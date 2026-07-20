@@ -89,7 +89,6 @@ function IntegrationCard({ data }: { data: IntegrationView }) {
   const t = useTranslations("integrations");
   const tc = useTranslations("common");
   const te = useTranslations("integrationEvents");
-  const tr = useTranslations("roles");
   const locale = useLocale();
 
   const [enabled, setEnabled] = useState(data.enabled);
@@ -222,7 +221,7 @@ function IntegrationCard({ data }: { data: IntegrationView }) {
               key={a}
               on={audiences.includes(a)}
               onChange={() => toggleIn(audiences, setAudiences, a)}
-              label={tr(a)}
+              label={t(`audienceLabels.${a}`)}
             />
           ))}
         </div>

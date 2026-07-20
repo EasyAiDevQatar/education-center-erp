@@ -296,6 +296,7 @@
     "event": "الحدث",
     "audience": "الفئة",
     "recipient": "المستلم",
+    "audienceLabels": { "TEACHER": "المعلم", "PARENT": "ولي الأمر", "STUDENT": "الطالب" },
     "fields": {
       "sendPath": "مسار إرسال الرسالة",
       "testPath": "مسار التحقق",

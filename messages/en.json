@@ -296,6 +296,7 @@
     "event": "Event",
     "audience": "Audience",
     "recipient": "Recipient",
+    "audienceLabels": { "TEACHER": "Teacher", "PARENT": "Parent", "STUDENT": "Student" },
     "fields": {
       "sendPath": "Send message path",
       "testPath": "Test/verify path",
