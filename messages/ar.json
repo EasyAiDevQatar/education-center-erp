@@ -67,7 +67,8 @@
       "operations": "العمليات",
       "finance": "المالية",
       "admin": "الإدارة"
-    }
+    },
+    "planner": "المخطط اليومي"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -370,6 +371,7 @@
       "UNPAID": "غير مدفوع"
     },
     "sessionStatus": {
+      "DRAFT": "مسودة",
       "SCHEDULED": "مجدولة",
       "CHECKED_IN": "حاضر",
       "COMPLETED": "مكتملة",
@@ -415,5 +417,29 @@
     "applyBulk": "تطبيق جماعي",
     "appliedToAll": "تم التطبيق على {n} معلم",
     "saved": "تم الحفظ"
+  },
+  "planner": {
+    "title": "المخطط اليومي",
+    "subtitle": "خطّط حصص اليوم لكل معلم كمسودات، ثم أكّد ما تم تدريسه فعلاً.",
+    "today": "اليوم",
+    "prev": "السابق",
+    "next": "التالي",
+    "teacher": "المدرس/ة",
+    "draftCount": "{n} مسودة",
+    "confirmedCount": "{n} مؤكدة",
+    "expectedTotal": "الإجمالي المتوقع",
+    "confirm": "تأكيد",
+    "confirmDay": "تأكيد اليوم",
+    "confirmTeacher": "تأكيد حصص المعلم",
+    "compact": "رصّ الأوقات",
+    "addToSlot": "إضافة حصة",
+    "addDraft": "إضافة مسودة",
+    "addDraftFor": "إضافة حصة — {teacher}",
+    "editDraft": "تعديل مسودة — {student}",
+    "timeAutoHint": "الوقت مقترح تلقائياً بعد آخر حصة للمعلم — يمكن تعديله.",
+    "settings": "إعدادات المخطط",
+    "dayStart": "بداية اليوم",
+    "homeGap": "فاصل التنقل للمنزل (دقيقة)",
+    "settingsHint": "تُستخدم لاقتراح أوقات الحصص ورصّها."
   }
 }

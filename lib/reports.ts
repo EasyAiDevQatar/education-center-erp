@@ -26,10 +26,13 @@ export async function getDashboardSummary(range?: DateRange) {
         _sum: { amount: true },
         where: dateWhere ? { date: dateWhere } : undefined,
       }),
-      db.session.count({ where: dateWhere ? { date: dateWhere } : undefined }),
+      // Planner drafts are unconfirmed plans — excluded from all KPIs.
+      db.session.count({
+        where: { status: { not: "DRAFT" }, ...(dateWhere ? { date: dateWhere } : {}) },
+      }),
       db.session.aggregate({
         _sum: { total: true },
-        where: dateWhere ? { date: dateWhere } : undefined,
+        where: { status: { not: "DRAFT" }, ...(dateWhere ? { date: dateWhere } : {}) },
       }),
       db.student.count({ where: { active: true } }),
       db.teacher.count({ where: { active: true } }),
@@ -57,7 +60,7 @@ export async function getRevenueByTeacher(range?: DateRange) {
   const grouped = await db.session.groupBy({
     by: ["teacherId"],
     _sum: { total: true, hours: true },
-    where: dateWhere ? { date: dateWhere } : undefined,
+    where: { status: { not: "DRAFT" }, ...(dateWhere ? { date: dateWhere } : {}) },
   });
   const teachers = await db.teacher.findMany({
     where: { id: { in: grouped.map((g) => g.teacherId) } },

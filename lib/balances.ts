@@ -2,10 +2,14 @@ import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
 
-/** Charges (session totals) − payments = balance owed by the student. */
+/** Charges (session totals) − payments = balance owed by the student.
+ *  Planner DRAFT sessions are pending confirmation and never count as charges. */
 export async function getStudentBalance(studentId: string) {
   const [charges, paid] = await Promise.all([
-    db.session.aggregate({ _sum: { total: true }, where: { studentId } }),
+    db.session.aggregate({
+      _sum: { total: true },
+      where: { studentId, status: { not: "DRAFT" } },
+    }),
     db.payment.aggregate({ _sum: { amount: true }, where: { studentId } }),
   ]);
   const totalCharges = toNumber(charges._sum.total);
@@ -26,7 +30,7 @@ export type LedgerEntry = {
 export async function getStudentLedger(studentId: string): Promise<LedgerEntry[]> {
   const [sessions, payments] = await Promise.all([
     db.session.findMany({
-      where: { studentId },
+      where: { studentId, status: { not: "DRAFT" } },
       include: { teacher: true, gradeLevel: true },
     }),
     db.payment.findMany({ where: { studentId } }),

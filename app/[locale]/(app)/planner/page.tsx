@@ -1,0 +1,89 @@
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { db } from "@/lib/db";
+import { toNumber } from "@/lib/money";
+import { currentPriceMatrix } from "@/lib/pricing";
+import { hhmmToMin } from "@/lib/planner";
+import { PageHeader } from "@/components/page-header";
+import { PlannerClient, type PlannerSession } from "./planner-client";
+import type { PriceMatrix } from "../sessions/session-dialog";
+
+export default async function PlannerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  await requireRole(locale, STAFF_ROLES);
+
+  const t = await getTranslations("planner");
+  const sp = await searchParams;
+  const dParam = Array.isArray(sp.date) ? sp.date[0] : sp.date;
+  const day =
+    dParam && /^\d{4}-\d{2}-\d{2}$/.test(dParam)
+      ? dParam
+      : new Date().toISOString().slice(0, 10);
+
+  const start = new Date(`${day}T00:00:00.000Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  const [sessions, teachers, students, levels, matrix, settingsRows] =
+    await Promise.all([
+      db.session.findMany({
+        where: { date: { gte: start, lt: end } },
+        include: { student: true, gradeLevel: true },
+        orderBy: { date: "asc" },
+      }),
+      db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      db.student.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
+      currentPriceMatrix(),
+      db.setting.findMany({
+        where: { key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin"] } },
+      }),
+    ]);
+
+  const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
+  const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
+
+  const rows: PlannerSession[] = sessions.map((s) => ({
+    id: s.id,
+    teacherId: s.teacherId,
+    startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
+    hours: toNumber(s.hours),
+    studentName: s.student.name,
+    levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
+    location: s.location as "CENTER" | "HOME",
+    status: s.status,
+    total: toNumber(s.total),
+  }));
+
+  const matrixMap: PriceMatrix = Object.fromEntries(
+    matrix.map((m) => [m.gradeLevel.id, { CENTER: m.CENTER, HOME: m.HOME }]),
+  );
+
+  return (
+    <div>
+      <PageHeader title={t("title")} description={t("subtitle")} />
+      <PlannerClient
+        day={day}
+        sessions={rows}
+        teachers={teachers.map((tt) => ({ id: tt.id, label: tt.name }))}
+        students={students.map((st) => ({
+          id: st.id,
+          name: st.name,
+          gradeLevelId: st.gradeLevelId,
+        }))}
+        levels={levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }))}
+        matrix={matrixMap}
+        currency={settings.currency ?? "QAR"}
+        dayStartMin={hhmmToMin(settings.plannerDayStart ?? null)}
+        homeGapMin={parseInt(settings.plannerHomeGapMin ?? "30", 10) || 0}
+      />
+    </div>
+  );
+}

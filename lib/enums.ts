@@ -20,8 +20,11 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const PAYMENT_STATUSES = ["PAID", "PARTIAL", "UNPAID"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-/** Scheduling/attendance lifecycle of a session (distinct from payment status). */
+/** Scheduling/attendance lifecycle of a session (distinct from payment status).
+ *  DRAFT = planned on the daily planner, pending confirmation — excluded from
+ *  balances/payroll/dashboard until confirmed (confirm = COMPLETED/taught). */
 export const SESSION_STATUSES = [
+  "DRAFT",
   "SCHEDULED",
   "CHECKED_IN",
   "COMPLETED",

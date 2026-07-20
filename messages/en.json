@@ -67,7 +67,8 @@
       "operations": "Operations",
       "finance": "Finance",
       "admin": "Administration"
-    }
+    },
+    "planner": "Daily planner"
   },
   "auth": {
     "login": "Log in",
@@ -370,6 +371,7 @@
       "UNPAID": "Unpaid"
     },
     "sessionStatus": {
+      "DRAFT": "Draft",
       "SCHEDULED": "Scheduled",
       "CHECKED_IN": "Checked in",
       "COMPLETED": "Completed",
@@ -415,5 +417,29 @@
     "applyBulk": "Apply to all teachers",
     "appliedToAll": "Applied to {n} teachers",
     "saved": "Saved"
+  },
+  "planner": {
+    "title": "Daily planner",
+    "subtitle": "Plan each teacher's day as drafts, then confirm what was actually taught.",
+    "today": "Today",
+    "prev": "Previous",
+    "next": "Next",
+    "teacher": "Teacher",
+    "draftCount": "{n} drafts",
+    "confirmedCount": "{n} confirmed",
+    "expectedTotal": "Expected total",
+    "confirm": "Confirm",
+    "confirmDay": "Confirm day",
+    "confirmTeacher": "Confirm teacher's sessions",
+    "compact": "Compact times",
+    "addToSlot": "Add session",
+    "addDraft": "Add draft",
+    "addDraftFor": "Add session — {teacher}",
+    "editDraft": "Edit draft — {student}",
+    "timeAutoHint": "Time is auto-suggested after the teacher's last session — editable.",
+    "settings": "Planner settings",
+    "dayStart": "Day start",
+    "homeGap": "Home travel gap (min)",
+    "settingsHint": "Used to suggest and compact session times."
   }
 }

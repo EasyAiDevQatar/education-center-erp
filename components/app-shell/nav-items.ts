@@ -10,6 +10,7 @@ import {
   Wallet,
   BadgeDollarSign,
   ScanLine,
+  ClipboardList,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -32,6 +33,7 @@ const FINANCE: Role[] = ["ADMIN", "ACCOUNTANT"];
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", key: "dashboard", icon: LayoutDashboard, roles: ALL, section: "operations" },
   { href: "/calendar", key: "calendar", icon: CalendarRange, roles: STAFF, section: "operations" },
+  { href: "/planner", key: "planner", icon: ClipboardList, roles: STAFF, section: "operations" },
   { href: "/checkin", key: "checkin", icon: ScanLine, roles: STAFF, section: "operations" },
   { href: "/sessions", key: "sessions", icon: CalendarDays, roles: STAFF, section: "operations" },
   { href: "/students", key: "students", icon: Users, roles: STAFF, section: "operations" },

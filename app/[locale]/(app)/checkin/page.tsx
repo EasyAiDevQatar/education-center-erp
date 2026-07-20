@@ -30,7 +30,8 @@ export default async function CheckinPage({
   end.setUTCDate(end.getUTCDate() + 1);
 
   const sessions = await db.session.findMany({
-    where: { date: { gte: start, lt: end } },
+    // Planner drafts are pending confirmation — not attendable at the kiosk.
+    where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } },
     include: { student: true, teacher: true, gradeLevel: true },
     orderBy: { date: "asc" },
   });

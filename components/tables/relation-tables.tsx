@@ -30,6 +30,7 @@ export type SessionLine = {
 };
 
 const SESSION_STATUS_VARIANT: Record<string, "success" | "warning" | "muted" | "destructive"> = {
+  DRAFT: "warning",
   SCHEDULED: "muted",
   CHECKED_IN: "warning",
   COMPLETED: "success",

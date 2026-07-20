@@ -79,7 +79,8 @@ export async function getAllTeacherEarnings(
     db.session.groupBy({
       by: ["teacherId"],
       _sum: { total: true, hours: true },
-      where: dateRange ? { date: dateRange } : undefined,
+      // Planner drafts are unconfirmed — never earn commission.
+      where: { status: { not: "DRAFT" }, ...(dateRange ? { date: dateRange } : {}) },
     }),
     db.payment.groupBy({
       by: ["teacherId"],
@@ -113,7 +114,7 @@ export async function getTeacherEarnings(
   const [s, p] = await Promise.all([
     db.session.aggregate({
       _sum: { total: true, hours: true },
-      where: { teacherId, date: dateRange },
+      where: { teacherId, date: dateRange, status: { not: "DRAFT" } },
     }),
     db.payment.aggregate({
       _sum: { amount: true },

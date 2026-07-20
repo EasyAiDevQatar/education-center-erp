@@ -44,6 +44,7 @@ const GRID_MAX = END_HOUR * 60;
 const GRID_H = (END_HOUR - START_HOUR) * HOUR_PX;
 
 const STATUS_STYLES: Record<string, string> = {
+  DRAFT: "border-s-warning border-dashed bg-warning/10 opacity-80",
   SCHEDULED: "border-s-primary bg-primary/10",
   CHECKED_IN: "border-s-warning bg-warning/20",
   COMPLETED: "border-s-success bg-success/20",
@@ -314,7 +315,7 @@ export function CalendarClient({
 
       {/* Legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
-        {(["SCHEDULED", "CHECKED_IN", "COMPLETED", "NO_SHOW", "CANCELLED"] as const).map((s) => (
+        {(["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED", "NO_SHOW", "CANCELLED"] as const).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <span className={cn("inline-block size-3 rounded-sm border-s-4", STATUS_STYLES[s])} />
             {te(`sessionStatus.${s}`)}
