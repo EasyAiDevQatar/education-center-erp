@@ -41,6 +41,8 @@
     "deleted": "تم الحذف",
     "count": "العدد",
     "hours": "الساعات",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
     "rowsPerPage": "صفوف بالصفحة",
     "showingRange": "عرض {from}–{to} من {total}",
     "previous": "السابق",
@@ -195,7 +197,19 @@
     "homeLat": "خط العرض",
     "homeLng": "خط الطول",
     "checkinPin": "رمز الحضور",
-    "useCurrentLocation": "استخدام الموقع الحالي"
+    "useCurrentLocation": "استخدام الموقع الحالي",
+    "locateOnMap": "تحديد على الخريطة"
+  },
+  "map": {
+    "title": "تحديد الموقع على الخريطة",
+    "searchPlaceholder": "ابحث عن عنوان أو مكان…",
+    "useCurrent": "موقعي الحالي",
+    "hint": "انقر على الخريطة لوضع العلامة، أو اسحبها للضبط الدقيق.",
+    "nothingPicked": "لم يتم تحديد موقع",
+    "noResults": "لا توجد نتائج",
+    "searchFailed": "البحث غير متاح",
+    "locationDenied": "تم رفض إذن تحديد الموقع",
+    "confirm": "استخدام هذا الموقع"
   },
   "teachers": {
     "title": "المعلمون",

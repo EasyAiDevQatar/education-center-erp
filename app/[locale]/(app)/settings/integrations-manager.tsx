@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plug, CheckCircle2, XCircle, Send, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Badge } from "@/components/ui/badge";
 import { FormField } from "@/components/crud/form-field";
 import { cn } from "@/lib/utils";
@@ -162,10 +163,9 @@ function IntegrationCard({ data }: { data: IntegrationView }) {
           />
         </FormField>
         <FormField label={t("apiKey")} htmlFor={`${data.provider}-key`}>
-          <Input
+          <PasswordInput
             id={`${data.provider}-key`}
             dir="ltr"
-            type="password"
             placeholder={data.hasKey ? data.apiKeyMask : t("apiKeyPlaceholder")}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}

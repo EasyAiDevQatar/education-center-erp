@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, ScrollText, MapPin } from "lucide-react";
+import { Plus, Pencil, ScrollText, MapPin, Map } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { MapPicker } from "@/components/map-picker";
 import { saveStudent, deleteStudent } from "./actions";
 
 export type Option = { id: string; label: string };
@@ -52,6 +53,7 @@ function StudentFields({
   const tc = useTranslations("common");
   const [lat, setLat] = useState(student?.homeLat != null ? String(student.homeLat) : "");
   const [lng, setLng] = useState(student?.homeLng != null ? String(student.homeLng) : "");
+  const [address, setAddress] = useState(student?.address ?? "");
 
   function useCurrentLocation() {
     if (!("geolocation" in navigator)) return;
@@ -95,15 +97,40 @@ function StudentFields({
 
       {/* Home-session attendance settings */}
       <div className="rounded-md border border-border bg-muted/30 p-3 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold text-muted-foreground">{t("homeLocation")}</p>
-          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={useCurrentLocation}>
-            <MapPin className="size-3.5" />
-            {t("useCurrentLocation")}
-          </Button>
+          <div className="flex flex-wrap gap-1.5">
+            <Button type="button" variant="outline" size="sm" className="gap-1" onClick={useCurrentLocation}>
+              <MapPin className="size-3.5" />
+              {t("useCurrentLocation")}
+            </Button>
+            <MapPicker
+              value={
+                lat && lng && !Number.isNaN(parseFloat(lat)) && !Number.isNaN(parseFloat(lng))
+                  ? { lat: parseFloat(lat), lng: parseFloat(lng) }
+                  : null
+              }
+              onPick={(v, addr) => {
+                setLat(v.lat.toFixed(6));
+                setLng(v.lng.toFixed(6));
+                if (addr && !address.trim()) setAddress(addr);
+              }}
+              trigger={
+                <Button type="button" variant="secondary" size="sm" className="gap-1">
+                  <Map className="size-3.5" />
+                  {t("locateOnMap")}
+                </Button>
+              }
+            />
+          </div>
         </div>
         <FormField label={t("address")} htmlFor="address">
-          <Input id="address" name="address" defaultValue={student?.address ?? ""} />
+          <Input
+            id="address"
+            name="address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
         </FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label={t("homeLat")} htmlFor="homeLat">

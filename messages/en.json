@@ -41,6 +41,8 @@
     "deleted": "Deleted",
     "count": "Count",
     "hours": "Hours",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "rowsPerPage": "Rows per page",
     "showingRange": "Showing {from}–{to} of {total}",
     "previous": "Previous",
@@ -195,7 +197,19 @@
     "homeLat": "Latitude",
     "homeLng": "Longitude",
     "checkinPin": "Check-in PIN",
-    "useCurrentLocation": "Use current location"
+    "useCurrentLocation": "Use current location",
+    "locateOnMap": "Locate on map"
+  },
+  "map": {
+    "title": "Pick location on map",
+    "searchPlaceholder": "Search an address or place…",
+    "useCurrent": "Current location",
+    "hint": "Click the map to drop a pin, or drag it to fine-tune.",
+    "nothingPicked": "No location selected",
+    "noResults": "No results found",
+    "searchFailed": "Search unavailable",
+    "locationDenied": "Location permission denied",
+    "confirm": "Use this location"
   },
   "teachers": {
     "title": "Teachers",
