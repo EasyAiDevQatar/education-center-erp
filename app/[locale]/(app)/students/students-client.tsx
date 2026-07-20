@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState , useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, CircleUserRound, MapPin, Map } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -21,6 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import {
+  useTableSortFilter,
+  SortableTableHeader,
+  type ColumnDef,
+} from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { MapPicker } from "@/components/map-picker";
 import { saveStudent, deleteStudent } from "./actions";
@@ -177,7 +182,27 @@ export function StudentsClient({
   const tp = useTranslations("profile");
   const locale = useLocale();
   const search = useTableSearch(students, (s) => [s.name, s.phone, s.gradeLevelLabel, s.guardianLabel, s.homeCode]);
-  const pg = usePagination(search.filtered);
+  const columns = useMemo<ColumnDef<StudentRow>[]>(
+    () => [
+      { key: "name", label: tc("name"), value: (s) => s.name },
+      { key: "level", label: t("gradeLevel"), value: (s) => s.gradeLevelLabel, filterable: true },
+      { key: "guardian", label: t("guardian"), value: (s) => s.guardianLabel, filterable: true },
+      { key: "phone", label: tc("phone"), value: (s) => s.phone },
+      {
+        key: "status",
+        label: tc("status"),
+        type: "enum",
+        value: (s) => (s.active ? "active" : "inactive"),
+        filterable: true,
+        options: ["active", "inactive"],
+        optionLabel: (v) => tc(v as "active"),
+      },
+      { key: "actions", label: tc("actions"), className: "text-end" },
+    ],
+    [t, tc],
+  );
+  const sf = useTableSortFilter(search.filtered, columns);
+  const pg = usePagination(sf.rows, 20, sf.version);
 
   return (
     <>
@@ -203,17 +228,10 @@ export function StudentsClient({
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{tc("name")}</TableHead>
-              <TableHead>{t("gradeLevel")}</TableHead>
-              <TableHead>{t("guardian")}</TableHead>
-              <TableHead>{tc("phone")}</TableHead>
-              <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
-            </TableRow>
+            <SortableTableHeader sf={sf} />
           </TableHeader>
           <TableBody>
-            {students.length === 0 && (
+            {pg.total === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">
                   {tc("noData")}

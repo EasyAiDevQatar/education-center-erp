@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
@@ -17,6 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import {
+  useTableSortFilter,
+  SortableTableHeader,
+  type ColumnDef,
+} from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney } from "@/lib/money";
 import { saveExpense, deleteExpense } from "./actions";
@@ -83,7 +90,19 @@ export function ExpensesClient({
   const tc = useTranslations("common");
   const locale = useLocale();
   const search = useTableSearch(expenses, (e) => [e.description, e.categoryLabel, e.paidTo, e.receiptNo, e.date]);
-  const pg = usePagination(search.filtered);
+  const columns = useMemo<ColumnDef<ExpenseRow>[]>(
+    () => [
+      { key: "date", label: tc("date"), type: "date", value: (e) => e.date },
+      { key: "description", label: t("description"), value: (e) => e.description },
+      { key: "category", label: t("category"), value: (e) => e.categoryLabel, filterable: true },
+      { key: "paidTo", label: t("paidTo"), value: (e) => e.paidTo },
+      { key: "amount", label: tc("amount"), type: "number", value: (e) => e.amount, className: "text-end" },
+      { key: "actions", label: tc("actions"), className: "text-end" },
+    ],
+    [t, tc],
+  );
+  const sf = useTableSortFilter(search.filtered, columns);
+  const pg = usePagination(sf.rows, 20, sf.version);
 
   return (
     <>
@@ -109,17 +128,10 @@ export function ExpensesClient({
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{tc("date")}</TableHead>
-              <TableHead>{t("description")}</TableHead>
-              <TableHead>{t("category")}</TableHead>
-              <TableHead>{t("paidTo")}</TableHead>
-              <TableHead className="text-end">{tc("amount")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
-            </TableRow>
+            <SortableTableHeader sf={sf} />
           </TableHeader>
           <TableBody>
-            {expenses.length === 0 && (
+            {pg.total === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">
                   {tc("noData")}

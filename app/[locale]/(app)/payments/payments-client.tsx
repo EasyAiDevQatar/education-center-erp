@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Printer } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
@@ -21,6 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import {
+  useTableSortFilter,
+  SortableTableHeader,
+  type ColumnDef,
+} from "@/components/ui/table-sort";
 import { formatMoney } from "@/lib/money";
 import { savePayment, deletePayment } from "./actions";
 import { getStudentOutstanding, type OutstandingInfo } from "./balance-actions";
@@ -216,7 +221,32 @@ export function PaymentsClient({
     p.notes,
     p.date,
   ]);
-  const pg = usePagination(search.filtered);
+  const columns = useMemo<ColumnDef<PaymentRow>[]>(
+    () => [
+      { key: "date", label: tc("date"), type: "date", value: (p) => p.date },
+      { key: "receipt", label: t("receiptNo"), value: (p) => p.receiptNo },
+      { key: "student", label: t("student"), value: (p) => p.studentName },
+      { key: "amount", label: tc("amount"), type: "number", value: (p) => p.amount, className: "text-end" },
+      {
+        key: "method",
+        label: t("method"),
+        type: "enum",
+        value: (p) => p.method,
+        filterable: true,
+        // Fixed order so every method shows even at zero count.
+        options: ["CASH", "POS", "QPAY", "TRANSFER"],
+        optionLabel: (v) => te(`method.${v}`),
+      },
+      { key: "teacher", label: t("allocateTeacher"), value: (p) => p.teacherName, filterable: true },
+      // No `value` ⇒ inert header: no button, no cursor, no aria-sort.
+      { key: "actions", label: tc("actions"), className: "text-end" },
+    ],
+    [t, tc, te],
+  );
+  const sf = useTableSortFilter(search.filtered, columns, {
+    defaultSort: { key: "date", dir: "desc" },
+  });
+  const pg = usePagination(sf.rows, 20, sf.version);
 
   return (
     <>
@@ -242,18 +272,10 @@ export function PaymentsClient({
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{tc("date")}</TableHead>
-              <TableHead>{t("receiptNo")}</TableHead>
-              <TableHead>{t("student")}</TableHead>
-              <TableHead className="text-end">{tc("amount")}</TableHead>
-              <TableHead>{t("method")}</TableHead>
-              <TableHead>{t("allocateTeacher")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
-            </TableRow>
+            <SortableTableHeader sf={sf} />
           </TableHeader>
           <TableBody>
-            {payments.length === 0 && (
+            {pg.total === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
                   {tc("noData")}

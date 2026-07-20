@@ -2,10 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users, Printer } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+import { printDoc } from "@/lib/print";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import {
@@ -38,11 +49,11 @@ export type CalEvent = {
 
 const START_HOUR = 7;
 const END_HOUR = 23;
-const HOUR_PX = 56;
+/** Row height per density. Compact halves it so a full week fits one screen. */
+const HOUR_PX_BY_DENSITY = { normal: 56, compact: 28 } as const;
 const SNAP_MIN = 15;
 const GRID_MIN = START_HOUR * 60;
 const GRID_MAX = END_HOUR * 60;
-const GRID_H = (END_HOUR - START_HOUR) * HOUR_PX;
 
 const STATUS_STYLES: Record<string, string> = {
   DRAFT: "border-s-warning border-dashed bg-warning/10 opacity-80",
@@ -68,24 +79,48 @@ function addDaysStr(s: string, n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Lay overlapping events into side-by-side lanes within a day column. */
+/**
+ * Lay overlapping events into side-by-side lanes within a day column.
+ *
+ * Lane width is decided per *cluster* of mutually-overlapping events, not per
+ * column: two events clashing at 09:00 must not squeeze an unrelated 18:00
+ * event to half width, which is what a column-wide lane count would do.
+ */
 function layout(events: CalEvent[]) {
   const sorted = [...events].sort((a, b) => a.startMinutes - b.startMinutes);
-  const laneEnds: number[] = [];
-  const placed = sorted.map((ev) => {
-    const end = ev.startMinutes + ev.hours * 60;
+  const endOf = (e: CalEvent) => e.startMinutes + e.hours * 60;
+
+  const placed: { ev: CalEvent; lane: number; lanes: number }[] = [];
+  let cluster: { ev: CalEvent; lane: number }[] = [];
+  let clusterEnd = -Infinity;
+  let laneEnds: number[] = [];
+
+  const flush = () => {
+    const lanes = Math.max(1, laneEnds.length);
+    for (const p of cluster) placed.push({ ...p, lanes });
+    cluster = [];
+    laneEnds = [];
+  };
+
+  for (const ev of sorted) {
+    // A gap with everything so far closes the cluster and resets lane widths.
+    if (ev.startMinutes >= clusterEnd && cluster.length) flush();
     let lane = laneEnds.findIndex((e) => e <= ev.startMinutes);
     if (lane === -1) {
       lane = laneEnds.length;
-      laneEnds.push(end);
+      laneEnds.push(endOf(ev));
     } else {
-      laneEnds[lane] = end;
+      laneEnds[lane] = endOf(ev);
     }
-    return { ev, lane };
-  });
-  const lanes = Math.max(1, laneEnds.length);
-  return { placed, lanes };
+    cluster.push({ ev, lane });
+    clusterEnd = Math.max(clusterEnd, endOf(ev));
+  }
+  if (cluster.length) flush();
+
+  return placed;
 }
+
+export type CalendarView = "week" | "day" | "compact" | "list";
 
 type Ghost = { id: string; day: string; startMinutes: number; hours: number };
 
@@ -100,8 +135,10 @@ export function CalendarClient({
   levels,
   matrix,
   teacherFilter,
+  studentFilter,
+  centerName,
 }: {
-  view: "week" | "day";
+  view: CalendarView;
   anchor: string;
   days: string[];
   events: CalEvent[];
@@ -111,10 +148,13 @@ export function CalendarClient({
   levels: Opt[];
   matrix: PriceMatrix;
   teacherFilter: string;
+  studentFilter: string;
+  centerName: string;
 }) {
   const t = useTranslations("calendar");
   const tg = useTranslations("group");
   const te = useTranslations("enums");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -144,10 +184,15 @@ export function CalendarClient({
   const [createAt, setCreateAt] = useState<{ date: string; time: string } | null>(null);
   const [editEv, setEditEv] = useState<CalEvent | null>(null);
 
+  // Compact is the same grid at half row height; list bypasses the grid entirely.
+  const compact = view === "compact";
+  const isGrid = view !== "list";
+  const hourPx = HOUR_PX_BY_DENSITY[compact ? "compact" : "normal"];
+
   // ---- geometry helpers ----
   function pointerMinutes(clientY: number) {
     const top = gridRef.current?.getBoundingClientRect().top ?? 0;
-    return GRID_MIN + ((clientY - top) / HOUR_PX) * 60;
+    return GRID_MIN + ((clientY - top) / hourPx) * 60;
   }
   function dayFromX(clientX: number): string | null {
     for (let i = 0; i < colRefs.current.length; i++) {
@@ -228,11 +273,18 @@ export function CalendarClient({
 
   // ---- navigation ----
   function go(params: Record<string, string>) {
-    // The teacher filter has to survive every other navigation.
+    // Every filter has to survive every other navigation. `go` does not read
+    // the live URL, so each param must be re-applied explicitly or it is lost
+    // silently on the next prev/next click.
     const sp = new URLSearchParams({ view, date: anchor, ...params });
-    const teacher = params.teacher ?? teacherFilter;
-    if (teacher) sp.set("teacher", teacher);
-    else sp.delete("teacher");
+    for (const [key, current] of [
+      ["teacher", teacherFilter],
+      ["student", studentFilter],
+    ] as const) {
+      const next = params[key] ?? current;
+      if (next) sp.set(key, next);
+      else sp.delete(key);
+    }
     router.push(`${pathname}?${sp.toString()}`);
   }
   const step = view === "day" ? 1 : 7;
@@ -268,7 +320,7 @@ export function CalendarClient({
   return (
     <div className="space-y-3">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
+      <div className="no-print flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
         <Button variant="secondary" size="sm" onClick={() => go({ date: today })}>
           {t("today")}
         </Button>
@@ -284,32 +336,43 @@ export function CalendarClient({
         </div>
         <span className="min-w-32 text-sm font-semibold tabular-nums">{rangeLabel}</span>
 
-        <Select
+        <Combobox
           aria-label={t("filterTeacher")}
           className="w-44"
+          placeholder={t("allTeachers")}
+          options={teachers.map((tt) => ({ value: tt.id, label: tt.label }))}
           value={teacherFilter}
-          onChange={(e) => go({ teacher: e.target.value })}
-        >
-          <option value="">{t("allTeachers")}</option>
-          {teachers.map((tt) => (
-            <option key={tt.id} value={tt.id}>{tt.label}</option>
-          ))}
-        </Select>
+          onChange={(v) => go({ teacher: v })}
+        />
+        <Combobox
+          aria-label={t("filterStudent")}
+          className="w-44"
+          placeholder={t("allStudents")}
+          options={students.map((st) => ({ value: st.id, label: st.name }))}
+          value={studentFilter}
+          onChange={(v) => go({ student: v })}
+        />
 
         <div className="ms-auto flex items-center gap-1 rounded-md border border-border p-0.5">
-          <button
-            onClick={() => go({ view: "week" })}
-            className={cn("rounded px-3 py-1 text-sm", view === "week" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-          >
-            {t("week")}
-          </button>
-          <button
-            onClick={() => go({ view: "day" })}
-            className={cn("rounded px-3 py-1 text-sm", view === "day" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
-          >
-            {t("day")}
-          </button>
+          {(["week", "day", "compact", "list"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => go({ view: v })}
+              className={cn(
+                "rounded px-3 py-1 text-sm",
+                view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {t(v)}
+            </button>
+          ))}
         </div>
+        {view === "list" && (
+          <Button variant="secondary" size="sm" className="gap-1" onClick={() => printDoc("A4 portrait")}>
+            <Printer className="size-4" />
+            {tc("print")}
+          </Button>
+        )}
         <GroupBookingDialog
           students={students}
           teachers={teachers}
@@ -333,7 +396,7 @@ export function CalendarClient({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
+      <div className="no-print flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
         {(["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED", "NO_SHOW", "CANCELLED"] as const).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <span className={cn("inline-block size-3 rounded-sm border-s-4", STATUS_STYLES[s])} />
@@ -343,7 +406,18 @@ export function CalendarClient({
         <span className="inline-flex items-center gap-1"><Home className="size-3" /> {te("location.HOME")}</span>
       </div>
 
+      {view === "list" && (
+        <ListView
+          events={events}
+          days={days}
+          rangeLabel={rangeLabel}
+          centerName={centerName}
+          onEdit={setEditEv}
+        />
+      )}
+
       {/* Calendar grid */}
+      {isGrid && (
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <div className="min-w-[720px]">
           {/* Day headers */}
@@ -376,7 +450,7 @@ export function CalendarClient({
             {/* Gutter */}
             <div className="w-14 shrink-0">
               {hours.map((h) => (
-                <div key={h} className="relative border-b border-border/60" style={{ height: HOUR_PX }}>
+                <div key={h} className="relative border-b border-border/60" style={{ height: hourPx }}>
                   <span className="absolute -top-2 end-1 text-[10px] tabular-nums text-muted-foreground">{pad(h)}:00</span>
                 </div>
               ))}
@@ -390,7 +464,7 @@ export function CalendarClient({
                   ? { ...(events.find((e) => e.id === ghost.id)!), day, startMinutes: ghost.startMinutes, hours: ghost.hours }
                   : null;
                 const all = ghostHere ? [...dayEvents, ghostHere] : dayEvents;
-                const { placed, lanes } = layout(all);
+                const placed = layout(all);
                 return (
                   <div
                     key={day}
@@ -398,24 +472,24 @@ export function CalendarClient({
                     className="relative flex-1 border-s border-border"
                     onClick={(e) => {
                       const top = (e.currentTarget as HTMLElement).getBoundingClientRect().top;
-                      const min = Math.max(GRID_MIN, Math.min(GRID_MAX - 60, snap(GRID_MIN + ((e.clientY - top) / HOUR_PX) * 60)));
+                      const min = Math.max(GRID_MIN, Math.min(GRID_MAX - 60, snap(GRID_MIN + ((e.clientY - top) / hourPx) * 60)));
                       setCreateAt({ date: day, time: fmtTime(min) });
                     }}
                   >
                     {/* hour cells */}
                     {hours.map((h) => (
-                      <div key={h} className="border-b border-border/60" style={{ height: HOUR_PX }} />
+                      <div key={h} className="border-b border-border/60" style={{ height: hourPx }} />
                     ))}
 
                     {/* now indicator */}
-                    {day === today && <NowLine />}
+                    {day === today && <NowLine hourPx={hourPx} />}
 
                     {/* events */}
-                    {placed.map(({ ev, lane }) => {
+                    {placed.map(({ ev, lane, lanes }) => {
                       const isGhost = ghost?.id === ev.id;
                       const width = 100 / lanes;
-                      const top = ((ev.startMinutes - GRID_MIN) / 60) * HOUR_PX;
-                      const height = Math.max(18, (ev.hours * 60) / 60 * HOUR_PX);
+                      const top = ((ev.startMinutes - GRID_MIN) / 60) * hourPx;
+                      const height = Math.max(compact ? 12 : 18, (ev.hours * 60) / 60 * hourPx);
                       return (
                         <div
                           key={ev.id + (isGhost ? "-g" : "")}
@@ -437,11 +511,15 @@ export function CalendarClient({
                             <span className="truncate font-semibold">{ev.studentName}</span>
                             {ev.location === "HOME" ? <Home className="size-3 shrink-0" /> : <Building2 className="size-3 shrink-0 opacity-60" />}
                           </div>
-                          <div className="truncate opacity-80">{ev.teacherName}</div>
-                          <div className="tabular-nums opacity-70">
-                            {fmtTime(ev.startMinutes)} · {ev.hours}
-                            {"h"} · {formatMoney(ev.total)} {currency}
-                          </div>
+                          {!compact && (
+                            <>
+                              <div className="truncate opacity-80">{ev.teacherName}</div>
+                              <div className="tabular-nums opacity-70">
+                                {fmtTime(ev.startMinutes)} · {ev.hours}
+                                {"h"} · {formatMoney(ev.total)} {currency}
+                              </div>
+                            </>
+                          )}
                           {/* resize handle */}
                           <div
                             onPointerDown={(e) => onPointerDownEvent(e, ev, "resize")}
@@ -457,6 +535,7 @@ export function CalendarClient({
           </div>
         </div>
       </div>
+      )}
 
       {/* Quick-create dialog */}
       {createAt && (
@@ -496,19 +575,106 @@ export function CalendarClient({
   );
 }
 
-function NowLine() {
+/**
+ * Flat chronological schedule — the printable view.
+ *
+ * Deliberately not the grid: a week grid on paper wastes most of the page on
+ * empty hours, while a list prints only the sessions that exist and paginates
+ * naturally across A4 pages.
+ */
+function ListView({
+  events,
+  days,
+  rangeLabel,
+  centerName,
+  onEdit,
+}: {
+  events: CalEvent[];
+  days: string[];
+  rangeLabel: string;
+  centerName: string;
+  onEdit: (ev: CalEvent) => void;
+}) {
+  const t = useTranslations("calendar");
+  const ts = useTranslations("sessions");
+  const tc = useTranslations("common");
+  const te = useTranslations("enums");
+
+  // Day order follows the visible range, so the printed sheet matches the grid.
+  const rank = new Map(days.map((d, i) => [d, i]));
+  const rows = [...events].sort(
+    (a, b) =>
+      (rank.get(a.day) ?? 0) - (rank.get(b.day) ?? 0) || a.startMinutes - b.startMinutes,
+  );
+
+  return (
+    <div data-print="A4" className="rounded-lg border border-border bg-card">
+      {/* Print-only header — the toolbar is hidden on paper. */}
+      <div className="hidden print:mb-3 print:block print:text-center">
+        <div className="font-bold">{centerName}</div>
+        <div className="text-sm">
+          {t("title")} · <span dir="ltr">{rangeLabel}</span>
+        </div>
+      </div>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{tc("date")}</TableHead>
+            <TableHead>{ts("startTime")}</TableHead>
+            <TableHead>{ts("student")}</TableHead>
+            <TableHead>{ts("teacher")}</TableHead>
+            <TableHead>{ts("location")}</TableHead>
+            <TableHead className="text-end">{tc("hours")}</TableHead>
+            <TableHead>{tc("status")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
+                {tc("noData")}
+              </TableCell>
+            </TableRow>
+          )}
+          {rows.map((ev) => (
+            <TableRow
+              key={ev.id}
+              className="cursor-pointer"
+              onClick={() => onEdit(ev)}
+            >
+              <TableCell className="tabular-nums" dir="ltr">{ev.day}</TableCell>
+              <TableCell className="tabular-nums" dir="ltr">{fmtTime(ev.startMinutes)}</TableCell>
+              <TableCell className="font-medium">{ev.studentName}</TableCell>
+              <TableCell>{ev.teacherName}</TableCell>
+              <TableCell>{te(`location.${ev.location}`)}</TableCell>
+              <TableCell className="text-end tabular-nums">{ev.hours}</TableCell>
+              <TableCell>
+                <Badge variant={ev.status === "COMPLETED" ? "success" : ev.status === "CANCELLED" ? "muted" : "default"}>
+                  {te(`sessionStatus.${ev.status}`)}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function NowLine({ hourPx }: { hourPx: number }) {
   const [top, setTop] = useState<number | null>(null);
   useEffect(() => {
     const tick = () => {
       const now = new Date();
       const min = now.getHours() * 60 + now.getMinutes();
       if (min < GRID_MIN || min > GRID_MAX) return setTop(null);
-      setTop(((min - GRID_MIN) / 60) * HOUR_PX);
+      setTop(((min - GRID_MIN) / 60) * hourPx);
     };
     tick();
     const id = setInterval(tick, 60000);
     return () => clearInterval(id);
-  }, []);
+  }, [hourPx]);
   if (top === null) return null;
   return (
     <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top }}>

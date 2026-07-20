@@ -189,5 +189,30 @@ async function loadRows(
         status: p.status,
       }));
     }
+    case "leads": {
+      const rows = await db.lead.findMany({
+        include: { gradeLevel: true },
+        orderBy: { createdAt: "desc" },
+      });
+      return rows.map((l) => ({
+        name: l.name,
+        phone: l.phone,
+        email: l.email,
+        source: l.source,
+        status: l.status,
+        gradeCode: l.gradeLevel?.code ?? null,
+        followUpAt: l.followUpAt ? ymd(l.followUpAt) : null,
+        notes: l.notes,
+      }));
+    }
+    case "terms": {
+      const rows = await db.term.findMany({ orderBy: { startDate: "desc" } });
+      return rows.map((x) => ({
+        nameAr: x.nameAr,
+        nameEn: x.nameEn,
+        startDate: ymd(x.startDate),
+        endDate: ymd(x.endDate),
+      }));
+    }
   }
 }

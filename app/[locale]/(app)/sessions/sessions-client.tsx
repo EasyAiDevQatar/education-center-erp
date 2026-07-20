@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Download, Users } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
@@ -18,6 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import {
+  useTableSortFilter,
+  SortableTableHeader,
+  type ColumnDef,
+} from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { QuickPayDialog } from "../payments/quick-pay-dialog";
 import { formatMoney, formatHours } from "@/lib/money";
@@ -82,7 +89,38 @@ export function SessionsClient({
     x.date,
     x.notes,
   ]);
-  const pg = usePagination(search.filtered);
+  const columns = useMemo<ColumnDef<SessionRow>[]>(
+    () => [
+      { key: "date", label: tc("date"), type: "date", value: (s) => s.date },
+      { key: "student", label: t("student"), value: (s) => s.studentName, filterable: true },
+      { key: "teacher", label: t("teacher"), value: (s) => s.teacherName, filterable: true },
+      { key: "level", label: t("gradeLevel"), value: (s) => s.levelLabel, filterable: true },
+      {
+        key: "location",
+        label: t("location"),
+        type: "enum",
+        value: (s) => s.location,
+        filterable: true,
+        options: ["CENTER", "HOME"],
+        optionLabel: (v) => te(`location.${v}`),
+      },
+      { key: "hours", label: t("hours"), type: "number", value: (s) => s.hours, className: "text-end" },
+      { key: "total", label: t("total"), type: "number", value: (s) => s.total, className: "text-end" },
+      {
+        key: "paymentStatus",
+        label: t("paymentStatus"),
+        type: "enum",
+        value: (s) => s.paymentStatus,
+        filterable: true,
+        options: ["PAID", "PARTIAL", "UNPAID"],
+        optionLabel: (v) => te(`paymentStatus.${v}`),
+      },
+      { key: "actions", label: tc("actions"), className: "text-end" },
+    ],
+    [t, tc, te],
+  );
+  const sf = useTableSortFilter(search.filtered, columns);
+  const pg = usePagination(sf.rows, 20, sf.version);
 
   function applyFilters(form: HTMLFormElement) {
     const fd = new FormData(form);
@@ -181,20 +219,10 @@ export function SessionsClient({
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{tc("date")}</TableHead>
-              <TableHead>{t("student")}</TableHead>
-              <TableHead>{t("teacher")}</TableHead>
-              <TableHead>{t("gradeLevel")}</TableHead>
-              <TableHead>{t("location")}</TableHead>
-              <TableHead className="text-end">{t("hours")}</TableHead>
-              <TableHead className="text-end">{t("total")}</TableHead>
-              <TableHead>{t("paymentStatus")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
-            </TableRow>
+            <SortableTableHeader sf={sf} />
           </TableHeader>
           <TableBody>
-            {sessions.length === 0 && (
+            {pg.total === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-muted-foreground">
                   {tc("noData")}

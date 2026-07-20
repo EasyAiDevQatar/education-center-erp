@@ -11,7 +11,12 @@ export const PAGE_SIZES = [20, 50, 100] as const;
 export type PageSize = number | "all";
 
 /** Client-side pagination state for an already-loaded list. */
-export function usePagination<T>(items: T[], initialSize: PageSize = 20) {
+export function usePagination<T>(
+  items: T[],
+  initialSize: PageSize = 20,
+  /** Change this to jump back to page 1 — e.g. when a sort or filter changes. */
+  resetKey?: unknown,
+) {
   const [pageSize, setPageSizeState] = useState<PageSize>(initialSize);
   const [page, setPage] = useState(1);
 
@@ -23,6 +28,11 @@ export function usePagination<T>(items: T[], initialSize: PageSize = 20) {
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
+
+  // A new sort or filter makes the current page meaningless — go back to 1.
+  useEffect(() => {
+    if (resetKey !== undefined) setPage(1);
+  }, [resetKey]);
 
   const setPageSize = (s: PageSize) => {
     setPageSizeState(s);

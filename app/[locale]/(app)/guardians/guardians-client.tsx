@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, CircleUserRound } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -17,6 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import {
+  useTableSortFilter,
+  SortableTableHeader,
+  type ColumnDef,
+} from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveGuardian, deleteGuardian } from "./actions";
 
@@ -55,7 +62,18 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
   const tp = useTranslations("profile");
   const locale = useLocale();
   const search = useTableSearch(guardians, (g) => [g.name, g.phone, g.email, g.notes]);
-  const pg = usePagination(search.filtered);
+  const columns = useMemo<ColumnDef<GuardianRow>[]>(
+    () => [
+      { key: "name", label: tc("name"), value: (g) => g.name },
+      { key: "phone", label: tc("phone"), value: (g) => g.phone },
+      { key: "email", label: tc("email"), value: (g) => g.email },
+      { key: "students", label: t("students"), type: "number", value: (g) => g.studentCount },
+      { key: "actions", label: tc("actions"), className: "text-end" },
+    ],
+    [t, tc],
+  );
+  const sf = useTableSortFilter(search.filtered, columns);
+  const pg = usePagination(sf.rows, 20, sf.version);
 
   return (
     <>
@@ -81,16 +99,10 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{tc("name")}</TableHead>
-              <TableHead>{tc("phone")}</TableHead>
-              <TableHead>{tc("email")}</TableHead>
-              <TableHead>{t("students")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
-            </TableRow>
+            <SortableTableHeader sf={sf} />
           </TableHeader>
           <TableBody>
-            {guardians.length === 0 && (
+            {pg.total === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground">
                   {tc("noData")}

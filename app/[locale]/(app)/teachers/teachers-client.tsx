@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, CircleUserRound } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -19,6 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import {
+  useTableSortFilter,
+  SortableTableHeader,
+  type ColumnDef,
+} from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveTeacher, deleteTeacher } from "./actions";
 
@@ -113,7 +120,26 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
   const tp = useTranslations("profile");
   const locale = useLocale();
   const search = useTableSearch(teachers, (x) => [x.name, x.phone, x.notes]);
-  const pg = usePagination(search.filtered);
+  const columns = useMemo<ColumnDef<TeacherRow>[]>(
+    () => [
+      { key: "name", label: tc("name"), value: (x) => x.name },
+      { key: "phone", label: tc("phone"), value: (x) => x.phone },
+      { key: "commissionPct", label: t("commissionPct"), type: "number", value: (x) => x.commissionPct },
+      {
+        key: "status",
+        label: tc("status"),
+        type: "enum",
+        value: (x) => (x.active ? "active" : "inactive"),
+        filterable: true,
+        options: ["active", "inactive"],
+        optionLabel: (v) => tc(v as "active"),
+      },
+      { key: "actions", label: tc("actions"), className: "text-end" },
+    ],
+    [t, tc],
+  );
+  const sf = useTableSortFilter(search.filtered, columns);
+  const pg = usePagination(sf.rows, 20, sf.version);
 
   return (
     <>
@@ -140,16 +166,10 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{tc("name")}</TableHead>
-              <TableHead>{tc("phone")}</TableHead>
-              <TableHead>{t("commissionPct")}</TableHead>
-              <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
-            </TableRow>
+            <SortableTableHeader sf={sf} />
           </TableHeader>
           <TableBody>
-            {teachers.length === 0 && (
+            {pg.total === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground">
                   {tc("noData")}

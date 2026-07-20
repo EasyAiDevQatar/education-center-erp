@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
-import { WIPE_PHRASE } from "@/lib/data-zone";
+import { WIPE_PHRASE, SEED_SPEC, type SeedKey } from "@/lib/data-zone";
+import { LEAD_STATUSES } from "@/lib/leads";
 
 export type DataState = {
   ok?: boolean;
@@ -36,6 +37,16 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.payouts = (await tx.teacherPayout.deleteMany()).count;
     summary.payments = (await tx.payment.deleteMany()).count;
     summary.sessions = (await tx.session.deleteMany()).count;
+    // Leads are business records and must go too. Their links to student /
+    // gradeLevel / user are all optional, so Prisma made them ON DELETE SET
+    // NULL — without this line a wipe would silently leave every lead behind
+    // with its references nulled, which is not "delete every business record".
+    // Sessions are deleted first because they point at leads, not vice versa.
+    summary.leads = (await tx.lead.deleteMany()).count;
+    // These two cascade from Teacher, so they would go anyway; deleting them
+    // explicitly keeps the returned summary honest about what was removed.
+    summary.plannerTemplates = (await tx.plannerTemplate.deleteMany()).count;
+    summary.availability = (await tx.teacherAvailability.deleteMany()).count;
     summary.packages = (await tx.package.deleteMany()).count;
     summary.expenses = (await tx.expense.deleteMany()).count;
     summary.expenseCategories = (await tx.expenseCategory.deleteMany()).count;
@@ -101,15 +112,15 @@ const EXPENSE_DESCRIPTIONS = [
 const nameAt = (pool: string[], i: number) =>
   i < pool.length ? pool[i] : `${pool[i % pool.length]} ${Math.floor(i / pool.length) + 1}`;
 
-const countsSchema = z.object({
-  teachers: z.coerce.number().int().min(0).max(100).default(10),
-  guardians: z.coerce.number().int().min(0).max(200).default(8),
-  students: z.coerce.number().int().min(0).max(500).default(25),
-  packages: z.coerce.number().int().min(0).max(200).default(5),
-  sessions: z.coerce.number().int().min(0).max(2000).default(60),
-  payments: z.coerce.number().int().min(0).max(1000).default(20),
-  expenses: z.coerce.number().int().min(0).max(500).default(12),
-});
+/** Built from SEED_SPEC so the schema can't drift from the modal's inputs. */
+const countsSchema = z.object(
+  Object.fromEntries(
+    SEED_SPEC.map((s) => [
+      s.key,
+      z.coerce.number().int().min(0).max(s.max).default(s.default),
+    ]),
+  ) as { [K in SeedKey]: z.ZodDefault<z.ZodNumber> },
+);
 export type SeedCounts = z.infer<typeof countsSchema>;
 
 /** Deterministic-ish PRNG so repeated seeds don't look identical but stay stable per run. */
@@ -248,6 +259,94 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     sessions++;
   }
   summary.sessions = sessions;
+
+  // --- terms (payroll TERM mode needs these) ---
+  let terms = 0;
+  if (n.terms > 0) {
+    const year = today.getUTCFullYear();
+    // Walk backwards from the current term so the newest is always "current".
+    for (let i = 0; i < n.terms; i++) {
+      const startMonth = i * -6 + 6; // …, +6, 0, -6 → two terms per year
+      const start = new Date(Date.UTC(year, startMonth, 1));
+      const end = new Date(Date.UTC(year, startMonth + 6, 0, 23, 59, 59, 999));
+      const label = `${start.toISOString().slice(0, 7)}`;
+      const existing = await db.term.findFirst({ where: { startDate: start } });
+      if (existing) continue;
+      await db.term.create({
+        data: {
+          nameAr: `الفصل ${i + 1} (${label})`,
+          nameEn: `Term ${i + 1} (${label})`,
+          startDate: start,
+          endDate: end,
+          active: true,
+        },
+      });
+      terms++;
+    }
+  }
+  summary.terms = terms;
+
+  // --- teacher availability (weekday windows) ---
+  let availability = 0;
+  for (let i = 0; i < n.availability && teacherIds.length; i++) {
+    const teacherId = teacherIds[i % teacherIds.length];
+    // Spread across the Gulf week, afternoons — matches the planner's day start.
+    const weekday = [6, 0, 1, 2, 3, 4][i % 6];
+    const startMin = pick([13 * 60, 14 * 60, 15 * 60]);
+    const dupe = await db.teacherAvailability.findFirst({ where: { teacherId, weekday } });
+    if (dupe) continue;
+    await db.teacherAvailability.create({
+      data: { teacherId, weekday, startMin, endMin: startMin + pick([240, 300, 360]) },
+    });
+    availability++;
+  }
+  summary.availability = availability;
+
+  // --- planner templates (recurring weekly grid) ---
+  let templates = 0;
+  for (let i = 0; i < n.templates && teacherIds.length && students.length; i++) {
+    const teacherId = teacherIds[i % teacherIds.length];
+    const student = students[i % students.length];
+    const weekday = [6, 0, 1, 2, 3][i % 5];
+    const startMin = 14 * 60 + (i % 4) * 90;
+    const dupe = await db.plannerTemplate.findFirst({
+      where: { teacherId, studentId: student.id, weekday, startMin },
+    });
+    if (dupe) continue;
+    await db.plannerTemplate.create({
+      data: {
+        teacherId,
+        studentId: student.id,
+        weekday,
+        startMin,
+        hours: pick([1, 1, 1.5]),
+        location: rand() < 0.3 ? "HOME" : "CENTER",
+      },
+    });
+    templates++;
+  }
+  summary.templates = templates;
+
+  // --- leads (spread across the pipeline, some follow-ups already overdue) ---
+  let leads = 0;
+  for (let i = 0; i < n.leads; i++) {
+    const status = LEAD_STATUSES[i % LEAD_STATUSES.length];
+    const follow = new Date(today);
+    // Every third lead is overdue so the board's highlighting is visible.
+    follow.setUTCDate(follow.getUTCDate() + (i % 3 === 0 ? -Math.ceil(rand() * 5) : Math.ceil(rand() * 10)));
+    await db.lead.create({
+      data: {
+        name: nameAt(STUDENT_NAMES, i + 100),
+        phone: `3333${String(1000 + i).slice(-4)}`,
+        source: pick(["زيارة", "توصية", "إنستغرام", "إعلان"]),
+        status,
+        gradeLevelId: levels.length ? pick(levels).id : null,
+        followUpAt: new Date(follow.toISOString().slice(0, 10) + "T00:00:00.000Z"),
+      },
+    });
+    leads++;
+  }
+  summary.leads = leads;
 
   // --- payments ---
   const existingMax = await db.payment.findMany({ select: { receiptNo: true } });

@@ -4,6 +4,29 @@
 /** The exact phrase an admin must type to arm the full data wipe. */
 export const WIPE_PHRASE = "DELETE-ALL";
 
+/**
+ * The demo seeder's editable counts, in the order the modal shows them.
+ *
+ * Single source of truth: the zod schema builds its defaults/limits from this
+ * and the modal renders its inputs from it, so adding a count is one line here
+ * instead of three places that silently drift apart.
+ */
+export const SEED_SPEC = [
+  { key: "teachers", max: 100, default: 10 },
+  { key: "guardians", max: 200, default: 8 },
+  { key: "students", max: 500, default: 25 },
+  { key: "terms", max: 12, default: 2 },
+  { key: "packages", max: 200, default: 5 },
+  { key: "sessions", max: 2000, default: 60 },
+  { key: "payments", max: 1000, default: 20 },
+  { key: "expenses", max: 500, default: 12 },
+  { key: "availability", max: 500, default: 20 },
+  { key: "templates", max: 500, default: 12 },
+  { key: "leads", max: 500, default: 10 },
+] as const;
+
+export type SeedKey = (typeof SEED_SPEC)[number]["key"];
+
 /** Tables exposed to XLSX export/import. `finance` gates to FINANCE_ROLES. */
 export type TableKey =
   | "students"
@@ -13,7 +36,9 @@ export type TableKey =
   | "payments"
   | "packages"
   | "expenses"
-  | "payouts";
+  | "payouts"
+  | "leads"
+  | "terms";
 
 export type TableSpec = {
   key: TableKey;
@@ -133,6 +158,32 @@ export const TABLES: TableSpec[] = [
       { key: "advances", ar: "السلف" },
       { key: "netPaid", ar: "الصافي" },
       { key: "status", ar: "الحالة" },
+    ],
+  },
+  {
+    key: "leads",
+    finance: false,
+    importable: true,
+    columns: [
+      { key: "name", ar: "الاسم", required: true },
+      { key: "phone", ar: "الهاتف" },
+      { key: "email", ar: "البريد الإلكتروني" },
+      { key: "source", ar: "مصدر العميل" },
+      { key: "status", ar: "الحالة" },
+      { key: "gradeCode", ar: "المرحلة" },
+      { key: "followUpAt", ar: "تاريخ المتابعة" },
+      { key: "notes", ar: "ملاحظات" },
+    ],
+  },
+  {
+    key: "terms",
+    finance: false,
+    importable: true,
+    columns: [
+      { key: "nameAr", ar: "الاسم بالعربية", required: true },
+      { key: "nameEn", ar: "الاسم بالإنجليزية" },
+      { key: "startDate", ar: "تاريخ البداية", required: true },
+      { key: "endDate", ar: "تاريخ النهاية", required: true },
     ],
   },
 ];

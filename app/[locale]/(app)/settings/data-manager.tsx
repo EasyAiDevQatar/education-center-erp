@@ -13,7 +13,7 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { TABLES, WIPE_PHRASE, type TableKey } from "@/lib/data-zone";
+import { TABLES, WIPE_PHRASE, SEED_SPEC, type TableKey } from "@/lib/data-zone";
 import { wipeAllData, seedDemoData, type DataState } from "./data-actions";
 
 /* ------------------------------ import/export ------------------------------ */
@@ -128,14 +128,6 @@ export function DataManager({ canFinance }: { canFinance: boolean }) {
 
 /* -------------------------------- danger zone ------------------------------- */
 
-const SEED_FIELDS = [
-  "teachers", "guardians", "students", "packages", "sessions", "payments", "expenses",
-] as const;
-const SEED_DEFAULTS: Record<(typeof SEED_FIELDS)[number], number> = {
-  teachers: 10, guardians: 8, students: 25, packages: 5,
-  sessions: 60, payments: 20, expenses: 12,
-};
-
 export function DangerZone() {
   const t = useTranslations("data");
   const tc = useTranslations("common");
@@ -144,8 +136,10 @@ export function DangerZone() {
 
   const [seedOpen, setSeedOpen] = useState(false);
   const [wipeOpen, setWipeOpen] = useState(false);
+  // Defaults come from SEED_SPEC, the same registry the zod schema is built
+  // from, so the modal can never offer a field the action doesn't accept.
   const [counts, setCounts] = useState<Record<string, string>>(
-    Object.fromEntries(SEED_FIELDS.map((k) => [k, String(SEED_DEFAULTS[k])])),
+    Object.fromEntries(SEED_SPEC.map((s) => [s.key, String(s.default)])),
   );
   const [confirm, setConfirm] = useState("");
   const [pending, start] = useTransition();
@@ -205,15 +199,20 @@ export function DangerZone() {
           </DialogHeader>
           <p className="mb-2 text-sm text-muted-foreground">{t("seedDialogHint")}</p>
           <div className="grid grid-cols-2 gap-3">
-            {SEED_FIELDS.map((k) => (
-              <FormField key={k} label={tn(k)} htmlFor={`seed-${k}`}>
+            {SEED_SPEC.map((spec) => (
+              <FormField
+                key={spec.key}
+                label={t(`seedFields.${spec.key}`)}
+                htmlFor={`seed-${spec.key}`}
+              >
                 <Input
-                  id={`seed-${k}`}
+                  id={`seed-${spec.key}`}
                   type="number"
                   min="0"
+                  max={spec.max}
                   dir="ltr"
-                  value={counts[k]}
-                  onChange={(e) => setCounts({ ...counts, [k]: e.target.value })}
+                  value={counts[spec.key]}
+                  onChange={(e) => setCounts({ ...counts, [spec.key]: e.target.value })}
                 />
               </FormField>
             ))}
@@ -229,7 +228,7 @@ export function DangerZone() {
               onClick={() =>
                 start(async () => {
                   const parsed = Object.fromEntries(
-                    SEED_FIELDS.map((k) => [k, parseInt(counts[k], 10) || 0]),
+                    SEED_SPEC.map((spec) => [spec.key, parseInt(counts[spec.key], 10) || 0]),
                   ) as Parameters<typeof seedDemoData>[1];
                   const r = await seedDemoData(locale, parsed);
                   setRes(r);

@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
@@ -18,6 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import {
+  useTableSortFilter,
+  SortableTableHeader,
+  type ColumnDef,
+} from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney, formatHours } from "@/lib/money";
 import { savePackage, deletePackage } from "./actions";
@@ -101,7 +108,28 @@ export function PackagesClient({
   const te = useTranslations("enums");
   const locale = useLocale();
   const search = useTableSearch(packages, (p) => [p.studentName, p.status, p.notes]);
-  const pg = usePagination(search.filtered);
+  const columns = useMemo<ColumnDef<PackageRow>[]>(
+    () => [
+      { key: "name", label: tc("name"), value: (p) => p.studentName },
+      { key: "totalHours", label: t("totalHours"), type: "number", value: (p) => p.totalHours, className: "text-end" },
+      { key: "hoursUsed", label: t("hoursUsed"), type: "number", value: (p) => p.hoursUsed, className: "text-end" },
+      { key: "remaining", label: t("hoursRemaining"), type: "number", value: (p) => p.totalHours - p.hoursUsed, className: "text-end" },
+      { key: "price", label: t("price"), type: "number", value: (p) => p.price, className: "text-end" },
+      {
+        key: "status",
+        label: tc("status"),
+        type: "enum",
+        value: (p) => p.status,
+        filterable: true,
+        options: ["ACTIVE", "COMPLETED", "EXPIRED"],
+        optionLabel: (v) => te(`packageStatus.${v}`),
+      },
+      { key: "actions", label: tc("actions"), className: "text-end" },
+    ],
+    [t, tc, te],
+  );
+  const sf = useTableSortFilter(search.filtered, columns);
+  const pg = usePagination(sf.rows, 20, sf.version);
 
   return (
     <>
@@ -127,18 +155,10 @@ export function PackagesClient({
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{tc("name")}</TableHead>
-              <TableHead className="text-end">{t("totalHours")}</TableHead>
-              <TableHead className="text-end">{t("hoursUsed")}</TableHead>
-              <TableHead className="text-end">{t("hoursRemaining")}</TableHead>
-              <TableHead className="text-end">{t("price")}</TableHead>
-              <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
-            </TableRow>
+            <SortableTableHeader sf={sf} />
           </TableHeader>
           <TableBody>
-            {packages.length === 0 && (
+            {pg.total === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
                   {tc("noData")}

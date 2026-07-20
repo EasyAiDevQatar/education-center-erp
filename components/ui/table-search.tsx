@@ -19,10 +19,10 @@ export function useTableSearch<T>(
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
-    const q = normalize(query);
+    const q = normalizeArabic(query);
     if (!q) return items;
     return items.filter((it) =>
-      fields(it).some((f) => (f ? normalize(f).includes(q) : false)),
+      fields(it).some((f) => (f ? normalizeArabic(f).includes(q) : false)),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, query]);
@@ -36,7 +36,7 @@ export function useTableSearch<T>(
  * Staff type quickly and rarely bother with hamza, so an exact match would
  * make the box feel broken on the majority of Arabic names.
  */
-function normalize(s: string): string {
+export function normalizeArabic(s: string): string {
   return s
     .toLowerCase()
     .replace(/[ً-ْٰ]/g, "") // harakat

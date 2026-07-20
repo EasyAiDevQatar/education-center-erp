@@ -65,7 +65,11 @@
   "clear": "مسح",
   "selectAll": "تحديد الكل",
   "errorGeneric": "تعذّر الحفظ، تحقق من البيانات",
-  "period": "الفترة"
+  "period": "الفترة",
+  "expandAll": "توسيع الكل",
+  "collapseAll": "طيّ الكل",
+  "filterBy": "تصفية",
+  "clearFilter": "مسح التصفية"
  },
  "nav": {
   "dashboard": "لوحة التحكم",
@@ -91,7 +95,8 @@
   "payouts": "الرواتب المصروفة",
   "teacherPortal": "بوابة المعلم",
   "parentPortal": "بوابة ولي الأمر",
-  "leads": "العملاء المحتملون"
+  "leads": "العملاء المحتملون",
+  "terms": "الفصول الدراسية"
  },
  "auth": {
   "login": "تسجيل الدخول",
@@ -192,7 +197,11 @@
   "add": "حجز حصة",
   "edit": "تعديل حصة",
   "allTeachers": "كل المعلمين",
-  "filterTeacher": "تصفية بالمعلم"
+  "filterTeacher": "تصفية بالمعلم",
+  "compact": "مضغوط",
+  "list": "قائمة",
+  "filterStudent": "تصفية بالطالب",
+  "allStudents": "كل الطلاب"
  },
  "checkin": {
   "title": "تسجيل الحضور والانصراف",
@@ -592,7 +601,20 @@
   "wipeKeeps": "يُبقى على: حسابات المديرين، بيانات المركز والشعار، وإعدادات التكاملات.",
   "wipeConfirmLabel": "اكتب {phrase} للتأكيد",
   "wipeMismatch": "النص غير مطابق",
-  "wipeConfirm": "حذف نهائي"
+  "wipeConfirm": "حذف نهائي",
+  "seedFields": {
+   "teachers": "المعلمون",
+   "guardians": "أولياء الأمور",
+   "students": "الطلاب",
+   "terms": "الفصول الدراسية",
+   "packages": "الباقات",
+   "sessions": "الحصص",
+   "payments": "المدفوعات",
+   "expenses": "المصروفات",
+   "availability": "أوقات دوام المعلمين",
+   "templates": "قوالب المخطط",
+   "leads": "العملاء المحتملون"
+  }
  },
  "availability": {
   "tab": "أوقات الدوام",

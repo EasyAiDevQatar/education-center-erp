@@ -38,6 +38,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
+import { printDoc } from "@/lib/print";
 import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
 import { findConflicts, weekdayOf, WEEKDAY_ORDER, type Conflict } from "@/lib/conflicts";
 import { ConflictWarnings } from "@/components/conflict-warnings";
@@ -104,25 +105,6 @@ const CELL_STYLES: Record<string, string> = {
   NO_SHOW: "border-destructive/50 bg-destructive/10",
   CANCELLED: "border-border bg-muted text-muted-foreground line-through",
 };
-
-/**
- * Print the sheet in landscape.
- *
- * `@page { size: … }` only works at the top level of a stylesheet — it can't be
- * scoped by a class or a named page in any way browsers actually honour — so
- * the rule is injected for the duration of the print call and removed after.
- */
-function printLandscape() {
-  const style = document.createElement("style");
-  style.media = "print";
-  style.textContent = "@page { size: A4 landscape; margin: 8mm; }";
-  document.head.appendChild(style);
-  try {
-    window.print();
-  } finally {
-    style.remove();
-  }
-}
 
 function addDaysStr(s: string, n: number) {
   const d = new Date(`${s}T00:00:00.000Z`);
@@ -341,7 +323,7 @@ export function PlannerClient({
           >
             <LayoutTemplate className="size-4" />
           </Button>
-          <Button size="sm" variant="secondary" className="gap-1" onClick={printLandscape}>
+          <Button size="sm" variant="secondary" className="gap-1" onClick={() => printDoc("A4 landscape")}>
             <Printer className="size-4" />
             {t("printSheet")}
           </Button>

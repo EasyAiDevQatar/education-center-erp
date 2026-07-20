@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CollapsibleCard, CollapsibleGroup } from "@/components/ui/collapsible-card";
 import { PROVIDERS, maskSecret } from "@/lib/integrations/registry";
 import { CenterProfileForm } from "./center-profile-form";
 import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
@@ -148,12 +148,9 @@ export default async function SettingsPage({
   return (
     <div>
       <PageHeader title={t("title")} />
+      <CollapsibleGroup>
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("center")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={t("center")}>
             <CenterProfileForm
               values={{
                 centerName: settings.centerName ?? "",
@@ -167,94 +164,49 @@ export default async function SettingsPage({
                 centerLogo: settings.centerLogo ?? "",
               }}
             />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("priceMatrix")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={t("priceMatrix")}>
             <PriceMatrixEditor rows={matrixRows} />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t("expenseCategories")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={t("expenseCategories")} className="lg:col-span-2">
             <CategoriesManager categories={catRows} />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{tterm("title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={tterm("title")} className="lg:col-span-2">
             <TermsManager
               terms={termRowsView}
               defaultPaymentMode={settings.defaultTeacherPaymentMode ?? "MONTH"}
             />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t("users")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={t("users")} className="lg:col-span-2">
             <UsersManager users={users} teachers={teacherOpts} guardians={guardianOpts} />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t("integrations")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={t("integrations")} className="lg:col-span-2">
             <IntegrationsManager integrations={integrations} />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t("notificationLog")}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+        <CollapsibleCard title={t("notificationLog")} className="lg:col-span-2">
             <NotificationLogTable rows={logRows} />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t("auditLog")}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+        <CollapsibleCard title={t("auditLog")} className="lg:col-span-2">
             <AuditLogTable rows={audits} />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{tdata("title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={tdata("title")} className="lg:col-span-2">
             {/* Settings is ADMIN-only, so finance tables are always available. */}
             <DataManager canFinance />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
 
-        <Card className="lg:col-span-2 border-destructive/40">
-          <CardHeader>
-            <CardTitle className="text-destructive">{tdata("dangerZone")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard title={tdata("dangerZone")} tone="danger" className="lg:col-span-2">
             <DangerZone />
-          </CardContent>
-        </Card>
+          </CollapsibleCard>
       </div>
+      </CollapsibleGroup>
     </div>
   );
 }

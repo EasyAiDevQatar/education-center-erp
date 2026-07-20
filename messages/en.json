@@ -65,7 +65,11 @@
   "clear": "Clear",
   "selectAll": "Select all",
   "errorGeneric": "Could not save — please check the details",
-  "period": "Period"
+  "period": "Period",
+  "expandAll": "Expand all",
+  "collapseAll": "Collapse all",
+  "filterBy": "Filter",
+  "clearFilter": "Clear filter"
  },
  "nav": {
   "dashboard": "Dashboard",
@@ -91,7 +95,8 @@
   "payouts": "Payouts",
   "teacherPortal": "Teacher portal",
   "parentPortal": "Parent portal",
-  "leads": "Leads"
+  "leads": "Leads",
+  "terms": "Terms"
  },
  "auth": {
   "login": "Log in",
@@ -192,7 +197,11 @@
   "add": "Book session",
   "edit": "Edit session",
   "allTeachers": "All teachers",
-  "filterTeacher": "Filter by teacher"
+  "filterTeacher": "Filter by teacher",
+  "compact": "Compact",
+  "list": "List",
+  "filterStudent": "Filter by student",
+  "allStudents": "All students"
  },
  "checkin": {
   "title": "Check-in / Check-out",
@@ -592,7 +601,20 @@
   "wipeKeeps": "Kept: administrator accounts, centre profile and logo, integration settings.",
   "wipeConfirmLabel": "Type {phrase} to confirm",
   "wipeMismatch": "Text does not match",
-  "wipeConfirm": "Delete permanently"
+  "wipeConfirm": "Delete permanently",
+  "seedFields": {
+   "teachers": "Teachers",
+   "guardians": "Guardians",
+   "students": "Students",
+   "terms": "Terms",
+   "packages": "Packages",
+   "sessions": "Sessions",
+   "payments": "Payments",
+   "expenses": "Expenses",
+   "availability": "Teacher availability",
+   "templates": "Planner templates",
+   "leads": "Leads"
+  }
  },
  "availability": {
   "tab": "Working hours",

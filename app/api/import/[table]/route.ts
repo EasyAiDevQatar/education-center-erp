@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { combineDateTime } from "@/lib/session-time";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { TABLES, type TableKey } from "@/lib/data-zone";
+import { LEAD_STATUSES } from "@/lib/leads";
 
 export type ImportResult = {
   ok?: boolean;
@@ -290,6 +291,44 @@ async function importRows(
               amount,
               paidTo: r.paidTo || null,
             },
+          });
+          created++;
+          break;
+        }
+        case "leads": {
+          if (!r.name) { fail(r, "name required"); break; }
+          // findLevel returns the id itself, not a record.
+          const levelId = r.gradeCode ? findLevel(r.gradeCode) : null;
+          // Unknown statuses fall back to NEW rather than rejecting the row —
+          // a spreadsheet typo shouldn't lose the enquiry.
+          const status = LEAD_STATUSES.includes(r.status as never) ? r.status : "NEW";
+          await db.lead.create({
+            data: {
+              name: r.name,
+              phone: r.phone || null,
+              email: r.email || null,
+              source: r.source || null,
+              status,
+              gradeLevelId: levelId,
+              followUpAt: r.followUpAt ? new Date(`${r.followUpAt}T00:00:00.000Z`) : null,
+              notes: r.notes || null,
+            },
+          });
+          created++;
+          break;
+        }
+        case "terms": {
+          if (!r.nameAr || !r.startDate || !r.endDate) { fail(r, "missing required"); break; }
+          const start = new Date(`${r.startDate}T00:00:00.000Z`);
+          const end = new Date(`${r.endDate}T23:59:59.999Z`);
+          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+            fail(r, "bad date"); break;
+          }
+          if (end < start) { fail(r, "end before start"); break; }
+          const dupe = await db.term.findFirst({ where: { nameAr: r.nameAr, startDate: start } });
+          if (dupe) { skipped++; break; }
+          await db.term.create({
+            data: { nameAr: r.nameAr, nameEn: r.nameEn || r.nameAr, startDate: start, endDate: end },
           });
           created++;
           break;

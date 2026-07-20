@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
-import { CalendarClient, type CalEvent } from "./calendar-client";
+import { CalendarClient, type CalEvent, type CalendarView } from "./calendar-client";
 import type { PriceMatrix } from "../sessions/session-dialog";
 
 /** Gulf week starts on Saturday. */
@@ -40,12 +40,15 @@ export default async function CalendarPage({
     const v = sp[k];
     return (Array.isArray(v) ? v[0] : v) ?? "";
   };
-  const view = get("view") === "day" ? "day" : "week";
+  const view = (["day", "compact", "list"] as const).includes(get("view") as never)
+    ? (get("view") as CalendarView)
+    : "week";
   const anchorStr = /^\d{4}-\d{2}-\d{2}$/.test(get("date"))
     ? get("date")
     : ymd(new Date());
   const anchor = parseUTC(anchorStr);
   const teacherFilter = get("teacher");
+  const studentFilter = get("student");
 
   // Build the visible day columns.
   let days: string[];
@@ -66,6 +69,7 @@ export default async function CalendarPage({
         where: {
           date: { gte: rangeStart, lt: rangeEnd },
           ...(teacherFilter ? { teacherId: teacherFilter } : {}),
+          ...(studentFilter ? { studentId: studentFilter } : {}),
         },
         include: { student: true, teacher: true, gradeLevel: true },
         orderBy: { date: "asc" },
@@ -74,10 +78,11 @@ export default async function CalendarPage({
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
-      db.setting.findMany({ where: { key: "currency" } }),
+      db.setting.findMany({ where: { key: { in: ["currency", "centerName"] } } }),
     ]);
 
-  const currency = settingsRows[0]?.value ?? "QAR";
+  const settingsMap = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
+  const currency = settingsMap.currency ?? "QAR";
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
   const events: CalEvent[] = sessions.map((s) => {
@@ -121,6 +126,8 @@ export default async function CalendarPage({
         levels={levelOpts}
         matrix={matrixMap}
         teacherFilter={teacherFilter}
+        studentFilter={studentFilter}
+        centerName={settingsMap.centerName ?? ""}
       />
     </div>
   );
