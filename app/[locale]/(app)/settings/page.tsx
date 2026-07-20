@@ -13,6 +13,7 @@ import { TermsManager, type TermRow } from "./terms-manager";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
 import { AuditLogTable, type AuditRow } from "./audit-log-table";
+import { DataManager, DangerZone } from "./data-manager";
 
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -34,6 +35,7 @@ export default async function SettingsPage({
 
   const t = await getTranslations("settings");
   const tterm = await getTranslations("terms");
+  const tdata = await getTranslations("data");
 
   const [settingsRows, matrix, categories, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
@@ -231,6 +233,25 @@ export default async function SettingsPage({
           </CardHeader>
           <CardContent className="p-0">
             <AuditLogTable rows={audits} />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>{tdata("title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Settings is ADMIN-only, so finance tables are always available. */}
+            <DataManager canFinance />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2 border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-destructive">{tdata("dangerZone")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DangerZone />
           </CardContent>
         </Card>
       </div>

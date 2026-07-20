@@ -487,5 +487,28 @@
       "UPDATE": "Update",
       "DELETE": "Delete"
     }
+  },
+  "data": {
+    "title": "Data import & export",
+    "hint": "Export any table to Excel, or download a blank template and import it once filled.",
+    "export": "Export",
+    "template": "Template",
+    "import": "Import",
+    "importDone": "Created {created} — skipped {skipped}",
+    "firstErrors": "Sample errors",
+    "dangerZone": "Danger zone",
+    "seedTitle": "Demo data",
+    "seedOpen": "Generate data",
+    "seedHint": "Generates demo data and restores grade levels, price matrix and expense categories.",
+    "seedDialogHint": "Adjust the counts before generating.",
+    "seedRun": "Generate",
+    "wipeTitle": "Delete all data",
+    "wipeOpen": "Delete all",
+    "wipeHint": "Deletes every record, keeping administrator accounts and centre settings.",
+    "wipeWarning": "This cannot be undone. Students, teachers, sessions, payments, expenses and all logs will be deleted.",
+    "wipeKeeps": "Kept: administrator accounts, centre profile and logo, integration settings.",
+    "wipeConfirmLabel": "Type {phrase} to confirm",
+    "wipeMismatch": "Text does not match",
+    "wipeConfirm": "Delete permanently"
   }
 }
