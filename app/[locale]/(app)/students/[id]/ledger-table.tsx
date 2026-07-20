@@ -49,7 +49,7 @@ export function LedgerTable({ ledger }: { ledger: LedgerEntry[] }) {
           )}
           {pg.pageItems.map((e, i) => (
             <TableRow key={pg.start + i}>
-              <TableCell dir="ltr" className="text-start tabular-nums">{e.date}</TableCell>
+              <TableCell className="text-start tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
               <TableCell>
                 <Badge variant={e.type === "PAYMENT" ? "success" : "muted"}>
                   {e.description}

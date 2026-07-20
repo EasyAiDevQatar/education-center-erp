@@ -84,12 +84,12 @@ export function AuditLogTable({ rows }: { rows: AuditRow[] }) {
           )}
           {pg.pageItems.map((r) => (
             <TableRow key={r.id}>
-              <TableCell dir="ltr" className="text-start tabular-nums">{r.at}</TableCell>
+              <TableCell className="text-start tabular-nums"><span dir="ltr">{r.at}</span></TableCell>
               <TableCell>{r.userName ?? "—"}</TableCell>
               <TableCell>{r.entity}</TableCell>
-              <TableCell dir="ltr" className="max-w-40 truncate text-start text-xs text-muted-foreground">
+              <TableCell className="max-w-40 truncate text-start text-xs text-muted-foreground"><span dir="ltr">
                 {r.entityId}
-              </TableCell>
+              </span></TableCell>
               <TableCell>
                 <Badge variant={ACTION_VARIANT[r.action] ?? "muted"}>
                   {t(`actions.${r.action}` as "actions.CREATE")}

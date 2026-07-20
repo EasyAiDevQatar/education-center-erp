@@ -243,7 +243,7 @@ export function StudentsClient({
                 <TableCell className="font-medium">{s.name}</TableCell>
                 <TableCell>{s.gradeLevelLabel ?? "—"}</TableCell>
                 <TableCell>{s.guardianLabel ?? "—"}</TableCell>
-                <TableCell dir="ltr" className="text-start">{s.phone ?? "—"}</TableCell>
+                <TableCell className="text-start"><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
                 <TableCell>
                   {s.active ? (
                     <Badge variant="success">{tc("active")}</Badge>

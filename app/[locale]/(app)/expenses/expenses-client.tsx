@@ -140,7 +140,7 @@ export function ExpensesClient({
             )}
             {pg.pageItems.map((e) => (
               <TableRow key={e.id}>
-                <TableCell dir="ltr" className="text-start tabular-nums">{e.date}</TableCell>
+                <TableCell className="text-start tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
                 <TableCell className="font-medium">{e.description}</TableCell>
                 <TableCell>{e.categoryLabel}</TableCell>
                 <TableCell>{e.paidTo ?? "—"}</TableCell>

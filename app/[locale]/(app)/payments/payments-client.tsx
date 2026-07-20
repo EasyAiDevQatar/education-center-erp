@@ -284,8 +284,8 @@ export function PaymentsClient({
             )}
             {pg.pageItems.map((p) => (
               <TableRow key={p.id}>
-                <TableCell dir="ltr" className="text-start tabular-nums">{p.date}</TableCell>
-                <TableCell dir="ltr" className="text-start tabular-nums">{p.receiptNo}</TableCell>
+                <TableCell className="text-start tabular-nums"><span dir="ltr">{p.date}</span></TableCell>
+                <TableCell className="text-start tabular-nums"><span dir="ltr">{p.receiptNo}</span></TableCell>
                 <TableCell className="font-medium">{p.studentName}</TableCell>
                 <TableCell className="text-end tabular-nums font-medium">{formatMoney(p.amount)} {currency}</TableCell>
                 <TableCell><Badge variant="default">{te(`method.${p.method}`)}</Badge></TableCell>

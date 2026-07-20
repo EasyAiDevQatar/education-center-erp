@@ -231,7 +231,7 @@ export function SessionsClient({
             )}
             {pg.pageItems.map((s) => (
               <TableRow key={s.id}>
-                <TableCell dir="ltr" className="text-start tabular-nums">{s.date}</TableCell>
+                <TableCell className="text-start tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
                 <TableCell className="font-medium">{s.studentName}</TableCell>
                 <TableCell>{s.teacherName}</TableCell>
                 <TableCell>{s.levelLabel}</TableCell>

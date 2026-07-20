@@ -156,7 +156,7 @@ export function UsersManager({
             {pg.pageItems.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.name}</TableCell>
-                <TableCell dir="ltr" className="text-start">{u.email}</TableCell>
+                <TableCell className="text-start"><span dir="ltr">{u.email}</span></TableCell>
                 <TableCell>
                   <Badge variant={u.role === "ADMIN" ? "default" : "muted"}>{tr(u.role as "ADMIN")}</Badge>
                 </TableCell>

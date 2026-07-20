@@ -79,9 +79,9 @@ export function SessionsTable({
           )}
           {pg.pageItems.map((s) => (
             <TableRow key={s.id}>
-              <TableCell dir="ltr" className="text-start tabular-nums">
+              <TableCell className="text-start tabular-nums"><span dir="ltr">
                 {s.date} {s.time}
-              </TableCell>
+              </span></TableCell>
               {!hideStudent && <TableCell className="font-medium">{s.studentName}</TableCell>}
               {!hideTeacher && <TableCell>{s.teacherName}</TableCell>}
               <TableCell>{s.levelLabel}</TableCell>
@@ -151,8 +151,8 @@ export function PaymentsTable({
           )}
           {pg.pageItems.map((p) => (
             <TableRow key={p.id}>
-              <TableCell dir="ltr" className="text-start tabular-nums">{p.date}</TableCell>
-              <TableCell dir="ltr" className="text-start tabular-nums">{p.receiptNo}</TableCell>
+              <TableCell className="text-start tabular-nums"><span dir="ltr">{p.date}</span></TableCell>
+              <TableCell className="text-start tabular-nums"><span dir="ltr">{p.receiptNo}</span></TableCell>
               {!hideStudent && <TableCell className="font-medium">{p.studentName}</TableCell>}
               <TableCell>{te(`method.${p.method}`)}</TableCell>
               <TableCell>{p.teacherName ?? "—"}</TableCell>
@@ -211,9 +211,9 @@ export function PayoutsTable({ rows, currency }: { rows: PayoutLine[]; currency:
           )}
           {pg.pageItems.map((p) => (
             <TableRow key={p.id}>
-              <TableCell dir="ltr" className="text-start tabular-nums">
+              <TableCell className="text-start tabular-nums"><span dir="ltr">
                 {p.periodStart} → {p.periodEnd}
-              </TableCell>
+              </span></TableCell>
               <TableCell className="text-end tabular-nums">{formatMoney(p.grossCommission)}</TableCell>
               <TableCell className="text-end tabular-nums">{formatMoney(p.fixedSalary)}</TableCell>
               <TableCell className="text-end tabular-nums">{formatMoney(p.deductions)}</TableCell>

@@ -194,8 +194,8 @@ export function TermsManager({
                       <Badge variant="success" className="ms-2">{t("current")}</Badge>
                     )}
                   </TableCell>
-                  <TableCell dir="ltr" className="text-start tabular-nums">{term.startDate}</TableCell>
-                  <TableCell dir="ltr" className="text-start tabular-nums">{term.endDate}</TableCell>
+                  <TableCell className="text-start tabular-nums"><span dir="ltr">{term.startDate}</span></TableCell>
+                  <TableCell className="text-start tabular-nums"><span dir="ltr">{term.endDate}</span></TableCell>
                   <TableCell>
                     <Badge variant={term.active ? "success" : "muted"}>
                       {term.active ? tc("active") : tc("inactive")}

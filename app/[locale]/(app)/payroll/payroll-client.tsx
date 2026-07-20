@@ -322,9 +322,9 @@ export function PayrollClient({
                     "—"
                   )}
                 </TableCell>
-                <TableCell dir="ltr" className="text-start text-xs tabular-nums">
+                <TableCell className="text-start text-xs tabular-nums"><span dir="ltr">
                   {p.periodStart} → {p.periodEnd}
-                </TableCell>
+                </span></TableCell>
                 <TableCell className="text-end tabular-nums">{formatMoney(p.grossCommission)}</TableCell>
                 <TableCell className="text-end tabular-nums">{formatMoney(p.advances)}</TableCell>
                 <TableCell className="text-end tabular-nums font-medium">{formatMoney(p.netPaid)} {currency}</TableCell>

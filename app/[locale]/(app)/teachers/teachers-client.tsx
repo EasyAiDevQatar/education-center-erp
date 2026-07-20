@@ -179,7 +179,7 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
             {pg.pageItems.map((teacher) => (
               <TableRow key={teacher.id}>
                 <TableCell className="font-medium">{teacher.name}</TableCell>
-                <TableCell dir="ltr" className="text-start">{teacher.phone ?? "—"}</TableCell>
+                <TableCell className="text-start"><span dir="ltr">{teacher.phone ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{teacher.commissionPct}%</TableCell>
                 <TableCell>
                   {teacher.active ? (

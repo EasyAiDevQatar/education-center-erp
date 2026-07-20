@@ -112,8 +112,8 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
             {pg.pageItems.map((g) => (
               <TableRow key={g.id}>
                 <TableCell className="font-medium">{g.name}</TableCell>
-                <TableCell dir="ltr" className="text-start">{g.phone ?? "—"}</TableCell>
-                <TableCell dir="ltr" className="text-start">{g.email ?? "—"}</TableCell>
+                <TableCell className="text-start"><span dir="ltr">{g.phone ?? "—"}</span></TableCell>
+                <TableCell className="text-start"><span dir="ltr">{g.email ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{g.studentCount}</TableCell>
                 <TableCell className="text-end">
                   <div className="flex justify-end gap-1">
