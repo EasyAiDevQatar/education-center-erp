@@ -83,7 +83,8 @@
   "planner": "Daily planner",
   "payouts": "Payouts",
   "teacherPortal": "Teacher portal",
-  "parentPortal": "Parent portal"
+  "parentPortal": "Parent portal",
+  "leads": "Leads"
  },
  "auth": {
   "login": "Log in",
@@ -130,7 +131,10 @@
   "expiringPackages": "Packages expiring soon",
   "topDebtors": "Top debtors",
   "openCalendar": "Open calendar",
-  "openPlanner": "Open planner"
+  "openPlanner": "Open planner",
+  "funnel": "Lead funnel",
+  "openLeads": "Open leads",
+  "followUpsDue": "Follow-ups due"
  },
  "sessions": {
   "title": "Daily Sessions",
@@ -431,7 +435,8 @@
    "4": "Thursday",
    "5": "Friday",
    "6": "Saturday"
-  }
+  },
+  "trial": "Trial"
  },
  "paymentModes": {
   "SESSION": "Per session",
@@ -665,6 +670,46 @@
    "emailTaken": "That email is already in use",
    "alreadyLinked": "A login already exists for this record",
    "notfound": "Record not found"
+  }
+ },
+ "leads": {
+  "title": "Leads",
+  "subtitle": "Track enquiries from first contact through to enrolment.",
+  "addLead": "Add lead",
+  "editLead": "Edit lead",
+  "statuses": {
+   "NEW": "New",
+   "CONTACTED": "Contacted",
+   "TRIAL": "Trial",
+   "ENROLLED": "Enrolled",
+   "LOST": "Lost"
+  },
+  "source": "Source",
+  "sourceHint": "e.g. walk-in, referral, Instagram, advert.",
+  "gradeLevel": "Grade level",
+  "followUpAt": "Follow up on",
+  "overdue": "overdue",
+  "dueToday": "today",
+  "total": "Total",
+  "conversionRate": "Conversion",
+  "dragHint": "Drag a card to another column to change its status.",
+  "trialCount": "{n} trial session(s)",
+  "bookTrial": "Book trial session",
+  "trialTitle": "Trial session — {name}",
+  "trialHint": "Booked as a zero-price draft: visible on the calendar and planner, invisible to the ledger.",
+  "convert": "Convert to student",
+  "convertTitle": "Convert {name} to a student",
+  "convertHint": "Creates a student record linked to this lead.",
+  "convertHintWithTrials": "Promotes the existing trial record to an enrolled student, keeping its history.",
+  "guardianName": "Guardian name",
+  "guardianPhone": "Guardian phone",
+  "guardianOptional": "Optional — a guardian record is created when a name is given.",
+  "openStudent": "Open student profile",
+  "errors": {
+   "forbidden": "Not allowed",
+   "invalid": "Invalid details",
+   "notfound": "Record not found",
+   "alreadyConverted": "This lead has already been converted"
   }
  }
 }

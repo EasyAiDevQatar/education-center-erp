@@ -12,6 +12,7 @@ import {
   ScanLine,
   ClipboardList,
   BarChart3,
+  UserPlus,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -42,6 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/students", key: "students", icon: Users, roles: STAFF, section: "operations" },
   { href: "/teachers", key: "teachers", icon: GraduationCap, roles: STAFF, section: "operations" },
   { href: "/guardians", key: "guardians", icon: UserRound, roles: STAFF, section: "operations" },
+  { href: "/leads", key: "leads", icon: UserPlus, roles: STAFF, section: "operations" },
   { href: "/payments", key: "payments", icon: Receipt, roles: STAFF, section: "finance" },
   { href: "/packages", key: "packages", icon: Package, roles: STAFF, section: "finance" },
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },

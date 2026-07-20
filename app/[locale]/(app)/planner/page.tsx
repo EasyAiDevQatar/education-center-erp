@@ -75,6 +75,7 @@ export default async function PlannerPage({
     status: s.status,
     total: toNumber(s.total),
     homeCode: s.student.homeCode,
+    isTrial: s.isTrial,
   }));
 
   const templateRows: PlannerTemplateRow[] = templates.map((x) => ({

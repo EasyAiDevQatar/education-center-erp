@@ -32,6 +32,7 @@ model User {
   guardian   Guardian? @relation(fields: [guardianId], references: [id])
 
   auditLogs AuditLog[]
+  leads     Lead[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -85,6 +86,7 @@ model GradeLevel {
   priceRules PriceRule[]
   sessions   Session[]
   students   Student[]
+  leads      Lead[]
 }
 
 /// Price-per-hour matrix: (grade level x location), versioned by effectiveFrom.
@@ -130,6 +132,7 @@ model Student {
   payments  Payment[]
   packages  Package[]
   templates PlannerTemplate[]
+  leads     Lead[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -212,6 +215,12 @@ model Session {
   checkInLat       Float?
   checkInLng       Float?
   actualHours      Decimal?  // measured from check-in → check-out
+
+  /// Trial lesson: booked at zero price as a DRAFT so it shows on the calendar
+  /// and planner without ever touching the ledger.
+  isTrial     Boolean @default(false)
+  leadId      String?
+  lead        Lead?   @relation(fields: [leadId], references: [id])
 
   allocations PaymentAllocation[]
   /// True once this session's hours have been deducted from its package, so
@@ -438,4 +447,36 @@ model NotificationLog {
 
   @@index([createdAt])
   @@index([event])
+}
+
+/// A prospective student before they enrol. Converting a lead creates the real
+/// Student (and Guardian) records and links any trial sessions already booked.
+model Lead {
+  id        String  @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  /// Where they came from — walk-in, referral, Instagram, etc. Free text so the
+  /// centre can track whatever channels they actually use.
+  source    String?
+  /// NEW | CONTACTED | TRIAL | ENROLLED | LOST
+  status    String  @default("NEW")
+  notes     String?
+  /// Grade level they are asking about, when known.
+  gradeLevelId String?
+  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  followUpAt   DateTime?
+  assignedToUserId String?
+  assignedTo       User?  @relation(fields: [assignedToUserId], references: [id])
+  /// Set once converted, so the lead keeps a trail to the enrolled student.
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id])
+
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([followUpAt])
 }

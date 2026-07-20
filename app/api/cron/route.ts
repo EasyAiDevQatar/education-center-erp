@@ -4,6 +4,7 @@ import { toNumber, formatMoney } from "@/lib/money";
 import { getStudentBalance } from "@/lib/balances";
 import { packageStatusFor } from "@/lib/billing-rules";
 import { dispatch, centerSettings } from "@/lib/integrations/notify";
+import { OPEN_LEAD_STATUSES } from "@/lib/leads";
 
 /**
  * Daily maintenance + reminders.
@@ -12,7 +13,8 @@ import { dispatch, centerSettings } from "@/lib/integrations/notify";
  *   add `?dry=1` to compute without sending.
  *
  * Jobs: tomorrow's session reminders, outstanding-balance reminders (with a
- * cooldown), low/expiring package notices, and package status sweeping.
+ * cooldown), low/expiring package notices, package status sweeping, and due
+ * lead follow-ups.
  * Every job is best-effort — one failure never blocks the others.
  */
 
@@ -155,6 +157,33 @@ export async function GET(request: Request) {
     report.packageLowNotices = lowNotices;
   } catch (e) {
     report.packageSweepError = String(e);
+  }
+
+  /* 4. Lead follow-ups that have come due ----------------------------------- */
+  // Reported, not messaged: the follow-up is a task for centre staff, and the
+  // lead has no account to notify. The board highlights them; this makes the
+  // count visible to whoever watches the cron output.
+  try {
+    const today = new Date();
+    const endOfToday = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999),
+    );
+    const due = await db.lead.findMany({
+      where: {
+        status: { in: OPEN_LEAD_STATUSES },
+        followUpAt: { not: null, lte: endOfToday },
+      },
+      select: { id: true, name: true, followUpAt: true },
+      orderBy: { followUpAt: "asc" },
+    });
+    report.leadFollowUpsDue = due.length;
+    report.leadFollowUps = due.slice(0, 20).map((l) => ({
+      id: l.id,
+      name: l.name,
+      followUpAt: l.followUpAt?.toISOString().slice(0, 10) ?? null,
+    }));
+  } catch (e) {
+    report.leadFollowUpError = String(e);
   }
 
   return NextResponse.json({ ok: true, ...report });

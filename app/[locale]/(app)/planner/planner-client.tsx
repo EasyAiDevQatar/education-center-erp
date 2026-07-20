@@ -71,6 +71,8 @@ export type PlannerSession = {
   total: number;
   /** Student's home location code — only meaningful for HOME sessions. */
   homeCode: string | null;
+  /** Free trial lesson booked from the leads board. */
+  isTrial: boolean;
 };
 
 export type PlannerTemplateRow = {
@@ -508,7 +510,14 @@ export function PlannerClient({
                               )}
                             </span>
                           </div>
-                          <div className="truncate font-medium">{s.studentName}</div>
+                          <div className="flex items-center gap-1">
+                            <span className="truncate font-medium">{s.studentName}</span>
+                            {s.isTrial && (
+                              <Badge variant="success" className="shrink-0 px-1 py-0 text-[10px]">
+                                {te("trial")}
+                              </Badge>
+                            )}
+                          </div>
                           {/* Where the teacher is actually going — only home
                               visits need a location, and only if one is set. */}
                           {s.location === "HOME" && s.homeCode && (
