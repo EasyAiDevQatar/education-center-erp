@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireAuth } from "@/lib/rbac";
+import { requireAuth, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney, formatDate } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
@@ -12,7 +12,7 @@ export default async function ReceiptPage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireAuth(locale);
+  const session = await requireAuth(locale);
 
   const [payment, settingsRows] = await Promise.all([
     db.payment.findUnique({
@@ -22,6 +22,13 @@ export default async function ReceiptPage({
     db.setting.findMany(),
   ]);
   if (!payment) notFound();
+
+  // Staff see every receipt; a parent sees only their own children's. Without
+  // this, any logged-in parent could walk the id space and read other families'
+  // payments.
+  if (!STAFF_ROLES.includes(session.role)) {
+    if (!session.guardianId || payment.student?.guardianId !== session.guardianId) notFound();
+  }
 
   const t = await getTranslations("payments");
   const tc = await getTranslations("common");

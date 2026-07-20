@@ -12,6 +12,7 @@ import { ProfileTabs } from "@/components/profile-tabs";
 import { SessionsTable, PaymentsTable, PayoutsTable } from "@/components/tables/relation-tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AvailabilityEditor } from "./availability-editor";
+import { PortalLoginButton } from "@/components/portal-login-button";
 
 export default async function TeacherProfilePage({
   params,
@@ -32,6 +33,13 @@ export default async function TeacherProfilePage({
 
   const teacher = await db.teacher.findUnique({ where: { id } });
   if (!teacher) notFound();
+
+  // Only an admin can mint portal logins, so only they see the control.
+  const session = await requireRole(locale, STAFF_ROLES);
+  const isAdmin = session.role === "ADMIN";
+  const linkedUser = isAdmin
+    ? await db.user.findUnique({ where: { teacherId: id }, select: { id: true } })
+    : null;
 
   const sp = await searchParams;
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
@@ -96,6 +104,11 @@ export default async function TeacherProfilePage({
               />
               <Row label={tc("status")} value={teacher.active ? tc("active") : tc("inactive")} />
               {teacher.notes && <Row label={tc("notes")} value={teacher.notes} />}
+              {isAdmin && (
+                <div className="pt-2">
+                  <PortalLoginButton kind="teacher" recordId={id} hasLogin={!!linkedUser} />
+                </div>
+              )}
             </CardContent>
           </Card>
 

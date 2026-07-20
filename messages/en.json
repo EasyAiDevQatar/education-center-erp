@@ -81,7 +81,9 @@
    "admin": "Administration"
   },
   "planner": "Daily planner",
-  "payouts": "Payouts"
+  "payouts": "Payouts",
+  "teacherPortal": "Teacher portal",
+  "parentPortal": "Parent portal"
  },
  "auth": {
   "login": "Log in",
@@ -337,7 +339,9 @@
   "sizePos": "POS 80mm",
   "receiptFooter": "Receipt footer",
   "statementFooter": "Statement footer",
-  "auditLog": "Audit log"
+  "auditLog": "Audit log",
+  "teacherCanConfirm": "Let teachers confirm their own sessions",
+  "teacherCanConfirmHint": "When on, a teacher can mark their own draft as taught from their portal."
  },
  "integrations": {
   "baseUrl": "API base URL",
@@ -626,5 +630,41 @@
   "charges": "Charges",
   "paid": "Paid",
   "balance": "Balance due"
+ },
+ "portal": {
+  "teacherTitle": "Teacher portal",
+  "parentTitle": "Parent portal",
+  "parentSubtitle": "Your children's sessions, balance, receipts and packages.",
+  "monthSessions": "Sessions this month",
+  "monthHours": "Hours this month",
+  "monthExpected": "Expected revenue",
+  "monthCommission": "Your expected commission",
+  "todaysSessions": "Today's sessions",
+  "todaysDrafts": "Today's drafts",
+  "upcoming": "Upcoming sessions",
+  "payslips": "Payslips",
+  "viewPayslip": "View payslip",
+  "confirmTaught": "Taught",
+  "confirmFailed": "Could not confirm",
+  "confirmDisabledHint": "Sessions are confirmed by centre staff.",
+  "balance": "Balance due",
+  "charges": "Charges",
+  "paid": "Paid",
+  "packages": "Packages",
+  "recentSessions": "Recent sessions",
+  "payments": "Payments",
+  "statement": "Statement",
+  "viewReceipt": "View receipt",
+  "noChildren": "No students are linked to your account. Please contact the centre.",
+  "createLogin": "Create portal login",
+  "createLoginHint": "Creates a portal-only account. Hand the password over so they can change it later.",
+  "hasLogin": "Has a portal login",
+  "errors": {
+   "forbidden": "Not allowed",
+   "invalid": "Invalid details",
+   "emailTaken": "That email is already in use",
+   "alreadyLinked": "A login already exists for this record",
+   "notfound": "Record not found"
+  }
  }
 }

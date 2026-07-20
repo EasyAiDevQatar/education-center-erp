@@ -33,6 +33,8 @@ const FINANCE: Role[] = ["ADMIN", "ACCOUNTANT"];
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", key: "dashboard", icon: LayoutDashboard, roles: ALL, section: "operations" },
+  { href: "/portal/teacher", key: "teacherPortal", icon: GraduationCap, roles: ["TEACHER"], section: "operations" },
+  { href: "/portal/parent", key: "parentPortal", icon: UserRound, roles: ["PARENT"], section: "operations" },
   { href: "/calendar", key: "calendar", icon: CalendarRange, roles: STAFF, section: "operations" },
   { href: "/planner", key: "planner", icon: ClipboardList, roles: STAFF, section: "operations" },
   { href: "/checkin", key: "checkin", icon: ScanLine, roles: STAFF, section: "operations" },

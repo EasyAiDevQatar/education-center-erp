@@ -12,6 +12,7 @@ import { ProfileTabs } from "@/components/profile-tabs";
 import { SessionsTable, PaymentsTable } from "@/components/tables/relation-tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PortalLoginButton } from "@/components/portal-login-button";
 
 export default async function GuardianProfilePage({
   params,
@@ -22,7 +23,8 @@ export default async function GuardianProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  const session = await requireRole(locale, STAFF_ROLES);
+  const isAdmin = session.role === "ADMIN";
 
   const t = await getTranslations("guardians");
   const ts = await getTranslations("students");
@@ -34,6 +36,11 @@ export default async function GuardianProfilePage({
     include: { students: { include: { gradeLevel: true } } },
   });
   if (!guardian) notFound();
+
+  // Only an admin can mint portal logins, so only they see the control.
+  const linkedUser = isAdmin
+    ? await db.user.findUnique({ where: { guardianId: id }, select: { id: true } })
+    : null;
 
   const sp = await searchParams;
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
@@ -88,6 +95,11 @@ export default async function GuardianProfilePage({
             <Row icon={<Phone className="size-4" />} label={tc("phone")} value={guardian.phone ?? "—"} />
             <Row icon={<Mail className="size-4" />} label={tc("email")} value={guardian.email ?? "—"} />
             {guardian.notes && <Row label={tc("notes")} value={guardian.notes} />}
+            {isAdmin && (
+              <div className="pt-2">
+                <PortalLoginButton kind="guardian" recordId={id} hasLogin={!!linkedUser} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

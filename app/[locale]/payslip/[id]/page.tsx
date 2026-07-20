@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, FINANCE_ROLES } from "@/lib/rbac";
+import { requireAuth, FINANCE_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney, formatDate, formatHours } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
@@ -12,7 +12,9 @@ export default async function PayslipPage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, FINANCE_ROLES);
+  // Finance staff see any payslip; a teacher may open their own and no other.
+  const session = await requireAuth(locale);
+  const isFinance = FINANCE_ROLES.includes(session.role);
 
   const [payout, settingsRows] = await Promise.all([
     db.teacherPayout.findUnique({
@@ -22,6 +24,8 @@ export default async function PayslipPage({
     db.setting.findMany(),
   ]);
   if (!payout) notFound();
+  // Not `forbidden` — a teacher probing ids shouldn't learn which ones exist.
+  if (!isFinance && payout.teacherId !== session.teacherId) notFound();
 
   const t = await getTranslations("payroll");
   const tc = await getTranslations("common");

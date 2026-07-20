@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireAuth, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getStudentBalance, getStudentLedger } from "@/lib/balances";
 import { formatMoney, formatDate } from "@/lib/money";
@@ -14,13 +14,17 @@ export default async function StudentStatementPage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  // Staff open any statement; a parent opens only their own children's.
+  const session = await requireAuth(locale);
 
   const [student, settingsRows] = await Promise.all([
     db.student.findUnique({ where: { id }, include: { gradeLevel: true, guardian: true } }),
     db.setting.findMany(),
   ]);
   if (!student) notFound();
+  if (!STAFF_ROLES.includes(session.role)) {
+    if (!session.guardianId || student.guardianId !== session.guardianId) notFound();
+  }
 
   const [balance, ledger] = await Promise.all([
     getStudentBalance(id),

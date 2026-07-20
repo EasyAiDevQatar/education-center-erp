@@ -8,6 +8,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { requireAuth } from "@/lib/rbac";
+import { redirect } from "@/i18n/navigation";
 import {
   getDashboardSummary,
   getRevenueByTeacher,
@@ -54,6 +55,15 @@ export default async function DashboardPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const session = await requireAuth(locale);
+
+  // Portal roles have no business on the finance dashboard — send them to the
+  // view that is actually theirs.
+  if (session.role === "TEACHER" && session.teacherId) {
+    redirect({ href: "/portal/teacher", locale });
+  }
+  if (session.role === "PARENT" && session.guardianId) {
+    redirect({ href: "/portal/parent", locale });
+  }
 
   const t = await getTranslations("dashboard");
   const tc = await getTranslations("common");

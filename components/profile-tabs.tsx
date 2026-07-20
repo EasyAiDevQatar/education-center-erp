@@ -11,10 +11,13 @@ export function ProfileTabs({
   tabs,
   active,
   basePath,
+  param = "tab",
 }: {
   tabs: ProfileTab[];
   active: string;
   basePath: string;
+  /** Query key holding the selection — the parent portal switches child, not tab. */
+  param?: string;
 }) {
   return (
     <div className="mb-4 flex flex-wrap gap-1 border-b border-border">
@@ -23,7 +26,7 @@ export function ProfileTabs({
         return (
           <Link
             key={t.key}
-            href={`${basePath}?tab=${t.key}`}
+            href={`${basePath}?${param}=${t.key}`}
             className={cn(
               "-mb-px rounded-t-md border-b-2 px-3 py-2 text-sm font-medium transition-colors",
               isActive

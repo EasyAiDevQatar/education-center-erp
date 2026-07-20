@@ -81,7 +81,9 @@
    "admin": "الإدارة"
   },
   "planner": "المخطط اليومي",
-  "payouts": "الرواتب المصروفة"
+  "payouts": "الرواتب المصروفة",
+  "teacherPortal": "بوابة المعلم",
+  "parentPortal": "بوابة ولي الأمر"
  },
  "auth": {
   "login": "تسجيل الدخول",
@@ -337,7 +339,9 @@
   "sizePos": "كاشير 80mm",
   "receiptFooter": "تذييل الإيصال",
   "statementFooter": "تذييل كشف الحساب",
-  "auditLog": "سجل التدقيق"
+  "auditLog": "سجل التدقيق",
+  "teacherCanConfirm": "السماح للمعلمين بتأكيد حصصهم",
+  "teacherCanConfirmHint": "عند التفعيل يمكن للمعلم تحويل مسودة حصته إلى «تم التدريس» من بوابته."
  },
  "integrations": {
   "baseUrl": "رابط الـ API",
@@ -626,5 +630,41 @@
   "charges": "الرسوم",
   "paid": "المدفوع",
   "balance": "الرصيد المستحق"
+ },
+ "portal": {
+  "teacherTitle": "بوابة المعلم",
+  "parentTitle": "بوابة ولي الأمر",
+  "parentSubtitle": "حصص أبنائك، الرصيد، الإيصالات والباقات.",
+  "monthSessions": "حصص هذا الشهر",
+  "monthHours": "ساعات هذا الشهر",
+  "monthExpected": "الدخل المتوقع",
+  "monthCommission": "عمولتك المتوقعة",
+  "todaysSessions": "حصص اليوم",
+  "todaysDrafts": "مسودات اليوم",
+  "upcoming": "الحصص القادمة",
+  "payslips": "قسائم الراتب",
+  "viewPayslip": "عرض القسيمة",
+  "confirmTaught": "تم التدريس",
+  "confirmFailed": "تعذّر التأكيد",
+  "confirmDisabledHint": "تأكيد الحصص يتم من إدارة المركز.",
+  "balance": "الرصيد المستحق",
+  "charges": "الرسوم",
+  "paid": "المدفوع",
+  "packages": "الباقات",
+  "recentSessions": "أحدث الحصص",
+  "payments": "المدفوعات",
+  "statement": "كشف الحساب",
+  "viewReceipt": "عرض الإيصال",
+  "noChildren": "لا يوجد طلاب مرتبطون بحسابك. تواصل مع إدارة المركز.",
+  "createLogin": "إنشاء حساب دخول",
+  "createLoginHint": "سيتم إنشاء حساب بصلاحية البوابة فقط. سلّم كلمة المرور لصاحبها ليغيّرها لاحقاً.",
+  "hasLogin": "لديه حساب دخول",
+  "errors": {
+   "forbidden": "غير مصرح",
+   "invalid": "بيانات غير صحيحة",
+   "emailTaken": "البريد الإلكتروني مستخدم بالفعل",
+   "alreadyLinked": "يوجد حساب مرتبط بهذا السجل",
+   "notfound": "السجل غير موجود"
+  }
  }
 }
