@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney } from "@/lib/money";
 import { saveExpense, deleteExpense } from "./actions";
 
@@ -81,11 +82,18 @@ export function ExpensesClient({
   const t = useTranslations("expenses");
   const tc = useTranslations("common");
   const locale = useLocale();
-  const pg = usePagination(expenses);
+  const search = useTableSearch(expenses, (e) => [e.description, e.categoryLabel, e.paidTo, e.receiptNo, e.date]);
+  const pg = usePagination(search.filtered);
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <TableSearch
+          value={search.query}
+          onChange={search.setQuery}
+          resultCount={search.filtered.length}
+          placeholder={t("searchPlaceholder")}
+        />
         <EntityDialog
           title={t("add")}
           action={saveExpense.bind(null, locale, null)}

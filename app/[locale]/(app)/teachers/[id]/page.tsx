@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { TrendingUp, TrendingDown, Wallet, Clock, Phone, Percent } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Clock, Phone, Percent, FileText } from "lucide-react";
 import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getTeacherEarnings } from "@/lib/payroll";
 import { loadSessionLines, loadPaymentLines, loadPayoutLines, getCurrency } from "@/lib/profile";
 import { formatMoney, formatHours, toNumber } from "@/lib/money";
+import { Link } from "@/i18n/navigation";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { ProfileTabs } from "@/components/profile-tabs";
@@ -61,11 +63,15 @@ export default async function TeacherProfilePage({
     }),
   ]);
 
+  // What has already been settled, so the tab can show what remains.
+  const paidOut = payouts.reduce((sum, p) => sum + p.netPaid, 0);
+
   const tabs = [
     { key: "overview", label: tp("overview") },
     { key: "sessions", label: tp("sessions"), count: sessions.length },
     { key: "payments", label: tp("payments"), count: payments.length },
     { key: "payouts", label: tp("payouts"), count: payouts.length },
+    { key: "statement", label: tp("statement") },
     { key: "availability", label: ta("tab"), count: availability.length },
   ];
 
@@ -132,6 +138,33 @@ export default async function TeacherProfilePage({
       {tab === "sessions" && <SessionsTable rows={sessions} currency={currency} hideTeacher />}
       {tab === "payments" && <PaymentsTable rows={payments} currency={currency} />}
       {tab === "payouts" && <PayoutsTable rows={payouts} currency={currency} />}
+      {tab === "statement" && (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-2">
+            <CardTitle>{tp("statement")}</CardTitle>
+            <Link href={`/statement/teacher/${id}`}>
+              <Button size="sm" className="gap-1">
+                <FileText className="size-4" />
+                {tp("openStatement")}
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <Row label={t("hoursTaught")} value={formatHours(earnings?.hours ?? 0)} />
+            <Row label={t("expectedIncome")} value={`${formatMoney(earnings?.expected ?? 0)} ${currency}`} />
+            <Row label={t("collectedIncome")} value={`${formatMoney(earnings?.collected ?? 0)} ${currency}`} />
+            <Row label={t("commissionDue")} value={`${formatMoney(earnings?.dueCommission ?? 0)} ${currency}`} />
+            <Row label={tp("payouts")} value={`− ${formatMoney(paidOut)} ${currency}`} />
+            <div className="border-t border-border pt-2">
+              <Row
+                label={t("netPayable")}
+                value={`${formatMoney((earnings?.dueCommission ?? 0) - paidOut)} ${currency}`}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {tab === "availability" && (
         <AvailabilityEditor teacherId={id} initial={availability} />
       )}

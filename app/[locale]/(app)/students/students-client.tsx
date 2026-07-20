@@ -10,6 +10,7 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { MapPicker } from "@/components/map-picker";
 import { saveStudent, deleteStudent } from "./actions";
 
@@ -55,6 +57,7 @@ function StudentFields({
   const [lat, setLat] = useState(student?.homeLat != null ? String(student.homeLat) : "");
   const [lng, setLng] = useState(student?.homeLng != null ? String(student.homeLng) : "");
   const [address, setAddress] = useState(student?.address ?? "");
+  const [guardianId, setGuardianId] = useState(student?.guardianId ?? "");
 
   function useCurrentLocation() {
     if (!("geolocation" in navigator)) return;
@@ -85,12 +88,13 @@ function StudentFields({
         </Select>
       </FormField>
       <FormField label={t("guardian")} htmlFor="guardianId">
-        <Select id="guardianId" name="guardianId" defaultValue={student?.guardianId ?? ""}>
-          <option value="">—</option>
-          {guardians.map((g) => (
-            <option key={g.id} value={g.id}>{g.label}</option>
-          ))}
-        </Select>
+        <Combobox
+          id="guardianId"
+          name="guardianId"
+          options={guardians.map((g) => ({ value: g.id, label: g.label }))}
+          value={guardianId}
+          onChange={setGuardianId}
+        />
       </FormField>
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" defaultValue={student?.notes ?? ""} />
@@ -172,11 +176,18 @@ export function StudentsClient({
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const pg = usePagination(students);
+  const search = useTableSearch(students, (s) => [s.name, s.phone, s.gradeLevelLabel, s.guardianLabel, s.homeCode]);
+  const pg = usePagination(search.filtered);
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <TableSearch
+          value={search.query}
+          onChange={search.setQuery}
+          resultCount={search.filtered.length}
+          placeholder={t("searchPlaceholder")}
+        />
         <EntityDialog
           title={t("add")}
           action={saveStudent.bind(null, locale, null)}

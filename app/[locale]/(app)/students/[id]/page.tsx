@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { SessionsTable, PaymentsTable } from "@/components/tables/relation-tables";
+import { StudentSessionsTable } from "./student-sessions-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LedgerTable } from "./ledger-table";
@@ -40,14 +41,18 @@ export default async function StudentProfilePage({
   const sp = await searchParams;
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
 
-  const [balance, ledger, sessions, payments, packages, currency] = await Promise.all([
-    getStudentBalance(id),
-    getStudentLedger(id),
-    loadSessionLines({ studentId: id }, locale),
-    loadPaymentLines({ studentId: id }),
-    db.package.findMany({ where: { studentId: id }, orderBy: { purchasedAt: "desc" } }),
-    getCurrency(),
-  ]);
+  const [balance, ledger, sessions, payments, packages, currency, teacherRows] =
+    await Promise.all([
+      getStudentBalance(id),
+      getStudentLedger(id),
+      loadSessionLines({ studentId: id }, locale),
+      loadPaymentLines({ studentId: id }),
+      db.package.findMany({ where: { studentId: id }, orderBy: { purchasedAt: "desc" } }),
+      getCurrency(),
+      // Payments can be allocated to a teacher from the pay dialog.
+      db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    ]);
+  const teachers = teacherRows.map((x) => ({ id: x.id, label: x.name }));
 
   const tabs = [
     { key: "overview", label: tp("overview") },
@@ -126,7 +131,15 @@ export default async function StudentProfilePage({
         </div>
       )}
 
-      {tab === "sessions" && <SessionsTable rows={sessions} currency={currency} hideStudent />}
+      {tab === "sessions" && (
+        <StudentSessionsTable
+          rows={sessions}
+          currency={currency}
+          studentId={id}
+          studentName={student.name}
+          teachers={teachers}
+        />
+      )}
       {tab === "payments" && <PaymentsTable rows={payments} currency={currency} hideStudent />}
       {tab === "statement" && (
         <div className="space-y-3">

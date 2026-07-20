@@ -58,7 +58,14 @@
    "termRequired": "Select a term",
    "invalidPeriod": "Invalid period"
   },
-  "price": "Price"
+  "price": "Price",
+  "searchPlaceholder": "Search…",
+  "noResults": "No results",
+  "resultsCount": "{n} result(s)",
+  "clear": "Clear",
+  "selectAll": "Select all",
+  "errorGeneric": "Could not save — please check the details",
+  "period": "Period"
  },
  "nav": {
   "dashboard": "Dashboard",
@@ -150,7 +157,8 @@
   "paymentStatus": "Payment status",
   "package": "Package",
   "startTime": "Start time",
-  "priceAuto": "Price is calculated automatically from grade level and location"
+  "priceAuto": "Price is calculated automatically from grade level and location",
+  "searchPlaceholder": "Search by student, teacher or date…"
  },
  "group": {
   "title": "Group booking",
@@ -229,7 +237,8 @@
   "useCurrentLocation": "Use current location",
   "locateOnMap": "Locate on map",
   "homeCode": "Home location code",
-  "homeCodeHint": "Short location code (zone/street/building or compound name) shown to the teacher on the planner for home sessions."
+  "homeCodeHint": "Short location code (zone/street/building or compound name) shown to the teacher on the planner for home sessions.",
+  "searchPlaceholder": "Search by name, phone or grade…"
  },
  "map": {
   "title": "Pick location on map",
@@ -256,13 +265,15 @@
   "fixedDeductions": "Fixed deductions",
   "netPayable": "Net payable",
   "paymentMode": "Payment mode",
-  "paymentModeDefault": "Centre default"
+  "paymentModeDefault": "Centre default",
+  "searchPlaceholder": "Search by teacher name or phone…"
  },
  "guardians": {
   "title": "Guardians",
   "add": "Add guardian",
   "edit": "Edit guardian",
-  "students": "Children"
+  "students": "Children",
+  "searchPlaceholder": "Search by name, phone or email…"
  },
  "payments": {
   "title": "Payments",
@@ -273,7 +284,17 @@
   "student": "Student",
   "allocateTeacher": "Allocate to teacher",
   "receipt": "Receipt",
-  "printReceipt": "Print receipt"
+  "printReceipt": "Print receipt",
+  "searchPlaceholder": "Search by student or receipt no…",
+  "payNow": "Record payment",
+  "payNowFor": "Record payment — {name}",
+  "amountDue": "Amount due",
+  "recordPayment": "Record payment",
+  "outstanding": "Outstanding balance",
+  "unpaidSessionsCount": "{n} unpaid session(s)",
+  "amountPrefilledHint": "Pre-filled with the outstanding balance — edit it for a part payment.",
+  "selectedCount": "{n} selected",
+  "paySelected": "Pay selected"
  },
  "packages": {
   "title": "Packages",
@@ -284,7 +305,8 @@
   "hoursRemaining": "Hours remaining",
   "price": "Price",
   "purchasedAt": "Purchased at",
-  "expiresAt": "Expires at"
+  "expiresAt": "Expires at",
+  "searchPlaceholder": "Search by student name…"
  },
  "expenses": {
   "title": "Expenses",
@@ -293,7 +315,8 @@
   "description": "Description",
   "category": "Category",
   "paidTo": "Paid to",
-  "receiptNo": "Receipt no."
+  "receiptNo": "Receipt no.",
+  "searchPlaceholder": "Search by description or category…"
  },
  "payroll": {
   "title": "Teacher Payroll",
@@ -452,7 +475,8 @@
   "details": "Details",
   "recentSessions": "Recent sessions",
   "earningsSummary": "Earnings summary",
-  "view360": "360° view"
+  "view360": "360° view",
+  "openStatement": "Open statement"
  },
  "terms": {
   "title": "Study terms",

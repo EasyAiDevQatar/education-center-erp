@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveGuardian, deleteGuardian } from "./actions";
 
 export type GuardianRow = {
@@ -53,11 +54,18 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const pg = usePagination(guardians);
+  const search = useTableSearch(guardians, (g) => [g.name, g.phone, g.email, g.notes]);
+  const pg = usePagination(search.filtered);
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <TableSearch
+          value={search.query}
+          onChange={search.setQuery}
+          resultCount={search.filtered.length}
+          placeholder={t("searchPlaceholder")}
+        />
         <EntityDialog
           title={t("add")}
           action={saveGuardian.bind(null, locale, null)}

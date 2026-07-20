@@ -34,6 +34,7 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
@@ -781,20 +782,16 @@ function AddDraftDialog({
         </DialogHeader>
         <div className="space-y-3">
           <FormField label={ts("student")} htmlFor="p-student">
-            <Select
+            <Combobox
               id="p-student"
+              options={students.map((st) => ({ value: st.id, label: st.name }))}
               value={studentId}
-              onChange={(e) => {
-                setStudentId(e.target.value);
-                const st = students.find((x) => x.id === e.target.value);
+              onChange={(v) => {
+                setStudentId(v);
+                const st = students.find((x) => x.id === v);
                 if (st?.gradeLevelId) setGradeLevelId(st.gradeLevelId);
               }}
-            >
-              <option value="">—</option>
-              {students.map((st) => (
-                <option key={st.id} value={st.id}>{st.name}</option>
-              ))}
-            </Select>
+            />
           </FormField>
 
           <div className="grid grid-cols-3 gap-3">
@@ -1128,12 +1125,12 @@ function TemplatesDialog({
               </Select>
             </FormField>
             <FormField label={ts("student")} htmlFor="tpl-student">
-              <Select id="tpl-student" value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-                <option value="">—</option>
-                {students.map((x) => (
-                  <option key={x.id} value={x.id}>{x.name}</option>
-                ))}
-              </Select>
+              <Combobox
+                id="tpl-student"
+                options={students.map((x) => ({ value: x.id, label: x.name }))}
+                value={studentId}
+                onChange={setStudentId}
+              />
             </FormField>
             <FormField label={t("weekday")} htmlFor="tpl-weekday">
               <Select id="tpl-weekday" value={weekday} onChange={(e) => setWeekday(e.target.value)}>

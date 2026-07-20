@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney, formatHours } from "@/lib/money";
 import { savePackage, deletePackage } from "./actions";
 
@@ -99,11 +100,18 @@ export function PackagesClient({
   const tc = useTranslations("common");
   const te = useTranslations("enums");
   const locale = useLocale();
-  const pg = usePagination(packages);
+  const search = useTableSearch(packages, (p) => [p.studentName, p.status, p.notes]);
+  const pg = usePagination(search.filtered);
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <TableSearch
+          value={search.query}
+          onChange={search.setQuery}
+          resultCount={search.filtered.length}
+          placeholder={t("searchPlaceholder")}
+        />
         <EntityDialog
           title={t("add")}
           action={savePackage.bind(null, locale, null)}

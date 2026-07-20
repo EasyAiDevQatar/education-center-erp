@@ -15,6 +15,7 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { formatMoney } from "@/lib/money";
 import { ConflictWarnings, useConflictCheck } from "@/components/conflict-warnings";
 
@@ -209,33 +210,25 @@ export function SessionDialog({
         </div>
 
         <FormField label={t("student")} htmlFor="studentId">
-          <Select
+          <Combobox
             id="studentId"
             name="studentId"
-            value={studentId}
-            onChange={(e) => onStudentChange(e.target.value)}
             required
-          >
-            <option value="">—</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </Select>
+            options={students.map((s) => ({ value: s.id, label: s.name }))}
+            value={studentId}
+            onChange={onStudentChange}
+          />
         </FormField>
 
         <FormField label={t("teacher")} htmlFor="teacherId">
-          <Select
+          <Combobox
             id="teacherId"
             name="teacherId"
-            value={teacherId}
-            onChange={(e) => setTeacherId(e.target.value)}
             required
-          >
-            <option value="">—</option>
-            {teachers.map((tt) => (
-              <option key={tt.id} value={tt.id}>{tt.label}</option>
-            ))}
-          </Select>
+            options={teachers.map((tt) => ({ value: tt.id, label: tt.label }))}
+            value={teacherId}
+            onChange={setTeacherId}
+          />
         </FormField>
 
         <div className="grid grid-cols-2 gap-3">

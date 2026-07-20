@@ -18,6 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { TableSearch, useTableSearch } from "@/components/ui/table-search";
+import { QuickPayDialog } from "../payments/quick-pay-dialog";
 import { formatMoney, formatHours } from "@/lib/money";
 import {
   SessionDialog,
@@ -73,7 +75,14 @@ export function SessionsClient({
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-  const pg = usePagination(sessions);
+  const search = useTableSearch(sessions, (x) => [
+    x.studentName,
+    x.teacherName,
+    x.levelLabel,
+    x.date,
+    x.notes,
+  ]);
+  const pg = usePagination(search.filtered);
 
   function applyFilters(form: HTMLFormElement) {
     const fd = new FormData(form);
@@ -87,6 +96,15 @@ export function SessionsClient({
 
   return (
     <>
+      <div className="mb-3">
+        <TableSearch
+          value={search.query}
+          onChange={search.setQuery}
+          resultCount={search.filtered.length}
+          placeholder={t("searchPlaceholder")}
+        />
+      </div>
+
       {/* Filter bar */}
       <form
         className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-3"
@@ -199,6 +217,15 @@ export function SessionsClient({
                 </TableCell>
                 <TableCell className="text-end">
                   <div className="flex justify-end gap-1">
+                    {s.paymentStatus !== "PAID" && (
+                      <QuickPayDialog
+                        studentId={s.studentId}
+                        studentName={s.studentName}
+                        amount={s.total}
+                        currency={currency}
+                        teachers={teachers}
+                      />
+                    )}
                     <SessionDialog
                       title={t("edit")}
                       action={saveSession.bind(null, locale, s.id)}

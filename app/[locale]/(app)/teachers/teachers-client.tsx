@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveTeacher, deleteTeacher } from "./actions";
 
 export type TeacherRow = {
@@ -111,11 +112,18 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const pg = usePagination(teachers);
+  const search = useTableSearch(teachers, (x) => [x.name, x.phone, x.notes]);
+  const pg = usePagination(search.filtered);
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <TableSearch
+          value={search.query}
+          onChange={search.setQuery}
+          resultCount={search.filtered.length}
+          placeholder={t("searchPlaceholder")}
+        />
         <EntityDialog
           title={t("add")}
           action={saveTeacher.bind(null, locale, null)}

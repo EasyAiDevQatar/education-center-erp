@@ -58,7 +58,14 @@
    "termRequired": "اختر الفصل الدراسي",
    "invalidPeriod": "فترة غير صحيحة"
   },
-  "price": "السعر"
+  "price": "السعر",
+  "searchPlaceholder": "بحث…",
+  "noResults": "لا توجد نتائج",
+  "resultsCount": "{n} نتيجة",
+  "clear": "مسح",
+  "selectAll": "تحديد الكل",
+  "errorGeneric": "تعذّر الحفظ، تحقق من البيانات",
+  "period": "الفترة"
  },
  "nav": {
   "dashboard": "لوحة التحكم",
@@ -150,7 +157,8 @@
   "paymentStatus": "حالة الدفع",
   "package": "الباقة",
   "startTime": "وقت البدء",
-  "priceAuto": "يُحتسب السعر تلقائياً من المرحلة والمكان"
+  "priceAuto": "يُحتسب السعر تلقائياً من المرحلة والمكان",
+  "searchPlaceholder": "ابحث بالطالب أو المعلم أو التاريخ…"
  },
  "group": {
   "title": "حجز جماعي",
@@ -229,7 +237,8 @@
   "useCurrentLocation": "استخدام الموقع الحالي",
   "locateOnMap": "تحديد على الخريطة",
   "homeCode": "كود موقع المنزل",
-  "homeCodeHint": "رمز مختصر للموقع (المنطقة/الشارع/المبنى أو اسم المجمع) يظهر للمعلم في المخطط عند الحصص المنزلية."
+  "homeCodeHint": "رمز مختصر للموقع (المنطقة/الشارع/المبنى أو اسم المجمع) يظهر للمعلم في المخطط عند الحصص المنزلية.",
+  "searchPlaceholder": "ابحث بالاسم أو الهاتف أو المرحلة…"
  },
  "map": {
   "title": "تحديد الموقع على الخريطة",
@@ -256,13 +265,15 @@
   "fixedDeductions": "الخصومات الثابتة",
   "netPayable": "صافي المستحق",
   "paymentMode": "طريقة الدفع",
-  "paymentModeDefault": "افتراضي المركز"
+  "paymentModeDefault": "افتراضي المركز",
+  "searchPlaceholder": "ابحث باسم المعلم أو الهاتف…"
  },
  "guardians": {
   "title": "أولياء الأمور",
   "add": "إضافة ولي أمر",
   "edit": "تعديل ولي أمر",
-  "students": "الأبناء"
+  "students": "الأبناء",
+  "searchPlaceholder": "ابحث بالاسم أو الهاتف أو البريد…"
  },
  "payments": {
   "title": "المدفوعات",
@@ -273,7 +284,17 @@
   "student": "الطالب",
   "allocateTeacher": "توزيع للمعلم",
   "receipt": "إيصال",
-  "printReceipt": "طباعة الإيصال"
+  "printReceipt": "طباعة الإيصال",
+  "searchPlaceholder": "ابحث بالطالب أو رقم الإيصال…",
+  "payNow": "تسجيل دفعة",
+  "payNowFor": "تسجيل دفعة — {name}",
+  "amountDue": "المبلغ المستحق",
+  "recordPayment": "تسجيل الدفعة",
+  "outstanding": "الرصيد المستحق",
+  "unpaidSessionsCount": "{n} حصة غير مسددة",
+  "amountPrefilledHint": "تم تعبئة المبلغ بالرصيد المستحق — يمكنك تعديله لدفعة جزئية.",
+  "selectedCount": "{n} محددة",
+  "paySelected": "دفع المحدد"
  },
  "packages": {
   "title": "الباقات",
@@ -284,7 +305,8 @@
   "hoursRemaining": "الساعات المتبقية",
   "price": "السعر",
   "purchasedAt": "تاريخ الشراء",
-  "expiresAt": "تاريخ الانتهاء"
+  "expiresAt": "تاريخ الانتهاء",
+  "searchPlaceholder": "ابحث باسم الطالب…"
  },
  "expenses": {
   "title": "المصروفات",
@@ -293,7 +315,8 @@
   "description": "البيان",
   "category": "نوع المصروف",
   "paidTo": "المستفيد",
-  "receiptNo": "رقم الإيصال"
+  "receiptNo": "رقم الإيصال",
+  "searchPlaceholder": "ابحث بالوصف أو النوع…"
  },
  "payroll": {
   "title": "رواتب المعلمين",
@@ -452,7 +475,8 @@
   "details": "البيانات",
   "recentSessions": "أحدث الحصص",
   "earningsSummary": "ملخص المستحقات",
-  "view360": "عرض شامل 360"
+  "view360": "عرض شامل 360",
+  "openStatement": "فتح كشف الحساب"
  },
  "terms": {
   "title": "الفصول الدراسية",
