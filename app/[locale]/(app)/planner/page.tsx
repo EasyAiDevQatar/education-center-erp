@@ -5,7 +5,11 @@ import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { hhmmToMin } from "@/lib/planner";
 import { PageHeader } from "@/components/page-header";
-import { PlannerClient, type PlannerSession } from "./planner-client";
+import {
+  PlannerClient,
+  type PlannerSession,
+  type PlannerTemplateRow,
+} from "./planner-client";
 import type { PriceMatrix } from "../sessions/session-dialog";
 
 export default async function PlannerPage({
@@ -31,7 +35,7 @@ export default async function PlannerPage({
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
 
-  const [sessions, teachers, students, levels, matrix, settingsRows] =
+  const [sessions, teachers, students, levels, matrix, settingsRows, availability, templates] =
     await Promise.all([
       db.session.findMany({
         where: { date: { gte: start, lt: end } },
@@ -43,7 +47,16 @@ export default async function PlannerPage({
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
       db.setting.findMany({
-        where: { key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin"] } },
+        where: {
+          key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin", "centerName"] },
+        },
+      }),
+      db.teacherAvailability.findMany({
+        select: { teacherId: true, weekday: true, startMin: true, endMin: true },
+      }),
+      db.plannerTemplate.findMany({
+        where: { active: true },
+        orderBy: [{ weekday: "asc" }, { startMin: "asc" }],
       }),
     ]);
 
@@ -53,6 +66,7 @@ export default async function PlannerPage({
   const rows: PlannerSession[] = sessions.map((s) => ({
     id: s.id,
     teacherId: s.teacherId,
+    studentId: s.studentId,
     startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
     hours: toNumber(s.hours),
     studentName: s.student.name,
@@ -60,6 +74,16 @@ export default async function PlannerPage({
     location: s.location as "CENTER" | "HOME",
     status: s.status,
     total: toNumber(s.total),
+  }));
+
+  const templateRows: PlannerTemplateRow[] = templates.map((x) => ({
+    id: x.id,
+    teacherId: x.teacherId,
+    studentId: x.studentId,
+    weekday: x.weekday,
+    startMin: x.startMin,
+    hours: toNumber(x.hours),
+    location: x.location as "CENTER" | "HOME",
   }));
 
   const matrixMap: PriceMatrix = Object.fromEntries(
@@ -83,6 +107,9 @@ export default async function PlannerPage({
         currency={settings.currency ?? "QAR"}
         dayStartMin={hhmmToMin(settings.plannerDayStart ?? null)}
         homeGapMin={parseInt(settings.plannerHomeGapMin ?? "30", 10) || 0}
+        availability={availability}
+        templates={templateRows}
+        centerName={settings.centerName ?? ""}
       />
     </div>
   );

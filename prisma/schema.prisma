@@ -50,10 +50,12 @@ model Teacher {
   /// SESSION | MONTH | TERM. Null falls back to the centre default setting.
   paymentMode     String?
 
-  user     User?
-  sessions Session[]
-  payments Payment[]      // payments allocated to this teacher
-  payouts  TeacherPayout[]
+  user         User?
+  sessions     Session[]
+  payments     Payment[]      // payments allocated to this teacher
+  payouts      TeacherPayout[]
+  availability TeacherAvailability[]
+  templates    PlannerTemplate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -119,14 +121,59 @@ model Student {
   homeLng    Float?
   checkinPin String?
 
-  sessions Session[]
-  payments Payment[]
-  packages Package[]
+  sessions  Session[]
+  payments  Payment[]
+  packages  Package[]
+  templates PlannerTemplate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
+}
+
+/// A teacher's recurring weekly working window. Several rows per weekday are
+/// allowed (e.g. a morning block and an evening block). Times are minutes from
+/// midnight in the same wall-clock convention as `Session.date`.
+///
+/// A teacher with no rows at all is treated as "always available" — the
+/// availability warning is opt-in per teacher, not a centre-wide gate.
+model TeacherAvailability {
+  id        String  @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  /// 0 = Sunday … 6 = Saturday (matches JS `Date.getUTCDay`).
+  weekday   Int
+  startMin  Int
+  endMin    Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, weekday])
+}
+
+/// A recurring weekly planner entry. "Generate day from template" turns every
+/// row matching the day's weekday into a DRAFT session, so a normal week can be
+/// laid out in one click and then adjusted.
+model PlannerTemplate {
+  id        String  @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// 0 = Sunday … 6 = Saturday (matches JS `Date.getUTCDay`).
+  weekday   Int
+  startMin  Int
+  hours     Decimal
+  location  String // CENTER | HOME
+  active    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, weekday])
+  @@index([weekday])
 }
 
 /// A single tutoring session (حصة). Price is resolved from the PriceRule matrix

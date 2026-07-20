@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
+import { ConflictWarnings, useConflictCheck } from "@/components/conflict-warnings";
 
 export type StudentOpt = { id: string; name: string; gradeLevelId: string | null };
 export type PackageOpt = { id: string; studentId: string; label: string };
@@ -98,6 +99,10 @@ export function SessionDialog({
   const [location, setLocation] = useState<"CENTER" | "HOME">(session?.location ?? "CENTER");
   const [hours, setHours] = useState<string>(session ? String(session.hours) : "1");
   const [packageId, setPackageId] = useState(session?.packageId ?? "");
+  // Controlled so the conflict check can see them (they still post via `name`).
+  const [date, setDate] = useState(session?.date ?? defaultDate ?? today);
+  const [time, setTime] = useState(session?.time ?? defaultTime ?? "16:00");
+  const [teacherId, setTeacherId] = useState(session?.teacherId ?? defaultTeacherId ?? "");
 
   // When opened fresh for quick-create, reset the light fields.
   useEffect(() => {
@@ -107,9 +112,28 @@ export function SessionDialog({
       setLocation("CENTER");
       setHours("1");
       setPackageId("");
+      setDate(defaultDate ?? today);
+      setTime(defaultTime ?? "16:00");
+      setTeacherId(defaultTeacherId ?? "");
       setError(null);
     }
-  }, [open, session]);
+    // `today` is stable for the life of the dialog.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, session, defaultDate, defaultTime, defaultTeacherId]);
+
+  // Advisory only — never gates the save button.
+  const conflictResults = useConflictCheck(
+    {
+      date,
+      time,
+      hours: parseFloat(hours) || 1,
+      teacherId,
+      studentIds: studentId ? [studentId] : [],
+      excludeId: session?.id ?? null,
+    },
+    open,
+  );
+  const conflicts = conflictResults[0]?.conflicts ?? [];
 
   const studentPackages = useMemo(
     () => packages.filter((p) => p.studentId === studentId),
@@ -149,10 +173,25 @@ export function SessionDialog({
       <form key={String(open)} onSubmit={onSubmit} className="space-y-3">
         <div className="grid grid-cols-3 gap-3">
           <FormField label={tc("date")} htmlFor="date">
-            <Input id="date" name="date" type="date" dir="ltr" defaultValue={session?.date ?? defaultDate ?? today} required />
+            <Input
+              id="date"
+              name="date"
+              type="date"
+              dir="ltr"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
           </FormField>
           <FormField label={t("startTime")} htmlFor="time">
-            <Input id="time" name="time" type="time" dir="ltr" defaultValue={session?.time ?? defaultTime ?? "16:00"} />
+            <Input
+              id="time"
+              name="time"
+              type="time"
+              dir="ltr"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
           </FormField>
           <FormField label={t("hours")} htmlFor="hours">
             <Input
@@ -185,7 +224,13 @@ export function SessionDialog({
         </FormField>
 
         <FormField label={t("teacher")} htmlFor="teacherId">
-          <Select id="teacherId" name="teacherId" defaultValue={session?.teacherId ?? defaultTeacherId ?? ""} required>
+          <Select
+            id="teacherId"
+            name="teacherId"
+            value={teacherId}
+            onChange={(e) => setTeacherId(e.target.value)}
+            required
+          >
             <option value="">—</option>
             {teachers.map((tt) => (
               <option key={tt.id} value={tt.id}>{tt.label}</option>
@@ -246,6 +291,8 @@ export function SessionDialog({
             </Select>
           </FormField>
         )}
+
+        <ConflictWarnings conflicts={conflicts} />
 
         <div className="flex items-center justify-between rounded-md bg-accent/60 px-3 py-2 text-sm">
           <span className="text-muted-foreground">

@@ -45,6 +45,7 @@ export default async function CalendarPage({
     ? get("date")
     : ymd(new Date());
   const anchor = parseUTC(anchorStr);
+  const teacherFilter = get("teacher");
 
   // Build the visible day columns.
   let days: string[];
@@ -62,7 +63,10 @@ export default async function CalendarPage({
   const [sessions, students, teachers, levels, matrix, settingsRows] =
     await Promise.all([
       db.session.findMany({
-        where: { date: { gte: rangeStart, lt: rangeEnd } },
+        where: {
+          date: { gte: rangeStart, lt: rangeEnd },
+          ...(teacherFilter ? { teacherId: teacherFilter } : {}),
+        },
         include: { student: true, teacher: true, gradeLevel: true },
         orderBy: { date: "asc" },
       }),
@@ -116,6 +120,7 @@ export default async function CalendarPage({
         teachers={teacherOpts}
         levels={levelOpts}
         matrix={matrixMap}
+        teacherFilter={teacherFilter}
       />
     </div>
   );

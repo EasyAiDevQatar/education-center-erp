@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import {
@@ -98,6 +99,7 @@ export function CalendarClient({
   teachers,
   levels,
   matrix,
+  teacherFilter,
 }: {
   view: "week" | "day";
   anchor: string;
@@ -108,6 +110,7 @@ export function CalendarClient({
   teachers: Opt[];
   levels: Opt[];
   matrix: PriceMatrix;
+  teacherFilter: string;
 }) {
   const t = useTranslations("calendar");
   const tg = useTranslations("group");
@@ -225,7 +228,11 @@ export function CalendarClient({
 
   // ---- navigation ----
   function go(params: Record<string, string>) {
+    // The teacher filter has to survive every other navigation.
     const sp = new URLSearchParams({ view, date: anchor, ...params });
+    const teacher = params.teacher ?? teacherFilter;
+    if (teacher) sp.set("teacher", teacher);
+    else sp.delete("teacher");
     router.push(`${pathname}?${sp.toString()}`);
   }
   const step = view === "day" ? 1 : 7;
@@ -276,6 +283,18 @@ export function CalendarClient({
           </Button>
         </div>
         <span className="min-w-32 text-sm font-semibold tabular-nums">{rangeLabel}</span>
+
+        <Select
+          aria-label={t("filterTeacher")}
+          className="w-44"
+          value={teacherFilter}
+          onChange={(e) => go({ teacher: e.target.value })}
+        >
+          <option value="">{t("allTeachers")}</option>
+          {teachers.map((tt) => (
+            <option key={tt.id} value={tt.id}>{tt.label}</option>
+          ))}
+        </Select>
 
         <div className="ms-auto flex items-center gap-1 rounded-md border border-border p-0.5">
           <button

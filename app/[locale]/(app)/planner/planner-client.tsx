@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronLeft,
@@ -14,6 +14,11 @@ import {
   Building2,
   Settings2,
   AlignStartVertical,
+  AlertTriangle,
+  CalendarPlus,
+  Copy as CopyIcon,
+  LayoutTemplate,
+  Printer,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
@@ -31,7 +36,9 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
-import { suggestNextStart, minToHHMM } from "@/lib/planner";
+import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
+import { findConflicts, weekdayOf, WEEKDAY_ORDER, type Conflict } from "@/lib/conflicts";
+import { ConflictWarnings } from "@/components/conflict-warnings";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { deleteSession } from "../sessions/actions";
 import {
@@ -42,10 +49,18 @@ import {
   compactTeacherDay,
   savePlannerSettings,
 } from "./actions";
+import {
+  generateDayFromTemplates,
+  copyLastWeek,
+  saveTemplate,
+  deleteTemplate,
+  type TemplateState,
+} from "./template-actions";
 
 export type PlannerSession = {
   id: string;
   teacherId: string;
+  studentId: string;
   startMin: number;
   hours: number;
   studentName: string;
@@ -53,6 +68,23 @@ export type PlannerSession = {
   location: "CENTER" | "HOME";
   status: string;
   total: number;
+};
+
+export type PlannerTemplateRow = {
+  id: string;
+  teacherId: string;
+  studentId: string;
+  weekday: number;
+  startMin: number;
+  hours: number;
+  location: "CENTER" | "HOME";
+};
+
+export type AvailabilityRow = {
+  teacherId: string;
+  weekday: number;
+  startMin: number;
+  endMin: number;
 };
 
 type Opt = { id: string; label: string };
@@ -83,6 +115,9 @@ export function PlannerClient({
   currency,
   dayStartMin,
   homeGapMin,
+  availability,
+  templates,
+  centerName,
 }: {
   day: string;
   sessions: PlannerSession[];
@@ -93,10 +128,14 @@ export function PlannerClient({
   currency: string;
   dayStartMin: number;
   homeGapMin: number;
+  availability: AvailabilityRow[];
+  templates: PlannerTemplateRow[];
+  centerName: string;
 }) {
   const t = useTranslations("planner");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
+  const tf = useTranslations("conflicts");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -105,6 +144,7 @@ export function PlannerClient({
   const [addFor, setAddFor] = useState<string | null>(null); // teacherId
   const [editing, setEditing] = useState<PlannerSession | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   // Drag-and-drop: draft card → any teacher row, then a time prompt on drop.
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverTeacher, setHoverTeacher] = useState<string | null>(null);
@@ -142,10 +182,74 @@ export function PlannerClient({
       router.refresh();
     });
 
+  const weekday = weekdayOf(day);
+
+  /**
+   * Conflicts are computed in the browser: the planner already holds the whole
+   * day plus every availability window, so no round-trip is needed.
+   */
+  const busy = useMemo(
+    () =>
+      sessions.map((s) => ({
+        id: s.id,
+        teacherId: s.teacherId,
+        studentId: s.studentId,
+        startMin: s.startMin,
+        hours: s.hours,
+        status: s.status,
+        studentName: s.studentName,
+        teacherName: teachers.find((x) => x.id === s.teacherId)?.label,
+      })),
+    [sessions, teachers],
+  );
+
+  const conflictsFor = useCallback(
+    (c: {
+      id?: string | null;
+      teacherId: string;
+      studentId: string;
+      startMin: number;
+      hours: number;
+    }) =>
+      findConflicts({
+        candidate: { ...c, weekday },
+        existing: busy,
+        availability: availability.filter((a) => a.teacherId === c.teacherId),
+      }),
+    [busy, availability, weekday],
+  );
+
+  /** Cards that already clash get a warning marker in the grid. */
+  const conflictedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of sessions) {
+      if (s.status === "CANCELLED" || s.status === "NO_SHOW") continue;
+      if (conflictsFor(s).length > 0) ids.add(s.id);
+    }
+    return ids;
+  }, [sessions, conflictsFor]);
+
+  const dayTemplates = templates.filter((x) => x.weekday === weekday);
+  const [banner, setBanner] = useState<string | null>(null);
+
+  const runGenerate = (fn: () => Promise<TemplateState>) =>
+    start(async () => {
+      const res = await fn();
+      if (res.ok) {
+        const parts: string[] = [];
+        if (res.count) parts.push(t("generated", { n: res.count }));
+        if (res.skipped) parts.push(t("skippedExisting", { n: res.skipped }));
+        // Nothing created AND nothing skipped means there was genuinely no
+        // source to draw from — otherwise say what was skipped instead.
+        setBanner(parts.length ? parts.join(" · ") : t("generatedNone"));
+        router.refresh();
+      }
+    });
+
   return (
     <div className="space-y-3">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
+      <div className="no-print flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
         <Button variant="secondary" size="sm" onClick={() => go(today)}>
           {t("today")}
         </Button>
@@ -184,6 +288,45 @@ export function PlannerClient({
           </Button>
           <Button
             size="sm"
+            variant="secondary"
+            className="gap-1"
+            disabled={pending || dayTemplates.length === 0}
+            title={t("generateDay")}
+            onClick={() => runGenerate(() => generateDayFromTemplates(locale, { date: day }))}
+          >
+            <CalendarPlus className="size-4" />
+            {t("generateDayShort")}
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-1"
+            disabled={pending}
+            onClick={() => runGenerate(() => copyLastWeek(locale, { date: day }))}
+          >
+            <CopyIcon className="size-4" />
+            {t("copyLastWeek")}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={t("templates")}
+            title={t("templates")}
+            onClick={() => setShowTemplates(true)}
+          >
+            <LayoutTemplate className="size-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={t("printSheet")}
+            title={t("printSheet")}
+            onClick={() => window.print()}
+          >
+            <Printer className="size-4" />
+          </Button>
+          <Button
+            size="sm"
             variant="ghost"
             aria-label={t("settings")}
             onClick={() => setShowSettings(true)}
@@ -193,8 +336,14 @@ export function PlannerClient({
         </div>
       </div>
 
+      {banner && (
+        <p className="rounded-md bg-accent px-3 py-2 text-sm" role="status">
+          {banner}
+        </p>
+      )}
+
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
+      <div className="no-print flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
         {(["DRAFT", "COMPLETED", "SCHEDULED", "CANCELLED"] as const).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <span className={cn("inline-block size-3 rounded-sm border", CELL_STYLES[s])} />
@@ -207,7 +356,14 @@ export function PlannerClient({
       </div>
 
       {/* Planner grid (paper layout: teacher rows × numbered slots) */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <div data-print="A4L" className="overflow-x-auto rounded-lg border border-border bg-card">
+        {/* Print-only header — on screen the toolbar already says which day it is. */}
+        <div className="hidden print:mb-2 print:block print:text-center">
+          <div className="font-bold">{centerName || t("sheetTitle")}</div>
+          <div className="text-xs">
+            {t("sheetTitle")} · <span dir="ltr">{day}</span> · {te(`weekday.${weekday}`)}
+          </div>
+        </div>
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
@@ -251,7 +407,7 @@ export function PlannerClient({
                   {/* Teacher cell (like المدرس/ة on the paper) */}
                   <td className="sticky start-0 z-10 bg-card p-2">
                     <div className="font-semibold">{teacher.label}</div>
-                    <div className="mt-1 flex gap-1">
+                    <div className="no-print mt-1 flex gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -287,7 +443,7 @@ export function PlannerClient({
                           {isNext && (
                             <button
                               onClick={() => setAddFor(teacher.id)}
-                              className="flex h-full min-h-16 w-full items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                              className="no-print flex h-full min-h-16 w-full items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                               aria-label={t("addToSlot")}
                             >
                               <Plus className="size-4" />
@@ -321,11 +477,19 @@ export function PlannerClient({
                             <span className="font-semibold">
                               {minToHHMM(s.startMin)}–{minToHHMM(end)}
                             </span>
-                            {s.location === "HOME" ? (
-                              <Home className="size-3.5 shrink-0" />
-                            ) : (
-                              <Building2 className="size-3.5 shrink-0 opacity-50" />
-                            )}
+                            <span className="flex shrink-0 items-center gap-1">
+                              {conflictedIds.has(s.id) && (
+                                <AlertTriangle
+                                  className="size-3.5 text-warning"
+                                  aria-label={tf("title")}
+                                />
+                              )}
+                              {s.location === "HOME" ? (
+                                <Home className="size-3.5" />
+                              ) : (
+                                <Building2 className="size-3.5 opacity-50" />
+                              )}
+                            </span>
                           </div>
                           <div className="truncate font-medium">{s.studentName}</div>
                           <div className="flex items-center justify-between text-xs opacity-80">
@@ -333,7 +497,7 @@ export function PlannerClient({
                             <span className="tabular-nums">{formatMoney(s.total)}</span>
                           </div>
                           {s.status === "DRAFT" && (
-                            <div className="mt-1 flex justify-end gap-0.5">
+                            <div className="no-print mt-1 flex justify-end gap-0.5">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -391,6 +555,7 @@ export function PlannerClient({
           currency={currency}
           dayStartMin={dayStartMin}
           homeGapMin={homeGapMin}
+          conflictsFor={conflictsFor}
           onClose={() => setAddFor(null)}
           onSaved={() => {
             setAddFor(null);
@@ -404,6 +569,7 @@ export function PlannerClient({
         <EditDraftDialog
           session={editing}
           teachers={teachers}
+          conflictsFor={conflictsFor}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -423,11 +589,23 @@ export function PlannerClient({
           )}
           dayStartMin={dayStartMin}
           homeGapMin={homeGapMin}
+          conflictsFor={conflictsFor}
           onClose={() => setMoveTarget(null)}
           onSaved={() => {
             setMoveTarget(null);
             router.refresh();
           }}
+        />
+      )}
+
+      {/* Weekly templates manager */}
+      {showTemplates && (
+        <TemplatesDialog
+          templates={templates}
+          teachers={teachers}
+          students={students}
+          onClose={() => setShowTemplates(false)}
+          onChanged={() => router.refresh()}
         />
       )}
 
@@ -449,6 +627,15 @@ export function PlannerClient({
 
 /* ---------- dialogs ---------- */
 
+/** Resolves advisory conflicts for a candidate slot, computed client-side. */
+type ConflictsFor = (c: {
+  id?: string | null;
+  teacherId: string;
+  studentId: string;
+  startMin: number;
+  hours: number;
+}) => Conflict[];
+
 function AddDraftDialog({
   day,
   teacherId,
@@ -460,6 +647,7 @@ function AddDraftDialog({
   currency,
   dayStartMin,
   homeGapMin,
+  conflictsFor,
   onClose,
   onSaved,
 }: {
@@ -473,6 +661,7 @@ function AddDraftDialog({
   currency: string;
   dayStartMin: number;
   homeGapMin: number;
+  conflictsFor: ConflictsFor;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -519,6 +708,15 @@ function AddDraftDialog({
     return row ? (row[location] ?? 0) : 0;
   })();
   const total = pricePerHour * (parseFloat(hours) || 0);
+
+  const conflicts = studentId
+    ? conflictsFor({
+        teacherId,
+        studentId,
+        startMin: hhmmToMin(time, 0),
+        hours: parseFloat(hours) || 1,
+      })
+    : [];
 
   function submit() {
     setError(null);
@@ -606,6 +804,7 @@ function AddDraftDialog({
               {ts("total")}: <span className="tabular-nums">{formatMoney(total)}</span> {currency}
             </span>
           </div>
+          <ConflictWarnings conflicts={conflicts} />
           <p className="text-xs text-muted-foreground">{t("timeAutoHint")}</p>
 
           {error && <p className="text-sm text-destructive">{tc("required")}</p>}
@@ -626,11 +825,13 @@ function AddDraftDialog({
 function EditDraftDialog({
   session,
   teachers,
+  conflictsFor,
   onClose,
   onSaved,
 }: {
   session: PlannerSession;
   teachers: Opt[];
+  conflictsFor: ConflictsFor;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -645,6 +846,14 @@ function EditDraftDialog({
   const [location, setLocation] = useState<"CENTER" | "HOME">(session.location);
   const [teacherId, setTeacherId] = useState(session.teacherId);
   const [pending, start] = useTransition();
+
+  const conflicts = conflictsFor({
+    id: session.id,
+    teacherId,
+    studentId: session.studentId,
+    startMin: hhmmToMin(time, session.startMin),
+    hours: parseFloat(hours) || session.hours,
+  });
 
   function submit() {
     start(async () => {
@@ -695,6 +904,7 @@ function EditDraftDialog({
               </Select>
             </FormField>
           </div>
+          <ConflictWarnings conflicts={conflicts} />
         </div>
         <DialogFooter>
           <DialogClose asChild>
@@ -717,6 +927,7 @@ function MoveDialog({
   targetExisting,
   dayStartMin,
   homeGapMin,
+  conflictsFor,
   onClose,
   onSaved,
 }: {
@@ -726,6 +937,7 @@ function MoveDialog({
   targetExisting: PlannerSession[];
   dayStartMin: number;
   homeGapMin: number;
+  conflictsFor: ConflictsFor;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -779,6 +991,15 @@ function MoveDialog({
           <FormField label={ts("startTime")} htmlFor="m-time">
             <Input id="m-time" type="time" dir="ltr" value={time} onChange={(e) => setTime(e.target.value)} />
           </FormField>
+          <ConflictWarnings
+            conflicts={conflictsFor({
+              id: session.id,
+              teacherId: targetTeacherId,
+              studentId: session.studentId,
+              startMin: hhmmToMin(time, session.startMin),
+              hours: session.hours,
+            })}
+          />
           <p className="text-xs text-muted-foreground">{t("moveHint")}</p>
         </div>
         <DialogFooter>
@@ -788,6 +1009,181 @@ function MoveDialog({
           <Button type="button" disabled={pending} onClick={submit}>
             {pending ? tc("saving") : sameTeacher ? tc("save") : t("move")}
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Manage the recurring weekly grid that "generate day" draws from. */
+function TemplatesDialog({
+  templates,
+  teachers,
+  students,
+  onClose,
+  onChanged,
+}: {
+  templates: PlannerTemplateRow[];
+  teachers: Opt[];
+  students: StudentOpt[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const t = useTranslations("planner");
+  const tc = useTranslations("common");
+  const ts = useTranslations("sessions");
+  const te = useTranslations("enums");
+  const locale = useLocale();
+
+  const [pending, start] = useTransition();
+  const [teacherId, setTeacherId] = useState(teachers[0]?.id ?? "");
+  const [studentId, setStudentId] = useState("");
+  const [weekday, setWeekday] = useState(String(WEEKDAY_ORDER[0]));
+  const [time, setTime] = useState("14:00");
+  const [hours, setHours] = useState("1");
+  const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");
+
+  const nameOf = (id: string, list: { id: string; label?: string; name?: string }[]) =>
+    list.find((x) => x.id === id)?.label ?? list.find((x) => x.id === id)?.name ?? id;
+
+  function add() {
+    if (!teacherId || !studentId) return;
+    start(async () => {
+      const res = await saveTemplate(locale, {
+        teacherId,
+        studentId,
+        weekday: parseInt(weekday, 10),
+        startMin: hhmmToMin(time, 14 * 60),
+        hours: parseFloat(hours) || 1,
+        location,
+      });
+      if (res.ok) {
+        setStudentId("");
+        onChanged();
+      }
+    });
+  }
+
+  function remove(id: string) {
+    start(async () => {
+      const res = await deleteTemplate(locale, id);
+      if (res.ok) onChanged();
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("templates")}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t("templatesHint")}</p>
+
+          {/* Add row */}
+          <div className="grid grid-cols-2 gap-2 rounded-md border border-border p-2 sm:grid-cols-3">
+            <FormField label={ts("teacher")} htmlFor="tpl-teacher">
+              <Select id="tpl-teacher" value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+                {teachers.map((x) => (
+                  <option key={x.id} value={x.id}>{x.label}</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label={ts("student")} htmlFor="tpl-student">
+              <Select id="tpl-student" value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+                <option value="">—</option>
+                {students.map((x) => (
+                  <option key={x.id} value={x.id}>{x.name}</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label={t("weekday")} htmlFor="tpl-weekday">
+              <Select id="tpl-weekday" value={weekday} onChange={(e) => setWeekday(e.target.value)}>
+                {WEEKDAY_ORDER.map((wd) => (
+                  <option key={wd} value={wd}>{te(`weekday.${wd}`)}</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label={ts("startTime")} htmlFor="tpl-time">
+              <Input id="tpl-time" type="time" dir="ltr" value={time} onChange={(e) => setTime(e.target.value)} />
+            </FormField>
+            <FormField label={ts("hours")} htmlFor="tpl-hours">
+              <Input
+                id="tpl-hours"
+                type="number"
+                step="0.5"
+                min="0.5"
+                dir="ltr"
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
+            </FormField>
+            <FormField label={ts("location")} htmlFor="tpl-loc">
+              <Select
+                id="tpl-loc"
+                value={location}
+                onChange={(e) => setLocation(e.target.value as "CENTER" | "HOME")}
+              >
+                <option value="CENTER">{te("location.CENTER")}</option>
+                <option value="HOME">{te("location.HOME")}</option>
+              </Select>
+            </FormField>
+            <div className="col-span-full flex justify-end">
+              <Button size="sm" disabled={pending || !studentId} onClick={add}>
+                {t("addTemplate")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Existing templates, grouped Saturday-first */}
+          <div className="max-h-72 space-y-2 overflow-y-auto">
+            {WEEKDAY_ORDER.map((wd) => {
+              const rows = templates.filter((x) => x.weekday === wd);
+              if (rows.length === 0) return null;
+              return (
+                <div key={wd}>
+                  <div className="mb-1 text-sm font-medium">{te(`weekday.${wd}`)}</div>
+                  <div className="space-y-1">
+                    {rows.map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-sm"
+                      >
+                        <span className="tabular-nums" dir="ltr">
+                          {minToHHMM(r.startMin)}–{minToHHMM(r.startMin + r.hours * 60)}
+                        </span>
+                        <span className="truncate">{nameOf(r.studentId, students)}</span>
+                        <span className="truncate text-muted-foreground">
+                          {nameOf(r.teacherId, teachers)}
+                        </span>
+                        {r.location === "HOME" && <Home className="size-3.5 shrink-0" />}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="ms-auto size-7"
+                          aria-label={tc("delete")}
+                          disabled={pending}
+                          onClick={() => remove(r.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {templates.length === 0 && (
+              <p className="py-4 text-center text-sm text-muted-foreground">{tc("noData")}</p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">{tc("close")}</Button>
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

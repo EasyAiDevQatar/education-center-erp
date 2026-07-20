@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Users, X, Check, Repeat } from "lucide-react";
+import { Users, X, Check, Repeat, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import { weeklyOccurrences } from "@/lib/recurrence";
+import { useConflictCheck } from "@/components/conflict-warnings";
 import { createGroupSessions } from "./actions";
 import type { StudentOpt, Opt, PriceMatrix } from "./session-dialog";
 
@@ -53,6 +54,7 @@ export function GroupBookingDialog({
   const ts = useTranslations("sessions");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
+  const tf = useTranslations("conflicts");
   const locale = useLocale();
 
   const controlled = openProp !== undefined;
@@ -138,6 +140,21 @@ export function GroupBookingDialog({
   }, [students, selected, gradeOverride, location, hours, matrix, occurrences]);
 
   const totalSessions = selected.size * occurrences.length;
+
+  // Advisory check against the FIRST occurrence only — checking every date in a
+  // long recurrence would be a lot of queries for a warning the user reads once.
+  const conflictResults = useConflictCheck(
+    {
+      date: occurrences[0] ?? date,
+      time,
+      hours: parseFloat(hours) || 1,
+      teacherId,
+      studentIds: [...selected],
+    },
+    open,
+  );
+  const conflictedStudents = conflictResults.filter((r) => r.conflicts.length > 0);
+  const conflictByStudent = new Map(conflictResults.map((r) => [r.studentId, r.conflicts.length]));
 
   function toggleWeekday(dn: number) {
     setWeekdays((prev) => {
@@ -304,6 +321,9 @@ export function GroupBookingDialog({
                         {on && <Check className="size-3" />}
                       </span>
                       <span className="truncate">{s.name}</span>
+                      {on && (conflictByStudent.get(s.id) ?? 0) > 0 && (
+                        <AlertTriangle className="ms-auto size-3.5 shrink-0 text-warning" />
+                      )}
                     </button>
                   );
                 })}
@@ -323,6 +343,22 @@ export function GroupBookingDialog({
           </div>
           {noGradeCount > 0 && (
             <p className="text-xs text-warning">{t("noGradeWarn", { n: noGradeCount })}</p>
+          )}
+          {conflictedStudents.length > 0 && (
+            <div className="rounded-md border border-warning bg-warning/10 p-2.5 text-sm">
+              <div className="mb-1 flex items-center gap-1.5 font-medium">
+                <AlertTriangle className="size-4 shrink-0" />
+                {tf("countForStudents", { n: conflictedStudents.length })}
+              </div>
+              <ul className="ms-5 list-disc space-y-0.5 text-xs">
+                {conflictedStudents.slice(0, 5).map((r) => (
+                  <li key={r.studentId}>
+                    {students.find((s) => s.id === r.studentId)?.name ?? r.studentId}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1.5 text-xs text-muted-foreground">{tf("advisory")}</p>
+            </div>
           )}
 
           {result && (

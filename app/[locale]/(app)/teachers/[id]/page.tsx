@@ -11,6 +11,7 @@ import { StatCard } from "@/components/stat-card";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { SessionsTable, PaymentsTable, PayoutsTable } from "@/components/tables/relation-tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AvailabilityEditor } from "./availability-editor";
 
 export default async function TeacherProfilePage({
   params,
@@ -27,6 +28,7 @@ export default async function TeacherProfilePage({
   const tc = await getTranslations("common");
   const tp = await getTranslations("profile");
   const tm = await getTranslations("paymentModes");
+  const ta = await getTranslations("availability");
 
   const teacher = await db.teacher.findUnique({ where: { id } });
   if (!teacher) notFound();
@@ -38,12 +40,17 @@ export default async function TeacherProfilePage({
   const wideStart = new Date("2000-01-01T00:00:00.000Z");
   const wideEnd = new Date("2100-01-01T00:00:00.000Z");
 
-  const [earnings, sessions, payments, payouts, currency] = await Promise.all([
+  const [earnings, sessions, payments, payouts, currency, availability] = await Promise.all([
     getTeacherEarnings(id, wideStart, wideEnd),
     loadSessionLines({ teacherId: id }, locale),
     loadPaymentLines({ teacherId: id }),
     loadPayoutLines(id),
     getCurrency(),
+    db.teacherAvailability.findMany({
+      where: { teacherId: id },
+      orderBy: [{ weekday: "asc" }, { startMin: "asc" }],
+      select: { weekday: true, startMin: true, endMin: true },
+    }),
   ]);
 
   const tabs = [
@@ -51,6 +58,7 @@ export default async function TeacherProfilePage({
     { key: "sessions", label: tp("sessions"), count: sessions.length },
     { key: "payments", label: tp("payments"), count: payments.length },
     { key: "payouts", label: tp("payouts"), count: payouts.length },
+    { key: "availability", label: ta("tab"), count: availability.length },
   ];
 
   return (
@@ -111,6 +119,9 @@ export default async function TeacherProfilePage({
       {tab === "sessions" && <SessionsTable rows={sessions} currency={currency} hideTeacher />}
       {tab === "payments" && <PaymentsTable rows={payments} currency={currency} />}
       {tab === "payouts" && <PayoutsTable rows={payouts} currency={currency} />}
+      {tab === "availability" && (
+        <AvailabilityEditor teacherId={id} initial={availability} />
+      )}
     </div>
   );
 }

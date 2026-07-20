@@ -131,6 +131,44 @@
   }
 }
 
+@media print {
+  /* Daily planner sheet — the paper original is a wide teacher × slot grid, so
+     it only fits landscape. Borders must survive the generic [data-print] reset
+     above, or the grid loses its structure. */
+  [data-print="A4L"] {
+    width: 100% !important;
+    font-size: 10px !important;
+    overflow: visible !important;
+  }
+  [data-print="A4L"] table {
+    width: 100% !important;
+    table-layout: fixed;
+  }
+  [data-print="A4L"] th,
+  [data-print="A4L"] td {
+    border: 1px solid #999 !important;
+    padding: 3px !important;
+  }
+  [data-print="A4L"] thead {
+    display: table-header-group; /* repeat the slot numbers on every page */
+  }
+  [data-print="A4L"] tr {
+    break-inside: avoid;
+  }
+  /* Sticky columns would float over the printed page. */
+  [data-print="A4L"] .sticky {
+    position: static !important;
+  }
+}
+
+body.print-a4l {
+  --print-page: A4 landscape;
+}
+@page a4l {
+  size: A4 landscape;
+  margin: 8mm;
+}
+
 /* Page size must be declared at top level, so gate via a body class instead. */
 body.print-pos80 {
   --print-page: 80mm auto;
