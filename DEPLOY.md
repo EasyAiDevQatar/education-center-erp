@@ -95,6 +95,26 @@ Then on vercel.com: **New Project → import the repo → add `DATABASE_URL` and
 
 ---
 
+## Database (PostgreSQL canonical since S1)
+
+Production runs **PostgreSQL** on vps7 (`edu_erp` database); the committed
+schema's provider is `postgresql`. For zero-setup local dev on SQLite:
+
+```bash
+npm run db:use-sqlite      # provider → sqlite + regenerate (DATABASE_URL=file:./dev.db)
+npm run db:use-postgres    # restore before committing — schema must be committed as postgresql
+```
+
+One-off data migration (already performed) lives in
+`scripts/migrate-sqlite-to-pg.mjs` — run on the server with
+`npm install --no-save better-sqlite3` first; it copies FK-ordered, converts
+SQLite's ms-epoch datetimes / 0-1 booleans via the client DMMF, is idempotent
+(`skipDuplicates`), and prints a payments/expenses/sessions reconciliation.
+
+**Backups:** `/usr/local/bin/backup-education.sh` runs nightly (cron, 03:00
+UTC) — `pg_dump | gzip` into `/var/backups/education/`, keeping the newest 14.
+Run it manually before every deploy.
+
 ## Redeploying (existing server)
 
 ```bash

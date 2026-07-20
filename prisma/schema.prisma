@@ -1,16 +1,17 @@
 // Education Center ERP — Prisma schema
-// Dev uses SQLite for zero-setup local runs. For production, switch
-// `provider` to "postgresql" and set DATABASE_URL to your Postgres instance.
-// The schema is intentionally Postgres-compatible: enum-like values are stored
-// as strings (see lib/enums.ts) and JSON is stored as text, so no model changes
-// are needed when switching providers.
+// Canonical provider is PostgreSQL (production). For zero-setup local dev on
+// SQLite, run `npm run db:use-sqlite` (and switch back with `db:use-postgres`
+// before committing — the swap script only edits the provider line below).
+// The schema is intentionally portable: enum-like values are stored as strings
+// (see lib/enums.ts) and JSON is stored as text, so no model changes are needed
+// when switching providers.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
