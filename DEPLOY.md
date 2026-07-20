@@ -95,6 +95,26 @@ Then on vercel.com: **New Project → import the repo → add `DATABASE_URL` and
 
 ---
 
+## Redeploying (existing server)
+
+```bash
+cd /var/www/education-center
+git fetch --all && git reset --hard origin/master
+
+# IMPORTANT: install with dev dependencies. The prod .env sets NODE_ENV=production,
+# and if that is exported before `npm ci`, npm skips devDependencies — the build
+# then fails with "Cannot find module '@tailwindcss/postcss'".
+env -u NODE_ENV npm ci --include=dev
+
+set -a; . ./.env; set +a          # loads DATABASE_URL / AUTH_SECRET correctly
+node node_modules/prisma/build/index.js db push   # only if the schema changed
+node node_modules/next/dist/bin/next build
+pm2 restart education-center --update-env
+```
+
+Load `.env` with `set -a; . ./.env; set +a` — `export $(grep … | xargs)` keeps the
+surrounding quotes and Prisma then rejects `"file:…` as an invalid URL.
+
 ## Notes
 
 - **HTTPS is required** for the home-session **GPS check-in** and the "use current
