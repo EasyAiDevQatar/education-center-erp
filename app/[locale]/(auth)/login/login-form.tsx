@@ -42,7 +42,9 @@ export function LoginForm() {
         />
       </div>
       {state.error && (
-        <p className="text-sm text-destructive">{t("invalidCredentials")}</p>
+        <p className="text-sm text-destructive">
+          {state.error === "locked" ? t("locked") : t("invalidCredentials")}
+        </p>
       )}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? t("signingIn") : t("signIn")}

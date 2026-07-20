@@ -11,6 +11,8 @@ import { CategoriesManager, type CategoryRow } from "./categories-manager";
 import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
 import { TermsManager, type TermRow } from "./terms-manager";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
+import { UsersManager, type UserRow } from "./users-manager";
+import { AuditLogTable, type AuditRow } from "./audit-log-table";
 
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -33,13 +35,24 @@ export default async function SettingsPage({
   const t = await getTranslations("settings");
   const tterm = await getTranslations("terms");
 
-  const [settingsRows, matrix, categories, integrationRows, logs, termRows] = await Promise.all([
+  const [settingsRows, matrix, categories, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
     currentPriceMatrix(),
     db.expenseCategory.findMany({ orderBy: { sortOrder: "asc" } }),
     db.integration.findMany(),
     db.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 300 }),
     db.term.findMany({ orderBy: { startDate: "desc" } }),
+    db.user.findMany({
+      orderBy: { name: "asc" },
+      include: { teacher: true, guardian: true },
+    }),
+    db.auditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 400,
+      include: { user: true },
+    }),
+    db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    db.guardian.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   // Merge the code-defined provider registry with any stored config. Secrets are
@@ -107,6 +120,29 @@ export default async function SettingsPage({
     current: x.active && x.startDate <= now && x.endDate >= now,
   }));
 
+  const users: UserRow[] = userRows.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    locale: u.locale,
+    active: u.active,
+    teacherId: u.teacherId,
+    guardianId: u.guardianId,
+    linkedLabel: u.teacher?.name ?? u.guardian?.name ?? null,
+  }));
+  const teacherOpts = teacherRows.map((x) => ({ id: x.id, label: x.name }));
+  const guardianOpts = guardianRows.map((x) => ({ id: x.id, label: x.name }));
+
+  const audits: AuditRow[] = auditRows.map((a) => ({
+    id: a.id,
+    at: a.createdAt.toISOString().slice(0, 16).replace("T", " "),
+    userName: a.user?.name ?? null,
+    entity: a.entity,
+    entityId: a.entityId,
+    action: a.action,
+  }));
+
   return (
     <div>
       <PageHeader title={t("title")} />
@@ -164,6 +200,15 @@ export default async function SettingsPage({
 
         <Card className="lg:col-span-2">
           <CardHeader>
+            <CardTitle>{t("users")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <UsersManager users={users} teachers={teacherOpts} guardians={guardianOpts} />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
             <CardTitle>{t("integrations")}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -177,6 +222,15 @@ export default async function SettingsPage({
           </CardHeader>
           <CardContent className="p-0">
             <NotificationLogTable rows={logRows} />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>{t("auditLog")}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <AuditLogTable rows={audits} />
           </CardContent>
         </Card>
       </div>

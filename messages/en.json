@@ -46,7 +46,15 @@
     "rowsPerPage": "Rows per page",
     "showingRange": "Showing {from}–{to} of {total}",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "errors": {
+      "emailTaken": "This email is already in use",
+      "lastAdmin": "Cannot deactivate or demote the last administrator",
+      "passwordShort": "Password too short — at least 8 characters",
+      "passwordRequired": "A password is required for a new user",
+      "passwordMismatch": "Passwords do not match",
+      "wrongPassword": "Current password is incorrect"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -79,7 +87,8 @@
     "signingIn": "Signing in...",
     "welcome": "Welcome",
     "invalidCredentials": "Invalid email or password",
-    "loggedOut": "Logged out"
+    "loggedOut": "Logged out",
+    "locked": "Too many failed attempts — try again in 10 minutes"
   },
   "roles": {
     "ADMIN": "Administrator",
@@ -307,7 +316,8 @@
     "sizeA4": "A4",
     "sizePos": "POS 80mm",
     "receiptFooter": "Receipt footer",
-    "statementFooter": "Statement footer"
+    "statementFooter": "Statement footer",
+    "auditLog": "Audit log"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -448,5 +458,34 @@
     "moveHint": "Time is suggested from the target teacher's schedule — adjust before saving.",
     "move": "Move",
     "dragHint": "Drag any draft onto another teacher's row to move it."
+  },
+  "users": {
+    "add": "Add user",
+    "edit": "Edit user",
+    "role": "Role",
+    "language": "Language",
+    "linkTeacher": "Link to teacher",
+    "linkGuardian": "Link to guardian",
+    "linkedTo": "Linked to",
+    "password": "Password",
+    "resetPassword": "Reset password",
+    "keepPasswordHint": "Leave blank to keep the current password",
+    "passwordMin": "At least 8 characters",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password"
+  },
+  "audit": {
+    "user": "User",
+    "entity": "Entity",
+    "record": "Record",
+    "action": "Action",
+    "filterEntity": "Filter by entity…",
+    "actions": {
+      "CREATE": "Create",
+      "UPDATE": "Update",
+      "DELETE": "Delete"
+    }
   }
 }

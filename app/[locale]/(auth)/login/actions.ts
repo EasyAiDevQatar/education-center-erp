@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { createSession } from "@/lib/session";
@@ -14,6 +15,20 @@ const schema = z.object({
 
 export type LoginState = { error?: string };
 
+/** Lockout policy: this many failures within the window locks the account. */
+const MAX_FAILURES = 5;
+const WINDOW_MIN = 10;
+
+async function clientIp(): Promise<string | null> {
+  const h = await headers();
+  // nginx sets X-Real-IP / X-Forwarded-For in front of the app.
+  return (
+    h.get("x-real-ip") ??
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    null
+  );
+}
+
 export async function loginAction(
   locale: string,
   _prev: LoginState,
@@ -25,23 +40,39 @@ export async function loginAction(
   });
   if (!parsed.success) return { error: "invalid" };
 
-  const user = await db.user.findUnique({ where: { email: parsed.data.email } });
-  if (!user || !user.active) return { error: "invalid" };
+  const email = parsed.data.email.toLowerCase();
+  const ip = await clientIp();
 
-  const ok = await verifyPassword(parsed.data.password, user.passwordHash);
+  // Rate limit: too many recent failures for this email → temporary lock.
+  const windowStart = new Date(Date.now() - WINDOW_MIN * 60 * 1000);
+  const recentFailures = await db.loginAttempt.count({
+    where: { email, success: false, at: { gte: windowStart } },
+  });
+  if (recentFailures >= MAX_FAILURES) return { error: "locked" };
+
+  const user = await db.user.findUnique({ where: { email } });
+  const ok =
+    user && user.active
+      ? await verifyPassword(parsed.data.password, user.passwordHash)
+      : false;
+
+  await db.loginAttempt.create({ data: { email, ip, success: !!ok } });
   if (!ok) return { error: "invalid" };
 
+  // Successful login clears the failure window.
+  await db.loginAttempt.deleteMany({ where: { email, success: false } });
+
   await createSession({
-    userId: user.id,
-    name: user.name,
-    role: user.role as Role,
-    locale: user.locale,
-    teacherId: user.teacherId,
-    guardianId: user.guardianId,
+    userId: user!.id,
+    name: user!.name,
+    role: user!.role as Role,
+    locale: user!.locale,
+    teacherId: user!.teacherId,
+    guardianId: user!.guardianId,
   });
 
   // Send the user to the dashboard in their preferred locale.
-  redirect({ href: "/", locale: user.locale || locale });
+  redirect({ href: "/", locale: user!.locale || locale });
   // Unreachable (redirect throws) — satisfies the control-flow return check.
   return {};
 }

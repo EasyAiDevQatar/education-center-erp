@@ -46,7 +46,15 @@
     "rowsPerPage": "صفوف بالصفحة",
     "showingRange": "عرض {from}–{to} من {total}",
     "previous": "السابق",
-    "next": "التالي"
+    "next": "التالي",
+    "errors": {
+      "emailTaken": "البريد الإلكتروني مستخدم بالفعل",
+      "lastAdmin": "لا يمكن تعطيل أو تخفيض آخر مدير نظام",
+      "passwordShort": "كلمة المرور قصيرة — ٨ أحرف على الأقل",
+      "passwordRequired": "كلمة المرور مطلوبة للمستخدم الجديد",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين",
+      "wrongPassword": "كلمة المرور الحالية غير صحيحة"
+    }
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -79,7 +87,8 @@
     "signingIn": "جارٍ الدخول...",
     "welcome": "مرحباً بك",
     "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
-    "loggedOut": "تم تسجيل الخروج"
+    "loggedOut": "تم تسجيل الخروج",
+    "locked": "تم إيقاف المحاولات مؤقتاً لكثرة المحاولات الخاطئة — أعد المحاولة بعد ١٠ دقائق"
   },
   "roles": {
     "ADMIN": "مدير النظام",
@@ -307,7 +316,8 @@
     "sizeA4": "A4",
     "sizePos": "كاشير 80mm",
     "receiptFooter": "تذييل الإيصال",
-    "statementFooter": "تذييل كشف الحساب"
+    "statementFooter": "تذييل كشف الحساب",
+    "auditLog": "سجل التدقيق"
   },
   "integrations": {
     "baseUrl": "رابط الـ API",
@@ -448,5 +458,34 @@
     "moveHint": "الوقت مقترح حسب جدول المعلم الهدف — يمكن تعديله قبل الحفظ.",
     "move": "نقل",
     "dragHint": "اسحب أي مسودة إلى صف معلم آخر لنقلها."
+  },
+  "users": {
+    "add": "إضافة مستخدم",
+    "edit": "تعديل مستخدم",
+    "role": "الدور",
+    "language": "اللغة",
+    "linkTeacher": "ربط بمعلم",
+    "linkGuardian": "ربط بولي أمر",
+    "linkedTo": "مرتبط بـ",
+    "password": "كلمة المرور",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "keepPasswordHint": "اتركه فارغاً للإبقاء على كلمة المرور الحالية",
+    "passwordMin": "٨ أحرف على الأقل",
+    "changePassword": "تغيير كلمة المرور",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "confirmPassword": "تأكيد كلمة المرور"
+  },
+  "audit": {
+    "user": "المستخدم",
+    "entity": "السجل",
+    "record": "المعرّف",
+    "action": "الإجراء",
+    "filterEntity": "تصفية حسب النوع…",
+    "actions": {
+      "CREATE": "إنشاء",
+      "UPDATE": "تعديل",
+      "DELETE": "حذف"
+    }
   }
 }

@@ -59,7 +59,8 @@ export function EntityDialog({
           {fields}
           {error && (
             <p className="text-sm text-destructive">
-              {error === "forbidden" ? "—" : t("required")}
+              {/* Known error codes get a specific message; anything else falls back. */}
+              {t.has(`errors.${error}`) ? t(`errors.${error}`) : t("required")}
             </p>
           )}
           <DialogFooter>

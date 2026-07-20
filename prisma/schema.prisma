@@ -286,6 +286,17 @@ model Setting {
   value String
 }
 
+/// Login attempts (success and failure) for rate limiting and security audit.
+model LoginAttempt {
+  id      String   @id @default(cuid())
+  email   String
+  ip      String?
+  success Boolean  @default(false)
+  at      DateTime @default(now())
+
+  @@index([email, at])
+}
+
 /// An academic term. Drives calendar context and term-based teacher payouts.
 model Term {
   id        String   @id @default(cuid())

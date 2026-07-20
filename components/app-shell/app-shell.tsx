@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/enums";
 import { NAV_ITEMS } from "./nav-items";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { ChangePasswordDialog } from "./change-password-dialog";
 import { Button } from "@/components/ui/button";
 
 const SECTIONS = ["operations", "finance", "admin"] as const;
@@ -122,6 +123,7 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2">
             <LocaleSwitcher />
+            <ChangePasswordDialog />
             <form action={onLogout}>
               <Button variant="ghost" size="sm" type="submit" className="gap-2">
                 <LogOut className="size-4" />
