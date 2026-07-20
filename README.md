@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# نظام إدارة المركز التعليمي — Education Center ERP
 
-## Getting Started
+A fully custom, **bilingual (Arabic-first RTL / English LTR)** ERP for a private
+tutoring / education center. Built from the center's real Excel workbook, it
+replaces the spreadsheet with sessions, billing, student balances, teacher
+payroll, expenses, and financial dashboards.
 
-First, run the development server:
+> Login (seed): **admin@center.qa** / **admin123**
+
+## Features
+
+- **Sessions (الحصص)** — daily tutoring sessions with **automatic pricing** from a
+  grade-level × location matrix (e.g. Secondary/Center = 175, Secondary/Home = 200),
+  calendar-style list, filters (date/teacher/status), and CSV export.
+- **Billing (المدفوعات)** — payments/receipts (Cash / POS / Qpay / Transfer),
+  auto receipt numbers, printable bilingual receipts, prepaid **packages (الباقات)**,
+  and per-student **ledgers** with running balance.
+- **Teachers & Payroll (الرواتب)** — commission %, auto-computed expected vs.
+  collected income, advances, payout runs, and printable payslips.
+- **Expenses & Dashboard** — categorized expenses (12 editable categories),
+  income/expense/net KPIs, revenue-by-teacher, expenses-by-category, and a
+  monthly-trend chart.
+- **Settings** — editable price matrix, expense categories, and center profile.
+- **Security** — role-based access (Admin / Accountant / Receptionist / Teacher /
+  Parent), session auth, immutable audit log on financial records, soft deletes.
+- **Bilingual** — Arabic default (RTL) + English (LTR), switchable live.
+
+## Tech stack
+
+Next.js 16 (App Router) · TypeScript · Prisma · SQLite (dev) / PostgreSQL (prod) ·
+Tailwind CSS v4 · next-intl · Recharts · custom JWT auth (jose + bcrypt) · Zod.
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env            # then edit AUTH_SECRET
+
+# create the local SQLite DB and generate the client
+node node_modules/prisma/build/index.js db push
+node --import tsx prisma/seed.ts   # reference data + admin + demo rows
+
+# run
+node node_modules/next/dist/bin/next dev   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> **Windows note:** this project lives in a path containing `&` ("Code & Projects"),
+> which breaks the `npx`/`.bin` shims. Invoke binaries directly via
+> `node node_modules/<pkg>/…` as shown above (the npm scripts assume a normal path).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Importing the real workbook
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+node --import tsx prisma/import-legacy-xlsx.ts
+```
 
-## Learn More
+Wipes transactional tables and loads **sessions, payments, and expenses** from
+`مراكز تعليمية.xlsx` (auto-found in Downloads, or set `WORKBOOK`). It prints a
+reconciliation report — the imported expense total matches the workbook's
+`اجماليات` sheet exactly (11,052).
 
-To learn more about Next.js, take a look at the following resources:
+## Deploying to production (PostgreSQL + Vercel)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See **[DEPLOY.md](DEPLOY.md)** for the full copy-paste guide. In short:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. In `prisma/schema.prisma`, set `datasource.provider = "postgresql"`.
+2. Provision Postgres (Neon or Supabase) and set `DATABASE_URL` + `AUTH_SECRET`
+   in your host's env.
+3. `prisma db push` against the Postgres URL, then run the seed.
+4. Deploy on Vercel (CLI or GitHub import). The schema is portable — no model
+   changes needed when switching providers. Note: the home-session **GPS check-in**
+   needs HTTPS, which Vercel provides by default.
 
-## Deploy on Vercel
+## Project structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+app/[locale]/(auth)/login      Login
+app/[locale]/(app)/…           Dashboard, sessions, students, teachers,
+                               guardians, payments, packages, expenses,
+                               payroll, settings  (auth-guarded shell)
+app/[locale]/receipt/[id]      Printable payment receipt
+app/[locale]/payslip/[id]      Printable payslip
+app/api/export/sessions        CSV export (UTF-8 BOM)
+lib/                           db, session, rbac, pricing, money, balances,
+                               payroll, reports, audit
+components/                    ui/ (shadcn-style), crud/ (reusable dialogs),
+                               charts/, app-shell/
+prisma/                        schema.prisma, seed.ts, import-legacy-xlsx.ts
+messages/{ar,en}.json          i18n catalogs
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tests
+
+```bash
+node --import tsx node_modules/vitest/vitest.mjs run
+```

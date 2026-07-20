@@ -1,0 +1,320 @@
+// Education Center ERP — Prisma schema
+// Dev uses SQLite for zero-setup local runs. For production, switch
+// `provider` to "postgresql" and set DATABASE_URL to your Postgres instance.
+// The schema is intentionally Postgres-compatible: enum-like values are stored
+// as strings (see lib/enums.ts) and JSON is stored as text, so no model changes
+// are needed when switching providers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Application users with a role. A user may be linked to a Teacher or Guardian
+/// record to power the teacher/parent portals.
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("RECEPTIONIST") // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT
+  locale       String   @default("ar") // ar | en
+  active       Boolean  @default(true)
+
+  teacherId  String?  @unique
+  teacher    Teacher? @relation(fields: [teacherId], references: [id])
+  guardianId String?  @unique
+  guardian   Guardian? @relation(fields: [guardianId], references: [id])
+
+  auditLogs AuditLog[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Teacher {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String?
+  commissionPct Decimal  @default(0) // percentage, e.g. 50 = 50%
+  active        Boolean  @default(true)
+  notes         String?
+
+  user     User?
+  sessions Session[]
+  payments Payment[]      // payments allocated to this teacher
+  payouts  TeacherPayout[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Guardian {
+  id       String    @id @default(cuid())
+  name     String
+  phone    String?
+  email    String?
+  notes    String?
+  user     User?
+  students Student[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GradeLevel {
+  id        String  @id @default(cuid())
+  code      String  @unique // ب م | ب | ع | ث | جامعة
+  nameAr    String
+  nameEn    String
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  priceRules PriceRule[]
+  sessions   Session[]
+  students   Student[]
+}
+
+/// Price-per-hour matrix: (grade level x location), versioned by effectiveFrom.
+model PriceRule {
+  id            String     @id @default(cuid())
+  gradeLevelId  String
+  gradeLevel    GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  location      String     // CENTER | HOME
+  pricePerHour  Decimal
+  effectiveFrom DateTime   @default(now())
+  active        Boolean    @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([gradeLevelId, location, effectiveFrom])
+  @@index([gradeLevelId, location])
+}
+
+model Student {
+  id           String      @id @default(cuid())
+  name         String
+  phone        String?
+  gradeLevelId String?
+  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  guardianId   String?
+  guardian     Guardian?   @relation(fields: [guardianId], references: [id])
+  active       Boolean     @default(true)
+  notes        String?
+
+  // Home-session check-in support: saved home location (geofence anchor) and a
+  // short PIN the student/guardian confirms at check-in.
+  address    String?
+  homeLat    Float?
+  homeLng    Float?
+  checkinPin String?
+
+  sessions Session[]
+  payments Payment[]
+  packages Package[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+/// A single tutoring session (حصة). Price is resolved from the PriceRule matrix
+/// at creation time and snapshotted onto the row.
+model Session {
+  id           String     @id @default(cuid())
+  date         DateTime
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id])
+  teacherId    String
+  teacher      Teacher    @relation(fields: [teacherId], references: [id])
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  location     String     // CENTER | HOME
+  hours        Decimal
+  pricePerHour Decimal
+  total        Decimal
+  paymentStatus String    @default("UNPAID") // PAID | PARTIAL | UNPAID
+  packageId    String?
+  package      Package?   @relation(fields: [packageId], references: [id])
+  notes        String?
+  branchId     String?    // future multi-branch seam
+
+  // Scheduling & attendance. `date` holds the start datetime; `hours` is the
+  // planned duration. Attendance drives status: a completed session is billable.
+  status           String    @default("SCHEDULED") // SCHEDULED | CHECKED_IN | COMPLETED | NO_SHOW | CANCELLED
+  studentCheckInAt DateTime?
+  studentCheckOutAt DateTime?
+  teacherCheckInAt DateTime?
+  checkInMethod    String?   // KIOSK | GPS | QR | MANUAL
+  checkInLat       Float?
+  checkInLng       Float?
+  actualHours      Decimal?  // measured from check-in → check-out
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([status])
+}
+
+/// Prepaid bundle of hours (باقة). Sessions decrement hoursUsed.
+model Package {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  totalHours  Decimal
+  hoursUsed   Decimal   @default(0)
+  price       Decimal
+  purchasedAt DateTime  @default(now())
+  expiresAt   DateTime?
+  status      String    @default("ACTIVE") // ACTIVE | COMPLETED | EXPIRED
+  notes       String?
+
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A collected payment / receipt (الدخل المحصل). Optionally allocated to a teacher.
+model Payment {
+  id        String   @id @default(cuid())
+  date      DateTime
+  receiptNo String   @unique
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id])
+  amount    Decimal
+  method    String   @default("CASH") // CASH | POS | QPAY | TRANSFER
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+  packageId String?
+  notes     String?
+  branchId  String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([studentId])
+}
+
+model ExpenseCategory {
+  id        String    @id @default(cuid())
+  nameAr    String
+  nameEn    String
+  sortOrder Int       @default(0)
+  active    Boolean   @default(true)
+  expenses  Expense[]
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  date        DateTime
+  receiptNo   String?
+  description String
+  categoryId  String
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  amount      Decimal
+  paidTo      String?
+  branchId    String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([categoryId])
+}
+
+/// A teacher payroll run for a period.
+model TeacherPayout {
+  id              String   @id @default(cuid())
+  teacherId       String
+  teacher         Teacher  @relation(fields: [teacherId], references: [id])
+  periodStart     DateTime
+  periodEnd       DateTime
+  grossCommission Decimal
+  advances        Decimal  @default(0)
+  netPaid         Decimal
+  status          String   @default("DRAFT") // DRAFT | PAID
+  notes           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+}
+
+/// Immutable audit trail for financial records. before/after stored as JSON text.
+model AuditLog {
+  id       String  @id @default(cuid())
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+  entity   String
+  entityId String
+  action   String // CREATE | UPDATE | DELETE
+  before   String?
+  after    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+/// A configured third-party integration (messaging, etc.). Credentials are stored
+/// here rather than in code/env so the repo stays secret-free and non-technical
+/// admins can manage them from Settings → Integrations.
+model Integration {
+  id       String  @id @default(cuid())
+  provider String  @unique // EASYAICONNECT | ... (see lib/integrations/registry.ts)
+  enabled  Boolean @default(false)
+
+  baseUrl String?
+  apiKey  String?
+  /// Provider-specific extras as JSON text (endpoint paths, sender id, …).
+  config  String?
+  /// JSON array of enabled event keys, e.g. ["SESSION_BOOKED","PAYMENT_RECEIVED"].
+  events  String?
+  /// JSON array of audiences to notify: ["TEACHER","PARENT","STUDENT"].
+  audiences String?
+
+  lastTestAt  DateTime?
+  lastTestOk  Boolean?
+  lastTestMsg String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Delivery record for every outbound notification attempt.
+model NotificationLog {
+  id        String  @id @default(cuid())
+  provider  String
+  event     String
+  audience  String // TEACHER | PARENT | STUDENT
+  recipient String // phone number or provider contact id
+  status    String // SENT | FAILED | SKIPPED
+  message   String?
+  error     String?
+  entityType String?
+  entityId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([event])
+}
