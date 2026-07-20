@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { toNumber, formatMoney } from "@/lib/money";
 import { getStudentBalance } from "@/lib/balances";
 import { packageStatusFor } from "@/lib/billing-rules";
+import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { dispatch, centerSettings } from "@/lib/integrations/notify";
 import { OPEN_LEAD_STATUSES } from "@/lib/leads";
 
@@ -14,7 +15,7 @@ import { OPEN_LEAD_STATUSES } from "@/lib/leads";
  *
  * Jobs: tomorrow's session reminders, outstanding-balance reminders (with a
  * cooldown), low/expiring package notices, package status sweeping, and due
- * lead follow-ups.
+ * lead follow-ups, and auto-completion of unmarked sessions.
  * Every job is best-effort — one failure never blocks the others.
  */
 
@@ -184,6 +185,47 @@ export async function GET(request: Request) {
     }));
   } catch (e) {
     report.leadFollowUpError = String(e);
+  }
+
+  /* 5. Auto-complete sessions nobody marked --------------------------------- */
+  // A scheduled lesson whose end time passed and that nobody touched is almost
+  // always one that simply happened. Completing it makes it billable, so each
+  // one is flagged `autoCompleted` and shows in the check-in review list until
+  // a human accepts or undoes it — fast by default, still auditable.
+  try {
+    const graceHours = parseInt(
+      (await db.setting.findUnique({ where: { key: "autoCompleteGraceHours" } }))?.value ?? "6",
+      10,
+    );
+    const cutoff = new Date(Date.now() - graceHours * 60 * 60 * 1000);
+
+    const stale = await db.session.findMany({
+      // DRAFT is excluded deliberately: an unconfirmed plan is not attendance.
+      where: { status: "SCHEDULED", date: { lt: cutoff } },
+      select: { id: true, date: true, hours: true },
+    });
+
+    let completed = 0;
+    for (const s of stale) {
+      // `date` is the start; only sweep once the lesson has actually ended.
+      const endsAt = new Date(s.date.getTime() + toNumber(s.hours) * 60 * 60 * 1000);
+      if (endsAt > cutoff) continue;
+      if (!dry) {
+        await db.$transaction(async (tx) => {
+          await tx.session.update({
+            where: { id: s.id },
+            data: { status: "COMPLETED", autoCompleted: true },
+          });
+          await applyPackageHours(tx, s.id);
+          await syncSessionPaymentStatus(tx, s.id);
+        });
+      }
+      completed++;
+    }
+    report.autoCompleted = completed;
+    report.autoCompleteGraceHours = graceHours;
+  } catch (e) {
+    report.autoCompleteError = String(e);
   }
 
   return NextResponse.json({ ok: true, ...report });

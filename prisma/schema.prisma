@@ -122,6 +122,10 @@ model Student {
   homeLat    Float?
   homeLng    Float?
   checkinPin String?
+  /// Stable random token behind the student's printable QR card.
+  /// Deliberately not the row id: a card can be reissued by rotating this
+  /// without touching history, and a lost card never exposes an internal id.
+  qrToken    String? @unique
   /// Short code the centre uses to identify the home location (zone/street/
   /// building, a compound name, whatever they already write on the paper
   /// sheet). Shown on planner cards for HOME sessions so the teacher knows
@@ -226,6 +230,10 @@ model Session {
   /// True once this session's hours have been deducted from its package, so
   /// confirm/undo cycles can never double-count.
   packageApplied Boolean @default(false)
+  /// Completed by the nightly sweep rather than by a person. Auto-completing
+  /// makes a session billable without anyone confirming the lesson happened,
+  /// so it is flagged for the review list rather than done silently.
+  autoCompleted  Boolean @default(false)
 
   createdById String?
   createdAt   DateTime @default(now())

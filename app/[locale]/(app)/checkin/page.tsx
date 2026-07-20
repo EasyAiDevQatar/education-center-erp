@@ -3,7 +3,7 @@ import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
-import { CheckinClient, type CheckinItem } from "./checkin-client";
+import { RosterBoard, type RosterItem } from "./roster-board";
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -29,46 +29,45 @@ export default async function CheckinPage({
   const end = new Date(`${day}T00:00:00.000Z`);
   end.setUTCDate(end.getUTCDate() + 1);
 
-  const sessions = await db.session.findMany({
-    // Planner drafts are pending confirmation — not attendable at the kiosk.
-    where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } },
-    include: { student: true, teacher: true, gradeLevel: true },
-    orderBy: { date: "asc" },
-  });
+  const [sessions, review] = await Promise.all([
+    db.session.findMany({
+      // Planner drafts are pending confirmation — not attendance records.
+      where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } },
+      include: { student: true, teacher: true },
+      orderBy: { date: "asc" },
+    }),
+    // The review queue is deliberately NOT scoped to the shown day: an
+    // auto-completion from last week still needs a human, and hiding it behind
+    // date navigation is exactly how it would get missed.
+    db.session.findMany({
+      where: { autoCompleted: true },
+      include: { student: true, teacher: true },
+      orderBy: { date: "desc" },
+      take: 50,
+    }),
+  ]);
 
-  const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
-  // Check-in/out are real instants — display them in the center's local time
-  // (Qatar) rather than UTC. This can become a configurable setting later.
-  const hm = (d: Date | null) =>
-    d
-      ? d.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-          timeZone: "Asia/Qatar",
-        })
-      : null;
-
-  const items: CheckinItem[] = sessions.map((s) => ({
+  type Row = (typeof sessions)[number];
+  const toItem = (s: Row): RosterItem => ({
     id: s.id,
-    studentName: s.student.name,
+    teacherId: s.teacherId,
     teacherName: s.teacher.name,
-    levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
-    location: s.location as "CENTER" | "HOME",
-    startMinutes: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
+    studentName: s.student.name,
+    startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
     hours: toNumber(s.hours),
+    location: s.location as "CENTER" | "HOME",
     status: s.status,
-    checkedInAt: hm(s.studentCheckInAt),
-    checkedOutAt: hm(s.studentCheckOutAt),
-    hasPin: !!s.student.checkinPin,
-    homeLat: s.student.homeLat ?? null,
-    homeLng: s.student.homeLng ?? null,
-  }));
+    autoCompleted: s.autoCompleted,
+  });
 
   return (
     <div>
       <PageHeader title={t("title")} description={t("subtitle")} />
-      <CheckinClient day={day} items={items} />
+      <RosterBoard
+        day={day}
+        items={sessions.map(toItem)}
+        pendingReview={review.map(toItem)}
+      />
     </div>
   );
 }

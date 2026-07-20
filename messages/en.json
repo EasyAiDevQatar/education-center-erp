@@ -69,7 +69,8 @@
   "expandAll": "Expand all",
   "collapseAll": "Collapse all",
   "filterBy": "Filter",
-  "clearFilter": "Clear filter"
+  "clearFilter": "Clear filter",
+  "prev": "Previous"
  },
  "nav": {
   "dashboard": "Dashboard",
@@ -205,7 +206,7 @@
  },
  "checkin": {
   "title": "Check-in / Check-out",
-  "subtitle": "Center kiosk and home-session attendance",
+  "subtitle": "Record today in one tap — mark all present, then fix the exceptions.",
   "kiosk": "Center kiosk",
   "todaySessions": "Today's sessions",
   "searchStudent": "Search student or teacher…",
@@ -226,7 +227,39 @@
   "markNoShow": "No-show",
   "undo": "Undo",
   "elapsed": "Duration: {hours}h",
-  "verifyAndCheckIn": "Verify & check in"
+  "verifyAndCheckIn": "Verify & check in",
+  "today": "Today",
+  "searchPlaceholder": "Search student or teacher…",
+  "awaiting": "{n} awaiting",
+  "hoursRecorded": "{h} h recorded",
+  "allPresent": "All present",
+  "allPresentDay": "All present (day)",
+  "present": "Present",
+  "absent": "Absent",
+  "rowSummary": "{done}/{total}",
+  "scan": "Scan QR",
+  "scanTitle": "Scan student card",
+  "scanned": "{name} checked in",
+  "noCamera": "Camera unavailable in this browser — type the code instead.",
+  "manualCode": "Enter code manually",
+  "manualHint": "The code printed under the student card.",
+  "scanErrors": {
+   "unknownCard": "Unknown card",
+   "noSessionToday": "No session for this student today",
+   "invalid": "Invalid code",
+   "forbidden": "Not allowed"
+  },
+  "reviewTitle": "{n} session(s) auto-completed — needs review",
+  "reviewHint": "Completed by the system after their end time.",
+  "accept": "Accept",
+  "autoTag": "Auto",
+  "cards": "QR cards",
+  "cardsTitle": "Student check-in cards",
+  "cardsSubtitle": "Print and hand these out so students can check in by scanning.",
+  "generateCards": "Generate missing cards",
+  "missingCards": "{n} student(s) without a card",
+  "noCards": "No cards yet — press \"Generate missing cards\".",
+  "backToRoster": "Back to roster"
  },
  "students": {
   "title": "Students",
