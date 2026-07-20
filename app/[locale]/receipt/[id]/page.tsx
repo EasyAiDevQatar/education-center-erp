@@ -29,14 +29,40 @@ export default async function ReceiptPage({
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
   const currency = settings.currency ?? "QAR";
 
+  const isPos = settings.receiptSize === "POS80";
+
   return (
-    <div className="mx-auto max-w-md p-6">
-      <div className="mb-4 flex justify-end">
+    <div className={isPos ? "mx-auto max-w-xs p-4" : "mx-auto max-w-md p-6"}>
+      <div className="no-print mb-4 flex justify-end">
         <PrintButton />
       </div>
-      <div className="rounded-lg border border-border bg-card p-8 shadow-sm print:border-0 print:shadow-none">
+      <div
+        data-print={isPos ? "POS80" : "A4"}
+        className={
+          isPos
+            ? "rounded-lg border border-border bg-card p-4 shadow-sm print:border-0 print:shadow-none"
+            : "rounded-lg border border-border bg-card p-8 shadow-sm print:border-0 print:shadow-none"
+        }
+      >
         <div className="mb-6 border-b border-border pb-4 text-center">
+          {settings.centerLogo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={settings.centerLogo}
+              alt=""
+              className="mx-auto mb-2 max-h-16 object-contain"
+            />
+          )}
           <h1 className="text-xl font-bold">{settings.centerName ?? tc("appShort")}</h1>
+          {settings.centerAddress && (
+            <p className="text-xs text-muted-foreground">{settings.centerAddress}</p>
+          )}
+          {settings.centerPhone && (
+            <p className="text-xs text-muted-foreground" dir="ltr">{settings.centerPhone}</p>
+          )}
+          {settings.centerTaxNo && (
+            <p className="text-xs text-muted-foreground" dir="ltr">{settings.centerTaxNo}</p>
+          )}
           <p className="mt-1 text-sm text-muted-foreground">{t("receipt")}</p>
         </div>
         <dl className="space-y-3 text-sm">

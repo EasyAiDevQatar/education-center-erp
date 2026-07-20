@@ -29,7 +29,13 @@ export type EarningRow = {
   hours: number;
   expected: number;
   collected: number;
-  commission: number;
+  /** commissionPct x billed session totals. */
+  expectedCommission: number;
+  /** commissionPct x income actually collected — this is what gets paid. */
+  dueCommission: number;
+  fixedSalary: number;
+  fixedDeductions: number;
+  netPayable: number;
 };
 export type PayoutRow = {
   id: string;
@@ -37,6 +43,9 @@ export type PayoutRow = {
   periodStart: string;
   periodEnd: string;
   grossCommission: number;
+  expectedCommission: number;
+  fixedSalary: number;
+  deductions: number;
   advances: number;
   netPaid: number;
   status: string;
@@ -149,7 +158,10 @@ export function PayrollClient({
               <TableHead className="text-end">{tt("expectedIncome")}</TableHead>
               <TableHead className="text-end">{tt("collectedIncome")}</TableHead>
               <TableHead className="text-end">{tt("commissionPct")}</TableHead>
+              <TableHead className="text-end">{tt("commissionExpected")}</TableHead>
               <TableHead className="text-end">{tt("commissionDue")}</TableHead>
+              <TableHead className="text-end">{tt("fixedSalary")}</TableHead>
+              <TableHead className="text-end">{tt("netPayable")}</TableHead>
               <TableHead className="text-end">{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -161,7 +173,10 @@ export function PayrollClient({
                 <TableCell className="text-end tabular-nums">{formatMoney(e.expected)}</TableCell>
                 <TableCell className="text-end tabular-nums">{formatMoney(e.collected)}</TableCell>
                 <TableCell className="text-end tabular-nums">{e.commissionPct}%</TableCell>
-                <TableCell className="text-end tabular-nums font-medium">{formatMoney(e.commission)} {currency}</TableCell>
+                <TableCell className="text-end tabular-nums text-muted-foreground">{formatMoney(e.expectedCommission)}</TableCell>
+                <TableCell className="text-end tabular-nums font-medium">{formatMoney(e.dueCommission)} {currency}</TableCell>
+                <TableCell className="text-end tabular-nums">{formatMoney(e.fixedSalary)}</TableCell>
+                <TableCell className="text-end tabular-nums font-semibold">{formatMoney(e.netPayable)} {currency}</TableCell>
                 <TableCell className="text-end">
                   <EntityDialog
                     title={t("createPayslip")}
@@ -170,7 +185,7 @@ export function PayrollClient({
                       <PayslipFields
                         teacherId={e.teacherId}
                         period={period}
-                        commission={e.commission}
+                        commission={e.netPayable}
                         currency={currency}
                       />
                     }

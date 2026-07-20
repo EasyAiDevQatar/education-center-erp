@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { FINANCE_ROLES } from "@/lib/rbac";
 import { getTeacherEarnings } from "@/lib/payroll";
 import { writeAudit } from "@/lib/audit";
+import { notifyPayout } from "@/lib/integrations/notify";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -44,22 +45,31 @@ export async function createPayout(
   end.setHours(23, 59, 59, 999);
 
   const earnings = await getTeacherEarnings(d.teacherId, start, end);
-  const gross = earnings?.commission ?? 0;
-  const netPaid = gross - d.advances;
+  // Pay on what was actually collected; keep the expected figure for comparison.
+  const dueCommission = earnings?.dueCommission ?? 0;
+  const expectedCommission = earnings?.expectedCommission ?? 0;
+  const fixedSalary = earnings?.fixedSalary ?? 0;
+  const deductions = earnings?.fixedDeductions ?? 0;
+  const netPaid = dueCommission + fixedSalary - deductions - d.advances;
 
   const created = await db.teacherPayout.create({
     data: {
       teacherId: d.teacherId,
       periodStart: start,
       periodEnd: end,
-      grossCommission: gross,
+      grossCommission: dueCommission,
+      expectedCommission,
+      fixedSalary,
+      deductions,
       advances: d.advances,
       netPaid,
       status: "DRAFT",
       notes: d.notes,
     },
   });
-  await writeAudit("TeacherPayout", created.id, "CREATE", { after: { gross, netPaid } });
+  await writeAudit("TeacherPayout", created.id, "CREATE", {
+    after: { dueCommission, expectedCommission, fixedSalary, deductions, netPaid },
+  });
   revalidatePath(`/${locale}/payroll`);
   return { ok: true };
 }
@@ -68,6 +78,7 @@ export async function markPayoutPaid(locale: string, id: string): Promise<Action
   if (await guard()) return { error: "forbidden" };
   await db.teacherPayout.update({ where: { id }, data: { status: "PAID" } });
   await writeAudit("TeacherPayout", id, "UPDATE", { after: { status: "PAID" } });
+  await notifyPayout(id);
   revalidatePath(`/${locale}/payroll`);
   return { ok: true };
 }

@@ -29,11 +29,28 @@ export async function saveCenterSettings(
     centerName: String(formData.get("centerName") ?? "").trim(),
     currency: String(formData.get("currency") ?? "QAR").trim(),
     receiptFooter: String(formData.get("receiptFooter") ?? "").trim(),
+    centerAddress: String(formData.get("centerAddress") ?? "").trim(),
+    centerPhone: String(formData.get("centerPhone") ?? "").trim(),
+    centerTaxNo: String(formData.get("centerTaxNo") ?? "").trim(),
+    // A4 | POS80 — drives the print stylesheet used for receipts.
+    receiptSize: String(formData.get("receiptSize") ?? "A4").trim(),
+    statementFooter: String(formData.get("statementFooter") ?? "").trim(),
   };
+
+  // Logo arrives as a data URL from the client (kept small, ~200 KB cap).
+  const logo = String(formData.get("centerLogo") ?? "");
+  if (logo === "__CLEAR__") {
+    entries.centerLogo = "";
+  } else if (logo.startsWith("data:image/")) {
+    if (logo.length > 400_000) return { error: "logoTooLarge" };
+    entries.centerLogo = logo;
+  }
+
   for (const [key, value] of Object.entries(entries)) {
     await db.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
   }
   revalidate(locale);
+  revalidatePath(`/${locale}/receipt`, "layout");
   return { ok: true };
 }
 

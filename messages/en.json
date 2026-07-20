@@ -219,7 +219,13 @@
     "hoursTaught": "Hours taught",
     "expectedIncome": "Expected income",
     "collectedIncome": "Collected income",
-    "commissionDue": "Commission due"
+    "commissionDue": "Commission due",
+    "commissionExpected": "Expected commission",
+    "fixedSalary": "Fixed salary",
+    "fixedDeductions": "Fixed deductions",
+    "netPayable": "Net payable",
+    "paymentMode": "Payment mode",
+    "paymentModeDefault": "Centre default"
   },
   "guardians": {
     "title": "Guardians",
@@ -271,7 +277,10 @@
     "earnings": "Teacher earnings",
     "history": "Payout history",
     "createPayslip": "Create payslip",
-    "markPaid": "Mark as paid"
+    "markPaid": "Mark as paid",
+    "expectedCommission": "Expected commission",
+    "fixedSalary": "Fixed salary",
+    "deductions": "Deductions"
   },
   "settings": {
     "title": "Settings",
@@ -287,7 +296,17 @@
     "nameEn": "Name (English)",
     "language": "Language",
     "integrations": "Integrations",
-    "notificationLog": "Notification log"
+    "notificationLog": "Notification log",
+    "logo": "Centre logo",
+    "uploadLogo": "Upload logo",
+    "logoHint": "PNG or JPG — resized automatically",
+    "taxNo": "Tax number",
+    "address": "Address",
+    "receiptSize": "Receipt size",
+    "sizeA4": "A4",
+    "sizePos": "POS 80mm",
+    "receiptFooter": "Receipt footer",
+    "statementFooter": "Statement footer"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -310,7 +329,11 @@
     "event": "Event",
     "audience": "Audience",
     "recipient": "Recipient",
-    "audienceLabels": { "TEACHER": "Teacher", "PARENT": "Parent", "STUDENT": "Student" },
+    "audienceLabels": {
+      "TEACHER": "Teacher",
+      "PARENT": "Parent",
+      "STUDENT": "Student"
+    },
     "fields": {
       "sendPath": "Send message path",
       "testPath": "Test/verify path",
@@ -331,11 +354,66 @@
     "BALANCE_REMINDER": "Balance reminder"
   },
   "enums": {
-    "location": { "CENTER": "Center", "HOME": "Home" },
-    "method": { "CASH": "Cash", "POS": "Card (POS)", "QPAY": "Qpay", "TRANSFER": "Transfer" },
-    "paymentStatus": { "PAID": "Paid", "PARTIAL": "Partial", "UNPAID": "Unpaid" },
-    "sessionStatus": { "SCHEDULED": "Scheduled", "CHECKED_IN": "Checked in", "COMPLETED": "Completed", "NO_SHOW": "No-show", "CANCELLED": "Cancelled" },
-    "packageStatus": { "ACTIVE": "Active", "COMPLETED": "Completed", "EXPIRED": "Expired" },
-    "payoutStatus": { "DRAFT": "Draft", "PAID": "Paid" }
+    "location": {
+      "CENTER": "Center",
+      "HOME": "Home"
+    },
+    "method": {
+      "CASH": "Cash",
+      "POS": "Card (POS)",
+      "QPAY": "Qpay",
+      "TRANSFER": "Transfer"
+    },
+    "paymentStatus": {
+      "PAID": "Paid",
+      "PARTIAL": "Partial",
+      "UNPAID": "Unpaid"
+    },
+    "sessionStatus": {
+      "SCHEDULED": "Scheduled",
+      "CHECKED_IN": "Checked in",
+      "COMPLETED": "Completed",
+      "NO_SHOW": "No-show",
+      "CANCELLED": "Cancelled"
+    },
+    "packageStatus": {
+      "ACTIVE": "Active",
+      "COMPLETED": "Completed",
+      "EXPIRED": "Expired"
+    },
+    "payoutStatus": {
+      "DRAFT": "Draft",
+      "PAID": "Paid"
+    }
+  },
+  "paymentModes": {
+    "SESSION": "Per session",
+    "MONTH": "Monthly",
+    "TERM": "Per term"
+  },
+  "profile": {
+    "overview": "Overview",
+    "sessions": "Sessions",
+    "payments": "Payments",
+    "statement": "Statement",
+    "payouts": "Payouts",
+    "details": "Details",
+    "recentSessions": "Recent sessions",
+    "earningsSummary": "Earnings summary",
+    "view360": "360° view"
+  },
+  "terms": {
+    "title": "Study terms",
+    "add": "Add term",
+    "edit": "Edit term",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "current": "Current",
+    "paymentSettings": "Teacher payment settings",
+    "centreDefaultMode": "Centre default",
+    "applyToAll": "Apply to all",
+    "applyBulk": "Apply to all teachers",
+    "appliedToAll": "Applied to {n} teachers",
+    "saved": "Saved"
   }
 }

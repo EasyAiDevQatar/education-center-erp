@@ -1,7 +1,8 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, CircleUserRound } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { FormField } from "@/components/crud/form-field";
@@ -50,6 +51,7 @@ function GuardianFields({ guardian }: { guardian?: GuardianRow }) {
 export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
   const t = useTranslations("guardians");
   const tc = useTranslations("common");
+  const tp = useTranslations("profile");
   const locale = useLocale();
   const pg = usePagination(guardians);
 
@@ -95,6 +97,11 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
                 <TableCell className="tabular-nums">{g.studentCount}</TableCell>
                 <TableCell className="text-end">
                   <div className="flex justify-end gap-1">
+                    <Link href={`/guardians/${g.id}`}>
+                      <Button variant="ghost" size="icon" aria-label={tp("view360")}>
+                        <CircleUserRound className="size-4" />
+                      </Button>
+                    </Link>
                     <EntityDialog
                       title={t("edit")}
                       action={saveGuardian.bind(null, locale, g.id)}

@@ -9,6 +9,7 @@ import { CenterProfileForm } from "./center-profile-form";
 import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
 import { CategoriesManager, type CategoryRow } from "./categories-manager";
 import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
+import { TermsManager, type TermRow } from "./terms-manager";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
 
 function parseJson<T>(raw: string | null, fallback: T): T {
@@ -30,13 +31,15 @@ export default async function SettingsPage({
   await requireRole(locale, ["ADMIN"]);
 
   const t = await getTranslations("settings");
+  const tterm = await getTranslations("terms");
 
-  const [settingsRows, matrix, categories, integrationRows, logs] = await Promise.all([
+  const [settingsRows, matrix, categories, integrationRows, logs, termRows] = await Promise.all([
     db.setting.findMany(),
     currentPriceMatrix(),
     db.expenseCategory.findMany({ orderBy: { sortOrder: "asc" } }),
     db.integration.findMany(),
     db.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 300 }),
+    db.term.findMany({ orderBy: { startDate: "desc" } }),
   ]);
 
   // Merge the code-defined provider registry with any stored config. Secrets are
@@ -93,6 +96,17 @@ export default async function SettingsPage({
     active: c.active,
   }));
 
+  const now = new Date();
+  const termRowsView: TermRow[] = termRows.map((x) => ({
+    id: x.id,
+    nameAr: x.nameAr,
+    nameEn: x.nameEn,
+    startDate: x.startDate.toISOString().slice(0, 10),
+    endDate: x.endDate.toISOString().slice(0, 10),
+    active: x.active,
+    current: x.active && x.startDate <= now && x.endDate >= now,
+  }));
+
   return (
     <div>
       <PageHeader title={t("title")} />
@@ -107,6 +121,12 @@ export default async function SettingsPage({
                 centerName: settings.centerName ?? "",
                 currency: settings.currency ?? "QAR",
                 receiptFooter: settings.receiptFooter ?? "",
+                centerAddress: settings.centerAddress ?? "",
+                centerPhone: settings.centerPhone ?? "",
+                centerTaxNo: settings.centerTaxNo ?? "",
+                receiptSize: settings.receiptSize ?? "A4",
+                statementFooter: settings.statementFooter ?? "",
+                centerLogo: settings.centerLogo ?? "",
               }}
             />
           </CardContent>
@@ -127,6 +147,18 @@ export default async function SettingsPage({
           </CardHeader>
           <CardContent>
             <CategoriesManager categories={catRows} />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>{tterm("title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TermsManager
+              terms={termRowsView}
+              defaultPaymentMode={settings.defaultTeacherPaymentMode ?? "MONTH"}
+            />
           </CardContent>
         </Card>
 

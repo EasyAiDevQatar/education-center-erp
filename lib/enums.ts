@@ -39,3 +39,7 @@ export type PackageStatus = (typeof PACKAGE_STATUSES)[number];
 
 export const PAYOUT_STATUSES = ["DRAFT", "PAID"] as const;
 export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
+
+/** How a teacher is paid. Per-teacher; falls back to the centre default. */
+export const TEACHER_PAYMENT_MODES = ["SESSION", "MONTH", "TERM"] as const;
+export type TeacherPaymentMode = (typeof TEACHER_PAYMENT_MODES)[number];

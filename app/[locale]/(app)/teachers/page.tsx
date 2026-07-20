@@ -21,6 +21,9 @@ export default async function TeachersPage({
     name: teacher.name,
     phone: teacher.phone,
     commissionPct: toNumber(teacher.commissionPct),
+    fixedSalary: toNumber(teacher.fixedSalary),
+    fixedDeductions: toNumber(teacher.fixedDeductions),
+    paymentMode: teacher.paymentMode,
     active: teacher.active,
     notes: teacher.notes,
   }));

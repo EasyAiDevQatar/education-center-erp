@@ -219,7 +219,13 @@
     "hoursTaught": "الساعات المُدرَّسة",
     "expectedIncome": "الدخل المتوقع",
     "collectedIncome": "الدخل المحصل",
-    "commissionDue": "العمولة المستحقة"
+    "commissionDue": "العمولة المستحقة",
+    "commissionExpected": "العمولة المتوقعة",
+    "fixedSalary": "الراتب الثابت",
+    "fixedDeductions": "الخصومات الثابتة",
+    "netPayable": "صافي المستحق",
+    "paymentMode": "طريقة الدفع",
+    "paymentModeDefault": "افتراضي المركز"
   },
   "guardians": {
     "title": "أولياء الأمور",
@@ -271,7 +277,10 @@
     "earnings": "أرباح المعلمين",
     "history": "سجل الرواتب",
     "createPayslip": "إنشاء قسيمة",
-    "markPaid": "تعليم كمدفوع"
+    "markPaid": "تعليم كمدفوع",
+    "expectedCommission": "العمولة المتوقعة",
+    "fixedSalary": "الراتب الثابت",
+    "deductions": "الخصومات"
   },
   "settings": {
     "title": "الإعدادات",
@@ -287,7 +296,17 @@
     "nameEn": "الاسم بالإنجليزية",
     "language": "اللغة",
     "integrations": "التكاملات",
-    "notificationLog": "سجل الإشعارات"
+    "notificationLog": "سجل الإشعارات",
+    "logo": "شعار المركز",
+    "uploadLogo": "رفع شعار",
+    "logoHint": "PNG أو JPG — يُصغَّر تلقائياً",
+    "taxNo": "الرقم الضريبي",
+    "address": "العنوان",
+    "receiptSize": "مقاس الإيصال",
+    "sizeA4": "A4",
+    "sizePos": "كاشير 80mm",
+    "receiptFooter": "تذييل الإيصال",
+    "statementFooter": "تذييل كشف الحساب"
   },
   "integrations": {
     "baseUrl": "رابط الـ API",
@@ -310,7 +329,11 @@
     "event": "الحدث",
     "audience": "الفئة",
     "recipient": "المستلم",
-    "audienceLabels": { "TEACHER": "المعلم", "PARENT": "ولي الأمر", "STUDENT": "الطالب" },
+    "audienceLabels": {
+      "TEACHER": "المعلم",
+      "PARENT": "ولي الأمر",
+      "STUDENT": "الطالب"
+    },
     "fields": {
       "sendPath": "مسار إرسال الرسالة",
       "testPath": "مسار التحقق",
@@ -331,11 +354,66 @@
     "BALANCE_REMINDER": "تذكير بالرصيد"
   },
   "enums": {
-    "location": { "CENTER": "المركز", "HOME": "المنزل" },
-    "method": { "CASH": "نقداً", "POS": "شبكة", "QPAY": "Qpay", "TRANSFER": "تحويل" },
-    "paymentStatus": { "PAID": "مدفوع", "PARTIAL": "جزئي", "UNPAID": "غير مدفوع" },
-    "sessionStatus": { "SCHEDULED": "مجدولة", "CHECKED_IN": "حاضر", "COMPLETED": "مكتملة", "NO_SHOW": "لم يحضر", "CANCELLED": "ملغاة" },
-    "packageStatus": { "ACTIVE": "نشطة", "COMPLETED": "مكتملة", "EXPIRED": "منتهية" },
-    "payoutStatus": { "DRAFT": "مسودة", "PAID": "مدفوع" }
+    "location": {
+      "CENTER": "المركز",
+      "HOME": "المنزل"
+    },
+    "method": {
+      "CASH": "نقداً",
+      "POS": "شبكة",
+      "QPAY": "Qpay",
+      "TRANSFER": "تحويل"
+    },
+    "paymentStatus": {
+      "PAID": "مدفوع",
+      "PARTIAL": "جزئي",
+      "UNPAID": "غير مدفوع"
+    },
+    "sessionStatus": {
+      "SCHEDULED": "مجدولة",
+      "CHECKED_IN": "حاضر",
+      "COMPLETED": "مكتملة",
+      "NO_SHOW": "لم يحضر",
+      "CANCELLED": "ملغاة"
+    },
+    "packageStatus": {
+      "ACTIVE": "نشطة",
+      "COMPLETED": "مكتملة",
+      "EXPIRED": "منتهية"
+    },
+    "payoutStatus": {
+      "DRAFT": "مسودة",
+      "PAID": "مدفوع"
+    }
+  },
+  "paymentModes": {
+    "SESSION": "بالحصة",
+    "MONTH": "شهري",
+    "TERM": "بالفصل الدراسي"
+  },
+  "profile": {
+    "overview": "نظرة عامة",
+    "sessions": "الحصص",
+    "payments": "المدفوعات",
+    "statement": "كشف الحساب",
+    "payouts": "الرواتب",
+    "details": "البيانات",
+    "recentSessions": "أحدث الحصص",
+    "earningsSummary": "ملخص المستحقات",
+    "view360": "عرض شامل 360"
+  },
+  "terms": {
+    "title": "الفصول الدراسية",
+    "add": "إضافة فصل",
+    "edit": "تعديل فصل",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "current": "الحالي",
+    "paymentSettings": "إعدادات دفع المعلمين",
+    "centreDefaultMode": "الافتراضي للمركز",
+    "applyToAll": "تطبيق على الجميع",
+    "applyBulk": "تطبيق جماعي",
+    "appliedToAll": "تم التطبيق على {n} معلم",
+    "saved": "تم الحفظ"
   }
 }

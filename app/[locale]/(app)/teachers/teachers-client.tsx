@@ -1,12 +1,14 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, CircleUserRound } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -24,6 +26,10 @@ export type TeacherRow = {
   name: string;
   phone: string | null;
   commissionPct: number;
+  fixedSalary: number;
+  fixedDeductions: number;
+  /** null = inherit the centre default payment mode. */
+  paymentMode: string | null;
   active: boolean;
   notes: string | null;
 };
@@ -31,6 +37,7 @@ export type TeacherRow = {
 function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
   const t = useTranslations("teachers");
   const tc = useTranslations("common");
+  const tm = useTranslations("paymentModes");
   return (
     <>
       <FormField label={tc("name")} htmlFor="name">
@@ -51,6 +58,38 @@ function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
           defaultValue={teacher?.commissionPct ?? 0}
         />
       </FormField>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label={t("fixedSalary")} htmlFor="fixedSalary">
+          <Input
+            id="fixedSalary"
+            name="fixedSalary"
+            type="number"
+            step="0.01"
+            min="0"
+            dir="ltr"
+            defaultValue={teacher?.fixedSalary ?? 0}
+          />
+        </FormField>
+        <FormField label={t("fixedDeductions")} htmlFor="fixedDeductions">
+          <Input
+            id="fixedDeductions"
+            name="fixedDeductions"
+            type="number"
+            step="0.01"
+            min="0"
+            dir="ltr"
+            defaultValue={teacher?.fixedDeductions ?? 0}
+          />
+        </FormField>
+      </div>
+      <FormField label={t("paymentMode")} htmlFor="paymentMode">
+        <Select id="paymentMode" name="paymentMode" defaultValue={teacher?.paymentMode ?? ""}>
+          <option value="">{t("paymentModeDefault")}</option>
+          <option value="SESSION">{tm("SESSION")}</option>
+          <option value="MONTH">{tm("MONTH")}</option>
+          <option value="TERM">{tm("TERM")}</option>
+        </Select>
+      </FormField>
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" defaultValue={teacher?.notes ?? ""} />
       </FormField>
@@ -70,6 +109,7 @@ function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
 export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
   const t = useTranslations("teachers");
   const tc = useTranslations("common");
+  const tp = useTranslations("profile");
   const locale = useLocale();
   const pg = usePagination(teachers);
 
@@ -122,6 +162,11 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
                 </TableCell>
                 <TableCell className="text-end">
                   <div className="flex justify-end gap-1">
+                    <Link href={`/teachers/${teacher.id}`}>
+                      <Button variant="ghost" size="icon" aria-label={tp("view360")}>
+                        <CircleUserRound className="size-4" />
+                      </Button>
+                    </Link>
                     <EntityDialog
                       title={t("edit")}
                       action={saveTeacher.bind(null, locale, teacher.id)}

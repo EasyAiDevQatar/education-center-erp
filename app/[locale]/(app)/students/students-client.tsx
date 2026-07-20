@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, ScrollText, MapPin, Map } from "lucide-react";
+import { Plus, Pencil, CircleUserRound, MapPin, Map } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
@@ -164,6 +164,7 @@ export function StudentsClient({
 }) {
   const t = useTranslations("students");
   const tc = useTranslations("common");
+  const tp = useTranslations("profile");
   const locale = useLocale();
   const pg = usePagination(students);
 
@@ -218,8 +219,8 @@ export function StudentsClient({
                 <TableCell className="text-end">
                   <div className="flex justify-end gap-1">
                     <Link href={`/students/${s.id}`}>
-                      <Button variant="ghost" size="icon" aria-label={t("ledger")}>
-                        <ScrollText className="size-4" />
+                      <Button variant="ghost" size="icon" aria-label={tp("view360")}>
+                        <CircleUserRound className="size-4" />
                       </Button>
                     </Link>
                     <EntityDialog

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { TEACHER_PAYMENT_MODES } from "@/lib/enums";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -13,6 +14,10 @@ const schema = z.object({
   name: z.string().trim().min(1),
   phone: z.string().trim().optional().nullable(),
   commissionPct: z.coerce.number().min(0).max(100).default(0),
+  fixedSalary: z.coerce.number().min(0).default(0),
+  fixedDeductions: z.coerce.number().min(0).default(0),
+  /** Empty string = inherit the centre default. */
+  paymentMode: z.enum(TEACHER_PAYMENT_MODES).optional().nullable(),
   active: z.coerce.boolean().default(true),
   notes: z.string().trim().optional().nullable(),
 });
@@ -39,6 +44,9 @@ export async function saveTeacher(
     name: formData.get("name"),
     phone: formData.get("phone") || null,
     commissionPct: formData.get("commissionPct") || 0,
+    fixedSalary: formData.get("fixedSalary") || 0,
+    fixedDeductions: formData.get("fixedDeductions") || 0,
+    paymentMode: formData.get("paymentMode") || null,
     active: formData.get("active") === "on" || formData.get("active") === "true",
     notes: formData.get("notes") || null,
   });

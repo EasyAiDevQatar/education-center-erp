@@ -43,6 +43,12 @@ model Teacher {
   active        Boolean  @default(true)
   notes         String?
 
+  /// Fixed monthly salary paid on top of commission, and any standing deduction.
+  fixedSalary     Decimal @default(0)
+  fixedDeductions Decimal @default(0)
+  /// SESSION | MONTH | TERM. Null falls back to the centre default setting.
+  paymentMode     String?
+
   user     User?
   sessions Session[]
   payments Payment[]      // payments allocated to this teacher
@@ -241,7 +247,12 @@ model TeacherPayout {
   teacher         Teacher  @relation(fields: [teacherId], references: [id])
   periodStart     DateTime
   periodEnd       DateTime
+  /// Commission actually due — commissionPct applied to income collected.
   grossCommission Decimal
+  /// Commission the sessions would earn once fully collected (for comparison).
+  expectedCommission Decimal @default(0)
+  fixedSalary     Decimal  @default(0)
+  deductions      Decimal  @default(0)
   advances        Decimal  @default(0)
   netPaid         Decimal
   status          String   @default("DRAFT") // DRAFT | PAID
@@ -273,6 +284,21 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+/// An academic term. Drives calendar context and term-based teacher payouts.
+model Term {
+  id        String   @id @default(cuid())
+  nameAr    String
+  nameEn    String
+  startDate DateTime
+  endDate   DateTime
+  active    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startDate])
 }
 
 /// A configured third-party integration (messaging, etc.). Credentials are stored
