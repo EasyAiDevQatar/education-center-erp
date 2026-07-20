@@ -11,6 +11,7 @@ import {
   BadgeDollarSign,
   ScanLine,
   ClipboardList,
+  BarChart3,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -43,5 +44,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/packages", key: "packages", icon: Package, roles: STAFF, section: "finance" },
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },
   { href: "/payroll", key: "payroll", icon: BadgeDollarSign, roles: FINANCE, section: "finance" },
+  { href: "/reports", key: "reports", icon: BarChart3, roles: FINANCE, section: "finance" },
   { href: "/settings", key: "settings", icon: Settings, roles: ["ADMIN"], section: "admin" },
 ];

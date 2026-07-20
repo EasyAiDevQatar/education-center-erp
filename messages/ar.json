@@ -57,7 +57,8 @@
    "monthRequired": "اختر الشهر",
    "termRequired": "اختر الفصل الدراسي",
    "invalidPeriod": "فترة غير صحيحة"
-  }
+  },
+  "price": "السعر"
  },
  "nav": {
   "dashboard": "لوحة التحكم",
@@ -121,7 +122,13 @@
   "thisMonth": "هذا الشهر",
   "lastMonth": "الشهر الماضي",
   "thisYear": "هذا العام",
-  "custom": "مخصص"
+  "custom": "مخصص",
+  "todaysSessions": "حصص اليوم",
+  "unconfirmedDrafts": "مسودات غير مؤكدة",
+  "expiringPackages": "باقات تقترب من الانتهاء",
+  "topDebtors": "أكبر المديونيات",
+  "openCalendar": "فتح التقويم",
+  "openPlanner": "فتح المخطط"
  },
  "sessions": {
   "title": "الحصص اليومية",
@@ -576,5 +583,48 @@
   "advisory": "تنبيه إرشادي فقط — يمكنك الحفظ رغم ذلك.",
   "none": "لا توجد تعارضات",
   "countForStudents": "{n} طالب لديه تعارض"
+ },
+ "reports": {
+  "title": "التقارير",
+  "subtitle": "تقارير الحضور والإيرادات والباقات والرواتب والمديونيات.",
+  "tabs": {
+   "attendance": "الحضور",
+   "revenue": "الإيرادات",
+   "packages": "الباقات",
+   "payroll": "ملخص الرواتب",
+   "debtors": "المديونيات"
+  },
+  "groupings": {
+   "teacher": "حسب المعلم",
+   "student": "حسب الطالب",
+   "level": "حسب المرحلة",
+   "location": "حسب المكان"
+  },
+  "groupBy": "التجميع",
+  "term": "الفصل الدراسي",
+  "customRange": "فترة مخصصة",
+  "allTime": "كل الفترات",
+  "exportExcel": "تصدير Excel",
+  "sessionsCount": "الحصص",
+  "completed": "مكتملة",
+  "noShow": "غياب",
+  "cancelled": "ملغاة",
+  "attendanceRate": "نسبة الحضور",
+  "expectedRevenue": "الدخل المتوقع",
+  "share": "النسبة",
+  "totalHours": "إجمالي الساعات",
+  "hoursUsed": "المستخدمة",
+  "remaining": "المتبقية",
+  "expiresAt": "تاريخ الانتهاء",
+  "payMode": "طريقة الدفع",
+  "period": "الفترة",
+  "commission": "العمولة",
+  "fixedSalary": "الراتب الثابت",
+  "deductions": "الخصومات والسلف",
+  "netPaid": "الصافي المدفوع",
+  "guardian": "ولي الأمر",
+  "charges": "الرسوم",
+  "paid": "المدفوع",
+  "balance": "الرصيد المستحق"
  }
 }

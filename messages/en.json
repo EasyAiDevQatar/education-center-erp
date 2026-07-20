@@ -57,7 +57,8 @@
    "monthRequired": "Select a month",
    "termRequired": "Select a term",
    "invalidPeriod": "Invalid period"
-  }
+  },
+  "price": "Price"
  },
  "nav": {
   "dashboard": "Dashboard",
@@ -121,7 +122,13 @@
   "thisMonth": "This month",
   "lastMonth": "Last month",
   "thisYear": "This year",
-  "custom": "Custom"
+  "custom": "Custom",
+  "todaysSessions": "Today's sessions",
+  "unconfirmedDrafts": "Unconfirmed drafts",
+  "expiringPackages": "Packages expiring soon",
+  "topDebtors": "Top debtors",
+  "openCalendar": "Open calendar",
+  "openPlanner": "Open planner"
  },
  "sessions": {
   "title": "Daily Sessions",
@@ -576,5 +583,48 @@
   "advisory": "Advisory only — you can still save.",
   "none": "No conflicts",
   "countForStudents": "{n} student(s) have a conflict"
+ },
+ "reports": {
+  "title": "Reports",
+  "subtitle": "Attendance, revenue, packages, payroll and outstanding balances.",
+  "tabs": {
+   "attendance": "Attendance",
+   "revenue": "Revenue",
+   "packages": "Packages",
+   "payroll": "Payroll summary",
+   "debtors": "Debtors"
+  },
+  "groupings": {
+   "teacher": "By teacher",
+   "student": "By student",
+   "level": "By grade level",
+   "location": "By location"
+  },
+  "groupBy": "Group by",
+  "term": "Term",
+  "customRange": "Custom range",
+  "allTime": "All time",
+  "exportExcel": "Export Excel",
+  "sessionsCount": "Sessions",
+  "completed": "Completed",
+  "noShow": "No-show",
+  "cancelled": "Cancelled",
+  "attendanceRate": "Attendance rate",
+  "expectedRevenue": "Expected revenue",
+  "share": "Share",
+  "totalHours": "Total hours",
+  "hoursUsed": "Used",
+  "remaining": "Remaining",
+  "expiresAt": "Expires",
+  "payMode": "Pay mode",
+  "period": "Period",
+  "commission": "Commission",
+  "fixedSalary": "Fixed salary",
+  "deductions": "Deductions & advances",
+  "netPaid": "Net paid",
+  "guardian": "Guardian",
+  "charges": "Charges",
+  "paid": "Paid",
+  "balance": "Balance due"
  }
 }

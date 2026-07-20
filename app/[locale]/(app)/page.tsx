@@ -14,16 +14,42 @@ import {
   getExpensesByCategory,
   getMonthlyTrend,
 } from "@/lib/reports";
+import { getDashboardAlerts } from "@/lib/report-queries";
+import { PeriodSelector } from "@/components/dashboard/period-selector";
+import { AlertWidgets } from "@/components/dashboard/alert-widgets";
 import { formatMoney } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthlyTrendChart } from "@/components/charts/monthly-trend-chart";
 
+/** Resolve a period key to a concrete range (UTC, matching the data). */
+function resolvePeriod(period: string): { from?: Date; to?: Date } {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  const start = (yy: number, mm: number) => new Date(Date.UTC(yy, mm, 1, 0, 0, 0, 0));
+  const endOfMonth = (yy: number, mm: number) =>
+    new Date(Date.UTC(yy, mm + 1, 0, 23, 59, 59, 999));
+
+  switch (period) {
+    case "thisMonth":
+      return { from: start(y, m), to: endOfMonth(y, m) };
+    case "lastMonth":
+      return { from: start(y, m - 1), to: endOfMonth(y, m - 1) };
+    case "thisYear":
+      return { from: start(y, 0), to: endOfMonth(y, 11) };
+    default:
+      return {}; // all time
+  }
+}
+
 export default async function DashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
@@ -32,11 +58,17 @@ export default async function DashboardPage({
   const t = await getTranslations("dashboard");
   const tc = await getTranslations("common");
 
-  const [summary, byTeacher, byCategory, trend] = await Promise.all([
-    getDashboardSummary(),
-    getRevenueByTeacher(),
-    getExpensesByCategory(),
+  const sp = await searchParams;
+  const periodRaw = Array.isArray(sp.period) ? sp.period[0] : sp.period;
+  const period = periodRaw ?? "all";
+  const range = resolvePeriod(period);
+
+  const [summary, byTeacher, byCategory, trend, alerts] = await Promise.all([
+    getDashboardSummary(range),
+    getRevenueByTeacher(range),
+    getExpensesByCategory(range),
     getMonthlyTrend(12),
+    getDashboardAlerts(locale),
   ]);
 
   const cur = tc("currency");
@@ -49,6 +81,10 @@ export default async function DashboardPage({
         title={t("title")}
         description={t("welcome", { name: session.name })}
       />
+
+      <PeriodSelector active={period} />
+
+      <AlertWidgets alerts={alerts} currency={cur} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
