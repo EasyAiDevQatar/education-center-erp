@@ -120,6 +120,11 @@ model Student {
   homeLat    Float?
   homeLng    Float?
   checkinPin String?
+  /// Short code the centre uses to identify the home location (zone/street/
+  /// building, a compound name, whatever they already write on the paper
+  /// sheet). Shown on planner cards for HOME sessions so the teacher knows
+  /// where they are going at a glance.
+  homeCode   String?
 
   sessions  Session[]
   payments  Payment[]

@@ -214,7 +214,9 @@
   "homeLng": "Longitude",
   "checkinPin": "Check-in PIN",
   "useCurrentLocation": "Use current location",
-  "locateOnMap": "Locate on map"
+  "locateOnMap": "Locate on map",
+  "homeCode": "Home location code",
+  "homeCodeHint": "Short location code (zone/street/building or compound name) shown to the teacher on the planner for home sessions."
  },
  "map": {
   "title": "Pick location on map",
@@ -497,7 +499,8 @@
   "sheetTitle": "Daily session sheet",
   "slot": "Slot",
   "saveAsTemplate": "Save as weekly template",
-  "savedAsTemplate": "Saved as template"
+  "savedAsTemplate": "Saved as template",
+  "homeCodeTitle": "Home location code"
  },
  "users": {
   "add": "Add user",

@@ -38,6 +38,7 @@ export type StudentRow = {
   homeLat: number | null;
   homeLng: number | null;
   checkinPin: string | null;
+  homeCode: string | null;
 };
 
 function StudentFields({
@@ -140,9 +141,14 @@ function StudentFields({
             <Input id="homeLng" name="homeLng" dir="ltr" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} />
           </FormField>
         </div>
-        <FormField label={t("checkinPin")} htmlFor="checkinPin">
-          <Input id="checkinPin" name="checkinPin" dir="ltr" inputMode="numeric" maxLength={6} placeholder="4–6" defaultValue={student?.checkinPin ?? ""} />
-        </FormField>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label={t("checkinPin")} htmlFor="checkinPin">
+            <Input id="checkinPin" name="checkinPin" dir="ltr" inputMode="numeric" maxLength={6} placeholder="4–6" defaultValue={student?.checkinPin ?? ""} />
+          </FormField>
+          <FormField label={t("homeCode")} htmlFor="homeCode" hint={t("homeCodeHint")}>
+            <Input id="homeCode" name="homeCode" maxLength={40} defaultValue={student?.homeCode ?? ""} />
+          </FormField>
+        </div>
       </div>
 
       <label className="flex items-center gap-2 text-sm">

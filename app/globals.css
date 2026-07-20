@@ -161,13 +161,8 @@
   }
 }
 
-body.print-a4l {
-  --print-page: A4 landscape;
-}
-@page a4l {
-  size: A4 landscape;
-  margin: 8mm;
-}
+/* The landscape @page rule is injected at print time by the planner's print
+   button — a named @page can't be targeted from markup in any browser. */
 
 /* Page size must be declared at top level, so gate via a body class instead. */
 body.print-pos80 {

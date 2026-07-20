@@ -35,6 +35,7 @@ export const TABLES: TableSpec[] = [
       { key: "gradeCode", ar: "المرحلة" },
       { key: "guardianName", ar: "ولي الأمر" },
       { key: "address", ar: "العنوان" },
+      { key: "homeCode", ar: "كود موقع المنزل" },
       { key: "checkinPin", ar: "رمز الحضور" },
       { key: "notes", ar: "ملاحظات" },
     ],

@@ -19,6 +19,7 @@ import {
   Copy as CopyIcon,
   LayoutTemplate,
   Printer,
+  MapPin,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
@@ -68,6 +69,8 @@ export type PlannerSession = {
   location: "CENTER" | "HOME";
   status: string;
   total: number;
+  /** Student's home location code — only meaningful for HOME sessions. */
+  homeCode: string | null;
 };
 
 export type PlannerTemplateRow = {
@@ -98,6 +101,25 @@ const CELL_STYLES: Record<string, string> = {
   NO_SHOW: "border-destructive/50 bg-destructive/10",
   CANCELLED: "border-border bg-muted text-muted-foreground line-through",
 };
+
+/**
+ * Print the sheet in landscape.
+ *
+ * `@page { size: … }` only works at the top level of a stylesheet — it can't be
+ * scoped by a class or a named page in any way browsers actually honour — so
+ * the rule is injected for the duration of the print call and removed after.
+ */
+function printLandscape() {
+  const style = document.createElement("style");
+  style.media = "print";
+  style.textContent = "@page { size: A4 landscape; margin: 8mm; }";
+  document.head.appendChild(style);
+  try {
+    window.print();
+  } finally {
+    style.remove();
+  }
+}
 
 function addDaysStr(s: string, n: number) {
   const d = new Date(`${s}T00:00:00.000Z`);
@@ -316,14 +338,9 @@ export function PlannerClient({
           >
             <LayoutTemplate className="size-4" />
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            aria-label={t("printSheet")}
-            title={t("printSheet")}
-            onClick={() => window.print()}
-          >
+          <Button size="sm" variant="secondary" className="gap-1" onClick={printLandscape}>
             <Printer className="size-4" />
+            {t("printSheet")}
           </Button>
           <Button
             size="sm"
@@ -492,6 +509,17 @@ export function PlannerClient({
                             </span>
                           </div>
                           <div className="truncate font-medium">{s.studentName}</div>
+                          {/* Where the teacher is actually going — only home
+                              visits need a location, and only if one is set. */}
+                          {s.location === "HOME" && s.homeCode && (
+                            <div
+                              className="mt-0.5 flex items-center gap-1 text-xs font-medium"
+                              title={t("homeCodeTitle")}
+                            >
+                              <MapPin className="size-3 shrink-0" />
+                              <span className="truncate">{s.homeCode}</span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between text-xs opacity-80">
                             <span>{s.levelLabel}</span>
                             <span className="tabular-nums">{formatMoney(s.total)}</span>

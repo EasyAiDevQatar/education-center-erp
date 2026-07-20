@@ -146,6 +146,7 @@ async function importRows(
               gradeLevelId: findLevel(r.gradeCode),
               guardianId: r.guardianName ? guardianByName.get(r.guardianName) ?? null : null,
               address: r.address || null,
+              homeCode: r.homeCode || null,
               checkinPin: /^\d{4,6}$/.test(r.checkinPin ?? "") ? r.checkinPin : null,
               notes: r.notes || null,
             },

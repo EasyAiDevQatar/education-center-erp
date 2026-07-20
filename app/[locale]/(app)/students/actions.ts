@@ -21,6 +21,7 @@ const schema = z.object({
   homeLat: z.coerce.number().min(-90).max(90).optional().nullable(),
   homeLng: z.coerce.number().min(-180).max(180).optional().nullable(),
   checkinPin: z.string().trim().regex(/^\d{4,6}$/).optional().nullable(),
+  homeCode: z.string().trim().max(40).optional().nullable(),
 });
 
 /** Empty strings from the form become null for optional numeric/text fields. */
@@ -52,6 +53,7 @@ export async function saveStudent(
     homeLat: orNull(formData.get("homeLat")),
     homeLng: orNull(formData.get("homeLng")),
     checkinPin: orNull(formData.get("checkinPin")),
+    homeCode: orNull(formData.get("homeCode")),
   });
   if (!parsed.success) return { error: "invalid" };
 

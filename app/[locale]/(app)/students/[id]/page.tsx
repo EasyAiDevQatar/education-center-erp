@@ -101,6 +101,7 @@ export default async function StudentProfilePage({
               <Row label={t("guardian")} value={student.guardian?.name ?? "—"} />
               <Row label={tc("phone")} value={student.guardian?.phone ?? "—"} />
               <Row icon={<MapPin className="size-4" />} label={t("address")} value={student.address ?? "—"} />
+              <Row label={t("homeCode")} value={student.homeCode ?? "—"} />
               <Row
                 label={t("homeLocation")}
                 value={

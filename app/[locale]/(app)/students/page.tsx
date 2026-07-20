@@ -48,6 +48,7 @@ export default async function StudentsPage({
     homeLat: s.homeLat,
     homeLng: s.homeLng,
     checkinPin: s.checkinPin,
+    homeCode: s.homeCode,
   }));
 
   return (
