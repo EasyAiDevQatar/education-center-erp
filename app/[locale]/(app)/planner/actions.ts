@@ -72,9 +72,11 @@ const updateSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/),
   hours: z.coerce.number().min(0.25).max(12),
   location: z.enum(LOCATIONS),
+  /** Optional reassignment to another teacher (drag-and-drop / edit dialog). */
+  teacherId: z.string().min(1).optional().nullable(),
 });
 
-/** Edit a draft's time/duration/location; price re-resolved from the matrix. */
+/** Edit a draft's time/duration/location/teacher; price re-resolved from the matrix. */
 export async function updateDraft(
   locale: string,
   input: z.infer<typeof updateSchema>,
@@ -99,9 +101,12 @@ export async function updateDraft(
       location: d.location,
       pricePerHour,
       total: pricePerHour * d.hours,
+      ...(d.teacherId ? { teacherId: d.teacherId } : {}),
     },
   });
-  await writeAudit("Session", d.id, "UPDATE", { after: { time: d.time, hours: d.hours, location: d.location } });
+  await writeAudit("Session", d.id, "UPDATE", {
+    after: { time: d.time, hours: d.hours, location: d.location, teacherId: d.teacherId ?? undefined },
+  });
   revalidate(locale);
   return { ok: true };
 }

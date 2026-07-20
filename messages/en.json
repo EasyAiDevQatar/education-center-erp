@@ -440,6 +440,13 @@
     "settings": "Planner settings",
     "dayStart": "Day start",
     "homeGap": "Home travel gap (min)",
-    "settingsHint": "Used to suggest and compact session times."
+    "settingsHint": "Used to suggest and compact session times.",
+    "moveTitle": "Move {student}'s session to {teacher}",
+    "retimeTitle": "Change time — {student}",
+    "currentTime": "Current time",
+    "suggestedTime": "Suggested time",
+    "moveHint": "Time is suggested from the target teacher's schedule — adjust before saving.",
+    "move": "Move",
+    "dragHint": "Drag any draft onto another teacher's row to move it."
   }
 }

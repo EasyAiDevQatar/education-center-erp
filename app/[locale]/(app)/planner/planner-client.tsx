@@ -105,6 +105,13 @@ export function PlannerClient({
   const [addFor, setAddFor] = useState<string | null>(null); // teacherId
   const [editing, setEditing] = useState<PlannerSession | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  // Drag-and-drop: draft card → any teacher row, then a time prompt on drop.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [hoverTeacher, setHoverTeacher] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState<{
+    session: PlannerSession;
+    teacherId: string;
+  } | null>(null);
 
   // Group + sort each teacher's day.
   const byTeacher = useMemo(() => {
@@ -217,7 +224,30 @@ export function PlannerClient({
               const list = byTeacher.get(teacher.id) ?? [];
               const teacherDrafts = list.filter((s) => s.status === "DRAFT");
               return (
-                <tr key={teacher.id} className="border-b border-border/60 align-top">
+                <tr
+                  key={teacher.id}
+                  className={cn(
+                    "border-b border-border/60 align-top transition-colors",
+                    dragId && hoverTeacher === teacher.id && "bg-primary/5",
+                  )}
+                  onDragOver={(e) => {
+                    if (!dragId) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    if (hoverTeacher !== teacher.id) setHoverTeacher(teacher.id);
+                  }}
+                  onDragLeave={() =>
+                    setHoverTeacher((h) => (h === teacher.id ? null : h))
+                  }
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!dragId) return;
+                    const s = sessions.find((x) => x.id === dragId);
+                    setDragId(null);
+                    setHoverTeacher(null);
+                    if (s) setMoveTarget({ session: s, teacherId: teacher.id });
+                  }}
+                >
                   {/* Teacher cell (like المدرس/ة on the paper) */}
                   <td className="sticky start-0 z-10 bg-card p-2">
                     <div className="font-semibold">{teacher.label}</div>
@@ -269,7 +299,24 @@ export function PlannerClient({
                     const end = s.startMin + s.hours * 60;
                     return (
                       <td key={s.id} className="border-s border-border/60 p-1.5">
-                        <div className={cn("group rounded-md border p-2", CELL_STYLES[s.status] ?? "")}>
+                        <div
+                          draggable={s.status === "DRAFT"}
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData("text/plain", s.id);
+                            setDragId(s.id);
+                          }}
+                          onDragEnd={() => {
+                            setDragId(null);
+                            setHoverTeacher(null);
+                          }}
+                          className={cn(
+                            "group rounded-md border p-2",
+                            CELL_STYLES[s.status] ?? "",
+                            s.status === "DRAFT" && "cursor-grab active:cursor-grabbing",
+                            dragId === s.id && "opacity-40 ring-2 ring-ring",
+                          )}
+                        >
                           <div className="flex items-center justify-between gap-1 tabular-nums" dir="ltr">
                             <span className="font-semibold">
                               {minToHHMM(s.startMin)}–{minToHHMM(end)}
@@ -356,9 +403,29 @@ export function PlannerClient({
       {editing && (
         <EditDraftDialog
           session={editing}
+          teachers={teachers}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Move dialog (after drag-and-drop): confirm target teacher + new time */}
+      {moveTarget && (
+        <MoveDialog
+          session={moveTarget.session}
+          targetTeacherId={moveTarget.teacherId}
+          targetTeacherName={teachers.find((x) => x.id === moveTarget.teacherId)?.label ?? ""}
+          targetExisting={(byTeacher.get(moveTarget.teacherId) ?? []).filter(
+            (s) => s.id !== moveTarget.session.id,
+          )}
+          dayStartMin={dayStartMin}
+          homeGapMin={homeGapMin}
+          onClose={() => setMoveTarget(null)}
+          onSaved={() => {
+            setMoveTarget(null);
             router.refresh();
           }}
         />
@@ -558,10 +625,12 @@ function AddDraftDialog({
 
 function EditDraftDialog({
   session,
+  teachers,
   onClose,
   onSaved,
 }: {
   session: PlannerSession;
+  teachers: Opt[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -574,6 +643,7 @@ function EditDraftDialog({
   const [time, setTime] = useState(minToHHMM(session.startMin));
   const [hours, setHours] = useState(String(session.hours));
   const [location, setLocation] = useState<"CENTER" | "HOME">(session.location);
+  const [teacherId, setTeacherId] = useState(session.teacherId);
   const [pending, start] = useTransition();
 
   function submit() {
@@ -583,6 +653,7 @@ function EditDraftDialog({
         time,
         hours: parseFloat(hours) || session.hours,
         location,
+        teacherId: teacherId !== session.teacherId ? teacherId : null,
       });
       if (res.ok) onSaved();
     });
@@ -594,27 +665,36 @@ function EditDraftDialog({
         <DialogHeader>
           <DialogTitle>{t("editDraft", { student: session.studentName })}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-3 gap-3">
-          <FormField label={ts("startTime")} htmlFor="e-time">
-            <Input id="e-time" type="time" dir="ltr" value={time} onChange={(e) => setTime(e.target.value)} />
-          </FormField>
-          <FormField label={ts("hours")} htmlFor="e-hours">
-            <Input
-              id="e-hours"
-              type="number"
-              step="0.5"
-              min="0.5"
-              dir="ltr"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-            />
-          </FormField>
-          <FormField label={ts("location")} htmlFor="e-loc">
-            <Select id="e-loc" value={location} onChange={(e) => setLocation(e.target.value as "CENTER" | "HOME")}>
-              <option value="CENTER">{te("location.CENTER")}</option>
-              <option value="HOME">{te("location.HOME")}</option>
+        <div className="space-y-3">
+          <FormField label={ts("teacher")} htmlFor="e-teacher">
+            <Select id="e-teacher" value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+              {teachers.map((tt) => (
+                <option key={tt.id} value={tt.id}>{tt.label}</option>
+              ))}
             </Select>
           </FormField>
+          <div className="grid grid-cols-3 gap-3">
+            <FormField label={ts("startTime")} htmlFor="e-time">
+              <Input id="e-time" type="time" dir="ltr" value={time} onChange={(e) => setTime(e.target.value)} />
+            </FormField>
+            <FormField label={ts("hours")} htmlFor="e-hours">
+              <Input
+                id="e-hours"
+                type="number"
+                step="0.5"
+                min="0.5"
+                dir="ltr"
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
+            </FormField>
+            <FormField label={ts("location")} htmlFor="e-loc">
+              <Select id="e-loc" value={location} onChange={(e) => setLocation(e.target.value as "CENTER" | "HOME")}>
+                <option value="CENTER">{te("location.CENTER")}</option>
+                <option value="HOME">{te("location.HOME")}</option>
+              </Select>
+            </FormField>
+          </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
@@ -622,6 +702,91 @@ function EditDraftDialog({
           </DialogClose>
           <Button type="button" disabled={pending} onClick={submit}>
             {pending ? tc("saving") : tc("save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Time-change prompt shown after dropping a dragged draft on a teacher row. */
+function MoveDialog({
+  session,
+  targetTeacherId,
+  targetTeacherName,
+  targetExisting,
+  dayStartMin,
+  homeGapMin,
+  onClose,
+  onSaved,
+}: {
+  session: PlannerSession;
+  targetTeacherId: string;
+  targetTeacherName: string;
+  targetExisting: PlannerSession[];
+  dayStartMin: number;
+  homeGapMin: number;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const t = useTranslations("planner");
+  const ts = useTranslations("sessions");
+  const tc = useTranslations("common");
+  const locale = useLocale();
+
+  const sameTeacher = targetTeacherId === session.teacherId;
+  // Suggest the chained slot on the TARGET teacher's day (dragged card excluded).
+  const suggested = minToHHMM(
+    suggestNextStart({
+      existing: targetExisting.map((s) => ({ startMin: s.startMin, hours: s.hours })),
+      dayStartMin,
+      homeGapMin,
+      nextLocation: session.location,
+    }),
+  );
+  const [time, setTime] = useState(suggested);
+  const [pending, start] = useTransition();
+
+  function submit() {
+    start(async () => {
+      const res = await updateDraft(locale, {
+        id: session.id,
+        time,
+        hours: session.hours,
+        location: session.location,
+        teacherId: sameTeacher ? null : targetTeacherId,
+      });
+      if (res.ok) onSaved();
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {sameTeacher
+              ? t("retimeTitle", { student: session.studentName })
+              : t("moveTitle", { student: session.studentName, teacher: targetTeacherName })}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {t("currentTime")}: <span className="tabular-nums" dir="ltr">{minToHHMM(session.startMin)}</span>
+            {" · "}
+            {t("suggestedTime")}: <span className="tabular-nums" dir="ltr">{suggested}</span>
+          </p>
+          <FormField label={ts("startTime")} htmlFor="m-time">
+            <Input id="m-time" type="time" dir="ltr" value={time} onChange={(e) => setTime(e.target.value)} />
+          </FormField>
+          <p className="text-xs text-muted-foreground">{t("moveHint")}</p>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">{tc("cancel")}</Button>
+          </DialogClose>
+          <Button type="button" disabled={pending} onClick={submit}>
+            {pending ? tc("saving") : sameTeacher ? tc("save") : t("move")}
           </Button>
         </DialogFooter>
       </DialogContent>
