@@ -25,6 +25,7 @@ import {
   type Opt,
   type PriceMatrix,
   type SessionInit,
+  type PackageOpt,
 } from "./session-dialog";
 import { saveSession, deleteSession } from "./actions";
 
@@ -51,6 +52,7 @@ export function SessionsClient({
   levels,
   matrix,
   currency,
+  packages = [],
   filters,
   exportHref,
 }: {
@@ -60,6 +62,7 @@ export function SessionsClient({
   levels: Opt[];
   matrix: PriceMatrix;
   currency: string;
+  packages?: PackageOpt[];
   filters: Filters;
   exportHref: string;
 }) {
@@ -147,6 +150,7 @@ export function SessionsClient({
           levels={levels}
           matrix={matrix}
           currency={currency}
+          packages={packages}
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
@@ -203,6 +207,7 @@ export function SessionsClient({
                       levels={levels}
                       matrix={matrix}
                       currency={currency}
+                      packages={packages}
                       session={s}
                       trigger={
                         <Button variant="ghost" size="icon" aria-label={tc("edit")}>

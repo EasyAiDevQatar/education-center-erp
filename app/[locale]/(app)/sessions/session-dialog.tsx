@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
 
 export type StudentOpt = { id: string; name: string; gradeLevelId: string | null };
+export type PackageOpt = { id: string; studentId: string; label: string };
 export type Opt = { id: string; label: string };
 export type PriceMatrix = Record<string, { CENTER: number | null; HOME: number | null }>;
 
@@ -32,6 +33,7 @@ export type SessionInit = {
   hours: number;
   paymentStatus: string;
   notes: string | null;
+  packageId?: string | null;
 };
 
 type ActionFn = (
@@ -48,6 +50,7 @@ export function SessionDialog({
   levels,
   matrix,
   currency,
+  packages = [],
   session,
   // Controlled-open + prefill support (used by the calendar's click-to-create).
   open: openProp,
@@ -65,6 +68,7 @@ export function SessionDialog({
   levels: Opt[];
   matrix: PriceMatrix;
   currency: string;
+  packages?: PackageOpt[];
   session?: SessionInit;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
@@ -93,6 +97,7 @@ export function SessionDialog({
   const [gradeLevelId, setGradeLevelId] = useState(session?.gradeLevelId ?? "");
   const [location, setLocation] = useState<"CENTER" | "HOME">(session?.location ?? "CENTER");
   const [hours, setHours] = useState<string>(session ? String(session.hours) : "1");
+  const [packageId, setPackageId] = useState(session?.packageId ?? "");
 
   // When opened fresh for quick-create, reset the light fields.
   useEffect(() => {
@@ -101,9 +106,15 @@ export function SessionDialog({
       setGradeLevelId("");
       setLocation("CENTER");
       setHours("1");
+      setPackageId("");
       setError(null);
     }
   }, [open, session]);
+
+  const studentPackages = useMemo(
+    () => packages.filter((p) => p.studentId === studentId),
+    [packages, studentId],
+  );
 
   const pricePerHour = useMemo(() => {
     const row = matrix[gradeLevelId];
@@ -217,6 +228,24 @@ export function SessionDialog({
             <option value="PAID">{te("paymentStatus.PAID")}</option>
           </Select>
         </FormField>
+
+        {/* Covering the session with a prepaid package: hours are drawn down when
+            it is confirmed/checked out, and it is not charged again on the ledger. */}
+        {studentPackages.length > 0 && (
+          <FormField label={t("package")} htmlFor="packageId">
+            <Select
+              id="packageId"
+              name="packageId"
+              value={packageId}
+              onChange={(e) => setPackageId(e.target.value)}
+            >
+              <option value="">—</option>
+              {studentPackages.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </Select>
+          </FormField>
+        )}
 
         <div className="flex items-center justify-between rounded-md bg-accent/60 px-3 py-2 text-sm">
           <span className="text-muted-foreground">

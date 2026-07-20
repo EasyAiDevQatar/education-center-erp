@@ -161,6 +161,11 @@ model Session {
   checkInLng       Float?
   actualHours      Decimal?  // measured from check-in → check-out
 
+  allocations PaymentAllocation[]
+  /// True once this session's hours have been deducted from its package, so
+  /// confirm/undo cycles can never double-count.
+  packageApplied Boolean @default(false)
+
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -205,12 +210,30 @@ model Payment {
   notes     String?
   branchId  String?
 
+  allocations PaymentAllocation[]
+
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([date])
   @@index([studentId])
+}
+
+/// Links part of a payment to a specific session, driving that session's
+/// paymentStatus (PAID / PARTIAL). Payments may stay unallocated (legacy rows).
+model PaymentAllocation {
+  id        String  @id @default(cuid())
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  amount    Decimal
+
+  createdAt DateTime @default(now())
+
+  @@unique([paymentId, sessionId])
+  @@index([sessionId])
 }
 
 model ExpenseCategory {

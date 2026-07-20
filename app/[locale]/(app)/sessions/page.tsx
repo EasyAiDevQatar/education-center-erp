@@ -23,7 +23,7 @@ export default async function SessionsPage({
   const sp = await searchParams;
   const filters = readSessionFilters(sp);
 
-  const [sessions, students, teachers, levels, matrix, settingsRows] =
+  const [sessions, students, teachers, levels, matrix, settingsRows, activePackages] =
     await Promise.all([
       db.session.findMany({
         where: sessionWhere(filters),
@@ -36,6 +36,11 @@ export default async function SessionsPage({
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
       db.setting.findMany({ where: { key: "currency" } }),
+      db.package.findMany({
+        where: { status: "ACTIVE" },
+        include: { student: true },
+        orderBy: { purchasedAt: "desc" },
+      }),
     ]);
 
   const currency = settingsRows[0]?.value ?? "QAR";
@@ -68,6 +73,13 @@ export default async function SessionsPage({
     name: s.name,
     gradeLevelId: s.gradeLevelId,
   }));
+  const packageOpts = activePackages.map((p) => ({
+    id: p.id,
+    studentId: p.studentId,
+    label: `${toNumber(p.totalHours) - toNumber(p.hoursUsed)} / ${toNumber(p.totalHours)} ${
+      locale === "ar" ? "ساعة متبقية" : "h remaining"
+    }`,
+  }));
   const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: tt.name }));
   const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));
 
@@ -86,6 +98,7 @@ export default async function SessionsPage({
         levels={levelOpts}
         matrix={matrixMap}
         currency={currency}
+        packages={packageOpts}
         filters={filters}
         exportHref={exportHref}
       />

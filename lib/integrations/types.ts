@@ -10,6 +10,8 @@ export const INTEGRATION_EVENTS = [
   "PAYMENT_RECEIVED",
   "PAYOUT_PAID",
   "BALANCE_REMINDER",
+  "SESSION_REMINDER",
+  "PACKAGE_LOW",
 ] as const;
 export type IntegrationEvent = (typeof INTEGRATION_EVENTS)[number];
 

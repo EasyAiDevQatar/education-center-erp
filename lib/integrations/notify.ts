@@ -52,6 +52,14 @@ const TEMPLATES: Record<IntegrationEvent, Record<"ar" | "en", Tpl>> = {
     ar: (v) => `${v.center}: تذكير — رصيد مستحق على ${v.student} بمبلغ ${v.amount} ${v.currency}.`,
     en: (v) => `${v.center}: Reminder — outstanding balance for ${v.student}: ${v.amount} ${v.currency}.`,
   },
+  SESSION_REMINDER: {
+    ar: (v) => `${v.center}: تذكير بحصة ${v.student} مع ${v.teacher} غداً ${v.date} الساعة ${v.time}.`,
+    en: (v) => `${v.center}: Reminder — ${v.student} has a session with ${v.teacher} tomorrow ${v.date} at ${v.time}.`,
+  },
+  PACKAGE_LOW: {
+    ar: (v) => `${v.center}: تنبيه — باقة ${v.student} على وشك الانتهاء (${v.hours} ساعة متبقية).`,
+    en: (v) => `${v.center}: Heads-up — ${v.student}'s package is running low (${v.hours}h remaining).`,
+  },
 };
 
 async function centerSettings() {
@@ -74,7 +82,7 @@ type Recipient = { audience: Audience; phone: string | null };
  * NotificationLog and swallowed — notifications must never break the business
  * action that triggered them.
  */
-async function dispatch(
+export async function dispatch(
   event: IntegrationEvent,
   recipients: Recipient[],
   vars: Vars,
@@ -133,6 +141,8 @@ function fmtTime(d: Date) {
 }
 
 /** Notify about a session lifecycle event. */
+export { centerSettings };
+
 export async function notifySession(
   event: Extract<
     IntegrationEvent,

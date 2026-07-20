@@ -76,7 +76,8 @@
       "finance": "المالية",
       "admin": "الإدارة"
     },
-    "planner": "المخطط اليومي"
+    "planner": "المخطط اليومي",
+    "payouts": "الرواتب المصروفة"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -362,7 +363,9 @@
     "CHECKED_OUT": "تسجيل انصراف",
     "PAYMENT_RECEIVED": "استلام دفعة",
     "PAYOUT_PAID": "صرف مستحقات",
-    "BALANCE_REMINDER": "تذكير بالرصيد"
+    "BALANCE_REMINDER": "تذكير بالرصيد",
+    "SESSION_REMINDER": "تذكير بحصة",
+    "PACKAGE_LOW": "الباقة على وشك الانتهاء"
   },
   "enums": {
     "location": {

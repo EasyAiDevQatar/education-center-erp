@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { notifySession } from "@/lib/integrations/notify";
+import { applyPackageHours, revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { distanceMeters, GEOFENCE_RADIUS_M } from "@/lib/geo";
 import { CHECKIN_METHODS } from "@/lib/enums";
 
@@ -93,9 +94,14 @@ export async function checkOutSession(locale: string, id: string): Promise<Check
     const ms = now.getTime() - session.studentCheckInAt.getTime();
     actualHours = Math.max(0.25, Math.round((ms / 3_600_000) * 4) / 4); // snap to 15 min
   }
-  await db.session.update({
-    where: { id },
-    data: { status: "COMPLETED", studentCheckOutAt: now, actualHours },
+  await db.$transaction(async (tx) => {
+    await tx.session.update({
+      where: { id },
+      data: { status: "COMPLETED", studentCheckOutAt: now, actualHours },
+    });
+    // Checking out makes it billable — draw down the package once.
+    await applyPackageHours(tx, id);
+    await syncSessionPaymentStatus(tx, id);
   });
   await writeAudit("Session", id, "UPDATE", { after: { status: "COMPLETED", actualHours } });
   await notifySession("CHECKED_OUT", id);
@@ -115,18 +121,23 @@ export async function markNoShow(locale: string, id: string): Promise<CheckinRes
 /** Revert attendance back to scheduled (undo a mistaken tap). */
 export async function undoCheckin(locale: string, id: string): Promise<CheckinResult> {
   if (await guard()) return { error: "forbidden" };
-  await db.session.update({
-    where: { id },
-    data: {
-      status: "SCHEDULED",
-      studentCheckInAt: null,
-      studentCheckOutAt: null,
-      teacherCheckInAt: null,
-      checkInMethod: null,
-      checkInLat: null,
-      checkInLng: null,
-      actualHours: null,
-    },
+  await db.$transaction(async (tx) => {
+    // No longer taught → give the package hours back.
+    await revertPackageHours(tx, id);
+    await tx.session.update({
+      where: { id },
+      data: {
+        status: "SCHEDULED",
+        studentCheckInAt: null,
+        studentCheckOutAt: null,
+        teacherCheckInAt: null,
+        checkInMethod: null,
+        checkInLat: null,
+        checkInLng: null,
+        actualHours: null,
+      },
+    });
+    await syncSessionPaymentStatus(tx, id);
   });
   await writeAudit("Session", id, "UPDATE", { after: { status: "SCHEDULED" } });
   revalidate(locale);

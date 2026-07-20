@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { writeAudit } from "@/lib/audit";
+import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { combineDateTime } from "@/lib/session-time";
 import { toNumber } from "@/lib/money";
 import { compactTimes, hhmmToMin, minToHHMM } from "@/lib/planner";
@@ -118,7 +119,13 @@ export async function confirmSession(locale: string, id: string): Promise<Planne
   if (!existing) return { error: "notfound" };
   if (existing.status !== "DRAFT") return { error: "notDraft" };
 
-  await db.session.update({ where: { id }, data: { status: "COMPLETED" } });
+  // Confirming makes the session billable: draw down its package (if any) and
+  // refresh its payment status inside one transaction.
+  await db.$transaction(async (tx) => {
+    await tx.session.update({ where: { id }, data: { status: "COMPLETED" } });
+    await applyPackageHours(tx, id);
+    await syncSessionPaymentStatus(tx, id);
+  });
   await writeAudit("Session", id, "UPDATE", { after: { status: "COMPLETED", confirmedFromDraft: true } });
   revalidate(locale);
   return { ok: true };
@@ -146,14 +153,23 @@ export async function confirmDay(
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
 
-  const res = await db.session.updateMany({
+  const targets = await db.session.findMany({
     where: {
       status: "DRAFT",
       date: dayRange(d.date),
       ...(d.teacherId ? { teacherId: d.teacherId } : {}),
     },
-    data: { status: "COMPLETED" },
+    select: { id: true },
   });
+  const res = { count: 0 };
+  for (const { id } of targets) {
+    await db.$transaction(async (tx) => {
+      await tx.session.update({ where: { id }, data: { status: "COMPLETED" } });
+      await applyPackageHours(tx, id);
+      await syncSessionPaymentStatus(tx, id);
+    });
+    res.count++;
+  }
   await writeAudit("Session", "bulk-confirm", "UPDATE", {
     after: { date: d.date, teacherId: d.teacherId ?? "all", count: res.count },
   });

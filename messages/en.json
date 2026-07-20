@@ -76,7 +76,8 @@
       "finance": "Finance",
       "admin": "Administration"
     },
-    "planner": "Daily planner"
+    "planner": "Daily planner",
+    "payouts": "Payouts"
   },
   "auth": {
     "login": "Log in",
@@ -362,7 +363,9 @@
     "CHECKED_OUT": "Checked out",
     "PAYMENT_RECEIVED": "Payment received",
     "PAYOUT_PAID": "Payout paid",
-    "BALANCE_REMINDER": "Balance reminder"
+    "BALANCE_REMINDER": "Balance reminder",
+    "SESSION_REMINDER": "Session reminder",
+    "PACKAGE_LOW": "Package running low"
   },
   "enums": {
     "location": {

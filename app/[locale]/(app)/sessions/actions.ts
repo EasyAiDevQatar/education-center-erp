@@ -9,6 +9,7 @@ import { resolvePricePerHour } from "@/lib/pricing";
 import { writeAudit } from "@/lib/audit";
 import { combineDateTime } from "@/lib/session-time";
 import { notifySession } from "@/lib/integrations/notify";
+import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { LOCATIONS, PAYMENT_STATUSES } from "@/lib/enums";
 
 export type ActionState = { ok?: boolean; error?: string };
@@ -23,6 +24,7 @@ const schema = z.object({
   hours: z.coerce.number().positive(),
   paymentStatus: z.enum(PAYMENT_STATUSES).default("UNPAID"),
   notes: z.string().trim().optional().nullable(),
+  packageId: z.string().trim().optional().nullable(),
 });
 
 async function guard() {
@@ -48,6 +50,7 @@ export async function saveSession(
     hours: formData.get("hours"),
     paymentStatus: formData.get("paymentStatus") || "UNPAID",
     notes: formData.get("notes") || null,
+    packageId: formData.get("packageId") || null,
   });
   if (!parsed.success) return { error: "invalid" };
 
@@ -68,6 +71,7 @@ export async function saveSession(
     total,
     paymentStatus: d.paymentStatus,
     notes: d.notes,
+    packageId: d.packageId || null,
   };
 
   if (id) {
@@ -76,6 +80,12 @@ export async function saveSession(
     await notifySession("SESSION_RESCHEDULED", id);
   } else {
     const created = await db.session.create({ data });
+    // Package-covered sessions are settled by the package purchase, so reflect
+    // that in paymentStatus straight away. Hours are only drawn down once the
+    // session is actually taught (confirm / check-out).
+    if (data.packageId) {
+      await db.$transaction((tx) => syncSessionPaymentStatus(tx, created.id));
+    }
     await writeAudit("Session", created.id, "CREATE", { after: data });
     await notifySession("SESSION_BOOKED", created.id);
   }

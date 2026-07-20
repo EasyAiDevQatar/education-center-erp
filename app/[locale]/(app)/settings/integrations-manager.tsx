@@ -50,6 +50,8 @@ const ALL_EVENTS = [
   "PAYMENT_RECEIVED",
   "PAYOUT_PAID",
   "BALANCE_REMINDER",
+  "SESSION_REMINDER",
+  "PACKAGE_LOW",
 ] as const;
 const ALL_AUDIENCES = ["TEACHER", "PARENT", "STUDENT"] as const;
 
