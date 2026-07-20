@@ -3,6 +3,7 @@ import { requireRole, FINANCE_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { getAllTeacherEarnings } from "@/lib/payroll";
+import { effectiveMode, monthOf } from "@/lib/payroll-period";
 import { PageHeader } from "@/components/page-header";
 import { PayrollClient, type EarningRow, type PayoutRow } from "./payroll-client";
 
@@ -28,21 +29,40 @@ export default async function PayrollPage({
   const toDate = filter.to ? new Date(filter.to) : undefined;
   if (toDate) toDate.setHours(23, 59, 59, 999);
 
-  const [earningsAll, payouts, settingsRow, earliest] = await Promise.all([
+  const [earningsAll, payouts, settingsRows, earliest, terms] = await Promise.all([
     getAllTeacherEarnings(fromDate, toDate),
     db.teacherPayout.findMany({ orderBy: { createdAt: "desc" }, include: { teacher: true } }),
-    db.setting.findUnique({ where: { key: "currency" } }),
+    db.setting.findMany({ where: { key: { in: ["currency", "defaultTeacherPaymentMode"] } } }),
     db.session.findFirst({ orderBy: { date: "asc" }, select: { date: true } }),
+    db.term.findMany({ where: { active: true }, orderBy: { startDate: "desc" } }),
   ]);
+  const settingsMap = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
+  const centreMode = settingsMap.defaultTeacherPaymentMode ?? "MONTH";
 
-  const currency = settingsRow?.value ?? "QAR";
-  const earnings: EarningRow[] = earningsAll.filter((e) => e.hours > 0 || e.collected > 0);
+  const currency = settingsMap.currency ?? "QAR";
+  const earningsRaw = earningsAll.filter((e) => e.hours > 0 || e.collected > 0);
 
   const today = new Date().toISOString().slice(0, 10);
   const period = {
     from: filter.from || (earliest ? earliest.date.toISOString().slice(0, 10) : today),
     to: filter.to || today,
   };
+
+  // Each teacher's effective mode drives which period control the dialog shows.
+  const earningsWithMode: EarningRow[] = earningsRaw.map((e) => ({
+    ...e,
+    mode: effectiveMode(e.paymentMode, centreMode),
+  }));
+
+  const termOpts = terms.map((x) => ({
+    id: x.id,
+    label: locale === "ar" ? x.nameAr : x.nameEn,
+    startDate: x.startDate.toISOString().slice(0, 10),
+    endDate: x.endDate.toISOString().slice(0, 10),
+  }));
+  const now = new Date();
+  const currentTerm =
+    terms.find((x) => x.startDate <= now && x.endDate >= now) ?? null;
 
   const payoutRows: PayoutRow[] = payouts.map((p) => ({
     id: p.id,
@@ -56,18 +76,22 @@ export default async function PayrollPage({
     advances: toNumber(p.advances),
     netPaid: toNumber(p.netPaid),
     status: p.status,
+    payMode: p.payMode,
   }));
 
   return (
     <div>
       <PageHeader title={t("title")} />
       <PayrollClient
-        earnings={earnings}
+        earnings={earningsWithMode}
         payouts={payoutRows}
         period={period}
         filter={filter}
         currency={currency}
         locale={locale}
+        terms={termOpts}
+        currentTermId={currentTerm?.id ?? null}
+        defaultMonth={monthOf(today)}
       />
     </div>
   );

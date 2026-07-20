@@ -9,6 +9,7 @@ import { DeleteButton } from "@/components/crud/delete-button";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -36,6 +37,8 @@ export type EarningRow = {
   fixedSalary: number;
   fixedDeductions: number;
   netPayable: number;
+  /** Effective mode (teacher's own or the centre default). */
+  mode: "SESSION" | "MONTH" | "TERM";
 };
 export type PayoutRow = {
   id: string;
@@ -49,33 +52,76 @@ export type PayoutRow = {
   advances: number;
   netPaid: number;
   status: string;
+  payMode: string | null;
 };
 export type Period = { from: string; to: string };
+export type TermOpt = { id: string; label: string; startDate: string; endDate: string };
 
 function PayslipFields({
   teacherId,
   period,
   commission,
   currency,
+  mode,
+  terms,
+  currentTermId,
+  defaultMonth,
 }: {
   teacherId: string;
   period: Period;
   commission: number;
   currency: string;
+  mode: "SESSION" | "MONTH" | "TERM";
+  terms: TermOpt[];
+  currentTermId: string | null;
+  defaultMonth: string;
 }) {
   const t = useTranslations("payroll");
   const tc = useTranslations("common");
+  const tm = useTranslations("paymentModes");
   return (
     <>
       <input type="hidden" name="teacherId" value={teacherId} />
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label={t("periodStart")} htmlFor="periodStart">
-          <Input id="periodStart" name="periodStart" type="date" dir="ltr" defaultValue={period.from} required />
-        </FormField>
-        <FormField label={t("periodEnd")} htmlFor="periodEnd">
-          <Input id="periodEnd" name="periodEnd" type="date" dir="ltr" defaultValue={period.to} required />
-        </FormField>
+
+      <div className="flex items-center gap-2 rounded-md bg-accent/60 px-3 py-2 text-sm">
+        <span className="text-muted-foreground">{t("payMode")}:</span>
+        <span className="font-medium">{tm(mode)}</span>
       </div>
+
+      {/* The period control follows the teacher's payment mode. */}
+      {mode === "MONTH" ? (
+        <>
+          <FormField label={t("month")} htmlFor="month">
+            <Input id="month" name="month" type="month" dir="ltr" defaultValue={defaultMonth} required />
+          </FormField>
+          <input type="hidden" name="periodStart" value={period.from} />
+          <input type="hidden" name="periodEnd" value={period.to} />
+        </>
+      ) : mode === "TERM" ? (
+        <>
+          <FormField label={t("term")} htmlFor="termId">
+            <Select id="termId" name="termId" defaultValue={currentTermId ?? terms[0]?.id ?? ""} required>
+              {terms.length === 0 && <option value="">—</option>}
+              {terms.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.label} ({x.startDate} → {x.endDate})
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <input type="hidden" name="periodStart" value={period.from} />
+          <input type="hidden" name="periodEnd" value={period.to} />
+        </>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label={t("periodStart")} htmlFor="periodStart">
+            <Input id="periodStart" name="periodStart" type="date" dir="ltr" defaultValue={period.from} required />
+          </FormField>
+          <FormField label={t("periodEnd")} htmlFor="periodEnd">
+            <Input id="periodEnd" name="periodEnd" type="date" dir="ltr" defaultValue={period.to} required />
+          </FormField>
+        </div>
+      )}
       <div className="rounded-md bg-accent/60 px-3 py-2 text-sm">
         {t("grossCommission")}:{" "}
         <span className="font-semibold tabular-nums">{formatMoney(commission)} {currency}</span>
@@ -97,6 +143,9 @@ export function PayrollClient({
   filter,
   currency,
   locale: localeProp,
+  terms,
+  currentTermId,
+  defaultMonth,
 }: {
   earnings: EarningRow[];
   payouts: PayoutRow[];
@@ -104,11 +153,15 @@ export function PayrollClient({
   filter: Period;
   currency: string;
   locale: string;
+  terms: TermOpt[];
+  currentTermId: string | null;
+  defaultMonth: string;
 }) {
   const t = useTranslations("payroll");
   const tt = useTranslations("teachers");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
+  const tm = useTranslations("paymentModes");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -145,6 +198,34 @@ export function PayrollClient({
           <Input name="to" type="date" dir="ltr" defaultValue={filter.to} className="w-40" />
         </div>
         <Button type="submit" variant="secondary">{tc("filter")}</Button>
+
+        {/* Quick periods — terms come from Settings, month from today. */}
+        <div className="ms-auto flex flex-wrap gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const [y, m] = defaultMonth.split("-").map(Number);
+              const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+              const p2 = (n: number) => String(n).padStart(2, "0");
+              router.push(`${pathname}?from=${y}-${p2(m)}-01&to=${y}-${p2(m)}-${p2(last)}`);
+            }}
+          >
+            {t("thisMonth")}
+          </Button>
+          {terms.slice(0, 3).map((x) => (
+            <Button
+              key={x.id}
+              type="button"
+              variant={x.id === currentTermId ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => router.push(`${pathname}?from=${x.startDate}&to=${x.endDate}`)}
+            >
+              {x.label}
+            </Button>
+          ))}
+        </div>
       </form>
 
       {/* Earnings */}
@@ -187,6 +268,10 @@ export function PayrollClient({
                         period={period}
                         commission={e.netPayable}
                         currency={currency}
+                        mode={e.mode}
+                        terms={terms}
+                        currentTermId={currentTermId}
+                        defaultMonth={defaultMonth}
                       />
                     }
                     trigger={
@@ -210,6 +295,7 @@ export function PayrollClient({
           <TableHeader>
             <TableRow>
               <TableHead>{tc("name")}</TableHead>
+              <TableHead>{t("payMode")}</TableHead>
               <TableHead>{t("period")}</TableHead>
               <TableHead className="text-end">{t("grossCommission")}</TableHead>
               <TableHead className="text-end">{t("advances")}</TableHead>
@@ -221,7 +307,7 @@ export function PayrollClient({
           <TableBody>
             {payouts.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -229,6 +315,13 @@ export function PayrollClient({
             {pgP.pageItems.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.teacherName}</TableCell>
+                <TableCell>
+                  {p.payMode ? (
+                    <Badge variant="muted">{tm(p.payMode as "MONTH")}</Badge>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
                 <TableCell dir="ltr" className="text-start text-xs tabular-nums">
                   {p.periodStart} → {p.periodEnd}
                 </TableCell>

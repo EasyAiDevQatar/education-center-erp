@@ -53,7 +53,10 @@
       "passwordShort": "كلمة المرور قصيرة — ٨ أحرف على الأقل",
       "passwordRequired": "كلمة المرور مطلوبة للمستخدم الجديد",
       "passwordMismatch": "كلمتا المرور غير متطابقتين",
-      "wrongPassword": "كلمة المرور الحالية غير صحيحة"
+      "wrongPassword": "كلمة المرور الحالية غير صحيحة",
+      "monthRequired": "اختر الشهر",
+      "termRequired": "اختر الفصل الدراسي",
+      "invalidPeriod": "فترة غير صحيحة"
     }
   },
   "nav": {
@@ -291,7 +294,12 @@
     "markPaid": "تعليم كمدفوع",
     "expectedCommission": "العمولة المتوقعة",
     "fixedSalary": "الراتب الثابت",
-    "deductions": "الخصومات"
+    "deductions": "الخصومات",
+    "payMode": "طريقة الدفع",
+    "month": "الشهر",
+    "term": "الفصل الدراسي",
+    "thisMonth": "هذا الشهر",
+    "student": "الطالب"
   },
   "settings": {
     "title": "الإعدادات",

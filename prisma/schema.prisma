@@ -281,6 +281,12 @@ model TeacherPayout {
   netPaid         Decimal
   status          String   @default("DRAFT") // DRAFT | PAID
   notes           String?
+  /// Mode this payout was generated under (SESSION | MONTH | TERM), snapshotted
+  /// so a later change to the teacher's setting can't rewrite payslip history.
+  payMode         String?
+  /// Term this payout covers, when generated in TERM mode.
+  termId          String?
+  term            Term?    @relation(fields: [termId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -329,6 +335,8 @@ model Term {
   startDate DateTime
   endDate   DateTime
   active    Boolean  @default(true)
+
+  payouts TeacherPayout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

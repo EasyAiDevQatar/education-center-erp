@@ -53,7 +53,10 @@
       "passwordShort": "Password too short — at least 8 characters",
       "passwordRequired": "A password is required for a new user",
       "passwordMismatch": "Passwords do not match",
-      "wrongPassword": "Current password is incorrect"
+      "wrongPassword": "Current password is incorrect",
+      "monthRequired": "Select a month",
+      "termRequired": "Select a term",
+      "invalidPeriod": "Invalid period"
     }
   },
   "nav": {
@@ -291,7 +294,12 @@
     "markPaid": "Mark as paid",
     "expectedCommission": "Expected commission",
     "fixedSalary": "Fixed salary",
-    "deductions": "Deductions"
+    "deductions": "Deductions",
+    "payMode": "Payment mode",
+    "month": "Month",
+    "term": "Term",
+    "thisMonth": "This month",
+    "student": "Student"
   },
   "settings": {
     "title": "Settings",
