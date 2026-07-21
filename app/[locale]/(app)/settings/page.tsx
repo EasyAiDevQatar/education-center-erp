@@ -13,6 +13,8 @@ import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
 import { CategoriesManager, type CategoryRow } from "./categories-manager";
 import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
 import { TermsManager, type TermRow } from "./terms-manager";
+import { TeacherPaymentsSettings } from "./teacher-payments-settings";
+import { DEFAULT_EARNINGS_MODE, isEarningsMode } from "@/lib/earnings-mode";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
 import { AuditLogTable, type AuditRow } from "./audit-log-table";
@@ -172,6 +174,14 @@ export default async function SettingsPage({
               }}
             />
           </CollapsibleCard>
+
+        <CollapsibleCard title={t("teacherPayments")} className="lg:col-span-2">
+          <TeacherPaymentsSettings
+            defaultMode={settings.teacherEarningsMode ?? DEFAULT_EARNINGS_MODE}
+            overriddenCount={teacherRows.filter((x) => isEarningsMode(x.earningsMode)).length}
+            totalCount={teacherRows.length}
+          />
+        </CollapsibleCard>
 
         <CollapsibleCard title={t("priceMatrix")}>
             <PriceMatrixEditor rows={matrixRows} />

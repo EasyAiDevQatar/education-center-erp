@@ -29,6 +29,7 @@ import {
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveTeacher, deleteTeacher } from "./actions";
 import { displayName, nameSearchText } from "@/lib/names";
+import { EARNINGS_MODES } from "@/lib/earnings-mode";
 
 export type TeacherRow = {
   id: string;
@@ -40,6 +41,8 @@ export type TeacherRow = {
   fixedDeductions: number;
   /** null = inherit the centre default payment mode. */
   paymentMode: string | null;
+  /** null = inherit the centre default earnings mode. */
+  earningsMode: string | null;
   active: boolean;
   notes: string | null;
 };
@@ -48,6 +51,7 @@ function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
   const t = useTranslations("teachers");
   const tc = useTranslations("common");
   const tm = useTranslations("paymentModes");
+  const tem = useTranslations("earningsModes");
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -97,14 +101,26 @@ function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
           />
         </FormField>
       </div>
-      <FormField label={t("paymentMode")} htmlFor="paymentMode">
-        <Select id="paymentMode" name="paymentMode" defaultValue={teacher?.paymentMode ?? ""}>
-          <option value="">{t("paymentModeDefault")}</option>
-          <option value="SESSION">{tm("SESSION")}</option>
-          <option value="MONTH">{tm("MONTH")}</option>
-          <option value="TERM">{tm("TERM")}</option>
-        </Select>
-      </FormField>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label={t("earningsMode")} htmlFor="earningsMode" hint={t("earningsModeHint")}>
+          <Select id="earningsMode" name="earningsMode" defaultValue={teacher?.earningsMode ?? ""}>
+            <option value="">{t("earningsModeDefault")}</option>
+            {EARNINGS_MODES.map((m) => (
+              <option key={m} value={m}>
+                {tem(m)}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label={t("paymentMode")} htmlFor="paymentMode" hint={t("paymentModeHint")}>
+          <Select id="paymentMode" name="paymentMode" defaultValue={teacher?.paymentMode ?? ""}>
+            <option value="">{t("paymentModeDefault")}</option>
+            <option value="SESSION">{tm("SESSION")}</option>
+            <option value="MONTH">{tm("MONTH")}</option>
+            <option value="TERM">{tm("TERM")}</option>
+          </Select>
+        </FormField>
+      </div>
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" defaultValue={teacher?.notes ?? ""} />
       </FormField>

@@ -1,6 +1,11 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
+import {
+  computePay,
+  resolveEarningsMode,
+  type EarningsMode,
+} from "./earnings-mode";
 
 export type TeacherEarnings = {
   teacherId: string;
@@ -17,10 +22,24 @@ export type TeacherEarnings = {
   dueCommission: number;
   fixedSalary: number;
   fixedDeductions: number;
-  /** dueCommission + fixedSalary − fixedDeductions (before ad-hoc advances). */
+  /** What this teacher is actually owed under their earnings mode, before
+      ad-hoc advances. Suppressed components are zero, not missing. */
   netPayable: number;
   paymentMode: string | null;
+  /** Resolved SALARY | COMMISSION | BOTH — the teacher's own or the centre's. */
+  earningsMode: EarningsMode;
 };
+
+/**
+ * The centre-wide default earnings mode.
+ *
+ * Read once per query rather than per teacher: it is a single settings row and
+ * every teacher without an explicit mode resolves against it.
+ */
+async function centreEarningsMode(): Promise<string | null> {
+  const row = await db.setting.findUnique({ where: { key: "teacherEarningsMode" } });
+  return row?.value ?? null;
+}
 
 function rangeWhere(from?: Date, to?: Date) {
   if (!from && !to) return undefined;
@@ -38,16 +57,24 @@ function build(
     fixedSalary: unknown;
     fixedDeductions: unknown;
     paymentMode: string | null;
+    earningsMode: string | null;
   },
   expected: number,
   collected: number,
   hours: number,
+  centreDefault: string | null,
 ): TeacherEarnings {
   const pct = toNumber(t.commissionPct as never);
   const fixedSalary = toNumber(t.fixedSalary as never);
   const fixedDeductions = toNumber(t.fixedDeductions as never);
   const expectedCommission = (expected * pct) / 100;
   const dueCommission = (collected * pct) / 100;
+  const mode = resolveEarningsMode(t.earningsMode, centreDefault);
+  const pay = computePay(mode, {
+    commission: dueCommission,
+    salary: fixedSalary,
+    deductions: fixedDeductions,
+  });
   return {
     teacherId: t.id,
     name: t.name,
@@ -59,8 +86,9 @@ function build(
     dueCommission,
     fixedSalary,
     fixedDeductions,
-    netPayable: dueCommission + fixedSalary - fixedDeductions,
+    netPayable: pay.net,
     paymentMode: t.paymentMode,
+    earningsMode: mode,
   };
 }
 
@@ -70,10 +98,10 @@ export async function getAllTeacherEarnings(
   to?: Date,
 ): Promise<TeacherEarnings[]> {
   const dateRange = rangeWhere(from, to);
-  const teachers = await db.teacher.findMany({
-    where: { active: true },
-    orderBy: { name: "asc" },
-  });
+  const [teachers, centreDefault] = await Promise.all([
+    db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    centreEarningsMode(),
+  ]);
 
   const [sessionsGrouped, paymentsGrouped] = await Promise.all([
     db.session.groupBy({
@@ -98,6 +126,7 @@ export async function getAllTeacherEarnings(
       toNumber(sMap.get(t.id)?.total),
       toNumber(pMap.get(t.id)?.amount),
       toNumber(sMap.get(t.id)?.hours),
+      centreDefault,
     ),
   );
 }
@@ -108,7 +137,10 @@ export async function getTeacherEarnings(
   from: Date,
   to: Date,
 ): Promise<TeacherEarnings | null> {
-  const teacher = await db.teacher.findUnique({ where: { id: teacherId } });
+  const [teacher, centreDefault] = await Promise.all([
+    db.teacher.findUnique({ where: { id: teacherId } }),
+    centreEarningsMode(),
+  ]);
   if (!teacher) return null;
   const dateRange = rangeWhere(from, to);
   const [s, p] = await Promise.all([
@@ -126,5 +158,6 @@ export async function getTeacherEarnings(
     toNumber(s._sum.total),
     toNumber(p._sum.amount),
     toNumber(s._sum.hours),
+    centreDefault,
   );
 }

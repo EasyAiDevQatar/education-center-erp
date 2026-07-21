@@ -22,6 +22,7 @@ import {
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { formatMoney, formatHours } from "@/lib/money";
 import { createPayout, markPayoutPaid, deletePayout } from "./actions";
+import { computePay, anySalary, type EarningsMode } from "@/lib/earnings-mode";
 
 export type EarningRow = {
   teacherId: string;
@@ -39,6 +40,8 @@ export type EarningRow = {
   netPayable: number;
   /** Effective mode (teacher's own or the centre default). */
   mode: "SESSION" | "MONTH" | "TERM";
+  /** Resolved SALARY | COMMISSION | BOTH — what this teacher is actually owed. */
+  earningsMode: EarningsMode;
 };
 export type PayoutRow = {
   id: string;
@@ -53,14 +56,48 @@ export type PayoutRow = {
   netPaid: number;
   status: string;
   payMode: string | null;
+  earnMode: string | null;
 };
 export type Period = { from: string; to: string };
 export type TermOpt = { id: string; label: string; startDate: string; endDate: string };
 
+/** One line of the payslip breakdown. Muted when the mode suppresses it. */
+function PayLine({
+  label,
+  value,
+  currency,
+  tone = "normal",
+}: {
+  label: string;
+  value: number;
+  currency: string;
+  tone?: "normal" | "muted" | "negative" | "total";
+}) {
+  const row =
+    tone === "total"
+      ? "flex items-center justify-between border-t border-border pt-1.5 text-base font-semibold"
+      : tone === "muted"
+        ? "flex items-center justify-between text-sm text-muted-foreground"
+        : "flex items-center justify-between text-sm";
+  return (
+    <div className={row}>
+      <span>{label}</span>
+      <span className={tone === "negative" ? "tabular-nums text-destructive" : "tabular-nums"}>
+        {tone === "negative" && value > 0 ? "−" : ""}
+        {formatMoney(value)} {currency}
+      </span>
+    </div>
+  );
+}
+
 function PayslipFields({
   teacherId,
+  teacherName,
   period,
   commission,
+  salary,
+  deductions,
+  earningsMode,
   currency,
   mode,
   terms,
@@ -68,8 +105,12 @@ function PayslipFields({
   defaultMonth,
 }: {
   teacherId: string;
+  teacherName: string;
   period: Period;
   commission: number;
+  salary: number;
+  deductions: number;
+  earningsMode: EarningsMode;
   currency: string;
   mode: "SESSION" | "MONTH" | "TERM";
   terms: TermOpt[];
@@ -79,13 +120,27 @@ function PayslipFields({
   const t = useTranslations("payroll");
   const tc = useTranslations("common");
   const tm = useTranslations("paymentModes");
+  const tem = useTranslations("earningsModes");
+
+  // Advances are the only figure edited here, so the breakdown recalculates as
+  // the user types rather than surprising them after they save.
+  const [advances, setAdvances] = useState(0);
+  const pay = computePay(earningsMode, { commission, salary, deductions, advances });
+
   return (
     <>
       <input type="hidden" name="teacherId" value={teacherId} />
 
-      <div className="flex items-center gap-2 rounded-md bg-accent/60 px-3 py-2 text-sm">
-        <span className="text-muted-foreground">{t("payMode")}:</span>
-        <span className="font-medium">{tm(mode)}</span>
+      <div className="rounded-md bg-accent/60 px-3 py-2">
+        <div className="font-medium">{teacherName}</div>
+        <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+          <span>
+            {t("payMode")}: {tm(mode)}
+          </span>
+          <span>
+            {t("earningsBasis")}: {tem(earningsMode)}
+          </span>
+        </div>
       </div>
 
       {/* The period control follows the teacher's payment mode. */}
@@ -122,13 +177,51 @@ function PayslipFields({
           </FormField>
         </div>
       )}
-      <div className="rounded-md bg-accent/60 px-3 py-2 text-sm">
-        {t("grossCommission")}:{" "}
-        <span className="font-semibold tabular-nums">{formatMoney(commission)} {currency}</span>
-      </div>
-      <FormField label={t("advances")} htmlFor="advances">
-        <Input id="advances" name="advances" type="number" step="5" min="0" dir="ltr" defaultValue={0} />
+
+      <FormField label={t("advances")} htmlFor="advances" hint={t("advancesHint")}>
+        <Input
+          id="advances"
+          name="advances"
+          type="number"
+          step="5"
+          min="0"
+          dir="ltr"
+          value={advances}
+          onChange={(e) => setAdvances(Math.max(0, Number(e.target.value) || 0))}
+        />
       </FormField>
+
+      {/* What the teacher actually receives, and why. A single "commission"
+          figure left the reader to do this arithmetic in their head. */}
+      <div className="space-y-1.5 rounded-md border border-border p-3">
+        <PayLine
+          label={t("grossCommission")}
+          value={pay.commission}
+          currency={currency}
+          tone={earningsMode === "SALARY" ? "muted" : "normal"}
+        />
+        <PayLine
+          label={t("salaryLine")}
+          value={pay.salary}
+          currency={currency}
+          tone={earningsMode === "COMMISSION" ? "muted" : "normal"}
+        />
+        {pay.deductions > 0 && (
+          <PayLine label={t("deductions")} value={pay.deductions} currency={currency} tone="negative" />
+        )}
+        {pay.advances > 0 && (
+          <PayLine label={t("advances")} value={pay.advances} currency={currency} tone="negative" />
+        )}
+        <PayLine label={t("netPaid")} value={pay.net} currency={currency} tone="total" />
+        {earningsMode !== "BOTH" && (
+          <p className="pt-1 text-xs text-muted-foreground">
+            {t("earningsExcluded", {
+              part: earningsMode === "SALARY" ? t("grossCommission") : t("salaryLine"),
+            })}
+          </p>
+        )}
+      </div>
+
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" />
       </FormField>
@@ -159,6 +252,7 @@ export function PayrollClient({
 }) {
   const t = useTranslations("payroll");
   const tt = useTranslations("teachers");
+  const tem = useTranslations("earningsModes");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
   const tm = useTranslations("paymentModes");
@@ -167,6 +261,9 @@ export function PayrollClient({
   const pathname = usePathname();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, start] = useTransition();
+  // A column of zeroes is noise; the salary column appears only once someone
+  // on the page is actually paid one.
+  const showSalary = anySalary(earnings);
   const pgE = usePagination(earnings);
   const pgP = usePagination(payouts);
 
@@ -241,7 +338,7 @@ export function PayrollClient({
               <TableHead className="text-end">{tt("commissionPct")}</TableHead>
               <TableHead className="text-end">{tt("commissionExpected")}</TableHead>
               <TableHead className="text-end">{tt("commissionDue")}</TableHead>
-              <TableHead className="text-end">{tt("fixedSalary")}</TableHead>
+              {showSalary && <TableHead className="text-end">{tt("fixedSalary")}</TableHead>}
               <TableHead className="text-end">{tt("netPayable")}</TableHead>
               <TableHead className="text-end">{tc("actions")}</TableHead>
             </TableRow>
@@ -249,14 +346,21 @@ export function PayrollClient({
           <TableBody>
             {pgE.pageItems.map((e) => (
               <TableRow key={e.teacherId}>
-                <TableCell className="font-medium">{e.name}</TableCell>
+                <TableCell className="font-medium">
+                  {e.name}
+                  <span className="ms-1 text-xs font-normal text-muted-foreground">
+                    · {tem(e.earningsMode)}
+                  </span>
+                </TableCell>
                 <TableCell className="text-end tabular-nums">{formatHours(e.hours)}</TableCell>
                 <TableCell className="text-end tabular-nums">{formatMoney(e.expected)}</TableCell>
                 <TableCell className="text-end tabular-nums">{formatMoney(e.collected)}</TableCell>
                 <TableCell className="text-end tabular-nums">{e.commissionPct}%</TableCell>
                 <TableCell className="text-end tabular-nums text-muted-foreground">{formatMoney(e.expectedCommission)}</TableCell>
                 <TableCell className="text-end tabular-nums font-medium">{formatMoney(e.dueCommission)} {currency}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(e.fixedSalary)}</TableCell>
+                {showSalary && (
+                  <TableCell className="text-end tabular-nums">{formatMoney(e.fixedSalary)}</TableCell>
+                )}
                 <TableCell className="text-end tabular-nums font-semibold">{formatMoney(e.netPayable)} {currency}</TableCell>
                 <TableCell className="text-end">
                   <EntityDialog
@@ -265,8 +369,12 @@ export function PayrollClient({
                     fields={
                       <PayslipFields
                         teacherId={e.teacherId}
+                        teacherName={e.name}
                         period={period}
-                        commission={e.netPayable}
+                        commission={e.dueCommission}
+                        salary={e.fixedSalary}
+                        deductions={e.fixedDeductions}
+                        earningsMode={e.earningsMode}
                         currency={currency}
                         mode={e.mode}
                         terms={terms}

@@ -10,6 +10,7 @@ import { writeAudit } from "@/lib/audit";
 import { guardArchived } from "@/lib/academic-year";
 import { notifyPayout } from "@/lib/integrations/notify";
 import { effectiveMode, monthRange } from "@/lib/payroll-period";
+import { computePay, DEFAULT_EARNINGS_MODE } from "@/lib/earnings-mode";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -81,29 +82,37 @@ export async function createPayout(
   // Pay on what was actually collected; keep the expected figure for comparison.
   const dueCommission = earnings?.dueCommission ?? 0;
   const expectedCommission = earnings?.expectedCommission ?? 0;
-  const fixedSalary = earnings?.fixedSalary ?? 0;
-  const deductions = earnings?.fixedDeductions ?? 0;
-  const netPaid = dueCommission + fixedSalary - deductions - d.advances;
+  // The earnings mode decides which components count. Suppressed ones are
+  // stored as zero rather than as the teacher's standing figure, so a payslip
+  // never shows a salary the teacher was not paid.
+  const earnMode = earnings?.earningsMode ?? DEFAULT_EARNINGS_MODE;
+  const pay = computePay(earnMode, {
+    commission: dueCommission,
+    salary: earnings?.fixedSalary ?? 0,
+    deductions: earnings?.fixedDeductions ?? 0,
+    advances: d.advances,
+  });
 
   const created = await db.teacherPayout.create({
     data: {
       teacherId: d.teacherId,
       periodStart: start,
       periodEnd: end,
-      grossCommission: dueCommission,
+      grossCommission: pay.commission,
       expectedCommission,
-      fixedSalary,
-      deductions,
-      advances: d.advances,
-      netPaid,
+      fixedSalary: pay.salary,
+      deductions: pay.deductions,
+      advances: pay.advances,
+      netPaid: pay.net,
       status: "DRAFT",
       notes: d.notes,
       payMode: mode,
+      earnMode,
       termId,
     },
   });
   await writeAudit("TeacherPayout", created.id, "CREATE", {
-    after: { dueCommission, expectedCommission, fixedSalary, deductions, netPaid, mode },
+    after: { expectedCommission, payMode: mode, ...pay },
   });
   revalidatePath(`/${locale}/payroll`);
   return { ok: true };

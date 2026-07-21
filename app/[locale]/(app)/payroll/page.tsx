@@ -41,7 +41,15 @@ export default async function PayrollPage({
   const centreMode = settingsMap.defaultTeacherPaymentMode ?? "MONTH";
 
   const currency = settingsMap.currency ?? "QAR";
-  const earningsRaw = earningsAll.filter((e) => e.hours > 0 || e.collected > 0);
+  // Teachers with nothing to show are hidden — but "nothing" now depends on how
+  // they earn: someone on a salary is owed it whether or not they taught this
+  // period, and filtering on hours alone would drop them off payroll entirely.
+  const earningsRaw = earningsAll.filter(
+    (e) =>
+      e.hours > 0 ||
+      e.collected > 0 ||
+      (e.earningsMode !== "COMMISSION" && e.fixedSalary > 0),
+  );
 
   const today = new Date().toISOString().slice(0, 10);
   const period = {
@@ -78,6 +86,7 @@ export default async function PayrollPage({
     netPaid: toNumber(p.netPaid),
     status: p.status,
     payMode: p.payMode,
+    earnMode: p.earnMode,
   }));
 
   return (

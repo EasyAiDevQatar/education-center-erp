@@ -56,8 +56,13 @@ model Teacher {
   /// Fixed monthly salary paid on top of commission, and any standing deduction.
   fixedSalary     Decimal @default(0)
   fixedDeductions Decimal @default(0)
-  /// SESSION | MONTH | TERM. Null falls back to the centre default setting.
+  /// SESSION | MONTH | TERM — how often a payout is cut. Null falls back to the
+  /// centre default setting.
   paymentMode     String?
+  /// SALARY | COMMISSION | BOTH — what the teacher is actually owed. Distinct
+  /// from paymentMode, which is only about the period. Null inherits the
+  /// centre default so changing that setting moves everyone who never opted out.
+  earningsMode    String?
 
   user         User?
   sessions     Session[]
@@ -376,6 +381,10 @@ model TeacherPayout {
   /// Mode this payout was generated under (SESSION | MONTH | TERM), snapshotted
   /// so a later change to the teacher's setting can't rewrite payslip history.
   payMode         String?
+  /// Earnings mode in force when this payout was cut (SALARY | COMMISSION |
+  /// BOTH), snapshotted for the same reason: a payslip must keep explaining the
+  /// figures it was printed with.
+  earnMode        String?
   /// Term this payout covers, when generated in TERM mode.
   termId          String?
   term            Term?    @relation(fields: [termId], references: [id])

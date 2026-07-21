@@ -57,7 +57,9 @@
       "monthRequired": "اختر الشهر",
       "termRequired": "اختر الفصل الدراسي",
       "invalidPeriod": "فترة غير صحيحة",
-      "yearArchived": "هذا العام مؤرشف — لا يمكن تعديل حصصه أو معاملاته المالية."
+      "yearArchived": "هذا العام مؤرشف — لا يمكن تعديل حصصه أو معاملاته المالية.",
+      "forbidden": "لا تملك صلاحية لهذا الإجراء.",
+      "invalid": "قيمة غير صالحة."
     },
     "price": "السعر",
     "searchPlaceholder": "بحث…",
@@ -90,7 +92,7 @@
     "payments": "المدفوعات",
     "packages": "الباقات",
     "expenses": "المصروفات",
-    "payroll": "رواتب المعلمين",
+    "payroll": "مستحقات المعلمين",
     "reports": "التقارير",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
@@ -352,7 +354,11 @@
     "netPayable": "صافي المستحق",
     "paymentMode": "طريقة الدفع",
     "paymentModeDefault": "افتراضي المركز",
-    "searchPlaceholder": "ابحث باسم المعلم أو الهاتف…"
+    "searchPlaceholder": "ابحث باسم المعلم أو الهاتف…",
+    "earningsMode": "طريقة الاحتساب",
+    "earningsModeDefault": "اتّباع افتراضي المركز",
+    "earningsModeHint": "راتب فقط، عمولة فقط، أو الاثنان.",
+    "paymentModeHint": "كل كم يُصرف المستحق."
   },
   "guardians": {
     "title": "أولياء الأمور",
@@ -405,7 +411,7 @@
     "searchPlaceholder": "ابحث بالوصف أو النوع…"
   },
   "payroll": {
-    "title": "رواتب المعلمين",
+    "title": "مستحقات المعلمين",
     "add": "إنشاء كشف راتب",
     "period": "الفترة",
     "periodStart": "بداية الفترة",
@@ -425,7 +431,11 @@
     "month": "الشهر",
     "term": "الفصل الدراسي",
     "thisMonth": "هذا الشهر",
-    "student": "الطالب"
+    "student": "الطالب",
+    "earningsBasis": "طريقة الاحتساب",
+    "salaryLine": "الراتب الثابت",
+    "advancesHint": "مبالغ صُرفت مقدماً وتُخصم من المستحق.",
+    "earningsExcluded": "{part} غير محتسب لهذا المعلم حسب طريقة الاحتساب."
   },
   "settings": {
     "title": "الإعدادات",
@@ -454,7 +464,17 @@
     "statementFooter": "تذييل كشف الحساب",
     "auditLog": "سجل التدقيق",
     "teacherCanConfirm": "السماح للمعلمين بتأكيد حصصهم",
-    "teacherCanConfirmHint": "عند التفعيل يمكن للمعلم تحويل مسودة حصته إلى «تم التدريس» من بوابته."
+    "teacherCanConfirmHint": "عند التفعيل يمكن للمعلم تحويل مسودة حصته إلى «تم التدريس» من بوابته.",
+    "teacherPayments": "مستحقات المعلمين",
+    "earningsIntro": "حدّد كيف تُحتسب مستحقات المعلمين: راتب ثابت، أو عمولة على المحصّل، أو الاثنان معاً.",
+    "earningsDefault": "الوضع الافتراضي للمركز",
+    "earningsDefaultHint": "يُطبَّق على كل معلم لم يُحدَّد له وضع خاص.",
+    "earningsApplyAll": "تطبيق على الجميع",
+    "earningsApplyAllHint": "يستبدل الوضع الخاص بكل معلم نشط. «اتّباع الافتراضي» يزيل التخصيص ويعيدهم للافتراضي.",
+    "earningsApplyAllAction": "تطبيق على كل المعلمين",
+    "earningsInherit": "اتّباع الافتراضي",
+    "earningsOverrideCount": "{n} من {total} معلم لديهم وضع خاص.",
+    "appliedToTeachers": "تم التطبيق على {n} معلم."
   },
   "integrations": {
     "baseUrl": "رابط الـ API",
@@ -925,5 +945,10 @@
       "cannotCurrentArchived": "لا يمكن جعل عام مؤرشف هو الحالي",
       "cannotDeleteArchived": "لا يمكن حذف عام مؤرشف — ألغِ الأرشفة أولاً"
     }
+  },
+  "earningsModes": {
+    "SALARY": "راتب فقط",
+    "COMMISSION": "عمولة فقط",
+    "BOTH": "راتب + عمولة"
   }
 }

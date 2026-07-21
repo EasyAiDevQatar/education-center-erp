@@ -57,7 +57,9 @@
       "monthRequired": "Select a month",
       "termRequired": "Select a term",
       "invalidPeriod": "Invalid period",
-      "yearArchived": "That academic year is archived — its sessions and money records cannot be changed."
+      "yearArchived": "That academic year is archived — its sessions and money records cannot be changed.",
+      "forbidden": "You do not have permission for this action.",
+      "invalid": "That value is not valid."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -90,7 +92,7 @@
     "payments": "Payments",
     "packages": "Packages",
     "expenses": "Expenses",
-    "payroll": "Payroll",
+    "payroll": "Teacher dues",
     "reports": "Reports",
     "settings": "Settings",
     "logout": "Log out",
@@ -352,7 +354,11 @@
     "netPayable": "Net payable",
     "paymentMode": "Payment mode",
     "paymentModeDefault": "Centre default",
-    "searchPlaceholder": "Search by teacher name or phone…"
+    "searchPlaceholder": "Search by teacher name or phone…",
+    "earningsMode": "Earnings basis",
+    "earningsModeDefault": "Follow centre default",
+    "earningsModeHint": "Salary only, commission only, or both.",
+    "paymentModeHint": "How often the payout is cut."
   },
   "guardians": {
     "title": "Guardians",
@@ -405,7 +411,7 @@
     "searchPlaceholder": "Search by description or category…"
   },
   "payroll": {
-    "title": "Teacher Payroll",
+    "title": "Teacher dues",
     "add": "Create payslip",
     "period": "Period",
     "periodStart": "Period start",
@@ -425,7 +431,11 @@
     "month": "Month",
     "term": "Term",
     "thisMonth": "This month",
-    "student": "Student"
+    "student": "Student",
+    "earningsBasis": "Earnings basis",
+    "salaryLine": "Fixed salary",
+    "advancesHint": "Money already advanced, deducted from the payout.",
+    "earningsExcluded": "{part} is not counted for this teacher under their earnings basis."
   },
   "settings": {
     "title": "Settings",
@@ -454,7 +464,17 @@
     "statementFooter": "Statement footer",
     "auditLog": "Audit log",
     "teacherCanConfirm": "Let teachers confirm their own sessions",
-    "teacherCanConfirmHint": "When on, a teacher can mark their own draft as taught from their portal."
+    "teacherCanConfirmHint": "When on, a teacher can mark their own draft as taught from their portal.",
+    "teacherPayments": "Teacher payments",
+    "earningsIntro": "Choose how teacher dues are worked out: a fixed salary, commission on what is collected, or both.",
+    "earningsDefault": "Centre default",
+    "earningsDefaultHint": "Applies to every teacher without a mode of their own.",
+    "earningsApplyAll": "Apply to all",
+    "earningsApplyAllHint": "Overwrites each active teacher's own mode. \"Follow default\" clears their override instead.",
+    "earningsApplyAllAction": "Apply to all teachers",
+    "earningsInherit": "Follow default",
+    "earningsOverrideCount": "{n} of {total} teachers have their own mode.",
+    "appliedToTeachers": "Applied to {n} teachers."
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -925,5 +945,10 @@
       "cannotCurrentArchived": "An archived year cannot be current",
       "cannotDeleteArchived": "Cannot delete an archived year — unarchive it first"
     }
+  },
+  "earningsModes": {
+    "SALARY": "Salary only",
+    "COMMISSION": "Commission only",
+    "BOTH": "Salary + commission"
   }
 }
