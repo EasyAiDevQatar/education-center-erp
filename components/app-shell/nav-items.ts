@@ -65,6 +65,16 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/reports", key: "reports", icon: BarChart3, roles: FINANCE, section: "finance" },
   // ADMIN only: the HR register carries QID/passport/IBAN — a categorically
   // more sensitive surface than anything else in the app.
-  { href: "/hr", key: "hr", icon: BriefcaseBusiness, roles: ["ADMIN"], section: "admin" },
+  {
+    href: "/hr",
+    key: "hr",
+    icon: BriefcaseBusiness,
+    roles: ["ADMIN"],
+    section: "admin",
+    children: [
+      { href: "/hr", key: "hrRegister" },
+      { href: "/hr/leave", key: "hrLeave" },
+    ],
+  },
   { href: "/settings", key: "settings", icon: Settings, roles: ["ADMIN"], section: "admin" },
 ];

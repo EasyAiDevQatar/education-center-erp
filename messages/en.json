@@ -63,7 +63,9 @@
       "duplicate": "Duplicate value — the QID, employee no. or teacher is already used by another record.",
       "invalid_qid": "The QID must be exactly 11 digits.",
       "invalid_iban": "Invalid IBAN — 29 characters starting QA.",
-      "invalid_email": "Invalid email address."
+      "invalid_email": "Invalid email address.",
+      "leaveOverlap": "This employee already has approved or pending leave overlapping this period.",
+      "alreadyDecided": "This request has already been decided."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -114,7 +116,9 @@
     "roster": "Roster",
     "scan": "Scan cards",
     "qrCards": "QR cards",
-    "hr": "HR"
+    "hr": "HR",
+    "hrRegister": "Staff register",
+    "hrLeave": "Leave"
   },
   "auth": {
     "login": "Log in",
@@ -1023,5 +1027,41 @@
     "terminateHint": "The record is not deleted — it becomes Terminated and leave accrual stops. Documents and payslips remain.",
     "terminateAction": "End service",
     "lastWorkingDay": "Last working day"
+  },
+  "leave": {
+    "title": "Leave",
+    "subtitle": "Staff leave balances and requests — per Qatar labour law.",
+    "newRequest": "New request",
+    "adjustTitle": "Adjust balance",
+    "adjustDays": "Days (+/−)",
+    "adjustHint": "Positive credits the balance (opening/carry-forward), negative debits it.",
+    "employee": "Employee",
+    "type": "Type",
+    "from": "From",
+    "to": "To",
+    "reason": "Reason",
+    "daysComputed": "{n} days (calendar days)",
+    "calendarDaysNote": "Annual leave is counted in calendar days.",
+    "pendingQueue": "{n} requests awaiting a decision",
+    "approve": "Approve",
+    "reject": "Reject",
+    "balances": "Balances — current year",
+    "accrued": "Accrued to date",
+    "adjustments": "Adjustments",
+    "taken": "Taken",
+    "pendingCol": "Pending",
+    "remaining": "Remaining",
+    "sick": "Sick",
+    "noHireDate": "(no hire date — balance is zero)",
+    "history": "Request history",
+    "period": "Period",
+    "days": "Days",
+    "statuses": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "daysN": "{n} days"
   }
 }
