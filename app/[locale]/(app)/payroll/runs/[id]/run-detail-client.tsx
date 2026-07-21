@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
-import { Printer, CheckCheck } from "lucide-react";
+import { Printer, CheckCheck, FileDown } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -204,8 +204,38 @@ export function RunDetailClient({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [printing, setPrinting] = useState(false);
+  const [wpsIssues, setWpsIssues] = useState<{ key: string; message: string; recordIndex?: number }[] | null>(null);
 
   const total = items.reduce((n, i) => n + i.netPaid, 0);
+
+  /**
+   * The SIF is fetched rather than linked: a validation failure returns 422
+   * with the issue list, and a plain anchor would show the user raw JSON.
+   */
+  const downloadWps = () =>
+    start(async () => {
+      setWpsIssues(null);
+      const res = await fetch(`/api/wps/${runId}`);
+      if (res.status === 422) {
+        const body = (await res.json()) as { issues: { key: string; message: string; recordIndex?: number }[] };
+        setWpsIssues(body.issues);
+        return;
+      }
+      if (!res.ok) {
+        setWpsIssues([{ key: "http", message: String(res.status) }]);
+        return;
+      }
+      const blob = await res.blob();
+      const name =
+        res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+        `SIF-${month}.csv`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
 
   const doPrint = () => {
     // flushSync commits the sheet before print; rAF never fires on a hidden
@@ -236,6 +266,10 @@ export function RunDetailClient({
             <Printer className="size-4" />
             {t("printAll")}
           </Button>
+          <Button variant="secondary" className="gap-1" disabled={pending} onClick={downloadWps}>
+            <FileDown className="size-4" />
+            {t("wpsExport")}
+          </Button>
           {status !== "PAID" && (
             <Button
               className="gap-1"
@@ -253,6 +287,23 @@ export function RunDetailClient({
           )}
         </div>
       </div>
+
+      {wpsIssues && (
+        <div className="no-print rounded-lg border border-destructive/50 bg-destructive/5 p-3">
+          <p className="mb-1 text-sm font-semibold text-destructive">{t("wpsBlocked")}</p>
+          <ul className="list-inside list-disc space-y-0.5 text-sm">
+            {wpsIssues.map((i, n) => (
+              <li key={n}>
+                {i.recordIndex !== undefined && items[i.recordIndex]
+                  ? `${items[i.recordIndex].name}: `
+                  : ""}
+                {t.has(`wpsIssues.${i.key}`) ? t(`wpsIssues.${i.key}`) : `${i.key} — ${i.message}`}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">{t("wpsBlockedHint")}</p>
+        </div>
+      )}
 
       <div className="no-print rounded-lg border border-border bg-card">
         <Table>

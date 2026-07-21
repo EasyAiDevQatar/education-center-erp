@@ -14,6 +14,7 @@ import { CategoriesManager, type CategoryRow } from "./categories-manager";
 import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
 import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
+import { WpsSettings } from "./wps-settings";
 import { DEFAULT_EARNINGS_MODE, isEarningsMode } from "@/lib/earnings-mode";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
@@ -180,6 +181,19 @@ export default async function SettingsPage({
             defaultMode={settings.teacherEarningsMode ?? DEFAULT_EARNINGS_MODE}
             overriddenCount={teacherRows.filter((x) => isEarningsMode(x.earningsMode)).length}
             totalCount={teacherRows.length}
+          />
+        </CollapsibleCard>
+
+        <CollapsibleCard title={t("wpsSettings")} className="lg:col-span-2">
+          <WpsSettings
+            values={{
+              wpsEmployerEID: settings.wpsEmployerEID ?? "",
+              wpsPayerEID: settings.wpsPayerEID ?? "",
+              wpsPayerQID: settings.wpsPayerQID ?? "",
+              wpsPayerBank: settings.wpsPayerBank ?? "",
+              wpsPayerIBAN: settings.wpsPayerIBAN ?? "",
+              wpsSifVersion: settings.wpsSifVersion ?? "1",
+            }}
           />
         </CollapsibleCard>
 

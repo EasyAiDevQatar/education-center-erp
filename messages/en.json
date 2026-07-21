@@ -490,7 +490,8 @@
     "earningsApplyAllAction": "Apply to all teachers",
     "earningsInherit": "Follow default",
     "earningsOverrideCount": "{n} of {total} teachers have their own mode.",
-    "appliedToTeachers": "Applied to {n} teachers."
+    "appliedToTeachers": "Applied to {n} teachers.",
+    "wpsSettings": "Wage Protection System (WPS)"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -1109,7 +1110,31 @@
     "signEmployee": "Employee signature — I received the amount above",
     "signEmployer": "Employer signature",
     "signDate": "Date",
-    "printFooter": "Payslips for {month} — one page per employee, for signature."
+    "printFooter": "Payslips for {month} — one page per employee, for signature.",
+    "wpsExport": "Export WPS (SIF)",
+    "wpsBlocked": "The WPS file cannot be generated — complete the missing data:",
+    "wpsBlockedHint": "Establishment and payer details live in Settings; employee details (QID/visa, bank, IBAN, basic salary above zero) live in HR.",
+    "wpsIssues": {
+      "employerEID": "Employer EID invalid — set it in Settings.",
+      "payer": "Set the payer in Settings: EID or QID (exactly one).",
+      "payerEID": "Payer EID invalid.",
+      "payerQID": "Payer QID invalid.",
+      "payerBankShortName": "Choose the payer bank in Settings.",
+      "payerIBAN": "Payer IBAN invalid.",
+      "salaryYearMonth": "Salary month invalid.",
+      "records": "No employee-linked payslips on this run.",
+      "qid": "Enter a QID (11 digits) or a visa ID — exactly one.",
+      "visaId": "Visa ID longer than 12 characters.",
+      "name": "Name missing or over 70 characters.",
+      "bankShortName": "Pick the employee's bank from the list.",
+      "account": "Enter a valid IBAN for the employee.",
+      "salaryFrequency": "One salary frequency per file.",
+      "workingDays": "Working days missing.",
+      "basicSalary": "Basic salary must be above zero.",
+      "netSalary": "Net salary cannot be negative.",
+      "deductionReasonCode": "Deductions require a reason code.",
+      "notes": "Reason code 99 requires notes."
+    }
   },
   "eos": {
     "title": "End of service — {name}",
@@ -1128,5 +1153,19 @@
     "netSettlement": "Net settlement",
     "unpaidNote": "On save, the server subtracts approved unpaid-leave days from the service period.",
     "terminatesWarning": "Saving permanently ends the employment and records the settlement."
+  },
+  "wps": {
+    "intro": "Details for the Salary Information File (SIF) uploaded to the bank: the establishment ID from the registration card and the account salaries are paid from.",
+    "employerEID": "Employer EID",
+    "employerEIDHint": "7 or 8 digits from the establishment registration card.",
+    "payerEID": "Payer EID",
+    "payerHint": "Usually the same as the Employer EID. Leave blank if the payer is an individual.",
+    "payerQID": "Payer QID",
+    "payerQidHint": "Only when the payer is an individual — one of the two, never both.",
+    "payerBank": "Payer bank",
+    "payerIBAN": "Payer IBAN",
+    "payerIbanHint": "29 characters, starting QA.",
+    "sifVersion": "SIF version",
+    "sifVersionHint": "1 = the new format (QCB Circular 2020/7)."
   }
 }
