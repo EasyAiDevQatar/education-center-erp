@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { FINANCE_ROLES } from "@/lib/rbac";
 import { getTeacherEarnings } from "@/lib/payroll";
 import { writeAudit } from "@/lib/audit";
+import { guardArchived } from "@/lib/academic-year";
 import { notifyPayout } from "@/lib/integrations/notify";
 import { effectiveMode, monthRange } from "@/lib/payroll-period";
 
@@ -119,6 +120,9 @@ export async function markPayoutPaid(locale: string, id: string): Promise<Action
 
 export async function deletePayout(locale: string, id: string): Promise<ActionState> {
   if (await guard()) return { error: "forbidden" };
+  const prior = await db.teacherPayout.findUnique({ where: { id } });
+  const frozen = await guardArchived(prior?.periodStart, prior?.periodEnd);
+  if (frozen) return { error: frozen };
   await db.teacherPayout.delete({ where: { id } });
   await writeAudit("TeacherPayout", id, "DELETE");
   revalidatePath(`/${locale}/payroll`);

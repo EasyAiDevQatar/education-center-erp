@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { guardArchived } from "@/lib/academic-year";
 import { notifyPayment } from "@/lib/integrations/notify";
 import { nextReceiptNo } from "@/lib/balances";
 import { PAYMENT_METHODS } from "@/lib/enums";
@@ -47,6 +48,9 @@ export async function savePayment(
   if (!parsed.success) return { error: "invalid" };
 
   const d = parsed.data;
+  const priorPayment = id ? await db.payment.findUnique({ where: { id } }) : null;
+  const frozen = await guardArchived(new Date(d.date), priorPayment?.date);
+  if (frozen) return { error: frozen };
   const data = {
     date: new Date(d.date),
     studentId: d.studentId,
@@ -77,6 +81,9 @@ export async function savePayment(
 
 export async function deletePayment(locale: string, id: string): Promise<ActionState> {
   if (await guard()) return { error: "forbidden" };
+  const prior = await db.payment.findUnique({ where: { id } });
+  const frozen = await guardArchived(prior?.date);
+  if (frozen) return { error: frozen };
   await db.payment.delete({ where: { id } });
   await writeAudit("Payment", id, "DELETE");
   revalidatePath(`/${locale}/payments`);

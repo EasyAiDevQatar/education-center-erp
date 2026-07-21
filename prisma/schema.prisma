@@ -514,3 +514,29 @@ model StudentTeacher {
   @@index([studentId])
   @@index([teacherId])
 }
+
+/// A school year. Archiving one freezes its money and attendance records.
+///
+/// Membership is decided by date range rather than a foreign key on every
+/// table: adding `academicYearId` to sessions, payments, payouts and expenses
+/// would mean backfilling four large tables and keeping the column in step on
+/// every write, for information the record's own date already carries.
+model AcademicYear {
+  id        String   @id @default(cuid())
+  nameAr    String
+  nameEn    String
+  startDate DateTime
+  endDate   DateTime
+  /// Archived years reject new/edited/deleted sessions, payments, payouts and
+  /// expenses. Student, teacher and guardian records stay editable so a
+  /// misspelled name can still be fixed, and reports keep reading normally.
+  archived  Boolean  @default(false)
+  /// The year new work defaults into. Exactly one should be current.
+  isCurrent Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([archived])
+  @@index([startDate, endDate])
+}

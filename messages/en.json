@@ -56,7 +56,8 @@
    "wrongPassword": "Current password is incorrect",
    "monthRequired": "Select a month",
    "termRequired": "Select a term",
-   "invalidPeriod": "Invalid period"
+   "invalidPeriod": "Invalid period",
+   "yearArchived": "That academic year is archived — its sessions and money records cannot be changed."
   },
   "price": "Price",
   "searchPlaceholder": "Search…",
@@ -831,5 +832,37 @@
   },
   "graceHours": "Auto-complete grace (hours)",
   "graceHoursHint": "A session left unmarked this long after it ends is completed by the system and flagged for review."
+ },
+ "years": {
+  "title": "Academic years",
+  "intro": "Archiving a year freezes its sessions, payments, payouts and expenses. Student and teacher records stay editable, and reports and statements keep working.",
+  "addYear": "Add year",
+  "editYear": "Edit year",
+  "startNewYear": "Start new year",
+  "nameAr": "Name (Arabic)",
+  "nameEn": "Name (English)",
+  "startDate": "Start date",
+  "endDate": "End date",
+  "records": "Records",
+  "recordsBreakdown": "{sessions} sessions · {payments} payments · {payouts} payouts · {expenses} expenses",
+  "current": "Current",
+  "archived": "Archived",
+  "open": "Open",
+  "makeCurrent": "Make current",
+  "archive": "Archive",
+  "unarchive": "Unarchive",
+  "rolloverHint": "Creates the new year, makes it current, and archives the previous one in one step.",
+  "archivePrevious": "Archive \"{name}\"",
+  "archiveWarning": "{n} money and attendance records will be frozen — still viewable, no longer editable.",
+  "errors": {
+   "forbidden": "Not allowed",
+   "invalid": "Invalid details",
+   "invalidPeriod": "End must be after start",
+   "yearOverlap": "Overlaps another year",
+   "notfound": "Year not found",
+   "cannotArchiveCurrent": "Cannot archive the current year — set another one current first",
+   "cannotCurrentArchived": "An archived year cannot be current",
+   "cannotDeleteArchived": "Cannot delete an archived year — unarchive it first"
+  }
  }
 }

@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { writeAudit } from "@/lib/audit";
+import { guardArchived } from "@/lib/academic-year";
 import { combineDateTime } from "@/lib/session-time";
 import { notifySession } from "@/lib/integrations/notify";
 import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
@@ -56,6 +57,11 @@ export async function saveSession(
 
   const d = parsed.data;
   const date = combineDateTime(d.date, d.time);
+
+  // Both dates: an edit must not move a session out of a frozen year either.
+  const priorSession = id ? await db.session.findUnique({ where: { id } }) : null;
+  const frozen = await guardArchived(date, priorSession?.date);
+  if (frozen) return { error: frozen };
   // Authoritative price resolution from the matrix (client preview is advisory).
   const pricePerHour = await resolvePricePerHour(d.gradeLevelId, d.location, date);
   const total = pricePerHour * d.hours;
@@ -96,6 +102,9 @@ export async function saveSession(
 
 export async function deleteSession(locale: string, id: string): Promise<ActionState> {
   if (await guard()) return { error: "forbidden" };
+  const prior = await db.session.findUnique({ where: { id } });
+  const frozen = await guardArchived(prior?.date);
+  if (frozen) return { error: frozen };
   await db.session.delete({ where: { id } });
   await writeAudit("Session", id, "DELETE");
   revalidatePath(`/${locale}/sessions`);

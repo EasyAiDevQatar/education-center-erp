@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { FINANCE_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { guardArchived } from "@/lib/academic-year";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -41,6 +42,9 @@ export async function saveExpense(
   if (!parsed.success) return { error: "invalid" };
 
   const d = parsed.data;
+  const existingExpense = id ? await db.expense.findUnique({ where: { id } }) : null;
+  const frozen = await guardArchived(new Date(d.date), existingExpense?.date);
+  if (frozen) return { error: frozen };
   const data = {
     date: new Date(d.date),
     description: d.description,
@@ -62,6 +66,9 @@ export async function saveExpense(
 
 export async function deleteExpense(locale: string, id: string): Promise<ActionState> {
   if (await guard()) return { error: "forbidden" };
+  const existing = await db.expense.findUnique({ where: { id } });
+  const frozen = await guardArchived(existing?.date);
+  if (frozen) return { error: frozen };
   await db.expense.delete({ where: { id } });
   await writeAudit("Expense", id, "DELETE");
   revalidatePath(`/${locale}/expenses`);

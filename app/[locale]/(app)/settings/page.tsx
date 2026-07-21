@@ -1,10 +1,12 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { listAcademicYears } from "@/lib/academic-year";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
 import { CollapsibleCard, CollapsibleGroup } from "@/components/ui/collapsible-card";
 import { AttendanceSettings } from "./attendance-settings";
+import { YearsManager } from "./years-manager";
 import { PROVIDERS, maskSecret } from "@/lib/integrations/registry";
 import { CenterProfileForm } from "./center-profile-form";
 import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
@@ -38,9 +40,11 @@ export default async function SettingsPage({
   const tterm = await getTranslations("terms");
   const tdata = await getTranslations("data");
   const tatt = await getTranslations("attendanceSettings");
+  const tyear = await getTranslations("years");
 
-  const [settingsRows, matrix, categories, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
+  const [settingsRows, years, matrix, categories, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
+    listAcademicYears(),
     currentPriceMatrix(),
     db.expenseCategory.findMany({ orderBy: { sortOrder: "asc" } }),
     db.integration.findMany(),
@@ -175,6 +179,10 @@ export default async function SettingsPage({
         <CollapsibleCard title={t("expenseCategories")} className="lg:col-span-2">
             <CategoriesManager categories={catRows} />
           </CollapsibleCard>
+
+        <CollapsibleCard title={tyear("title")} className="lg:col-span-2">
+          <YearsManager years={years} />
+        </CollapsibleCard>
 
         <CollapsibleCard title={tatt("title")} className="lg:col-span-2">
           <AttendanceSettings

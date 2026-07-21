@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { guardArchived } from "@/lib/academic-year";
 import { toNumber } from "@/lib/money";
 import { combineDateTime } from "@/lib/session-time";
 
@@ -31,6 +32,14 @@ export async function rescheduleSession(
   if (await guard()) return { error: "forbidden" };
   const parsed = rescheduleSchema.safeParse(input);
   if (!parsed.success) return { error: "invalid" };
+
+  // Dragging a session across a year boundary counts as touching both years.
+  const before = await db.session.findUnique({ where: { id: parsed.data.id } });
+  const frozen = await guardArchived(
+    combineDateTime(parsed.data.date, parsed.data.time),
+    before?.date,
+  );
+  if (frozen) return { error: frozen };
   const { id, date, time, teacherId } = parsed.data;
 
   const data: { date: Date; teacherId?: string } = {
@@ -58,6 +67,10 @@ export async function resizeSession(
   if (await guard()) return { error: "forbidden" };
   const parsed = resizeSchema.safeParse(input);
   if (!parsed.success) return { error: "invalid" };
+
+  const before = await db.session.findUnique({ where: { id: parsed.data.id } });
+  const frozen = await guardArchived(before?.date);
+  if (frozen) return { error: frozen };
   const { id, hours } = parsed.data;
 
   const existing = await db.session.findUnique({ where: { id } });

@@ -24,6 +24,9 @@ export function DeleteButton({
   const t = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  // A refused delete must say why. Without this the dialog just closed and the
+  // row stayed put, which reads as the button being broken.
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -40,6 +43,11 @@ export function DeleteButton({
         <DialogHeader>
           <DialogTitle>{label ?? t("confirmDelete")}</DialogTitle>
         </DialogHeader>
+        {error && (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {t.has(`errors.${error}`) ? t(`errors.${error}`) : t("errorGeneric")}
+          </p>
+        )}
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline">
@@ -51,8 +59,11 @@ export function DeleteButton({
             disabled={pending}
             onClick={() =>
               start(async () => {
-                await action();
-                setOpen(false);
+                setError(null);
+                const res = await action();
+                // Keep the dialog open on failure so the reason is readable.
+                if (res?.error) setError(res.error);
+                else setOpen(false);
               })
             }
           >
