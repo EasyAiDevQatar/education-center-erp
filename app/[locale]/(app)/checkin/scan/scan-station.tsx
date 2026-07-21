@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { FormField } from "@/components/crud/form-field";
 import { minToHHMM } from "@/lib/planner";
 import { checkInByQr, type ScanOutcome } from "../actions";
+import { createQrDecoder, classifyCameraError, type CameraError } from "@/lib/qr-decode";
 
 export type ScanRow = {
   id: string;
@@ -21,8 +22,6 @@ export type ScanRow = {
   status: string;
 };
 
-type DetectedBarcode = { rawValue: string };
-type BarcodeDetectorLike = { detect: (s: CanvasImageSource) => Promise<DetectedBarcode[]> };
 type Feed = { ok: boolean; name: string; at: string };
 
 /**
@@ -55,7 +54,9 @@ export function ScanStation({
 
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
-  const [supported, setSupported] = useState<boolean | null>(null);
+  const [camera, setCamera] = useState<"starting" | "live" | CameraError>("starting");
+  // Which decoder is in play, so the UI can explain a slower fallback.
+  const [decoderKind, setDecoderKind] = useState<"native" | "fallback" | null>(null);
   const [manual, setManual] = useState("");
   const [feed, setFeed] = useState<Feed[]>([]);
   const [choice, setChoice] = useState<ScanOutcome | null>(null);
@@ -100,19 +101,22 @@ export function ScanStation({
     let timer: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
-      const Ctor = (
-        window as unknown as {
-          BarcodeDetector?: new (o: { formats: string[] }) => BarcodeDetectorLike;
-        }
-      ).BarcodeDetector;
-      if (!Ctor || !navigator.mediaDevices?.getUserMedia) {
-        setSupported(false);
+      // Decoder and camera are independent: Safari has no BarcodeDetector but a
+      // perfectly good camera, so a missing decoder must never stop the camera.
+      let decoder;
+      try {
+        decoder = await createQrDecoder();
+        if (cancelled) return;
+        setDecoderKind(decoder.kind);
+      } catch {
+        if (!cancelled) setCamera("unsupported");
         return;
       }
 
       try {
-        // A laptop only has a front camera, so `environment` must be a
-        // preference, not a requirement — forcing it fails outright there.
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("no getUserMedia");
+        // `environment` is a preference, not a requirement — a laptop only has
+        // a front camera and an exact constraint would fail outright there.
         const constraints: MediaStreamConstraints = {
           video: deviceId
             ? { deviceId: { exact: deviceId } }
@@ -129,10 +133,9 @@ export function ScanStation({
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-        setSupported(true);
+        setCamera("live");
 
-        // Labels are only populated after permission is granted, so enumerate
-        // after getUserMedia rather than before.
+        // Labels only populate after permission is granted, so enumerate here.
         const devices = await navigator.mediaDevices.enumerateDevices();
         const cams = devices.filter((d) => d.kind === "videoinput");
         if (!cancelled) {
@@ -143,18 +146,15 @@ export function ScanStation({
           }
         }
 
-        const detector = new Ctor({ formats: ["qr_code"] });
+        // jsQR does more work per frame, so give it a little more breathing room.
+        const interval = decoder.kind === "native" ? 400 : 600;
         timer = setInterval(async () => {
           if (!videoRef.current || busyRef.current) return;
-          try {
-            const found = await detector.detect(videoRef.current);
-            if (found.length > 0) submit(found[0].rawValue);
-          } catch {
-            // One bad frame is not worth surfacing.
-          }
-        }, 400);
-      } catch {
-        setSupported(false);
+          const text = await decoder.scan(videoRef.current);
+          if (text) submit(text);
+        }, interval);
+      } catch (err) {
+        if (!cancelled) setCamera(classifyCameraError(err));
       }
     })();
 
@@ -170,7 +170,7 @@ export function ScanStation({
     <div className="grid gap-4 lg:grid-cols-2">
       {/* Camera */}
       <div className="space-y-3">
-        {supported !== false ? (
+        {camera === "starting" || camera === "live" ? (
           <div className="relative overflow-hidden rounded-lg bg-black">
             <video ref={videoRef} playsInline muted className="aspect-video w-full object-cover" />
             <div className="pointer-events-none absolute inset-10 rounded-lg border-2 border-white/70" />
@@ -181,10 +181,19 @@ export function ScanStation({
             )}
           </div>
         ) : (
-          <p className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-            <CameraOff className="size-4 shrink-0" />
-            {t("noCamera")}
+          <p className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm">
+            <CameraOff className="mt-0.5 size-4 shrink-0 text-destructive" />
+            <span>
+              <span className="font-medium text-destructive">{t(`cameraErrors.${camera}`)}</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {t(`cameraHints.${camera}`)}
+              </span>
+            </span>
           </p>
+        )}
+
+        {decoderKind === "fallback" && camera === "live" && (
+          <p className="text-xs text-muted-foreground">{t("fallbackDecoder")}</p>
         )}
 
         {cameras.length > 1 && (

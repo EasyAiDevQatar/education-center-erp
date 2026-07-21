@@ -15,18 +15,16 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { checkInByQr } from "./actions";
-
-/** Minimal shape of the native detector — no library, no bundle cost. */
-type DetectedBarcode = { rawValue: string };
-type BarcodeDetectorLike = { detect: (s: CanvasImageSource) => Promise<DetectedBarcode[]> };
+import { createQrDecoder, classifyCameraError, type CameraError } from "@/lib/qr-decode";
 
 /**
  * Camera check-in for the reception tablet.
  *
- * Uses the browser's built-in BarcodeDetector rather than pulling in a scanning
- * library — it is available in Chrome/Edge, which is what a kiosk runs. Where
- * it is missing (Safari, Firefox) the dialog falls back to typing the code off
- * the card, so the feature degrades instead of disappearing.
+ * Decoding goes through `lib/qr-decode`, which prefers the browser's built-in
+ * BarcodeDetector and falls back to jsQR where it is missing (Safari, Firefox).
+ * The camera is opened regardless of which decoder is available — the two are
+ * unrelated, and treating a missing decoder as a missing camera is what used to
+ * make this dialog refuse to scan on browsers whose camera worked fine.
  */
 export function QrScanner({
   day,
@@ -44,7 +42,7 @@ export function QrScanner({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
-  const [supported, setSupported] = useState<boolean | null>(null);
+  const [camera, setCamera] = useState<"starting" | "live" | CameraError>("starting");
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState("");
   const [pending, start] = useTransition();
@@ -72,15 +70,22 @@ export function QrScanner({
     let timer: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
-      const Ctor = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => BarcodeDetectorLike })
-        .BarcodeDetector;
-      if (!Ctor) {
-        setSupported(false);
+      // Decoder and camera are independent — a browser without BarcodeDetector
+      // still has a working camera, so the decoder falls back instead of the
+      // whole feature switching itself off.
+      let decoder;
+      try {
+        decoder = await createQrDecoder();
+        if (cancelled) return;
+      } catch {
+        if (!cancelled) setCamera("unsupported");
         return;
       }
+
       try {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("no getUserMedia");
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+          video: { facingMode: { ideal: "environment" } },
         });
         if (cancelled) {
           stream.getTracks().forEach((tr) => tr.stop());
@@ -91,21 +96,16 @@ export function QrScanner({
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-        setSupported(true);
+        setCamera("live");
 
-        const detector = new Ctor({ formats: ["qr_code"] });
+        const interval = decoder.kind === "native" ? 400 : 600;
         timer = setInterval(async () => {
           if (!videoRef.current || busyRef.current) return;
-          try {
-            const found = await detector.detect(videoRef.current);
-            if (found.length > 0) submitToken(found[0].rawValue);
-          } catch {
-            // A single failed frame is not worth surfacing.
-          }
-        }, 400);
-      } catch {
-        // Permission denied or no camera — the manual field still works.
-        setSupported(false);
+          const text = await decoder.scan(videoRef.current);
+          if (text) submitToken(text);
+        }, interval);
+      } catch (err) {
+        if (!cancelled) setCamera(classifyCameraError(err));
       }
     })();
 
@@ -125,19 +125,24 @@ export function QrScanner({
         </DialogHeader>
 
         <div className="space-y-3">
-          {supported !== false ? (
+          {camera === "starting" || camera === "live" ? (
             <div className="relative overflow-hidden rounded-lg bg-black">
               <video ref={videoRef} playsInline muted className="aspect-video w-full object-cover" />
               <div className="pointer-events-none absolute inset-8 rounded-lg border-2 border-white/70" />
             </div>
           ) : (
-            <p className="flex items-center gap-2 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-              <CameraOff className="size-4 shrink-0" />
-              {t("noCamera")}
+            <p className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm">
+              <CameraOff className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <span>
+                <span className="font-medium text-destructive">{t(`cameraErrors.${camera}`)}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {t(`cameraHints.${camera}`)}
+                </span>
+              </span>
             </p>
           )}
 
-          {supported === null && (
+          {camera === "starting" && (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Camera className="size-4" />
               {tc("loading")}
