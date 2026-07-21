@@ -49,7 +49,7 @@ export async function getStudentLedger(studentId: string): Promise<LedgerEntry[]
     ...sessions.map((s) => ({
       date: s.date.toISOString().slice(0, 10),
       type: "SESSION" as const,
-      description: `${s.teacher.name} · ${s.gradeLevel.nameAr}`,
+      description: `${s.teacher?.name ?? ""} · ${s.gradeLevel.nameAr}`,
       debit: toNumber(s.total),
       credit: 0,
     })),

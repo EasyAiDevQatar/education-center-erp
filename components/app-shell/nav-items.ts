@@ -26,6 +26,8 @@ export type NavItem = {
   roles: Role[];
   /** section key under `nav.sections` */
   section: "operations" | "finance" | "admin";
+  /** Nested links, shown indented while the parent branch is active. */
+  children?: { href: string; key: string }[];
 };
 
 const ALL: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST", "TEACHER", "PARENT"];
@@ -38,7 +40,18 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/portal/parent", key: "parentPortal", icon: UserRound, roles: ["PARENT"], section: "operations" },
   { href: "/calendar", key: "calendar", icon: CalendarRange, roles: STAFF, section: "operations" },
   { href: "/planner", key: "planner", icon: ClipboardList, roles: STAFF, section: "operations" },
-  { href: "/checkin", key: "checkin", icon: ScanLine, roles: STAFF, section: "operations" },
+  {
+    href: "/checkin",
+    key: "checkin",
+    icon: ScanLine,
+    roles: STAFF,
+    section: "operations",
+    children: [
+      { href: "/checkin", key: "roster" },
+      { href: "/checkin/scan", key: "scan" },
+      { href: "/checkin/cards", key: "qrCards" },
+    ],
+  },
   { href: "/sessions", key: "sessions", icon: CalendarDays, roles: STAFF, section: "operations" },
   { href: "/students", key: "students", icon: Users, roles: STAFF, section: "operations" },
   { href: "/teachers", key: "teachers", icon: GraduationCap, roles: STAFF, section: "operations" },

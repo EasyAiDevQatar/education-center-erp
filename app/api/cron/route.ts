@@ -55,13 +55,13 @@ export async function GET(request: Request) {
         await dispatch(
           "SESSION_REMINDER",
           [
-            { audience: "TEACHER", phone: s.teacher.phone },
+            { audience: "TEACHER", phone: s.teacher?.phone ?? null },
             { audience: "STUDENT", phone: s.student.phone },
             { audience: "PARENT", phone: s.student.guardian?.phone ?? null },
           ],
           {
             student: s.student.name,
-            teacher: s.teacher.name,
+            teacher: s.teacher?.name ?? "",
             date: ymd(s.date),
             time: s.date.toISOString().slice(11, 16),
             center,

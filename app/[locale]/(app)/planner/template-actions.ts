@@ -226,7 +226,9 @@ export async function copyLastWeek(
 
   const res = await materialiseDrafts(
     d.date,
-    source.map((x) => ({
+    source
+      .filter((x): x is typeof x & { teacherId: string } => x.teacherId !== null)
+      .map((x) => ({
       teacherId: x.teacherId,
       studentId: x.studentId,
       startMin: x.date.getUTCHours() * 60 + x.date.getUTCMinutes(),
@@ -256,6 +258,8 @@ export async function saveSessionAsTemplate(
 
   const s = await db.session.findUnique({ where: { id: parsed.data.sessionId } });
   if (!s) return { error: "notfound" };
+  // A recurring template needs a teacher to recur for.
+  if (!s.teacherId) return { error: "noTeacher" };
 
   const startMin = s.date.getUTCHours() * 60 + s.date.getUTCMinutes();
   const weekday = s.date.getUTCDay();

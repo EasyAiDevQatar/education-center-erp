@@ -104,7 +104,7 @@ export async function outstandingSessions(studentId: string) {
       return {
         id: s.id,
         date: s.date.toISOString().slice(0, 10),
-        teacherName: s.teacher.name,
+        teacherName: s.teacher?.name ?? "",
         total,
         allocated,
         outstanding: Math.max(0, total - allocated),

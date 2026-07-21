@@ -22,7 +22,7 @@ export async function loadSessionLines(
     date: s.date.toISOString().slice(0, 10),
     time: s.date.toISOString().slice(11, 16),
     studentName: s.student.name,
-    teacherName: s.teacher.name,
+    teacherName: s.teacher?.name ?? "",
     levelLabel: locale === "ar" ? s.gradeLevel.nameAr : s.gradeLevel.nameEn,
     location: s.location,
     hours: toNumber(s.hours),

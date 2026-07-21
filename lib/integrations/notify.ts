@@ -161,13 +161,13 @@ export async function notifySession(
     await dispatch(
       event,
       [
-        { audience: "TEACHER", phone: s.teacher.phone },
+        { audience: "TEACHER", phone: s.teacher?.phone ?? null },
         { audience: "STUDENT", phone: s.student.phone },
         { audience: "PARENT", phone: s.student.guardian?.phone ?? null },
       ],
       {
         student: s.student.name,
-        teacher: s.teacher.name,
+        teacher: s.teacher?.name ?? "",
         date: fmtDate(s.date),
         time: fmtTime(s.date),
         hours: String(toNumber(s.hours)),
@@ -224,7 +224,7 @@ export async function notifyPayout(payoutId: string): Promise<void> {
     await dispatch(
       "PAYOUT_PAID",
       [{ audience: "TEACHER", phone: p.teacher.phone }],
-      { teacher: p.teacher.name, amount: formatMoney(p.netPaid), currency, center },
+      { teacher: p.teacher?.name ?? "", amount: formatMoney(p.netPaid), currency, center },
       { type: "TeacherPayout", id: p.id },
     );
   } catch {

@@ -13,6 +13,7 @@ import {
   Home,
   Building2,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import { useRouter, usePathname, Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -22,12 +23,14 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { cn } from "@/lib/utils";
 import { formatHours } from "@/lib/money";
 import { minToHHMM } from "@/lib/planner";
+import { Select } from "@/components/ui/select";
 import { markAttendance, markAll, undoAutoComplete, confirmAutoComplete } from "./actions";
+import { assignSessionTeacher } from "../settings/attendance-actions";
 import { QrScanner } from "./qr-scanner";
 
 export type RosterItem = {
   id: string;
-  teacherId: string;
+  teacherId: string | null;
   teacherName: string;
   studentName: string;
   startMin: number;
@@ -36,6 +39,9 @@ export type RosterItem = {
   status: string;
   autoCompleted: boolean;
 };
+
+/** Bucket key for sessions recorded before a teacher was assigned. */
+const UNASSIGNED = "__unassigned__";
 
 function addDaysStr(s: string, n: number) {
   const d = new Date(`${s}T00:00:00.000Z`);
@@ -65,10 +71,16 @@ export function RosterBoard({
   day,
   items,
   pendingReview,
+  needsTeacher,
+  dayTeachers,
 }: {
   day: string;
   items: RosterItem[];
   pendingReview: RosterItem[];
+  /** Walk-ins recorded before anyone knew who taught them. */
+  needsTeacher: RosterItem[];
+  /** Only teachers who actually worked that day are offered. */
+  dayTeachers: { id: string; label: string }[];
 }) {
   const t = useTranslations("checkin");
   const tc = useTranslations("common");
@@ -86,8 +98,11 @@ export function RosterBoard({
   const byTeacher = useMemo(() => {
     const m = new Map<string, RosterItem[]>();
     for (const it of search.filtered) {
-      if (!m.has(it.teacherId)) m.set(it.teacherId, []);
-      m.get(it.teacherId)!.push(it);
+      // Walk-ins with no teacher yet share one bucket so they stay visible
+      // instead of vanishing from a teacher-keyed grouping.
+      const key = it.teacherId ?? UNASSIGNED;
+      if (!m.has(key)) m.set(key, []);
+      m.get(key)!.push(it);
     }
     for (const list of m.values()) list.sort((a, b) => a.startMin - b.startMin);
     return [...m.entries()].sort((a, b) =>
@@ -170,6 +185,54 @@ export function RosterBoard({
         </p>
       )}
 
+      {/* Walk-ins still missing a teacher — nobody's payroll moves until set */}
+      {needsTeacher.length > 0 && (
+        <div className="rounded-lg border border-primary bg-primary/5 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+            <UserPlus className="size-4" />
+            {t("needsTeacherTitle", { n: needsTeacher.length })}
+          </div>
+          <div className="space-y-1">
+            {needsTeacher.map((r) => (
+              <div
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-background px-2 py-1.5 text-sm"
+              >
+                <span className="font-medium">{r.studentName}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground tabular-nums" dir="ltr">
+                    {minToHHMM(r.startMin)}
+                  </span>
+                  <Select
+                    aria-label={t("assignTeacher")}
+                    className="w-44"
+                    defaultValue=""
+                    disabled={pending}
+                    onChange={(e) =>
+                      e.target.value &&
+                      run(() =>
+                        assignSessionTeacher(locale, {
+                          sessionId: r.id,
+                          teacherId: e.target.value,
+                        }),
+                      )
+                    }
+                  >
+                    <option value="">{t("assignTeacher")}</option>
+                    {dayTeachers.map((x) => (
+                      <option key={x.id} value={x.id}>{x.label}</option>
+                    ))}
+                  </Select>
+                </span>
+              </div>
+            ))}
+          </div>
+          {dayTeachers.length === 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">{t("noDayTeachers")}</p>
+          )}
+        </div>
+      )}
+
       {/* Sessions the sweep completed on its own, awaiting a human */}
       {pendingReview.length > 0 && (
         <div className="rounded-lg border border-warning bg-warning/10 p-3">
@@ -234,7 +297,9 @@ export function RosterBoard({
         return (
           <div key={teacherId} className="rounded-lg border border-border bg-card p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <span className="font-semibold">{list[0]?.teacherName}</span>
+              <span className="font-semibold">
+                {list[0]?.teacherName || t("noTeacher")}
+              </span>
               <span className="flex items-center gap-1">
                 <span className="me-1 text-xs text-muted-foreground">
                   {t("rowSummary", { done: list.length - rowAwaiting.length, total: list.length })}
@@ -245,7 +310,13 @@ export function RosterBoard({
                   className="gap-1"
                   disabled={pending || rowAwaiting.length === 0}
                   onClick={() =>
-                    run(() => markAll(locale, { date: day, mark: "COMPLETED", teacherId }))
+                    run(() =>
+                      markAll(locale, {
+                        date: day,
+                        mark: "COMPLETED",
+                        teacherId: teacherId === UNASSIGNED ? null : teacherId,
+                      }),
+                    )
                   }
                 >
                   <Check className="size-3.5" />

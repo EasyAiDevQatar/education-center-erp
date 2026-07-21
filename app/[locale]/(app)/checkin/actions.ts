@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { resolvePricePerHour } from "@/lib/pricing";
 import { notifySession } from "@/lib/integrations/notify";
 import { applyPackageHours, revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { distanceMeters, GEOFENCE_RADIUS_M } from "@/lib/geo";
@@ -268,29 +269,74 @@ export async function markAll(
 const qrSchema = z.object({
   token: z.string().trim().min(4).max(64),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** Set on the second call once the operator has picked which session. */
+  sessionId: z.string().optional().nullable(),
 });
 
+export type ScanChoice = {
+  id: string;
+  startMin: number;
+  teacherName: string | null;
+  status: string;
+};
+
+export type ScanOutcome = AttendanceState & {
+  /** Present when the operator must choose which session to credit. */
+  choices?: ScanChoice[];
+  /** Echoed back so the picker can re-submit without re-scanning. */
+  token?: string;
+  /** True when a walk-in session was created rather than matched. */
+  walkIn?: boolean;
+};
+
 /**
- * Scan a student's card and mark their session for the day.
+ * Scan a student's card and record their attendance.
  *
- * Picks the session nearest to now rather than the day's first, so a student
- * arriving for their 17:00 lesson isn't recorded against the 09:00 one they
- * already attended.
+ * Three behaviours the centre controls from Settings:
+ *  - `attendancePickSession` — show every session for the day and let the
+ *    operator choose, instead of silently taking the nearest one.
+ *  - `attendanceWalkIn` — what to do when the student has no session today:
+ *    FLAG (create one with no teacher, for the admin to assign), ASSIGN (use
+ *    their assigned teacher), ASK (refuse and let the operator book), or NONE.
  */
 export async function checkInByQr(
   locale: string,
   input: z.infer<typeof qrSchema>,
-): Promise<AttendanceState> {
+): Promise<ScanOutcome> {
   if (await guard()) return { error: "forbidden" };
   const parsed = qrSchema.safeParse(input);
   if (!parsed.success) return { error: "invalid" };
+  const { token, date, sessionId } = parsed.data;
 
-  const student = await db.student.findUnique({ where: { qrToken: parsed.data.token } });
+  const student = await db.student.findUnique({ where: { qrToken: token } });
   if (!student) return { error: "unknownCard" };
 
-  const start = new Date(`${parsed.data.date}T00:00:00.000Z`);
+  const start = new Date(`${date}T00:00:00.000Z`);
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
+
+  // Second pass: the operator already chose. Verify it belongs to this student
+  // so a stale id from another card can't be credited here.
+  if (sessionId) {
+    const chosen = await db.session.findFirst({
+      where: { id: sessionId, studentId: student.id },
+    });
+    if (!chosen) return { error: "invalid", studentName: student.name };
+    await db.session.update({ where: { id: chosen.id }, data: { checkInMethod: "QR" } });
+    await applyMark(chosen.id, "COMPLETED");
+    await writeAudit("Session", chosen.id, "UPDATE", {
+      after: { status: "COMPLETED", via: "qr-picked", studentId: student.id },
+    });
+    revalidate(locale);
+    return { ok: true, studentName: student.name };
+  }
+
+  const settingsRows = await db.setting.findMany({
+    where: { key: { in: ["attendancePickSession", "attendanceWalkIn"] } },
+  });
+  const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
+  const pickSession = settings.attendancePickSession === "true";
+  const walkIn = settings.attendanceWalkIn ?? "FLAG";
 
   const todays = await db.session.findMany({
     where: {
@@ -298,12 +344,83 @@ export async function checkInByQr(
       date: { gte: start, lt: end },
       status: { in: ["SCHEDULED", "CHECKED_IN"] },
     },
+    include: { teacher: true },
+    orderBy: { date: "asc" },
   });
-  if (todays.length === 0) return { error: "noSessionToday", studentName: student.name };
+
+  const minOf = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
+
+  /* ---- nothing booked today ---- */
+  if (todays.length === 0) {
+    if (walkIn === "NONE") return { error: "noSessionToday", studentName: student.name };
+    if (walkIn === "ASK") return { error: "noSessionAsk", studentName: student.name };
+
+    if (!student.gradeLevelId) {
+      // No grade means no price, and an unpriced session would quietly under-bill.
+      return { error: "noGradeLevel", studentName: student.name };
+    }
+
+    // ASSIGN uses the student's teacher for the current year, if there is
+    // exactly one obvious choice; otherwise fall back to leaving it unassigned
+    // rather than crediting someone's payroll arbitrarily.
+    let teacherId: string | null = null;
+    if (walkIn === "ASSIGN") {
+      const assigned = await db.studentTeacher.findMany({
+        where: { studentId: student.id },
+        orderBy: { createdAt: "asc" },
+        take: 2,
+      });
+      if (assigned.length === 1) teacherId = assigned[0].teacherId;
+    }
+
+    const now = new Date();
+    const when = new Date(
+      `${date}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00.000Z`,
+    );
+    const pricePerHour = await resolvePricePerHour(student.gradeLevelId, "CENTER", when);
+
+    const created = await db.session.create({
+      data: {
+        date: when,
+        studentId: student.id,
+        teacherId,
+        gradeLevelId: student.gradeLevelId,
+        location: "CENTER",
+        hours: 1,
+        pricePerHour,
+        total: pricePerHour,
+        paymentStatus: "UNPAID",
+        status: "COMPLETED",
+        checkInMethod: "QR",
+        studentCheckInAt: new Date(),
+        // Unassigned walk-ins surface in the "needs a teacher" list until an
+        // admin allocates one — nobody's payroll moves before then.
+        needsTeacher: teacherId === null,
+      },
+    });
+    await writeAudit("Session", created.id, "CREATE", {
+      after: { via: "qr-walkin", studentId: student.id, teacherId },
+    });
+    revalidate(locale);
+    return { ok: true, studentName: student.name, walkIn: true };
+  }
+
+  /* ---- one or more booked ---- */
+  if (pickSession && todays.length > 1) {
+    return {
+      studentName: student.name,
+      token,
+      choices: todays.map((s) => ({
+        id: s.id,
+        startMin: minOf(s.date),
+        teacherName: s.teacher?.name ?? null,
+        status: s.status,
+      })),
+    };
+  }
 
   const now = new Date();
   const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const minOf = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
   const closest = todays.reduce((best, s) =>
     Math.abs(minOf(s.date) - nowMin) < Math.abs(minOf(best.date) - nowMin) ? s : best,
   );

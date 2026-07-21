@@ -181,7 +181,7 @@ export async function loadParentPortal(guardianId: string, locale: string) {
           id: x.id,
           date: x.date.toISOString().slice(0, 10),
           time: x.date.toISOString().slice(11, 16),
-          teacherName: x.teacher.name,
+          teacherName: x.teacher?.name ?? "",
           hours: toNumber(x.hours),
           total: toNumber(x.total),
           status: x.status,

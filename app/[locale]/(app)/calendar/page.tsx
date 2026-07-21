@@ -95,7 +95,7 @@ export default async function CalendarPage({
       studentId: s.studentId,
       studentName: s.student.name,
       teacherId: s.teacherId,
-      teacherName: s.teacher.name,
+      teacherName: s.teacher?.name ?? "",
       gradeLevelId: s.gradeLevelId,
       levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
       location: s.location as "CENTER" | "HOME",

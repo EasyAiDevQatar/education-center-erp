@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
 import { CollapsibleCard, CollapsibleGroup } from "@/components/ui/collapsible-card";
+import { AttendanceSettings } from "./attendance-settings";
 import { PROVIDERS, maskSecret } from "@/lib/integrations/registry";
 import { CenterProfileForm } from "./center-profile-form";
 import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
@@ -36,6 +37,7 @@ export default async function SettingsPage({
   const t = await getTranslations("settings");
   const tterm = await getTranslations("terms");
   const tdata = await getTranslations("data");
+  const tatt = await getTranslations("attendanceSettings");
 
   const [settingsRows, matrix, categories, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
@@ -173,6 +175,16 @@ export default async function SettingsPage({
         <CollapsibleCard title={t("expenseCategories")} className="lg:col-span-2">
             <CategoriesManager categories={catRows} />
           </CollapsibleCard>
+
+        <CollapsibleCard title={tatt("title")} className="lg:col-span-2">
+          <AttendanceSettings
+            values={{
+              walkIn: settings.attendanceWalkIn ?? "FLAG",
+              pickSession: settings.attendancePickSession === "true",
+              graceHours: settings.autoCompleteGraceHours ?? "6",
+            }}
+          />
+        </CollapsibleCard>
 
         <CollapsibleCard title={tterm("title")} className="lg:col-span-2">
             <TermsManager

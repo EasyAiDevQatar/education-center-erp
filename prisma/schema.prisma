@@ -57,6 +57,7 @@ model Teacher {
   payouts      TeacherPayout[]
   availability TeacherAvailability[]
   templates    PlannerTemplate[]
+  students     StudentTeacher[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -137,6 +138,7 @@ model Student {
   packages  Package[]
   templates PlannerTemplate[]
   leads     Lead[]
+  teachers  StudentTeacher[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -195,8 +197,10 @@ model Session {
   date         DateTime
   studentId    String
   student      Student    @relation(fields: [studentId], references: [id])
-  teacherId    String
-  teacher      Teacher    @relation(fields: [teacherId], references: [id])
+  /// Nullable so a walk-in can be recorded before anyone knows who
+  /// taught it — no payroll moves until a teacher is assigned.
+  teacherId    String?
+  teacher      Teacher?   @relation(fields: [teacherId], references: [id])
   gradeLevelId String
   gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
   location     String     // CENTER | HOME
@@ -234,6 +238,9 @@ model Session {
   /// makes a session billable without anyone confirming the lesson happened,
   /// so it is flagged for the review list rather than done silently.
   autoCompleted  Boolean @default(false)
+  /// Recorded without a teacher (walk-in). Surfaces in the check-in
+  /// review list until an admin allocates one.
+  needsTeacher   Boolean @default(false)
 
   createdById String?
   createdAt   DateTime @default(now())
@@ -487,4 +494,23 @@ model Lead {
 
   @@index([status])
   @@index([followUpAt])
+}
+
+/// Which teachers a student normally works with.
+///
+/// Lets the booking dialogs offer the two or three relevant teachers instead of
+/// the whole roster. Scoped per academic year so last year's pairings don't
+/// clutter this year's lists.
+model StudentTeacher {
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, teacherId])
+  @@index([studentId])
+  @@index([teacherId])
 }

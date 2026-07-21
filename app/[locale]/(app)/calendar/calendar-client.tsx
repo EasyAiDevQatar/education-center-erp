@@ -37,7 +37,7 @@ export type CalEvent = {
   hours: number;
   studentId: string;
   studentName: string;
-  teacherId: string;
+  teacherId: string | null;
   teacherName: string;
   gradeLevelId: string;
   levelLabel: string;
@@ -308,7 +308,7 @@ export function CalendarClient({
         date: editEv.day,
         time: fmtTime(editEv.startMinutes),
         studentId: editEv.studentId,
-        teacherId: editEv.teacherId,
+        teacherId: editEv.teacherId ?? "",
         gradeLevelId: editEv.gradeLevelId,
         location: editEv.location,
         hours: editEv.hours,

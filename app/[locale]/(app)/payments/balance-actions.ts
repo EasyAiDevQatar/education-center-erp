@@ -56,7 +56,7 @@ export async function getStudentOutstanding(
     unpaidSessions: sessions.map((x) => ({
       id: x.id,
       date: x.date.toISOString().slice(0, 10),
-      teacherName: x.teacher.name,
+      teacherName: x.teacher?.name ?? "",
       total: toNumber(x.total),
       paymentStatus: x.paymentStatus,
     })),

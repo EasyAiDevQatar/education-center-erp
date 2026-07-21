@@ -50,20 +50,47 @@ export function AppShell({
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-accent-foreground",
+                <div key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-foreground/80 hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span>{t(item.key)}</span>
+                  </Link>
+
+                  {/* Sub-links appear only while their branch is open, so the
+                      sidebar stays short for the sections you aren't using. */}
+                  {item.children && active && (
+                    <div className="mt-1 flex flex-col gap-0.5 border-s border-border ms-5 ps-2">
+                      {item.children.map((child) => {
+                        // Exact match: /checkin must not light up on /checkin/cards.
+                        const childActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => setOpen(false)}
+                            className={cn(
+                              "rounded-md px-3 py-1.5 text-sm transition-colors",
+                              childActive
+                                ? "bg-accent font-medium text-accent-foreground"
+                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                            )}
+                          >
+                            {t(child.key)}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   )}
-                >
-                  <Icon className="size-4 shrink-0" />
-                  <span>{t(item.key)}</span>
-                </Link>
+                </div>
               );
             })}
           </div>

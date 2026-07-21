@@ -29,7 +29,7 @@ export default async function CheckinPage({
   const end = new Date(`${day}T00:00:00.000Z`);
   end.setUTCDate(end.getUTCDate() + 1);
 
-  const [sessions, review] = await Promise.all([
+  const [sessions, review, unassigned] = await Promise.all([
     db.session.findMany({
       // Planner drafts are pending confirmation — not attendance records.
       where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } },
@@ -45,13 +45,31 @@ export default async function CheckinPage({
       orderBy: { date: "desc" },
       take: 50,
     }),
+    // Same reasoning as the review queue: not scoped to the shown day, because
+    // a walk-in from Tuesday still needs a teacher on Thursday.
+    db.session.findMany({
+      where: { needsTeacher: true },
+      include: { student: true, teacher: true },
+      orderBy: { date: "desc" },
+      take: 50,
+    }),
   ]);
+
+  // Offer only teachers who actually worked that day — the realistic set, and
+  // a guard against crediting someone who wasn't in the building.
+  const dayTeachers = [
+    ...new Map(
+      sessions
+        .filter((s) => s.teacher)
+        .map((s) => [s.teacherId!, { id: s.teacherId!, label: s.teacher!.name }]),
+    ).values(),
+  ];
 
   type Row = (typeof sessions)[number];
   const toItem = (s: Row): RosterItem => ({
     id: s.id,
     teacherId: s.teacherId,
-    teacherName: s.teacher.name,
+    teacherName: s.teacher?.name ?? "",
     studentName: s.student.name,
     startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
     hours: toNumber(s.hours),
@@ -67,6 +85,8 @@ export default async function CheckinPage({
         day={day}
         items={sessions.map(toItem)}
         pendingReview={review.map(toItem)}
+        needsTeacher={unassigned.map(toItem)}
+        dayTeachers={dayTeachers}
       />
     </div>
   );

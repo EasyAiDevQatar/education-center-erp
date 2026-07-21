@@ -120,7 +120,7 @@ async function loadRows(
         date: ymd(s.date),
         time: hm(s.date),
         studentName: s.student.name,
-        teacherName: s.teacher.name,
+        teacherName: s.teacher?.name ?? "",
         gradeCode: s.gradeLevel.code,
         location: s.location,
         hours: toNumber(s.hours),
@@ -178,7 +178,7 @@ async function loadRows(
         orderBy: { periodStart: "desc" },
       });
       return rows.map((p) => ({
-        teacherName: p.teacher.name,
+        teacherName: p.teacher?.name ?? "",
         periodStart: ymd(p.periodStart),
         periodEnd: ymd(p.periodEnd),
         grossCommission: toNumber(p.grossCommission),

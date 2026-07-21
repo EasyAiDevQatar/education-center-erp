@@ -62,12 +62,16 @@ export async function getRevenueByTeacher(range?: DateRange) {
     _sum: { total: true, hours: true },
     where: { status: { not: "DRAFT" }, ...(dateWhere ? { date: dateWhere } : {}) },
   });
+  // Sessions still awaiting a teacher have nothing to attribute revenue to.
+  const assigned = grouped.filter(
+    (g): g is typeof g & { teacherId: string } => g.teacherId !== null,
+  );
   const teachers = await db.teacher.findMany({
-    where: { id: { in: grouped.map((g) => g.teacherId) } },
+    where: { id: { in: assigned.map((g) => g.teacherId) } },
     select: { id: true, name: true },
   });
   const nameById = new Map(teachers.map((t) => [t.id, t.name]));
-  return grouped
+  return assigned
     .map((g) => ({
       teacherId: g.teacherId,
       name: nameById.get(g.teacherId) ?? "—",

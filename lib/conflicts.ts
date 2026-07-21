@@ -29,7 +29,8 @@ export type Conflict = {
 
 export type BusySession = {
   id: string;
-  teacherId: string;
+  /** Null for a walk-in recorded before a teacher was assigned. */
+  teacherId: string | null;
   studentId: string;
   startMin: number;
   hours: number;

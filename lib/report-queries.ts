@@ -55,8 +55,11 @@ export async function getAttendance(
 
   const map = new Map<string, AttendanceRow>();
   for (const s of sessions) {
-    const id = by === "teacher" ? s.teacherId : s.studentId;
-    const name = by === "teacher" ? s.teacher.name : s.student.name;
+    // Grouping by teacher skips sessions still awaiting one: counting them
+    // under a fake bucket would distort every teacher's attendance rate.
+    if (by === "teacher" && !s.teacherId) continue;
+    const id = by === "teacher" ? s.teacherId! : s.studentId;
+    const name = by === "teacher" ? (s.teacher?.name ?? "") : s.student.name;
     let row = map.get(id);
     if (!row) {
       row = { id, name, total: 0, completed: 0, noShow: 0, cancelled: 0, hours: 0, attendanceRate: 0 };
@@ -113,8 +116,11 @@ export async function getRevenueBreakdown(
     let key: string;
     let label: string;
     if (by === "teacher") {
+      // Same reasoning as the attendance report: revenue can't be attributed
+      // to a teacher who hasn't been assigned yet.
+      if (!s.teacherId) continue;
       key = s.teacherId;
-      label = s.teacher.name;
+      label = s.teacher?.name ?? "";
     } else if (by === "level") {
       key = s.gradeLevelId;
       label = locale === "ar" ? s.gradeLevel.nameAr : s.gradeLevel.nameEn;

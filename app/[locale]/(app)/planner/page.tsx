@@ -63,7 +63,11 @@ export default async function PlannerPage({
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
-  const rows: PlannerSession[] = sessions.map((s) => ({
+  const rows: PlannerSession[] = sessions
+    // The planner is teacher-row based, so an unassigned walk-in has nowhere
+    // to sit; it shows on the calendar and the check-in board instead.
+    .filter((s): s is typeof s & { teacherId: string } => s.teacherId !== null)
+    .map((s) => ({
     id: s.id,
     teacherId: s.teacherId,
     studentId: s.studentId,

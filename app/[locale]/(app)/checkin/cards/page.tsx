@@ -4,6 +4,7 @@ import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { CardsToolbar } from "./cards-toolbar";
+import { ShareCardButton } from "./share-card-button";
 
 /**
  * Printable QR cards, one per active student.
@@ -27,7 +28,14 @@ export default async function QrCardsPage({
     db.student.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, qrToken: true, gradeLevel: { select: { nameAr: true, nameEn: true } } },
+      select: {
+        id: true,
+        name: true,
+        qrToken: true,
+        phone: true,
+        guardian: { select: { phone: true } },
+        gradeLevel: { select: { nameAr: true, nameEn: true } },
+      },
     }),
     db.setting.findMany({ where: { key: "centerName" } }),
   ]);
@@ -40,6 +48,8 @@ export default async function QrCardsPage({
       .map(async (s) => ({
         id: s.id,
         name: s.name,
+        // Prefer the guardian's number — the parent is who keeps the card safe.
+        phone: s.guardian?.phone ?? s.phone ?? null,
         level: s.gradeLevel ? (locale === "ar" ? s.gradeLevel.nameAr : s.gradeLevel.nameEn) : "",
         token: s.qrToken!,
         svg: await QRCode.toString(s.qrToken!, {
@@ -81,6 +91,7 @@ export default async function QrCardsPage({
             <div className="text-[10px] tracking-wider text-muted-foreground" dir="ltr">
               {c.token}
             </div>
+            <ShareCardButton name={c.name} token={c.token} phone={c.phone} />
           </div>
         ))}
       </div>

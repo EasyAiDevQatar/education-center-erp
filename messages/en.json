@@ -70,7 +70,8 @@
   "collapseAll": "Collapse all",
   "filterBy": "Filter",
   "clearFilter": "Clear filter",
-  "prev": "Previous"
+  "prev": "Previous",
+  "refresh": "Refresh"
  },
  "nav": {
   "dashboard": "Dashboard",
@@ -97,7 +98,10 @@
   "teacherPortal": "Teacher portal",
   "parentPortal": "Parent portal",
   "leads": "Leads",
-  "terms": "Terms"
+  "terms": "Terms",
+  "roster": "Roster",
+  "scan": "Scan cards",
+  "qrCards": "QR cards"
  },
  "auth": {
   "login": "Log in",
@@ -247,7 +251,9 @@
    "unknownCard": "Unknown card",
    "noSessionToday": "No session for this student today",
    "invalid": "Invalid code",
-   "forbidden": "Not allowed"
+   "forbidden": "Not allowed",
+   "noSessionAsk": "No session — book one first",
+   "noGradeLevel": "Student has no grade level set"
   },
   "reviewTitle": "{n} session(s) auto-completed — needs review",
   "reviewHint": "Completed by the system after their end time.",
@@ -259,7 +265,21 @@
   "generateCards": "Generate missing cards",
   "missingCards": "{n} student(s) without a card",
   "noCards": "No cards yet — press \"Generate missing cards\".",
-  "backToRoster": "Back to roster"
+  "backToRoster": "Back to roster",
+  "scanSubtitle": "Hold the student card up to the camera — attendance records itself.",
+  "camera": "Camera",
+  "scanFeed": "Recent scans",
+  "feedEmpty": "No cards scanned yet.",
+  "todaySoFar": "Today's sessions",
+  "noTeacher": "No teacher",
+  "pickSessionFor": "Choose a session for {name}",
+  "needsTeacherTitle": "{n} session(s) need a teacher",
+  "assignTeacher": "Choose a teacher",
+  "noDayTeachers": "No teacher recorded a session on this day.",
+  "walkInFlagHint": "No session today? One is created without a teacher for you to assign later.",
+  "shareWhatsApp": "Send on WhatsApp",
+  "noPhone": "No phone number",
+  "shareMessage": "{name}'s check-in card. Code: {code}"
  },
  "students": {
   "title": "Students",
@@ -790,5 +810,26 @@
    "notfound": "Record not found",
    "alreadyConverted": "This lead has already been converted"
   }
+ },
+ "attendanceSettings": {
+  "title": "Attendance settings",
+  "pickSession": "Choose session when scanning",
+  "pickSessionLabel": "Show all of today's sessions and let me pick",
+  "pickSessionHint": "When off, the scan records against the session nearest to now.",
+  "walkIn": "Student has no session today",
+  "walkInModes": {
+   "FLAG": "Create one without a teacher and flag it",
+   "ASSIGN": "Create one with the student's usual teacher",
+   "ASK": "Refuse and ask staff to book",
+   "NONE": "Record nothing"
+  },
+  "walkInHints": {
+   "FLAG": "Fastest while staying in control — no payroll moves before assignment.",
+   "ASSIGN": "Uses the assigned teacher only when there is exactly one; otherwise left unassigned.",
+   "ASK": "Shows an error at the kiosk so staff can book the session.",
+   "NONE": "The scan is refused outright."
+  },
+  "graceHours": "Auto-complete grace (hours)",
+  "graceHoursHint": "A session left unmarked this long after it ends is completed by the system and flagged for review."
  }
 }

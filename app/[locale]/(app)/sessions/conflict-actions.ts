@@ -65,7 +65,7 @@ export async function checkConflicts(
     hours: toNumber(x.hours),
     status: x.status,
     studentName: x.student.name,
-    teacherName: x.teacher.name,
+    teacherName: x.teacher?.name ?? "",
   }));
 
   const startMin = hhmmToMin(d.time, 0);
