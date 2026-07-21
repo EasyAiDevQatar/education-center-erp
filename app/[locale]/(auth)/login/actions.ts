@@ -72,7 +72,7 @@ export async function loginAction(
   });
 
   // Send the user to the dashboard in their preferred locale.
-  redirect({ href: "/", locale: user!.locale || locale });
+  redirect({ href: "/dashboard", locale: user!.locale || locale });
   // Unreachable (redirect throws) — satisfies the control-flow return check.
   return {};
 }

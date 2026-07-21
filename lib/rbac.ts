@@ -25,7 +25,9 @@ export async function requireRole(
   allowed: Role[],
 ): Promise<SessionPayload> {
   const session = await requireAuth(locale);
-  if (!allowed.includes(session.role)) redirect({ href: "/", locale });
+  // The root is public now; an authorised-but-wrong-role user belongs on
+  // their dashboard (which itself routes teachers/parents to their portals).
+  if (!allowed.includes(session.role)) redirect({ href: "/dashboard", locale });
   return session;
 }
 

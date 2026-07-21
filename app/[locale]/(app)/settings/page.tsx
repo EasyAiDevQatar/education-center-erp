@@ -15,6 +15,7 @@ import { IntegrationsManager, type IntegrationView } from "./integrations-manage
 import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
 import { WpsSettings } from "./wps-settings";
+import { SiteSettings } from "./site-settings";
 import { DEFAULT_EARNINGS_MODE, isEarningsMode } from "@/lib/earnings-mode";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
@@ -181,6 +182,25 @@ export default async function SettingsPage({
             defaultMode={settings.teacherEarningsMode ?? DEFAULT_EARNINGS_MODE}
             overriddenCount={teacherRows.filter((x) => isEarningsMode(x.earningsMode)).length}
             totalCount={teacherRows.length}
+          />
+        </CollapsibleCard>
+
+        <CollapsibleCard title={t("siteSettings")} className="lg:col-span-2">
+          <SiteSettings
+            values={{
+              publicHome: settings.publicHome ?? "ERP",
+              siteHeroTitleAr: settings.siteHeroTitleAr ?? "",
+              siteHeroTitleEn: settings.siteHeroTitleEn ?? "",
+              siteHeroTextAr: settings.siteHeroTextAr ?? "",
+              siteHeroTextEn: settings.siteHeroTextEn ?? "",
+              siteAboutAr: settings.siteAboutAr ?? "",
+              siteAboutEn: settings.siteAboutEn ?? "",
+              siteYears: settings.siteYears ?? "",
+              siteStudents: settings.siteStudents ?? "",
+              siteSuccessRate: settings.siteSuccessRate ?? "",
+              siteBranches: settings.siteBranches ?? "",
+              siteWhatsApp: settings.siteWhatsApp ?? "",
+            }}
           />
         </CollapsibleCard>
 

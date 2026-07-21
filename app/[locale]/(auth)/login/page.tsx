@@ -21,7 +21,7 @@ export default async function LoginPage({
 
   // Already authenticated → go straight to the dashboard.
   const session = await getSession();
-  if (session) redirect({ href: "/", locale });
+  if (session) redirect({ href: "/dashboard", locale });
 
   const t = await getTranslations("auth");
   const tc = await getTranslations("common");

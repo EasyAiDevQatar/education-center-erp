@@ -19,7 +19,7 @@ export async function requireTeacherPortal(locale: string): Promise<{
   // Staff may look at the portal (useful for support), but only a linked
   // teacher account has data to show.
   const teacherId = session.teacherId;
-  if (!teacherId) redirect({ href: "/", locale });
+  if (!teacherId) redirect({ href: "/dashboard", locale });
   return { session, teacherId: teacherId! };
 }
 
@@ -29,7 +29,7 @@ export async function requireParentPortal(locale: string): Promise<{
 }> {
   const session = await requireAuth(locale);
   const guardianId = session.guardianId;
-  if (!guardianId) redirect({ href: "/", locale });
+  if (!guardianId) redirect({ href: "/dashboard", locale });
   return { session, guardianId: guardianId! };
 }
 
