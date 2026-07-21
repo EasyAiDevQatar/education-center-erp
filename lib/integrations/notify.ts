@@ -216,15 +216,20 @@ export async function notifyPayout(payoutId: string): Promise<void> {
   try {
     const p = await db.teacherPayout.findUnique({
       where: { id: payoutId },
-      include: { teacher: true },
+      include: { teacher: true, employee: true },
     });
     if (!p) return;
     const { center, currency } = await centerSettings();
 
     await dispatch(
       "PAYOUT_PAID",
-      [{ audience: "TEACHER", phone: p.teacher.phone }],
-      { teacher: p.teacher?.name ?? "", amount: formatMoney(p.netPaid), currency, center },
+      [{ audience: "TEACHER", phone: p.teacher?.phone ?? p.employee?.phone ?? null }],
+      {
+        teacher: p.teacher?.name ?? p.employee?.name ?? "",
+        amount: formatMoney(p.netPaid),
+        currency,
+        center,
+      },
       { type: "TeacherPayout", id: p.id },
     );
   } catch {

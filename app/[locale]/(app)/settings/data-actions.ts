@@ -34,7 +34,11 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.notificationLogs = (await tx.notificationLog.deleteMany()).count;
     summary.loginAttempts = (await tx.loginAttempt.deleteMany()).count;
     summary.auditLogs = (await tx.auditLog.deleteMany()).count;
+    // HR: settlements and exports before their parents; payouts before runs.
+    summary.endOfService = (await tx.endOfService.deleteMany()).count;
+    summary.wpsExports = (await tx.wpsExport.deleteMany()).count;
     summary.payouts = (await tx.teacherPayout.deleteMany()).count;
+    summary.payrollRuns = (await tx.payrollRun.deleteMany()).count;
     summary.payments = (await tx.payment.deleteMany()).count;
     summary.sessions = (await tx.session.deleteMany()).count;
     // Leads are business records and must go too. Their links to student /
@@ -56,6 +60,13 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     await tx.user.updateMany({ data: { teacherId: null, guardianId: null } });
     summary.students = (await tx.student.deleteMany()).count;
     summary.guardians = (await tx.guardian.deleteMany()).count;
+    // HR: employees reference teachers, so they go first. The children cascade,
+    // but explicit deletes are self-documenting and survive a future FK change.
+    summary.leaveRequests = (await tx.leaveRequest.deleteMany()).count;
+    summary.leaveAdjustments = (await tx.leaveAdjustment.deleteMany()).count;
+    summary.employeeDocuments = (await tx.employeeDocument.deleteMany()).count;
+    summary.employees = (await tx.employee.deleteMany()).count;
+    summary.leaveTypes = (await tx.leaveType.deleteMany()).count;
     summary.teachers = (await tx.teacher.deleteMany()).count;
     summary.terms = (await tx.term.deleteMany()).count;
     summary.gradeLevels = (await tx.gradeLevel.deleteMany()).count;

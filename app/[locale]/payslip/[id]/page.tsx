@@ -20,7 +20,7 @@ export default async function PayslipPage({
   const [payout, settingsRows] = await Promise.all([
     db.teacherPayout.findUnique({
       where: { id },
-      include: { teacher: true, term: true },
+      include: { teacher: true, employee: true, term: true },
     }),
     db.setting.findMany(),
   ]);
@@ -49,7 +49,8 @@ export default async function PayslipPage({
         })
       : [];
 
-  const pct = toNumber(payout.teacher.commissionPct);
+  // Salary-only payslips have no teacher and therefore no commission rate.
+  const pct = payout.teacher ? toNumber(payout.teacher.commissionPct) : 0;
 
   const Row = ({
     label,
@@ -84,7 +85,16 @@ export default async function PayslipPage({
         </div>
 
         <dl className="space-y-3 text-sm">
-          <Row label={tc("name")} value={fullName(payout.teacher, locale)} />
+          <Row
+            label={tc("name")}
+            value={
+              payout.teacher
+                ? fullName(payout.teacher, locale)
+                : payout.employee
+                  ? fullName(payout.employee, locale)
+                  : "—"
+            }
+          />
           {payout.payMode && <Row label={t("payMode")} value={tm(payout.payMode as "MONTH")} />}
           {payout.term && (
             <Row label={t("term")} value={locale === "ar" ? payout.term.nameAr : payout.term.nameEn} />

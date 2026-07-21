@@ -34,6 +34,8 @@ model User {
   teacher    Teacher? @relation(fields: [teacherId], references: [id])
   guardianId String?  @unique
   guardian   Guardian? @relation(fields: [guardianId], references: [id])
+  employeeId String?  @unique
+  employee   Employee? @relation(fields: [employeeId], references: [id])
 
   auditLogs AuditLog[]
   leads     Lead[]
@@ -71,6 +73,7 @@ model Teacher {
   availability TeacherAvailability[]
   templates    PlannerTemplate[]
   students     StudentTeacher[]
+  employee     Employee?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -389,10 +392,39 @@ model TeacherPayout {
   termId          String?
   term            Term?    @relation(fields: [termId], references: [id])
 
+  /// --- HR module (additive; null on every pre-HR row) ---
+  /// The employee this payslip pays. A teacher-who-is-an-employee carries BOTH
+  /// teacherId and employeeId on one row — one payslip, not two to reconcile.
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  /// The batch this payslip was cut in. Null = ad-hoc single payout.
+  runId String?
+  run   PayrollRun? @relation(fields: [runId], references: [id])
+  /// WPS/gratuity split of fixedSalary. fixedSalary is kept written as their
+  /// sum so every reader that predates the HR module stays correct unchanged.
+  basicSalary Decimal @default(0)
+  allowances  Decimal @default(0)
+  /// WPS "Extra hours" / "Extra income" columns.
+  overtime    Decimal @default(0)
+  extraIncome Decimal @default(0)
+  /// WPS "Number of Working days". Null on pre-HR rows; the SIF generator
+  /// refuses to emit a record without it rather than guessing 30.
+  workingDays     Int?
+  unpaidLeaveDays Decimal @default(0)
+  /// CASH | BANK | CHEQUE — surfaces as the WPS Payment Type.
+  paymentMethod String?
+  paidAt        DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([teacherId])
+  @@index([employeeId])
+  @@index([runId])
+  /// One payslip per employee per run — a double-clicked bulk generate must not
+  /// become a double payment. NULLs are distinct in Postgres, so legacy rows
+  /// (employeeId null) are unaffected — the property StudentTeacher relies on.
+  @@unique([employeeId, runId])
 }
 
 /// Immutable audit trail for financial records. before/after stored as JSON text.
@@ -578,4 +610,235 @@ model AcademicYear {
 
   @@index([archived])
   @@index([startDate, endDate])
+}
+
+/// ------------------------------------------------------------------- HR ----
+
+/// Every person on the establishment: teachers, reception, admin, drivers.
+/// Separate from Teacher (an academic/commission entity) and from User (a
+/// login), because Qatar's WPS legally requires every employee listed
+/// regardless of whether they teach or can log in.
+///
+/// Identity fields are optional throughout: a record must be creatable on the
+/// hire date, before a QID is issued. The WPS export validates presence at
+/// export time, so HR is never blocked from recording a new hire.
+model Employee {
+  id         String  @id @default(cuid())
+  /// The centre's own staff number, printed on payslips.
+  employeeNo String? @unique
+  name       String
+  nameEn     String?
+  phone      String?
+  email      String?
+
+  qid         String?   @unique
+  visaId      String?
+  passportNo  String?
+  nationality String?
+  dob         DateTime?
+
+  hireDate DateTime?
+  /// Last working day. Set at final settlement; also stops leave accrual.
+  endDate      DateTime?
+  jobTitle     String?
+  department   String? // TEACHING | RECEPTION | ADMIN | TRANSPORT | OTHER
+  contractType String? // UNLIMITED | LIMITED — the expiry lives on a CONTRACT document
+  status       String  @default("ACTIVE") // ACTIVE | ON_LEAVE | TERMINATED
+
+  iban     String?
+  bankName String?
+  /// The bank's official WPS short code (Appendix B). Deliberately separate
+  /// from bankName: the SIF is parsed by the bank, and free text there gets
+  /// the whole file rejected.
+  bankShortName   String?
+  salaryFrequency String  @default("M") // WPS: M monthly | B bi-weekly
+
+  /// Gratuity under Art. 54 is 21 days of BASIC only, so the basic/allowances
+  /// split is structural, not cosmetic.
+  basicSalary Decimal @default(0)
+  allowances  Decimal @default(0)
+
+  /// Set when this employee is also a teacher. Once set, basicSalary +
+  /// allowances replace Teacher.fixedSalary as the salary source (see
+  /// lib/salary-source.ts) so the two can never both be paid.
+  teacherId String?  @unique
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+
+  notes String?
+
+  user             User?
+  documents        EmployeeDocument[]
+  leave            LeaveRequest[]
+  leaveAdjustments LeaveAdjustment[]
+  payslips         TeacherPayout[]
+  settlements      EndOfService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([name])
+}
+
+/// Every expiring document. Deliberately the ONLY place an expiry date lives —
+/// QID, visa and contract expiry are NOT also columns on Employee: one date per
+/// fact means one alerting query and no "which of the two is right" bug the
+/// first time someone renews in the wrong screen. A renewal is a new row, so
+/// history survives; alerts read the latest row per type.
+model EmployeeDocument {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       String // QID | VISA | PASSPORT | CONTRACT | HEALTH_CARD | LICENCE | OTHER
+  number     String?
+  issuedOn   DateTime?
+  expiresOn  DateTime?
+  /// Path to the scan on disk — never a DB blob, which would put passport
+  /// scans into every nightly pg_dump.
+  fileUrl String?
+  notes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([expiresOn])
+}
+
+model LeaveType {
+  id     String  @id @default(cuid())
+  code   String  @unique // ANNUAL | SICK | UNPAID | MATERNITY | HAJJ | OTHER
+  nameAr String
+  nameEn String
+  paid   Boolean @default(true)
+  /// Whether days under this type still count as service for gratuity. False
+  /// for UNPAID — the case that can drop someone below the one-year cliff.
+  countsAsService Boolean  @default(true)
+  annualCapDays   Decimal?
+  active          Boolean  @default(true)
+}
+
+model LeaveRequest {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// Snapshot of LeaveType.code, matching how payMode/earnMode are snapshotted:
+  /// renaming or retiring a type must not rewrite an approved request.
+  typeCode  String
+  startDate DateTime
+  endDate   DateTime
+  /// Computed and frozen at submission — a policy change cannot silently alter
+  /// what an approved request said.
+  days   Decimal
+  status String  @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  reason String?
+
+  decidedByUserId String?
+  decidedAt       DateTime?
+  decisionNote    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId, startDate])
+  @@index([status])
+}
+
+/// Opening balances, carry-forward and manual corrections. Without this the
+/// module is unusable on day one: staff have already taken leave this year
+/// that the system has never seen.
+model LeaveAdjustment {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  typeCode   String
+  /// Positive credits days, negative debits them.
+  days            Decimal
+  effectiveOn     DateTime
+  reason          String
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([employeeId, typeCode])
+}
+
+/// One batch of payslips: selecting many employees and generating in one
+/// action produces one run and N TeacherPayout rows.
+model PayrollRun {
+  id String @id @default(cuid())
+  /// The YYYY-MM this run pays — WPS carries Salary Year+Month in its header.
+  month       String
+  periodStart DateTime
+  periodEnd   DateTime
+  status      String @default("DRAFT") // DRAFT | APPROVED | PAID
+  /// Default for the run; per-payslip paymentMethod may override.
+  paymentMethod   String?
+  paidAt          DateTime?
+  notes           String?
+  createdByUserId String?
+
+  items   TeacherPayout[]
+  exports WpsExport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Not unique on month: off-cycle and corrective runs are real; the create
+  /// action warns instead.
+  @@index([month])
+}
+
+/// Proof of what was filed with the bank. The bytes are not stored — the
+/// generator is deterministic, so the file is reproducible from the run.
+model WpsExport {
+  id    String     @id @default(cuid())
+  runId String
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  /// The payer bank the file was named for (Appendix B short code).
+  bankCode        String
+  sifVersion      String
+  fileName        String
+  recordCount     Int
+  totalAmount     Decimal
+  /// sha256 of the emitted bytes.
+  checksum        String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([runId])
+}
+
+/// Final end-of-service settlement. Live gratuity accrual is deliberately NOT
+/// stored — it is a pure function of hire date, basic salary, unpaid leave and
+/// today. Only the settlement actually paid is a fact worth keeping, and every
+/// input is snapshotted so a later salary correction cannot rewrite it.
+model EndOfService {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  lastWorkingDay      DateTime
+  serviceDays         Int
+  serviceYears        Decimal
+  basicSalaryAtEnd    Decimal
+  unpaidLeaveDays     Decimal @default(0)
+  gratuityDaysPerYear Decimal
+  gratuityDays        Decimal
+  gratuityAmount      Decimal
+  unusedLeaveDays     Decimal @default(0)
+  unusedLeaveAmount   Decimal @default(0)
+  otherDues           Decimal @default(0)
+  deductions          Decimal @default(0)
+  /// May be negative: a settlement where deductions exceed dues is a real
+  /// debt, unlike a payslip net which is floored at zero.
+  netSettlement Decimal
+  status        String  @default("DRAFT") // DRAFT | PAID
+  /// The payslip it was disbursed on, when paid through payroll.
+  payslipId String? @unique
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
 }

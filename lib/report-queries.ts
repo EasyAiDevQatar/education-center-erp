@@ -194,12 +194,15 @@ export async function getPayoutSummary(range?: DateRange): Promise<PayoutSummary
   const d = dateWhere(range);
   const payouts = await db.teacherPayout.findMany({
     where: d ? { createdAt: d } : undefined,
-    include: { teacher: { select: { name: true } } },
+    include: {
+      teacher: { select: { name: true } },
+      employee: { select: { name: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
   return payouts.map((p) => ({
     id: p.id,
-    teacherName: p.teacher.name,
+    teacherName: p.teacher?.name ?? p.employee?.name ?? "—",
     payMode: p.payMode,
     periodStart: p.periodStart.toISOString().slice(0, 10),
     periodEnd: p.periodEnd.toISOString().slice(0, 10),

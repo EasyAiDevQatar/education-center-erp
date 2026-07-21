@@ -32,7 +32,10 @@ export default async function PayrollPage({
 
   const [earningsAll, payouts, settingsRows, earliest, terms] = await Promise.all([
     getAllTeacherEarnings(fromDate, toDate),
-    db.teacherPayout.findMany({ orderBy: { createdAt: "desc" }, include: { teacher: true } }),
+    db.teacherPayout.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { teacher: true, employee: true },
+    }),
     db.setting.findMany({ where: { key: { in: ["currency", "defaultTeacherPaymentMode"] } } }),
     db.session.findFirst({ orderBy: { date: "asc" }, select: { date: true } }),
     db.term.findMany({ where: { active: true }, orderBy: { startDate: "desc" } }),
@@ -75,7 +78,12 @@ export default async function PayrollPage({
 
   const payoutRows: PayoutRow[] = payouts.map((p) => ({
     id: p.id,
-    teacherName: displayName(p.teacher, locale),
+    // Salary-only payslips (HR module) have no teacher; show the employee.
+    teacherName: p.teacher
+      ? displayName(p.teacher, locale)
+      : p.employee
+        ? displayName(p.employee, locale)
+        : "—",
     periodStart: p.periodStart.toISOString().slice(0, 10),
     periodEnd: p.periodEnd.toISOString().slice(0, 10),
     grossCommission: toNumber(p.grossCommission),
