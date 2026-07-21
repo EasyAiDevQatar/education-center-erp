@@ -129,7 +129,7 @@
     "hrRegister": "Staff register",
     "hrLeave": "Leave",
     "payrollDues": "Dues",
-    "payrollRuns": "Payroll runs"
+    "payrollRuns": "Payroll runs & WPS"
   },
   "auth": {
     "login": "Log in",

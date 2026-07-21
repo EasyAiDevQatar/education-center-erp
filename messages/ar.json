@@ -129,7 +129,7 @@
     "hrRegister": "سجل الموظفين",
     "hrLeave": "الإجازات",
     "payrollDues": "المستحقات",
-    "payrollRuns": "دفعات الرواتب"
+    "payrollRuns": "دفعات الرواتب و WPS"
   },
   "auth": {
     "login": "تسجيل الدخول",
