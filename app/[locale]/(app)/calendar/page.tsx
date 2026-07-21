@@ -47,6 +47,12 @@ export default async function CalendarPage({
     ? get("date")
     : ymd(new Date());
   const anchor = parseUTC(anchorStr);
+  // Assignments are per academic year; unscoped until a year exists.
+  const currentYear = await db.academicYear.findFirst({
+    where: { isCurrent: true },
+    select: { id: true },
+  });
+
   const teacherFilter = get("teacher");
   const studentFilter = get("student");
 
@@ -74,7 +80,11 @@ export default async function CalendarPage({
         include: { student: true, teacher: true, gradeLevel: true },
         orderBy: { date: "asc" },
       }),
-      db.student.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      db.student.findMany({
+        where: { active: true },
+        orderBy: { name: "asc" },
+        include: { teachers: { where: { academicYearId: currentYear?.id ?? null } } },
+      }),
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
@@ -108,7 +118,12 @@ export default async function CalendarPage({
   const matrixMap: PriceMatrix = Object.fromEntries(
     matrix.map((m) => [m.gradeLevel.id, { CENTER: m.CENTER, HOME: m.HOME }]),
   );
-  const studentOpts = students.map((s) => ({ id: s.id, name: s.name, gradeLevelId: s.gradeLevelId }));
+  const studentOpts = students.map((s) => ({
+    id: s.id,
+    name: s.name,
+    gradeLevelId: s.gradeLevelId,
+    teacherIds: s.teachers.map((x) => x.teacherId),
+  }));
   const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: tt.name }));
   const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));
 

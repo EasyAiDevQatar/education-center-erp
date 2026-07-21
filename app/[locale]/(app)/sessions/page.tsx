@@ -23,6 +23,12 @@ export default async function SessionsPage({
   const sp = await searchParams;
   const filters = readSessionFilters(sp);
 
+  // Assignments are per academic year; unscoped until a year exists.
+  const currentYear = await db.academicYear.findFirst({
+    where: { isCurrent: true },
+    select: { id: true },
+  });
+
   const [sessions, students, teachers, levels, matrix, settingsRows, activePackages] =
     await Promise.all([
       db.session.findMany({
@@ -31,7 +37,11 @@ export default async function SessionsPage({
         take: 500,
         include: { student: true, teacher: true, gradeLevel: true },
       }),
-      db.student.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      db.student.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      include: { teachers: { where: { academicYearId: currentYear?.id ?? null } } },
+    }),
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
@@ -71,6 +81,7 @@ export default async function SessionsPage({
   const studentOpts = students.map((s) => ({
     id: s.id,
     name: s.name,
+    teacherIds: s.teachers.map((x) => x.teacherId),
     gradeLevelId: s.gradeLevelId,
   }));
   const packageOpts = activePackages.map((p) => ({

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -46,16 +47,20 @@ export type StudentRow = {
   homeLng: number | null;
   checkinPin: string | null;
   homeCode: string | null;
+  /** Teacher ids assigned for the current academic year. */
+  teacherIds: string[];
 };
 
 function StudentFields({
   student,
   levels,
   guardians,
+  teachers,
 }: {
   student?: StudentRow;
   levels: Option[];
   guardians: Option[];
+  teachers: Option[];
 }) {
   const t = useTranslations("students");
   const tc = useTranslations("common");
@@ -63,6 +68,7 @@ function StudentFields({
   const [lng, setLng] = useState(student?.homeLng != null ? String(student.homeLng) : "");
   const [address, setAddress] = useState(student?.address ?? "");
   const [guardianId, setGuardianId] = useState(student?.guardianId ?? "");
+  const [teacherIds, setTeacherIds] = useState<string[]>(student?.teacherIds ?? []);
 
   function useCurrentLocation() {
     if (!("geolocation" in navigator)) return;
@@ -99,6 +105,16 @@ function StudentFields({
           options={guardians.map((g) => ({ value: g.id, label: g.label }))}
           value={guardianId}
           onChange={setGuardianId}
+        />
+      </FormField>
+      <FormField label={t("assignedTeachers")} htmlFor="teacherIds" hint={t("assignedTeachersHint")}>
+        <MultiSelect
+          id="teacherIds"
+          name="teacherIds"
+          options={teachers.map((x) => ({ value: x.id, label: x.label }))}
+          value={teacherIds}
+          onChange={setTeacherIds}
+          placeholder={t("noTeachersAssigned")}
         />
       </FormField>
       <FormField label={tc("notes")} htmlFor="notes">
@@ -172,10 +188,12 @@ export function StudentsClient({
   students,
   levels,
   guardians,
+  teachers,
 }: {
   students: StudentRow[];
   levels: Option[];
   guardians: Option[];
+  teachers: Option[];
 }) {
   const t = useTranslations("students");
   const tc = useTranslations("common");
@@ -216,7 +234,7 @@ export function StudentsClient({
         <EntityDialog
           title={t("add")}
           action={saveStudent.bind(null, locale, null)}
-          fields={<StudentFields levels={levels} guardians={guardians} />}
+          fields={<StudentFields levels={levels} guardians={guardians} teachers={teachers} />}
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
@@ -261,7 +279,7 @@ export function StudentsClient({
                     <EntityDialog
                       title={t("edit")}
                       action={saveStudent.bind(null, locale, s.id)}
-                      fields={<StudentFields student={s} levels={levels} guardians={guardians} />}
+                      fields={<StudentFields student={s} levels={levels} guardians={guardians} teachers={teachers} />}
                       trigger={
                         <Button variant="ghost" size="icon" aria-label={tc("edit")}>
                           <Pencil className="size-4" />

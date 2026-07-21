@@ -19,7 +19,13 @@ import { Combobox } from "@/components/ui/combobox";
 import { formatMoney } from "@/lib/money";
 import { ConflictWarnings, useConflictCheck } from "@/components/conflict-warnings";
 
-export type StudentOpt = { id: string; name: string; gradeLevelId: string | null };
+export type StudentOpt = {
+  id: string;
+  name: string;
+  gradeLevelId: string | null;
+  /** Teachers assigned to this student for the current year, if any. */
+  teacherIds?: string[];
+};
 export type PackageOpt = { id: string; studentId: string; label: string };
 export type Opt = { id: string; label: string };
 export type PriceMatrix = Record<string, { CENTER: number | null; HOME: number | null }>;
@@ -141,6 +147,25 @@ export function SessionDialog({
     [packages, studentId],
   );
 
+  /**
+   * Put the student's own teachers at the top once one is picked.
+   *
+   * The full roster stays available below — a cover lesson with another
+   * teacher is normal, so this reorders rather than restricts.
+   */
+  const teacherOptions = useMemo(() => {
+    const assigned = new Set(students.find((s) => s.id === studentId)?.teacherIds ?? []);
+    if (assigned.size === 0) {
+      return teachers.map((tt) => ({ value: tt.id, label: tt.label }));
+    }
+    const mine = teachers.filter((tt) => assigned.has(tt.id));
+    const rest = teachers.filter((tt) => !assigned.has(tt.id));
+    return [
+      ...mine.map((tt) => ({ value: tt.id, label: tt.label, hint: t("assignedTag") })),
+      ...rest.map((tt) => ({ value: tt.id, label: tt.label })),
+    ];
+  }, [teachers, students, studentId, t]);
+
   const pricePerHour = useMemo(() => {
     const row = matrix[gradeLevelId];
     return row ? (row[location] ?? 0) : 0;
@@ -225,7 +250,7 @@ export function SessionDialog({
             id="teacherId"
             name="teacherId"
             required
-            options={teachers.map((tt) => ({ value: tt.id, label: tt.label }))}
+            options={teacherOptions}
             value={teacherId}
             onChange={setTeacherId}
           />

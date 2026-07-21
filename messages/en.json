@@ -169,7 +169,8 @@
   "package": "Package",
   "startTime": "Start time",
   "priceAuto": "Price is calculated automatically from grade level and location",
-  "searchPlaceholder": "Search by student, teacher or date…"
+  "searchPlaceholder": "Search by student, teacher or date…",
+  "assignedTag": "assigned"
  },
  "group": {
   "title": "Group booking",
@@ -301,7 +302,10 @@
   "locateOnMap": "Locate on map",
   "homeCode": "Home location code",
   "homeCodeHint": "Short location code (zone/street/building or compound name) shown to the teacher on the planner for home sessions.",
-  "searchPlaceholder": "Search by name, phone or grade…"
+  "searchPlaceholder": "Search by name, phone or grade…",
+  "assignedTeachers": "Assigned teachers",
+  "assignedTeachersHint": "Teachers who teach this student this year — they appear first when booking.",
+  "noTeachersAssigned": "No teachers assigned"
  },
  "map": {
   "title": "Pick location on map",

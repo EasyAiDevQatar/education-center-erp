@@ -507,12 +507,20 @@ model StudentTeacher {
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   teacherId String
   teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  /// Null until the centre sets up academic years, so assignments work before
+  /// then and simply become year-scoped once a year exists.
+  academicYearId String?
+  academicYear   AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
-  @@unique([studentId, teacherId])
+  // Postgres treats NULLs as distinct, so this can't enforce uniqueness while
+  // the year is null. Saving replaces the whole set instead, which makes
+  // duplicates impossible regardless.
+  @@unique([studentId, teacherId, academicYearId])
   @@index([studentId])
   @@index([teacherId])
+  @@index([academicYearId])
 }
 
 /// A school year. Archiving one freezes its money and attendance records.
@@ -536,6 +544,8 @@ model AcademicYear {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  assignments StudentTeacher[]
 
   @@index([archived])
   @@index([startDate, endDate])

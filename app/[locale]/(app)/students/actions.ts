@@ -58,14 +58,24 @@ export async function saveStudent(
   if (!parsed.success) return { error: "invalid" };
 
   const data = parsed.data;
+  // Multi-select posts one hidden input per teacher.
+  const teacherIds = formData.getAll("teacherIds").map(String).filter(Boolean);
+
+  let studentId: string;
   if (id) {
     await db.student.update({ where: { id }, data });
     await writeAudit("Student", id, "UPDATE", { after: data });
+    studentId = id;
   } else {
     const created = await db.student.create({ data });
     await writeAudit("Student", created.id, "CREATE", { after: data });
+    studentId = created.id;
   }
+
+  await setStudentTeachers(studentId, teacherIds);
+
   revalidatePath(`/${locale}/students`);
+  revalidatePath(`/${locale}/students/${studentId}`);
   return { ok: true };
 }
 
@@ -76,4 +86,33 @@ export async function deleteStudent(locale: string, id: string): Promise<ActionS
   await writeAudit("Student", id, "DELETE");
   revalidatePath(`/${locale}/students`);
   return { ok: true };
+}
+
+/**
+ * Replace a student's teacher assignments for the current academic year.
+ *
+ * Replace-all rather than diffing: the control is a multi-select, so the
+ * submitted list *is* the desired state, and rewriting it wholesale means
+ * duplicates are impossible even where the unique index can't help (a null
+ * academicYearId makes rows distinct in Postgres).
+ */
+async function setStudentTeachers(studentId: string, teacherIds: string[]) {
+  // Assignments belong to whichever year is current; before any year exists
+  // they are simply unscoped, so the feature works from day one.
+  const currentYear = await db.academicYear.findFirst({
+    where: { isCurrent: true },
+    select: { id: true },
+  });
+  const academicYearId = currentYear?.id ?? null;
+
+  await db.$transaction([
+    db.studentTeacher.deleteMany({ where: { studentId, academicYearId } }),
+    ...(teacherIds.length
+      ? [
+          db.studentTeacher.createMany({
+            data: teacherIds.map((teacherId) => ({ studentId, teacherId, academicYearId })),
+          }),
+        ]
+      : []),
+  ]);
 }

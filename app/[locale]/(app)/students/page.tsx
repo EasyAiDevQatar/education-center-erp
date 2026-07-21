@@ -15,14 +15,27 @@ export default async function StudentsPage({
 
   const t = await getTranslations("students");
 
-  const [students, levels, guardians] = await Promise.all([
+  // Assignments are per academic year; before any year exists they are unscoped.
+  const currentYear = await db.academicYear.findFirst({
+    where: { isCurrent: true },
+    select: { id: true },
+  });
+
+  const [students, levels, guardians, teachers] = await Promise.all([
     db.student.findMany({
       orderBy: { name: "asc" },
-      include: { gradeLevel: true, guardian: true },
+      include: {
+        gradeLevel: true,
+        guardian: true,
+        teachers: { where: { academicYearId: currentYear?.id ?? null } },
+      },
     }),
     db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
     db.guardian.findMany({ orderBy: { name: "asc" } }),
+    db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
+
+  const teacherOptions: Option[] = teachers.map((x) => ({ id: x.id, label: x.name }));
 
   const levelOptions: Option[] = levels.map((l) => ({
     id: l.id,
@@ -49,12 +62,18 @@ export default async function StudentsPage({
     homeLng: s.homeLng,
     checkinPin: s.checkinPin,
     homeCode: s.homeCode,
+    teacherIds: s.teachers.map((x) => x.teacherId),
   }));
 
   return (
     <div>
       <PageHeader title={t("title")} />
-      <StudentsClient students={rows} levels={levelOptions} guardians={guardianOptions} />
+      <StudentsClient
+        students={rows}
+        levels={levelOptions}
+        guardians={guardianOptions}
+        teachers={teacherOptions}
+      />
     </div>
   );
 }
