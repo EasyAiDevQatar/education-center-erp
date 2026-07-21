@@ -367,8 +367,12 @@ model Expense {
 /// A teacher payroll run for a period.
 model TeacherPayout {
   id              String   @id @default(cuid())
-  teacherId       String
-  teacher         Teacher  @relation(fields: [teacherId], references: [id])
+  /// Nullable since HR phase 4: a receptionist's payslip has no teacher. Every
+  /// pre-HR row still has it set. A hand-applied CHECK ("payslip_has_subject")
+  /// guarantees at least one of teacherId/employeeId is present — Prisma
+  /// cannot manage CHECK constraints, so do not expect it in a migrate diff.
+  teacherId       String?
+  teacher         Teacher? @relation(fields: [teacherId], references: [id])
   periodStart     DateTime
   periodEnd       DateTime
   /// Commission actually due — commissionPct applied to income collected.

@@ -61,7 +61,17 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/payments", key: "payments", icon: Receipt, roles: STAFF, section: "finance" },
   { href: "/packages", key: "packages", icon: Package, roles: STAFF, section: "finance" },
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },
-  { href: "/payroll", key: "payroll", icon: BadgeDollarSign, roles: FINANCE, section: "finance" },
+  {
+    href: "/payroll",
+    key: "payroll",
+    icon: BadgeDollarSign,
+    roles: FINANCE,
+    section: "finance",
+    children: [
+      { href: "/payroll", key: "payrollDues" },
+      { href: "/payroll/runs", key: "payrollRuns" },
+    ],
+  },
   { href: "/reports", key: "reports", icon: BarChart3, roles: FINANCE, section: "finance" },
   // ADMIN only: the HR register carries QID/passport/IBAN — a categorically
   // more sensitive surface than anything else in the app.

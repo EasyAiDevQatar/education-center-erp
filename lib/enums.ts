@@ -68,3 +68,10 @@ export const EMPLOYEE_DOC_TYPES = [
   "OTHER",
 ] as const;
 export type EmployeeDocType = (typeof EMPLOYEE_DOC_TYPES)[number];
+
+/** How a payslip was settled. BANK is what feeds the WPS file. */
+export const PAYSLIP_METHODS = ["BANK", "CASH", "CHEQUE"] as const;
+export type PayslipMethod = (typeof PAYSLIP_METHODS)[number];
+
+export const RUN_STATUSES = ["DRAFT", "PAID"] as const;
+export type RunStatus = (typeof RUN_STATUSES)[number];

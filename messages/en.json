@@ -65,7 +65,10 @@
       "invalid_iban": "Invalid IBAN — 29 characters starting QA.",
       "invalid_email": "Invalid email address.",
       "leaveOverlap": "This employee already has approved or pending leave overlapping this period.",
-      "alreadyDecided": "This request has already been decided."
+      "alreadyDecided": "This request has already been decided.",
+      "monthHasRun": "A run already exists for this month.",
+      "runPaid": "A paid run cannot be deleted.",
+      "noSelection": "Select at least one employee."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -118,7 +121,9 @@
     "qrCards": "QR cards",
     "hr": "HR",
     "hrRegister": "Staff register",
-    "hrLeave": "Leave"
+    "hrLeave": "Leave",
+    "payrollDues": "Dues",
+    "payrollRuns": "Payroll runs"
   },
   "auth": {
     "login": "Log in",
@@ -599,6 +604,15 @@
       "HEALTH_CARD": "Health card",
       "LICENCE": "Licence / certificate",
       "OTHER": "Other"
+    },
+    "payslipMethod": {
+      "BANK": "Bank transfer",
+      "CASH": "Cash",
+      "CHEQUE": "Cheque"
+    },
+    "runStatus": {
+      "DRAFT": "Draft",
+      "PAID": "Paid"
     }
   },
   "paymentModes": {
@@ -1063,5 +1077,36 @@
       "CANCELLED": "Cancelled"
     },
     "daysN": "{n} days"
+  },
+  "runs": {
+    "title": "Payroll runs",
+    "subtitle": "Generate a monthly run for all staff, settle it, and print signable payslips.",
+    "newRun": "New run",
+    "month": "Month",
+    "method": "Payment method",
+    "employees": "Employees",
+    "employeesHint": "Everyone is selected by default — a normal payroll run covers all staff.",
+    "noEmployees": "No employees yet — add them in HR first.",
+    "plusCommission": "+ commission",
+    "monthHasRunWarning": "A run already exists for {month}. Press \"Generate anyway\" if this is a corrective or off-cycle run.",
+    "generate": "Generate run",
+    "generateAnyway": "Generate anyway",
+    "payslips": "Payslips",
+    "openRun": "Open run",
+    "runTitle": "Payroll run {month}",
+    "runSubtitle": "{n} payslips — review, print for signatures, then settle.",
+    "printAll": "Print all payslips",
+    "markAllPaid": "Mark all paid",
+    "commission": "Commission",
+    "deductionsCol": "Deductions",
+    "net": "Net",
+    "printBasic": "Basic salary",
+    "printAllowances": "Allowances",
+    "printUnpaidDays": "Unpaid days",
+    "printWorkingDays": "Working days",
+    "signEmployee": "Employee signature — I received the amount above",
+    "signEmployer": "Employer signature",
+    "signDate": "Date",
+    "printFooter": "Payslips for {month} — one page per employee, for signature."
   }
 }

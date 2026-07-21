@@ -65,7 +65,10 @@
       "invalid_iban": "IBAN غير صالح — 29 خانة تبدأ بـ QA.",
       "invalid_email": "البريد الإلكتروني غير صالح.",
       "leaveOverlap": "لدى الموظف إجازة معتمدة أو قيد الطلب تتقاطع مع هذه الفترة.",
-      "alreadyDecided": "تم البت في هذا الطلب من قبل."
+      "alreadyDecided": "تم البت في هذا الطلب من قبل.",
+      "monthHasRun": "توجد دفعة سابقة لهذا الشهر.",
+      "runPaid": "لا يمكن حذف دفعة مدفوعة.",
+      "noSelection": "اختر موظفاً واحداً على الأقل."
     },
     "price": "السعر",
     "searchPlaceholder": "بحث…",
@@ -118,7 +121,9 @@
     "qrCards": "بطاقات QR",
     "hr": "الموارد البشرية",
     "hrRegister": "سجل الموظفين",
-    "hrLeave": "الإجازات"
+    "hrLeave": "الإجازات",
+    "payrollDues": "المستحقات",
+    "payrollRuns": "دفعات الرواتب"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -599,6 +604,15 @@
       "HEALTH_CARD": "البطاقة الصحية",
       "LICENCE": "رخصة / شهادة",
       "OTHER": "أخرى"
+    },
+    "payslipMethod": {
+      "BANK": "تحويل بنكي",
+      "CASH": "نقداً",
+      "CHEQUE": "شيك"
+    },
+    "runStatus": {
+      "DRAFT": "مسودة",
+      "PAID": "مدفوعة"
     }
   },
   "paymentModes": {
@@ -1063,5 +1077,36 @@
       "CANCELLED": "ملغاة"
     },
     "daysN": "{n} يوم"
+  },
+  "runs": {
+    "title": "دفعات الرواتب",
+    "subtitle": "إنشاء دفعة شهرية لكل الموظفين، اعتمادها، وطباعة القسائم للتوقيع.",
+    "newRun": "دفعة جديدة",
+    "month": "الشهر",
+    "method": "طريقة الدفع",
+    "employees": "الموظفون",
+    "employeesHint": "الكل محدد افتراضياً — دفعة الرواتب العادية تشمل كل الموظفين.",
+    "noEmployees": "لا يوجد موظفون — أضفهم أولاً من الموارد البشرية.",
+    "plusCommission": "+ عمولة",
+    "monthHasRunWarning": "توجد دفعة سابقة لشهر {month}. اضغط «إنشاء رغم ذلك» إذا كانت هذه دفعة تصحيحية أو إضافية.",
+    "generate": "إنشاء الدفعة",
+    "generateAnyway": "إنشاء رغم ذلك",
+    "payslips": "القسائم",
+    "openRun": "فتح الدفعة",
+    "runTitle": "دفعة رواتب {month}",
+    "runSubtitle": "{n} قسيمة — راجع، اطبع للتوقيع، ثم اعتمد الدفع.",
+    "printAll": "طباعة كل القسائم",
+    "markAllPaid": "اعتماد الدفع للجميع",
+    "commission": "العمولة",
+    "deductionsCol": "الخصومات",
+    "net": "الصافي",
+    "printBasic": "الراتب الأساسي",
+    "printAllowances": "البدلات",
+    "printUnpaidDays": "أيام بدون راتب",
+    "printWorkingDays": "أيام العمل",
+    "signEmployee": "توقيع الموظف — استلمت المبلغ الموضح أعلاه",
+    "signEmployer": "توقيع المسؤول",
+    "signDate": "التاريخ",
+    "printFooter": "قسائم رواتب شهر {month} — لكل موظف صفحة مستقلة للتوقيع."
   }
 }
