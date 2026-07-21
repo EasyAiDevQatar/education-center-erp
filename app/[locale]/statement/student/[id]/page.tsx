@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getStudentBalance, getStudentLedger } from "@/lib/balances";
 import { formatMoney, formatDate } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
+import { fullName } from "@/lib/names";
 
 /** Printable A4 account statement for one student. */
 export default async function StudentStatementPage({
@@ -73,7 +74,7 @@ export default async function StudentStatementPage({
         <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
           <div>
             <span className="text-muted-foreground">{tc("name")}: </span>
-            <span className="font-medium">{student.name}</span>
+            <span className="font-medium">{fullName(student, locale)}</span>
           </div>
           <div>
             <span className="text-muted-foreground">{t("gradeLevel")}: </span>

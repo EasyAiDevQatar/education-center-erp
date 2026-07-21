@@ -81,6 +81,7 @@ async function loadRows(
       });
       return rows.map((s) => ({
         name: s.name,
+        nameEn: s.nameEn ?? "",
         phone: s.phone ?? "",
         gradeCode: s.gradeLevel?.code ?? "",
         guardianName: s.guardian?.name ?? "",
@@ -93,6 +94,7 @@ async function loadRows(
       const rows = await db.teacher.findMany({ orderBy: { name: "asc" } });
       return rows.map((t) => ({
         name: t.name,
+        nameEn: t.nameEn ?? "",
         phone: t.phone ?? "",
         commissionPct: toNumber(t.commissionPct),
         fixedSalary: toNumber(t.fixedSalary),
@@ -104,6 +106,7 @@ async function loadRows(
       const rows = await db.guardian.findMany({ orderBy: { name: "asc" } });
       return rows.map((g) => ({
         name: g.name,
+        nameEn: g.nameEn ?? "",
         phone: g.phone ?? "",
         email: g.email ?? "",
         notes: g.notes ?? "",
@@ -196,6 +199,7 @@ async function loadRows(
       });
       return rows.map((l) => ({
         name: l.name,
+        nameEn: l.nameEn ?? "",
         phone: l.phone,
         email: l.email,
         source: l.source,

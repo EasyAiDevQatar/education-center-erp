@@ -24,6 +24,7 @@ function revalidate(locale: string) {
 
 const leadSchema = z.object({
   name: z.string().trim().min(1),
+  nameEn: z.string().trim().max(120).optional().nullable(),
   phone: z.string().trim().optional().nullable(),
   email: z.string().trim().optional().nullable(),
   source: z.string().trim().max(60).optional().nullable(),
@@ -45,6 +46,7 @@ export async function saveLead(
 
   const data = {
     name: d.name,
+    nameEn: d.nameEn ?? null,
     phone: d.phone || null,
     email: d.email || null,
     source: d.source || null,
@@ -134,6 +136,7 @@ export async function bookTrialSession(
     const placeholder = await db.student.create({
       data: {
         name: lead.name,
+        nameEn: lead.nameEn,
         phone: lead.phone,
         gradeLevelId: d.gradeLevelId,
         active: false,
@@ -228,6 +231,7 @@ export async function convertLead(
     : await db.student.create({
         data: {
           name: lead.name,
+          nameEn: lead.nameEn,
           phone: lead.phone,
           gradeLevelId,
           guardianId,

@@ -12,6 +12,7 @@ export type ActionState = { ok?: boolean; error?: string };
 
 const schema = z.object({
   name: z.string().trim().min(1),
+  nameEn: z.string().trim().max(120).optional().nullable(),
   phone: z.string().trim().optional().nullable(),
   commissionPct: z.coerce.number().min(0).max(100).default(0),
   fixedSalary: z.coerce.number().min(0).default(0),
@@ -21,6 +22,13 @@ const schema = z.object({
   active: z.coerce.boolean().default(true),
   notes: z.string().trim().optional().nullable(),
 });
+
+/** Empty strings from the form become null, so an unset name is absent rather
+    than an empty string that would defeat the display fallback. */
+function orNull(v: FormDataEntryValue | null): string | null {
+  const s = (v ?? "").toString().trim();
+  return s === "" ? null : s;
+}
 
 async function guard(): Promise<string | null> {
   const s = await getSession();
@@ -42,6 +50,7 @@ export async function saveTeacher(
 
   const parsed = schema.safeParse({
     name: formData.get("name"),
+    nameEn: orNull(formData.get("nameEn")),
     phone: formData.get("phone") || null,
     commissionPct: formData.get("commissionPct") || 0,
     fixedSalary: formData.get("fixedSalary") || 0,

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { TeachersClient, type TeacherRow } from "./teachers-client";
+import { displayName } from "@/lib/names";
 
 export default async function TeachersPage({
   params,
@@ -19,6 +20,7 @@ export default async function TeachersPage({
   const rows: TeacherRow[] = teachers.map((teacher) => ({
     id: teacher.id,
     name: teacher.name,
+    nameEn: teacher.nameEn,
     phone: teacher.phone,
     commissionPct: toNumber(teacher.commissionPct),
     fixedSalary: toNumber(teacher.fixedSalary),

@@ -11,10 +11,18 @@ export type ActionState = { ok?: boolean; error?: string };
 
 const schema = z.object({
   name: z.string().trim().min(1),
+  nameEn: z.string().trim().max(120).optional().nullable(),
   phone: z.string().trim().optional().nullable(),
   email: z.string().trim().optional().nullable(),
   notes: z.string().trim().optional().nullable(),
 });
+
+/** Empty strings from the form become null, so an unset name is absent rather
+    than an empty string that would defeat the display fallback. */
+function orNull(v: FormDataEntryValue | null): string | null {
+  const s = (v ?? "").toString().trim();
+  return s === "" ? null : s;
+}
 
 async function guard() {
   const s = await getSession();
@@ -30,6 +38,7 @@ export async function saveGuardian(
   if (await guard()) return { error: "forbidden" };
   const parsed = schema.safeParse({
     name: formData.get("name"),
+    nameEn: orNull(formData.get("nameEn")),
     phone: formData.get("phone") || null,
     email: formData.get("email") || null,
     notes: formData.get("notes") || null,

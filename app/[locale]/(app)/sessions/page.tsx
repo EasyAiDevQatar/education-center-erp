@@ -7,6 +7,7 @@ import { readSessionFilters, sessionWhere } from "@/lib/session-query";
 import { PageHeader } from "@/components/page-header";
 import { SessionsClient, type SessionRow } from "./sessions-client";
 import type { PriceMatrix } from "./session-dialog";
+import { displayName } from "@/lib/names";
 
 export default async function SessionsPage({
   params,
@@ -71,8 +72,8 @@ export default async function SessionsPage({
     hours: toNumber(s.hours),
     paymentStatus: s.paymentStatus,
     notes: s.notes,
-    studentName: s.student.name,
-    teacherName: s.teacher?.name ?? "",
+    studentName: displayName(s.student, locale),
+    teacherName: s.teacher ? displayName(s.teacher, locale) : "",
     levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
     pricePerHour: toNumber(s.pricePerHour),
     total: toNumber(s.total),
@@ -80,7 +81,7 @@ export default async function SessionsPage({
 
   const studentOpts = students.map((s) => ({
     id: s.id,
-    name: s.name,
+    name: displayName(s, locale),
     teacherIds: s.teachers.map((x) => x.teacherId),
     gradeLevelId: s.gradeLevelId,
   }));
@@ -91,7 +92,7 @@ export default async function SessionsPage({
       locale === "ar" ? "ساعة متبقية" : "h remaining"
     }`,
   }));
-  const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: tt.name }));
+  const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }));
   const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));
 
   // Export link carries the current filters.

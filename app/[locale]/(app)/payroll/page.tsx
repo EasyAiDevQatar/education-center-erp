@@ -6,6 +6,7 @@ import { getAllTeacherEarnings } from "@/lib/payroll";
 import { effectiveMode, monthOf } from "@/lib/payroll-period";
 import { PageHeader } from "@/components/page-header";
 import { PayrollClient, type EarningRow, type PayoutRow } from "./payroll-client";
+import { displayName } from "@/lib/names";
 
 export default async function PayrollPage({
   params,
@@ -66,7 +67,7 @@ export default async function PayrollPage({
 
   const payoutRows: PayoutRow[] = payouts.map((p) => ({
     id: p.id,
-    teacherName: p.teacher.name,
+    teacherName: displayName(p.teacher, locale),
     periodStart: p.periodStart.toISOString().slice(0, 10),
     periodEnd: p.periodEnd.toISOString().slice(0, 10),
     grossCommission: toNumber(p.grossCommission),

@@ -28,10 +28,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { LEAD_BOARD_ORDER, followUpState, funnelCounts, type LeadStatus } from "@/lib/leads";
 import { saveLead, moveLead, deleteLead, convertLead, bookTrialSession } from "./actions";
+import { displayName } from "@/lib/names";
 
 export type LeadRow = {
   id: string;
   name: string;
+  nameEn: string | null;
   phone: string | null;
   email: string | null;
   source: string | null;
@@ -176,7 +178,7 @@ export function LeadsBoard({
                         fu === "dueToday" && "border-warning",
                       )}
                     >
-                      <div className="font-medium">{l.name}</div>
+                      <div className="font-medium">{displayName(l, locale)}</div>
 
                       {l.phone && (
                         <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
@@ -343,6 +345,7 @@ function LeadDialog({
   const locale = useLocale();
 
   const [name, setName] = useState(lead?.name ?? "");
+  const [nameEn, setNameEn] = useState(lead?.nameEn ?? "");
   const [phone, setPhone] = useState(lead?.phone ?? "");
   const [email, setEmail] = useState(lead?.email ?? "");
   const [source, setSource] = useState(lead?.source ?? "");
@@ -356,6 +359,7 @@ function LeadDialog({
     start(async () => {
       const res = await saveLead(locale, lead?.id ?? null, {
         name,
+        nameEn: nameEn.trim() || null,
         phone,
         email,
         source,
@@ -375,9 +379,14 @@ function LeadDialog({
           <DialogTitle>{lead ? t("editLead") : t("addLead")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <FormField label={tc("name")} htmlFor="l-name">
-            <Input id="l-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label={tc("nameAr")} htmlFor="l-name">
+              <Input id="l-name" value={name} onChange={(e) => setName(e.target.value)} />
+            </FormField>
+            <FormField label={tc("nameEn")} htmlFor="l-nameEn">
+              <Input id="l-nameEn" dir="ltr" value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+            </FormField>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <FormField label={tc("phone")} htmlFor="l-phone">
               <Input id="l-phone" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -473,7 +482,7 @@ function ConvertDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("convertTitle", { name: lead.name })}</DialogTitle>
+          <DialogTitle>{t("convertTitle", { name: displayName(lead, locale) })}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
@@ -558,7 +567,7 @@ function TrialDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("trialTitle", { name: lead.name })}</DialogTitle>
+          <DialogTitle>{t("trialTitle", { name: displayName(lead, locale) })}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">{t("trialHint")}</p>

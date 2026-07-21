@@ -15,6 +15,7 @@ import { SessionsTable, PaymentsTable, PayoutsTable } from "@/components/tables/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AvailabilityEditor } from "./availability-editor";
 import { PortalLoginButton } from "@/components/portal-login-button";
+import { fullName } from "@/lib/names";
 
 export default async function TeacherProfilePage({
   params,
@@ -78,7 +79,7 @@ export default async function TeacherProfilePage({
   return (
     <div>
       <PageHeader
-        title={teacher.name}
+        title={fullName(teacher, locale)}
         description={`${t("commissionPct")}: ${toNumber(teacher.commissionPct)}% · ${
           teacher.paymentMode ? tm(teacher.paymentMode as "SESSION") : t("paymentModeDefault")
         }`}

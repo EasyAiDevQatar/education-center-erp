@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { PackagesClient, type PackageRow, type Opt } from "./packages-client";
+import { displayName } from "@/lib/names";
 
 export default async function PackagesPage({
   params,
@@ -25,7 +26,7 @@ export default async function PackagesPage({
   const rows: PackageRow[] = packages.map((p) => ({
     id: p.id,
     studentId: p.studentId,
-    studentName: p.student.name,
+    studentName: displayName(p.student, locale),
     totalHours: toNumber(p.totalHours),
     hoursUsed: toNumber(p.hoursUsed),
     price: toNumber(p.price),
@@ -34,7 +35,7 @@ export default async function PackagesPage({
     status: p.status,
     notes: p.notes,
   }));
-  const studentOpts: Opt[] = students.map((s) => ({ id: s.id, label: s.name }));
+  const studentOpts: Opt[] = students.map((s) => ({ id: s.id, label: displayName(s, locale) }));
 
   return (
     <div>

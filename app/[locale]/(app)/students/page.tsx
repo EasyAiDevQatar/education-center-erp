@@ -3,6 +3,7 @@ import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { StudentsClient, type StudentRow, type Option } from "./students-client";
+import { displayName } from "@/lib/names";
 
 export default async function StudentsPage({
   params,
@@ -35,17 +36,18 @@ export default async function StudentsPage({
     db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
 
-  const teacherOptions: Option[] = teachers.map((x) => ({ id: x.id, label: x.name }));
+  const teacherOptions: Option[] = teachers.map((x) => ({ id: x.id, label: displayName(x, locale) }));
 
   const levelOptions: Option[] = levels.map((l) => ({
     id: l.id,
     label: locale === "ar" ? l.nameAr : l.nameEn,
   }));
-  const guardianOptions: Option[] = guardians.map((g) => ({ id: g.id, label: g.name }));
+  const guardianOptions: Option[] = guardians.map((g) => ({ id: g.id, label: displayName(g, locale) }));
 
   const rows: StudentRow[] = students.map((s) => ({
     id: s.id,
     name: s.name,
+    nameEn: s.nameEn,
     phone: s.phone,
     gradeLevelId: s.gradeLevelId,
     gradeLevelLabel: s.gradeLevel
@@ -54,7 +56,7 @@ export default async function StudentsPage({
         : s.gradeLevel.nameEn
       : null,
     guardianId: s.guardianId,
-    guardianLabel: s.guardian?.name ?? null,
+    guardianLabel: s.guardian ? displayName(s.guardian, locale) : null,
     active: s.active,
     notes: s.notes,
     address: s.address,

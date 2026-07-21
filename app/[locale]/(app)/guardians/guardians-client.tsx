@@ -26,10 +26,12 @@ import {
 } from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveGuardian, deleteGuardian } from "./actions";
+import { displayName, nameSearchText } from "@/lib/names";
 
 export type GuardianRow = {
   id: string;
   name: string;
+  nameEn: string | null;
   phone: string | null;
   email: string | null;
   notes: string | null;
@@ -40,9 +42,14 @@ function GuardianFields({ guardian }: { guardian?: GuardianRow }) {
   const tc = useTranslations("common");
   return (
     <>
-      <FormField label={tc("name")} htmlFor="name">
-        <Input id="name" name="name" defaultValue={guardian?.name} required />
-      </FormField>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label={tc("nameAr")} htmlFor="name">
+          <Input id="name" name="name" defaultValue={guardian?.name} required />
+        </FormField>
+        <FormField label={tc("nameEn")} htmlFor="nameEn" hint={tc("nameEnHint")}>
+          <Input id="nameEn" name="nameEn" dir="ltr" defaultValue={guardian?.nameEn ?? ""} />
+        </FormField>
+      </div>
       <FormField label={tc("phone")} htmlFor="phone">
         <Input id="phone" name="phone" dir="ltr" defaultValue={guardian?.phone ?? ""} />
       </FormField>
@@ -61,10 +68,10 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const search = useTableSearch(guardians, (g) => [g.name, g.phone, g.email, g.notes]);
+  const search = useTableSearch(guardians, (g) => [nameSearchText(g), g.phone, g.email, g.notes]);
   const columns = useMemo<ColumnDef<GuardianRow>[]>(
     () => [
-      { key: "name", label: tc("name"), value: (g) => g.name },
+      { key: "name", label: tc("name"), value: (g) => displayName(g, locale) },
       { key: "phone", label: tc("phone"), value: (g) => g.phone },
       { key: "email", label: tc("email"), value: (g) => g.email },
       { key: "students", label: t("students"), type: "number", value: (g) => g.studentCount },
@@ -111,7 +118,7 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
             )}
             {pg.pageItems.map((g) => (
               <TableRow key={g.id}>
-                <TableCell className="font-medium">{g.name}</TableCell>
+                <TableCell className="font-medium">{displayName(g, locale)}</TableCell>
                 <TableCell className="text-start"><span dir="ltr">{g.phone ?? "—"}</span></TableCell>
                 <TableCell className="text-start"><span dir="ltr">{g.email ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{g.studentCount}</TableCell>

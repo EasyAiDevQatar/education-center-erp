@@ -74,7 +74,10 @@
     "prev": "Previous",
     "refresh": "Refresh",
     "close": "Close",
-    "password": "Password"
+    "password": "Password",
+    "nameAr": "Name (Arabic)",
+    "nameEn": "Name (English)",
+    "nameEnHint": "Optional — shown when the interface is in English."
   },
   "nav": {
     "dashboard": "Dashboard",

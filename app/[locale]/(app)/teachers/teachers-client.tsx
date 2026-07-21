@@ -28,10 +28,12 @@ import {
 } from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveTeacher, deleteTeacher } from "./actions";
+import { displayName, nameSearchText } from "@/lib/names";
 
 export type TeacherRow = {
   id: string;
   name: string;
+  nameEn: string | null;
   phone: string | null;
   commissionPct: number;
   fixedSalary: number;
@@ -48,9 +50,14 @@ function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
   const tm = useTranslations("paymentModes");
   return (
     <>
-      <FormField label={tc("name")} htmlFor="name">
-        <Input id="name" name="name" defaultValue={teacher?.name} required />
-      </FormField>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label={tc("nameAr")} htmlFor="name">
+          <Input id="name" name="name" defaultValue={teacher?.name} required />
+        </FormField>
+        <FormField label={tc("nameEn")} htmlFor="nameEn" hint={tc("nameEnHint")}>
+          <Input id="nameEn" name="nameEn" dir="ltr" defaultValue={teacher?.nameEn ?? ""} />
+        </FormField>
+      </div>
       <FormField label={tc("phone")} htmlFor="phone">
         <Input id="phone" name="phone" dir="ltr" defaultValue={teacher?.phone ?? ""} />
       </FormField>
@@ -119,10 +126,10 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const search = useTableSearch(teachers, (x) => [x.name, x.phone, x.notes]);
+  const search = useTableSearch(teachers, (x) => [nameSearchText(x), x.phone, x.notes]);
   const columns = useMemo<ColumnDef<TeacherRow>[]>(
     () => [
-      { key: "name", label: tc("name"), value: (x) => x.name },
+      { key: "name", label: tc("name"), value: (x) => displayName(x, locale) },
       { key: "phone", label: tc("phone"), value: (x) => x.phone },
       { key: "commissionPct", label: t("commissionPct"), type: "number", value: (x) => x.commissionPct },
       {
@@ -178,7 +185,7 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
             )}
             {pg.pageItems.map((teacher) => (
               <TableRow key={teacher.id}>
-                <TableCell className="font-medium">{teacher.name}</TableCell>
+                <TableCell className="font-medium">{displayName(teacher, locale)}</TableCell>
                 <TableCell className="text-start"><span dir="ltr">{teacher.phone ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{teacher.commissionPct}%</TableCell>
                 <TableCell>

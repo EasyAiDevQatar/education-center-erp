@@ -17,6 +17,7 @@ async function guardAdmin() {
 
 const schema = z.object({
   name: z.string().trim().min(1),
+  nameEn: z.string().trim().max(120).optional().nullable(),
   email: z.string().trim().toLowerCase().email(),
   role: z.enum(ROLES),
   locale: z.enum(["ar", "en"]).default("ar"),
@@ -47,6 +48,7 @@ export async function saveUser(
 
   const parsed = schema.safeParse({
     name: formData.get("name"),
+    nameEn: (formData.get("nameEn")?.toString().trim() || null),
     email: formData.get("email"),
     role: formData.get("role"),
     locale: formData.get("locale") || "ar",

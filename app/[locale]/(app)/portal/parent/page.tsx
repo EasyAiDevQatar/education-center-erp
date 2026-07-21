@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProfileTabs } from "@/components/profile-tabs";
+import { displayName } from "@/lib/names";
 
 export default async function ParentPortalPage({
   params,
@@ -49,7 +50,7 @@ export default async function ParentPortalPage({
 
       {children.length > 1 && (
         <ProfileTabs
-          tabs={children.map((c) => ({ key: c.id, label: c.name }))}
+          tabs={children.map((c) => ({ key: c.id, label: displayName(c, locale) }))}
           active={active.id}
           basePath="/portal/parent"
           param="child"

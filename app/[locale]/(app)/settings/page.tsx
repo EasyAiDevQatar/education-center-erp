@@ -131,6 +131,7 @@ export default async function SettingsPage({
   const users: UserRow[] = userRows.map((u) => ({
     id: u.id,
     name: u.name,
+    nameEn: u.nameEn,
     email: u.email,
     role: u.role,
     locale: u.locale,

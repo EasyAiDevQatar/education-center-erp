@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { PaymentsClient, type PaymentRow, type Opt } from "./payments-client";
+import { displayName } from "@/lib/names";
 
 export default async function PaymentsPage({
   params,
@@ -33,15 +34,15 @@ export default async function PaymentsPage({
     date: p.date.toISOString().slice(0, 10),
     receiptNo: p.receiptNo,
     studentId: p.studentId,
-    studentName: p.student?.name ?? "—",
+    studentName: p.student ? displayName(p.student, locale) : "—",
     amount: toNumber(p.amount),
     method: p.method,
     teacherId: p.teacherId,
-    teacherName: p.teacher?.name ?? "—",
+    teacherName: p.teacher ? displayName(p.teacher, locale) : "—",
     notes: p.notes,
   }));
-  const studentOpts: Opt[] = students.map((s) => ({ id: s.id, label: s.name }));
-  const teacherOpts: Opt[] = teachers.map((t) => ({ id: t.id, label: t.name }));
+  const studentOpts: Opt[] = students.map((s) => ({ id: s.id, label: displayName(s, locale) }));
+  const teacherOpts: Opt[] = teachers.map((t) => ({ id: t.id, label: displayName(t, locale) }));
 
   return (
     <div>

@@ -56,6 +56,7 @@ export const TABLES: TableSpec[] = [
     importable: true,
     columns: [
       { key: "name", ar: "الاسم", required: true },
+      { key: "nameEn", ar: "الاسم بالإنجليزية" },
       { key: "phone", ar: "الهاتف" },
       { key: "gradeCode", ar: "المرحلة" },
       { key: "guardianName", ar: "ولي الأمر" },
@@ -71,6 +72,7 @@ export const TABLES: TableSpec[] = [
     importable: true,
     columns: [
       { key: "name", ar: "الاسم", required: true },
+      { key: "nameEn", ar: "الاسم بالإنجليزية" },
       { key: "phone", ar: "الهاتف" },
       { key: "commissionPct", ar: "نسبة العمولة" },
       { key: "fixedSalary", ar: "الراتب الثابت" },
@@ -84,6 +86,7 @@ export const TABLES: TableSpec[] = [
     importable: true,
     columns: [
       { key: "name", ar: "الاسم", required: true },
+      { key: "nameEn", ar: "الاسم بالإنجليزية" },
       { key: "phone", ar: "الهاتف" },
       { key: "email", ar: "البريد الإلكتروني" },
       { key: "notes", ar: "ملاحظات" },
@@ -166,6 +169,7 @@ export const TABLES: TableSpec[] = [
     importable: true,
     columns: [
       { key: "name", ar: "الاسم", required: true },
+      { key: "nameEn", ar: "الاسم بالإنجليزية" },
       { key: "phone", ar: "الهاتف" },
       { key: "email", ar: "البريد الإلكتروني" },
       { key: "source", ar: "مصدر العميل" },

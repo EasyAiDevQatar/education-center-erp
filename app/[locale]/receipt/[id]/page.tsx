@@ -4,6 +4,7 @@ import { requireAuth, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney, formatDate } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
+import { displayName, fullName } from "@/lib/names";
 
 export default async function ReceiptPage({
   params,
@@ -83,7 +84,7 @@ export default async function ReceiptPage({
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">{t("student")}</dt>
-            <dd className="font-medium">{payment.student?.name ?? "—"}</dd>
+            <dd className="font-medium">{payment.student ? fullName(payment.student, locale) : "—"}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">{t("method")}</dt>
@@ -92,7 +93,7 @@ export default async function ReceiptPage({
           {payment.teacher && (
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{t("allocateTeacher")}</dt>
-              <dd>{payment.teacher.name}</dd>
+              <dd>{displayName(payment.teacher, locale)}</dd>
             </div>
           )}
           {payment.notes && (

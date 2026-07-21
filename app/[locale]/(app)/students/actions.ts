@@ -11,6 +11,7 @@ export type ActionState = { ok?: boolean; error?: string };
 
 const schema = z.object({
   name: z.string().trim().min(1),
+  nameEn: z.string().trim().max(120).optional().nullable(),
   phone: z.string().trim().optional().nullable(),
   gradeLevelId: z.string().trim().optional().nullable(),
   guardianId: z.string().trim().optional().nullable(),
@@ -44,6 +45,7 @@ export async function saveStudent(
   if (await guard()) return { error: "forbidden" };
   const parsed = schema.safeParse({
     name: formData.get("name"),
+    nameEn: orNull(formData.get("nameEn")),
     phone: formData.get("phone") || null,
     gradeLevelId: formData.get("gradeLevelId") || null,
     guardianId: formData.get("guardianId") || null,

@@ -30,11 +30,13 @@ import {
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { MapPicker } from "@/components/map-picker";
 import { saveStudent, deleteStudent } from "./actions";
+import { displayName, nameSearchText } from "@/lib/names";
 
 export type Option = { id: string; label: string };
 export type StudentRow = {
   id: string;
   name: string;
+  nameEn: string | null;
   phone: string | null;
   gradeLevelId: string | null;
   gradeLevelLabel: string | null;
@@ -84,9 +86,14 @@ function StudentFields({
 
   return (
     <>
-      <FormField label={tc("name")} htmlFor="name">
-        <Input id="name" name="name" defaultValue={student?.name} required />
-      </FormField>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label={tc("nameAr")} htmlFor="name">
+          <Input id="name" name="name" defaultValue={student?.name} required />
+        </FormField>
+        <FormField label={tc("nameEn")} htmlFor="nameEn" hint={tc("nameEnHint")}>
+          <Input id="nameEn" name="nameEn" dir="ltr" defaultValue={student?.nameEn ?? ""} />
+        </FormField>
+      </div>
       <FormField label={tc("phone")} htmlFor="phone">
         <Input id="phone" name="phone" dir="ltr" defaultValue={student?.phone ?? ""} />
       </FormField>
@@ -199,10 +206,10 @@ export function StudentsClient({
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const search = useTableSearch(students, (s) => [s.name, s.phone, s.gradeLevelLabel, s.guardianLabel, s.homeCode]);
+  const search = useTableSearch(students, (s) => [nameSearchText(s), s.phone, s.gradeLevelLabel, s.guardianLabel, s.homeCode]);
   const columns = useMemo<ColumnDef<StudentRow>[]>(
     () => [
-      { key: "name", label: tc("name"), value: (s) => s.name },
+      { key: "name", label: tc("name"), value: (s) => displayName(s, locale) },
       { key: "level", label: t("gradeLevel"), value: (s) => s.gradeLevelLabel, filterable: true },
       { key: "guardian", label: t("guardian"), value: (s) => s.guardianLabel, filterable: true },
       { key: "phone", label: tc("phone"), value: (s) => s.phone },
@@ -258,7 +265,7 @@ export function StudentsClient({
             )}
             {pg.pageItems.map((s) => (
               <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.name}</TableCell>
+                <TableCell className="font-medium">{displayName(s, locale)}</TableCell>
                 <TableCell>{s.gradeLevelLabel ?? "—"}</TableCell>
                 <TableCell>{s.guardianLabel ?? "—"}</TableCell>
                 <TableCell className="text-start"><span dir="ltr">{s.phone ?? "—"}</span></TableCell>

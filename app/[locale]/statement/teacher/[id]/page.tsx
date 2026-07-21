@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getTeacherEarnings } from "@/lib/payroll";
 import { toNumber, formatMoney, formatHours, formatDate } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
+import { displayName, fullName } from "@/lib/names";
 
 /**
  * Printable A4 account statement for one teacher.
@@ -86,7 +87,7 @@ export default async function TeacherStatementPage({
         <dl className="mb-5 space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">{tc("name")}</dt>
-            <dd className="font-medium">{teacher.name}</dd>
+            <dd className="font-medium">{fullName(teacher, locale)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">{t("commissionPct")}</dt>
@@ -124,7 +125,7 @@ export default async function TeacherStatementPage({
             {sessions.map((s) => (
               <tr key={s.id} className="border-b border-border/60">
                 <td className="p-2 tabular-nums" dir="ltr">{s.date.toISOString().slice(0, 10)}</td>
-                <td className="p-2">{s.student.name}</td>
+                <td className="p-2">{displayName(s.student, locale)}</td>
                 <td className="p-2">{te(`sessionStatus.${s.status}`)}</td>
                 <td className="p-2 text-end tabular-nums">{formatHours(s.hours)}</td>
                 <td className="p-2 text-end tabular-nums">{formatMoney(s.total)}</td>

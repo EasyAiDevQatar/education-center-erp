@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { CardsToolbar } from "./cards-toolbar";
 import { ShareCardButton } from "./share-card-button";
+import { displayName } from "@/lib/names";
 
 /**
  * Printable QR cards, one per active student.
@@ -47,7 +48,7 @@ export default async function QrCardsPage({
       .filter((s) => s.qrToken)
       .map(async (s) => ({
         id: s.id,
-        name: s.name,
+        name: displayName(s, locale),
         // Prefer the guardian's number — the parent is who keeps the card safe.
         phone: s.guardian?.phone ?? s.phone ?? null,
         level: s.gradeLevel ? (locale === "ar" ? s.gradeLevel.nameAr : s.gradeLevel.nameEn) : "",

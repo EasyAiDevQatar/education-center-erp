@@ -4,6 +4,7 @@ import { requireAuth, FINANCE_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney, formatDate, formatHours } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
+import { displayName, fullName } from "@/lib/names";
 
 export default async function PayslipPage({
   params,
@@ -83,7 +84,7 @@ export default async function PayslipPage({
         </div>
 
         <dl className="space-y-3 text-sm">
-          <Row label={tc("name")} value={payout.teacher.name} />
+          <Row label={tc("name")} value={fullName(payout.teacher, locale)} />
           {payout.payMode && <Row label={t("payMode")} value={tm(payout.payMode as "MONTH")} />}
           {payout.term && (
             <Row label={t("term")} value={locale === "ar" ? payout.term.nameAr : payout.term.nameEn} />
@@ -110,7 +111,7 @@ export default async function PayslipPage({
               {lines.map((s) => (
                 <tr key={s.id} className="border-b border-border/60">
                   <td className="p-2 tabular-nums" dir="ltr">{s.date.toISOString().slice(0, 10)}</td>
-                  <td className="p-2">{s.student.name}</td>
+                  <td className="p-2">{displayName(s.student, locale)}</td>
                   <td className="p-2 text-end tabular-nums">{formatHours(s.hours)}</td>
                   <td className="p-2 text-end tabular-nums">{formatMoney(s.total)}</td>
                   <td className="p-2 text-end tabular-nums">

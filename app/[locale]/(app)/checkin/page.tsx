@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { RosterBoard, type RosterItem } from "./roster-board";
+import { displayName } from "@/lib/names";
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -61,7 +62,7 @@ export default async function CheckinPage({
     ...new Map(
       sessions
         .filter((s) => s.teacher)
-        .map((s) => [s.teacherId!, { id: s.teacherId!, label: s.teacher!.name }]),
+        .map((s) => [s.teacherId!, { id: s.teacherId!, label: displayName(s.teacher!, locale) }]),
     ).values(),
   ];
 
@@ -69,8 +70,8 @@ export default async function CheckinPage({
   const toItem = (s: Row): RosterItem => ({
     id: s.id,
     teacherId: s.teacherId,
-    teacherName: s.teacher?.name ?? "",
-    studentName: s.student.name,
+    teacherName: s.teacher ? displayName(s.teacher, locale) : "",
+    studentName: displayName(s.student, locale),
     startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
     hours: toNumber(s.hours),
     location: s.location as "CENTER" | "HOME",

@@ -6,6 +6,7 @@ import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
 import { CalendarClient, type CalEvent, type CalendarView } from "./calendar-client";
 import type { PriceMatrix } from "../sessions/session-dialog";
+import { displayName } from "@/lib/names";
 
 /** Gulf week starts on Saturday. */
 const WEEK_START_DOW = 6;
@@ -103,9 +104,9 @@ export default async function CalendarPage({
       startMinutes: start.getUTCHours() * 60 + start.getUTCMinutes(),
       hours: toNumber(s.hours),
       studentId: s.studentId,
-      studentName: s.student.name,
+      studentName: displayName(s.student, locale),
       teacherId: s.teacherId,
-      teacherName: s.teacher?.name ?? "",
+      teacherName: s.teacher ? displayName(s.teacher, locale) : "",
       gradeLevelId: s.gradeLevelId,
       levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
       location: s.location as "CENTER" | "HOME",
@@ -120,11 +121,11 @@ export default async function CalendarPage({
   );
   const studentOpts = students.map((s) => ({
     id: s.id,
-    name: s.name,
+    name: displayName(s, locale),
     gradeLevelId: s.gradeLevelId,
     teacherIds: s.teachers.map((x) => x.teacherId),
   }));
-  const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: tt.name }));
+  const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }));
   const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));
 
   return (

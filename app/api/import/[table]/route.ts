@@ -143,6 +143,7 @@ async function importRows(
           const s = await db.student.create({
             data: {
               name: r.name,
+              nameEn: r.nameEn || null,
               phone: r.phone || null,
               gradeLevelId: findLevel(r.gradeCode),
               guardianId: r.guardianName ? guardianByName.get(r.guardianName) ?? null : null,
@@ -162,6 +163,7 @@ async function importRows(
           const t = await db.teacher.create({
             data: {
               name: r.name,
+              nameEn: r.nameEn || null,
               phone: r.phone || null,
               commissionPct: num(r.commissionPct, 50),
               fixedSalary: num(r.fixedSalary),
@@ -179,6 +181,7 @@ async function importRows(
           const g = await db.guardian.create({
             data: {
               name: r.name,
+              nameEn: r.nameEn || null,
               phone: r.phone || null,
               email: r.email || null,
               notes: r.notes || null,
@@ -305,6 +308,7 @@ async function importRows(
           await db.lead.create({
             data: {
               name: r.name,
+              nameEn: r.nameEn || null,
               phone: r.phone || null,
               email: r.email || null,
               source: r.source || null,

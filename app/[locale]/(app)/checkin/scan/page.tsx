@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { ScanStation, type ScanRow } from "./scan-station";
+import { displayName } from "@/lib/names";
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -43,8 +44,8 @@ export default async function ScanPage({
 
   const rows: ScanRow[] = todays.map((s) => ({
     id: s.id,
-    studentName: s.student.name,
-    teacherName: s.teacher?.name ?? null,
+    studentName: displayName(s.student, locale),
+    teacherName: s.teacher ? displayName(s.teacher, locale) : null,
     startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
     hours: toNumber(s.hours),
     status: s.status,

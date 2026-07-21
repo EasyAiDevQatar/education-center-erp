@@ -20,6 +20,10 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   name         String
+  /// Latin-script name, shown when the interface is in English. Optional: the
+  /// centre's records are Arabic-first, so this fills in over time and every
+  /// display falls back to `name` while it is empty.
+  nameEn       String?
   email        String   @unique
   passwordHash String
   role         String   @default("RECEPTIONIST") // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT
@@ -40,6 +44,10 @@ model User {
 model Teacher {
   id            String   @id @default(cuid())
   name          String
+  /// Latin-script name, shown when the interface is in English. Optional: the
+  /// centre's records are Arabic-first, so this fills in over time and every
+  /// display falls back to `name` while it is empty.
+  nameEn        String?
   phone         String?
   commissionPct Decimal  @default(0) // percentage, e.g. 50 = 50%
   active        Boolean  @default(true)
@@ -66,6 +74,10 @@ model Teacher {
 model Guardian {
   id       String    @id @default(cuid())
   name     String
+  /// Latin-script name, shown when the interface is in English. Optional: the
+  /// centre's records are Arabic-first, so this fills in over time and every
+  /// display falls back to `name` while it is empty.
+  nameEn   String?
   phone    String?
   email    String?
   notes    String?
@@ -109,6 +121,10 @@ model PriceRule {
 model Student {
   id           String      @id @default(cuid())
   name         String
+  /// Latin-script name, shown when the interface is in English. Optional: the
+  /// centre's records are Arabic-first, so this fills in over time and every
+  /// display falls back to `name` while it is empty.
+  nameEn       String?
   phone        String?
   gradeLevelId String?
   gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
@@ -469,6 +485,10 @@ model NotificationLog {
 model Lead {
   id        String  @id @default(cuid())
   name      String
+  /// Latin-script name, shown when the interface is in English. Optional: the
+  /// centre's records are Arabic-first, so this fills in over time and every
+  /// display falls back to `name` while it is empty.
+  nameEn    String?
   phone     String?
   email     String?
   /// Where they came from — walk-in, referral, Instagram, etc. Free text so the

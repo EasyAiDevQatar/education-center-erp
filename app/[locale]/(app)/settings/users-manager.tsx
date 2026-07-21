@@ -25,6 +25,7 @@ export type Opt = { id: string; label: string };
 export type UserRow = {
   id: string;
   name: string;
+  nameEn: string | null;
   email: string;
   role: string;
   locale: string;
@@ -41,8 +42,11 @@ function UserFields({ user, teachers, guardians }: { user?: UserRow; teachers: O
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <FormField label={tc("name")} htmlFor="u-name">
+        <FormField label={tc("nameAr")} htmlFor="u-name">
           <Input id="u-name" name="name" defaultValue={user?.name} required />
+        </FormField>
+        <FormField label={tc("nameEn")} htmlFor="u-nameEn">
+          <Input id="u-nameEn" name="nameEn" dir="ltr" defaultValue={user?.nameEn ?? ""} />
         </FormField>
         <FormField label={tc("email")} htmlFor="u-email">
           <Input id="u-email" name="email" type="email" dir="ltr" defaultValue={user?.email} required />

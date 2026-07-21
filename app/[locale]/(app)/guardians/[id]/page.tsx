@@ -13,6 +13,7 @@ import { SessionsTable, PaymentsTable } from "@/components/tables/relation-table
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PortalLoginButton } from "@/components/portal-login-button";
+import { displayName, fullName } from "@/lib/names";
 
 export default async function GuardianProfilePage({
   params,
@@ -69,7 +70,7 @@ export default async function GuardianProfilePage({
 
   return (
     <div>
-      <PageHeader title={guardian.name} description={guardian.phone ?? undefined} />
+      <PageHeader title={fullName(guardian, locale)} description={guardian.phone ?? undefined} />
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={ts("totalCharges")} value={formatMoney(totalCharges)} suffix={currency} icon={TrendingUp} />
@@ -113,7 +114,7 @@ export default async function GuardianProfilePage({
               {guardian.students.map((s) => (
                 <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 p-2">
                   <Link href={`/students/${s.id}`} className="font-medium text-primary hover:underline">
-                    {s.name}
+                    {displayName(s, locale)}
                   </Link>
                   <span className="text-sm text-muted-foreground">
                     {s.gradeLevel ? (locale === "ar" ? s.gradeLevel.nameAr : s.gradeLevel.nameEn) : "—"}

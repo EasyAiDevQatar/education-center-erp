@@ -3,6 +3,7 @@ import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { GuardiansClient, type GuardianRow } from "./guardians-client";
+import { displayName } from "@/lib/names";
 
 export default async function GuardiansPage({
   params,
@@ -21,6 +22,7 @@ export default async function GuardiansPage({
   const rows: GuardianRow[] = guardians.map((g) => ({
     id: g.id,
     name: g.name,
+    nameEn: g.nameEn,
     phone: g.phone,
     email: g.email,
     notes: g.notes,

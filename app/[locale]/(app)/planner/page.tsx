@@ -11,6 +11,7 @@ import {
   type PlannerTemplateRow,
 } from "./planner-client";
 import type { PriceMatrix } from "../sessions/session-dialog";
+import { displayName } from "@/lib/names";
 
 export default async function PlannerPage({
   params,
@@ -73,7 +74,7 @@ export default async function PlannerPage({
     studentId: s.studentId,
     startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
     hours: toNumber(s.hours),
-    studentName: s.student.name,
+    studentName: displayName(s.student, locale),
     levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
     location: s.location as "CENTER" | "HOME",
     status: s.status,
@@ -102,10 +103,10 @@ export default async function PlannerPage({
       <PlannerClient
         day={day}
         sessions={rows}
-        teachers={teachers.map((tt) => ({ id: tt.id, label: tt.name }))}
+        teachers={teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }))}
         students={students.map((st) => ({
           id: st.id,
-          name: st.name,
+          name: displayName(st, locale),
           gradeLevelId: st.gradeLevelId,
         }))}
         levels={levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }))}

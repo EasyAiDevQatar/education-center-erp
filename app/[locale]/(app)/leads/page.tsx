@@ -3,6 +3,7 @@ import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { LeadsBoard, type LeadRow } from "./leads-board";
+import { displayName } from "@/lib/names";
 
 export default async function LeadsPage({
   params,
@@ -29,6 +30,7 @@ export default async function LeadsPage({
   const rows: LeadRow[] = leads.map((l) => ({
     id: l.id,
     name: l.name,
+    nameEn: l.nameEn,
     phone: l.phone,
     email: l.email,
     source: l.source,
@@ -47,7 +49,7 @@ export default async function LeadsPage({
       <LeadsBoard
         leads={rows}
         levels={levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }))}
-        teachers={teachers.map((x) => ({ id: x.id, label: x.name }))}
+        teachers={teachers.map((x) => ({ id: x.id, label: displayName(x, locale) }))}
         today={new Date().toISOString().slice(0, 10)}
       />
     </div>

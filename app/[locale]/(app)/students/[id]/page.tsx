@@ -15,6 +15,7 @@ import { StudentSessionsTable } from "./student-sessions-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LedgerTable } from "./ledger-table";
+import { displayName, fullName } from "@/lib/names";
 
 export default async function StudentProfilePage({
   params,
@@ -52,7 +53,7 @@ export default async function StudentProfilePage({
       // Payments can be allocated to a teacher from the pay dialog.
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     ]);
-  const teachers = teacherRows.map((x) => ({ id: x.id, label: x.name }));
+  const teachers = teacherRows.map((x) => ({ id: x.id, label: displayName(x, locale) }));
 
   const tabs = [
     { key: "overview", label: tp("overview") },
@@ -65,7 +66,7 @@ export default async function StudentProfilePage({
   return (
     <div>
       <PageHeader
-        title={student.name}
+        title={fullName(student, locale)}
         description={
           [
             student.gradeLevel
@@ -73,7 +74,7 @@ export default async function StudentProfilePage({
                 ? student.gradeLevel.nameAr
                 : student.gradeLevel.nameEn
               : null,
-            student.guardian ? `${t("guardian")}: ${student.guardian.name}` : null,
+            student.guardian ? `${t("guardian")}: ${displayName(student.guardian, locale)}` : null,
           ]
             .filter(Boolean)
             .join(" · ") || undefined
@@ -103,7 +104,7 @@ export default async function StudentProfilePage({
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <Row icon={<Phone className="size-4" />} label={tc("phone")} value={student.phone ?? "—"} />
-              <Row label={t("guardian")} value={student.guardian?.name ?? "—"} />
+              <Row label={t("guardian")} value={student.guardian ? displayName(student.guardian, locale) : "—"} />
               <Row label={tc("phone")} value={student.guardian?.phone ?? "—"} />
               <Row icon={<MapPin className="size-4" />} label={t("address")} value={student.address ?? "—"} />
               <Row label={t("homeCode")} value={student.homeCode ?? "—"} />
@@ -136,7 +137,7 @@ export default async function StudentProfilePage({
           rows={sessions}
           currency={currency}
           studentId={id}
-          studentName={student.name}
+          studentName={displayName(student, locale)}
           teachers={teachers}
         />
       )}
