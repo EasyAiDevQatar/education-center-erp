@@ -72,7 +72,8 @@
     "filterBy": "Filter",
     "clearFilter": "Clear filter",
     "prev": "Previous",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "close": "Close"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -621,7 +622,20 @@
     "slot": "Slot",
     "saveAsTemplate": "Save as weekly template",
     "savedAsTemplate": "Saved as template",
-    "homeCodeTitle": "Home location code"
+    "homeCodeTitle": "Home location code",
+    "printOptions": "Print options",
+    "printTeachers": "Teachers",
+    "printTeachersHint": "Teachers with sessions today are selected automatically.",
+    "printWithSessions": "With sessions",
+    "printAllTeachers": "All",
+    "printNoSessions": "none",
+    "printExtraSlots": "Extra blank columns",
+    "printExtraSlotsHint": "Columns to fill in by hand. Zero = used columns only.",
+    "printHideCancelled": "Hide cancelled sessions",
+    "printShowAmounts": "Show amounts",
+    "printShowLevel": "Show grade level",
+    "printSummary": "{teachers} teachers across {columns} columns will be printed.",
+    "printCounts": "{teachers} teachers · {sessions} sessions"
   },
   "users": {
     "add": "Add user",

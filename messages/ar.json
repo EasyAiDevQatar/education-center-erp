@@ -72,7 +72,8 @@
     "filterBy": "تصفية",
     "clearFilter": "مسح التصفية",
     "prev": "السابق",
-    "refresh": "تحديث"
+    "refresh": "تحديث",
+    "close": "إغلاق"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -621,7 +622,20 @@
     "slot": "الحصة",
     "saveAsTemplate": "حفظ كقالب أسبوعي",
     "savedAsTemplate": "تم الحفظ كقالب",
-    "homeCodeTitle": "كود موقع المنزل"
+    "homeCodeTitle": "كود موقع المنزل",
+    "printOptions": "خيارات الطباعة",
+    "printTeachers": "المعلمون",
+    "printTeachersHint": "المعلمون الذين لديهم حصص اليوم محدَّدون تلقائياً.",
+    "printWithSessions": "من لديهم حصص",
+    "printAllTeachers": "الجميع",
+    "printNoSessions": "لا حصص",
+    "printExtraSlots": "أعمدة فارغة إضافية",
+    "printExtraSlotsHint": "أعمدة للكتابة باليد. صفر = الأعمدة المستخدمة فقط.",
+    "printHideCancelled": "إخفاء الحصص الملغاة",
+    "printShowAmounts": "إظهار المبالغ",
+    "printShowLevel": "إظهار المرحلة الدراسية",
+    "printSummary": "ستُطبع {teachers} معلم/ة في {columns} عمود.",
+    "printCounts": "{teachers} معلم/ة · {sessions} حصة"
   },
   "users": {
     "add": "إضافة مستخدم",

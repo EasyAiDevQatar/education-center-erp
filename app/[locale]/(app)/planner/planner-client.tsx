@@ -59,6 +59,12 @@ import {
   deleteTemplate,
   type TemplateState,
 } from "./template-actions";
+import {
+  PlannerPrintDialog,
+  PlannerPrintSheet,
+  defaultPrintOpts,
+  type PrintOpts,
+} from "./print-sheet";
 
 export type PlannerSession = {
   id: string;
@@ -152,6 +158,7 @@ export function PlannerClient({
   const [editing, setEditing] = useState<PlannerSession | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
   // Drag-and-drop: draft card → any teacher row, then a time prompt on drop.
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverTeacher, setHoverTeacher] = useState<string | null>(null);
@@ -159,6 +166,25 @@ export function PlannerClient({
     session: PlannerSession;
     teacherId: string;
   } | null>(null);
+  const [printOpts, setPrintOpts] = useState<PrintOpts>(() =>
+    defaultPrintOpts(teachers, sessions),
+  );
+
+  /**
+   * Re-derive the teacher selection every time the dialog opens — the day, and
+   * who is working it, changes under a long-lived page. Display preferences are
+   * kept, since those are about how this user likes their sheet.
+   */
+  const openPrint = () => {
+    setPrintOpts((p) => ({ ...p, teacherIds: defaultPrintOpts(teachers, sessions).teacherIds }));
+    setShowPrint(true);
+  };
+
+  const runPrint = () => {
+    setShowPrint(false);
+    // Let the dialog unmount before window.print() blocks the main thread.
+    requestAnimationFrame(() => requestAnimationFrame(() => printDoc("A4 landscape")));
+  };
 
   // Group + sort each teacher's day.
   const byTeacher = useMemo(() => {
@@ -323,7 +349,7 @@ export function PlannerClient({
           >
             <LayoutTemplate className="size-4" />
           </Button>
-          <Button size="sm" variant="secondary" className="gap-1" onClick={() => printDoc("A4 landscape")}>
+          <Button size="sm" variant="secondary" className="gap-1" onClick={openPrint}>
             <Printer className="size-4" />
             {t("printSheet")}
           </Button>
@@ -357,15 +383,19 @@ export function PlannerClient({
         </span>
       </div>
 
+      {/* The printed sheet is a separate, purpose-built document — see
+          print-sheet.tsx. The interactive grid below never prints. */}
+      <PlannerPrintSheet
+        day={day}
+        weekdayLabel={te(`weekday.${weekday}`)}
+        centerName={centerName}
+        teachers={teachers}
+        sessions={sessions}
+        opts={printOpts}
+      />
+
       {/* Planner grid (paper layout: teacher rows × numbered slots) */}
-      <div data-print="A4L" className="overflow-x-auto rounded-lg border border-border bg-card">
-        {/* Print-only header — on screen the toolbar already says which day it is. */}
-        <div className="hidden print:mb-2 print:block print:text-center">
-          <div className="font-bold">{centerName || t("sheetTitle")}</div>
-          <div className="text-xs">
-            {t("sheetTitle")} · <span dir="ltr">{day}</span> · {te(`weekday.${weekday}`)}
-          </div>
-        </div>
+      <div className="no-print overflow-x-auto rounded-lg border border-border bg-card">
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
@@ -639,6 +669,18 @@ export function PlannerClient({
             setShowSettings(false);
             router.refresh();
           }}
+        />
+      )}
+
+      {/* What goes on the printed sheet */}
+      {showPrint && (
+        <PlannerPrintDialog
+          teachers={teachers}
+          sessions={sessions}
+          opts={printOpts}
+          onChange={setPrintOpts}
+          onPrint={runPrint}
+          onClose={() => setShowPrint(false)}
         />
       )}
     </div>

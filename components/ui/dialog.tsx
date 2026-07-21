@@ -16,9 +16,14 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out" />
+      {/* Dialogs never print. A dialog can still be closing (or deliberately
+          open, as when the planner prints from its options modal) when
+          window.print() fires, and a full-page black overlay would otherwise
+          land on the paper. */}
+      <DialogPrimitive.Overlay className="no-print fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out" />
       <DialogPrimitive.Content
         className={cn(
+          "no-print",
           // The outer box is capped to the viewport and clips; the inner wrapper
           // scrolls. That keeps the close button pinned while long forms scroll.
           "fixed start-1/2 top-1/2 z-50 flex max-h-[90dvh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg rtl:translate-x-1/2",
