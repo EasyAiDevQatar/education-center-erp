@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, FileText, UserX, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, Pencil, FileText, UserX, AlertTriangle, Trash2, HandCoins } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { FormField } from "@/components/crud/form-field";
@@ -38,6 +38,8 @@ import {
 import { WPS_BANKS } from "@/lib/wps/banks";
 import { displayName, nameSearchText } from "@/lib/names";
 import { saveEmployee, terminateEmployee, saveDocument, deleteDocument } from "./actions";
+import { createSettlement } from "./eos-actions";
+import { computeGratuity, computeSettlement, dailyBasic } from "@/lib/gratuity";
 
 export type DocRow = {
   id: string;
@@ -350,6 +352,132 @@ function DocumentsDialog({
   );
 }
 
+/* ------------------------------------------------------- end of service */
+
+function EosFields({ employee }: { employee: EmployeeRow }) {
+  const t = useTranslations("eos");
+  const tc = useTranslations("common");
+  const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
+  const [unusedLeave, setUnusedLeave] = useState(0);
+  const [otherDues, setOtherDues] = useState(0);
+  const [deductions, setDeductions] = useState(0);
+
+  // Live preview with the SAME pure functions the server uses. The one thing
+  // the client cannot know is total unpaid leave — the server subtracts it,
+  // so the preview is labelled as before-unpaid-leave.
+  const g = employee.hireDate
+    ? computeGratuity({
+        hireDate: employee.hireDate,
+        endDate: day,
+        basicSalary: employee.basicSalary,
+      })
+    : null;
+  const st =
+    g &&
+    computeSettlement({
+      gratuityAmount: g.amount,
+      unusedLeaveDays: unusedLeave,
+      dailyBasic: dailyBasic(employee.basicSalary),
+      otherDues,
+      deductions,
+    });
+
+  return (
+    <>
+      <input type="hidden" name="employeeId" value={employee.id} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label={t("lastWorkingDay")} htmlFor="eos-day">
+          <Input
+            id="eos-day"
+            name="lastWorkingDay"
+            type="date"
+            dir="ltr"
+            required
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+          />
+        </FormField>
+        <FormField label={t("unusedLeave")} htmlFor="eos-leave" hint={t("unusedLeaveHint")}>
+          <Input
+            id="eos-leave"
+            name="unusedLeaveDays"
+            type="number"
+            step="0.5"
+            min="0"
+            dir="ltr"
+            value={unusedLeave}
+            onChange={(e) => setUnusedLeave(Math.max(0, Number(e.target.value) || 0))}
+          />
+        </FormField>
+        <FormField label={t("otherDues")} htmlFor="eos-dues">
+          <Input
+            id="eos-dues"
+            name="otherDues"
+            type="number"
+            step="0.01"
+            min="0"
+            dir="ltr"
+            value={otherDues}
+            onChange={(e) => setOtherDues(Math.max(0, Number(e.target.value) || 0))}
+          />
+        </FormField>
+        <FormField label={t("deductions")} htmlFor="eos-ded">
+          <Input
+            id="eos-ded"
+            name="deductions"
+            type="number"
+            step="0.01"
+            min="0"
+            dir="ltr"
+            value={deductions}
+            onChange={(e) => setDeductions(Math.max(0, Number(e.target.value) || 0))}
+          />
+        </FormField>
+      </div>
+
+      {!employee.hireDate ? (
+        <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
+          {t("needsHireDate")}
+        </p>
+      ) : (
+        g &&
+        st && (
+          <div className="space-y-1 rounded-md border border-border p-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t("service")}</span>
+              <span className="tabular-nums">{t("serviceValue", { years: g.serviceYears, days: g.serviceDays })}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t("gratuity")}</span>
+              <span className="tabular-nums">
+                {g.eligible ? formatMoney(g.amount) : t("underOneYear")}
+              </span>
+            </div>
+            {unusedLeave > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t("leaveEncashment")}</span>
+                <span className="tabular-nums">{formatMoney(st.leaveEncashment)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-border pt-1 font-semibold">
+              <span>{t("netSettlement")}</span>
+              <span className={st.net < 0 ? "tabular-nums text-destructive" : "tabular-nums"}>
+                {formatMoney(st.net)}
+              </span>
+            </div>
+            <p className="pt-1 text-xs text-muted-foreground">{t("unpaidNote")}</p>
+          </div>
+        )
+      )}
+
+      <FormField label={tc("notes")} htmlFor="eos-notes">
+        <Input id="eos-notes" name="notes" />
+      </FormField>
+      <p className="text-xs text-warning">{t("terminatesWarning")}</p>
+    </>
+  );
+}
+
 /* -------------------------------------------------------------- terminate */
 
 function TerminateDialog({
@@ -415,6 +543,7 @@ export function HrClient({
   const t = useTranslations("hr");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
+  const tEos = useTranslations("eos");
   const locale = useLocale();
 
   const [docsFor, setDocsFor] = useState<EmployeeRow | null>(null);
@@ -546,6 +675,23 @@ export function HrClient({
                           </Button>
                         }
                       />
+                      {e.status !== "TERMINATED" && (
+                        <EntityDialog
+                          title={tEos("title", { name: e.name })}
+                          action={createSettlement.bind(null, locale)}
+                          fields={<EosFields employee={e} />}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={tEos("action")}
+                              title={tEos("action")}
+                            >
+                              <HandCoins className="size-4" />
+                            </Button>
+                          }
+                        />
+                      )}
                       {e.status !== "TERMINATED" && (
                         <Button
                           variant="ghost"

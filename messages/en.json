@@ -68,7 +68,9 @@
       "alreadyDecided": "This request has already been decided.",
       "monthHasRun": "A run already exists for this month.",
       "runPaid": "A paid run cannot be deleted.",
-      "noSelection": "Select at least one employee."
+      "noSelection": "Select at least one employee.",
+      "noHireDate": "This employee has no hire date.",
+      "alreadySettled": "An end-of-service settlement already exists for this employee."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -1108,5 +1110,23 @@
     "signEmployer": "Employer signature",
     "signDate": "Date",
     "printFooter": "Payslips for {month} — one page per employee, for signature."
+  },
+  "eos": {
+    "title": "End of service — {name}",
+    "action": "End of service & gratuity",
+    "lastWorkingDay": "Last working day",
+    "unusedLeave": "Unused leave days",
+    "unusedLeaveHint": "Check the leave page — encashed at the basic daily rate.",
+    "otherDues": "Other dues",
+    "deductions": "Deductions",
+    "needsHireDate": "Cannot compute without a hire date — add it on the employee record first.",
+    "service": "Service",
+    "serviceValue": "{years} years ({days} days)",
+    "gratuity": "End-of-service gratuity",
+    "underOneYear": "Under one year — no gratuity",
+    "leaveEncashment": "Leave encashment",
+    "netSettlement": "Net settlement",
+    "unpaidNote": "On save, the server subtracts approved unpaid-leave days from the service period.",
+    "terminatesWarning": "Saving permanently ends the employment and records the settlement."
   }
 }
