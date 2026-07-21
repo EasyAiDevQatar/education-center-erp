@@ -13,6 +13,7 @@ import {
   ClipboardList,
   BarChart3,
   UserPlus,
+  BriefcaseBusiness,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -62,5 +63,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },
   { href: "/payroll", key: "payroll", icon: BadgeDollarSign, roles: FINANCE, section: "finance" },
   { href: "/reports", key: "reports", icon: BarChart3, roles: FINANCE, section: "finance" },
+  // ADMIN only: the HR register carries QID/passport/IBAN — a categorically
+  // more sensitive surface than anything else in the app.
+  { href: "/hr", key: "hr", icon: BriefcaseBusiness, roles: ["ADMIN"], section: "admin" },
   { href: "/settings", key: "settings", icon: Settings, roles: ["ADMIN"], section: "admin" },
 ];

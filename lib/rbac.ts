@@ -5,6 +5,10 @@ import type { Role } from "./enums";
 
 /** Roles that can see all financial data and admin areas. */
 export const FINANCE_ROLES: Role[] = ["ADMIN", "ACCOUNTANT"];
+/** Roles that can read employee identity documents (QID, passport, IBAN).
+    Deliberately narrower than FINANCE_ROLES: an accountant needs salary
+    figures, not passport numbers. */
+export const HR_ROLES: Role[] = ["ADMIN"];
 /** Roles that can operate the front desk (sessions, students, payments). */
 export const STAFF_ROLES: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST"];
 

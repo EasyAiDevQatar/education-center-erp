@@ -59,7 +59,11 @@
       "invalidPeriod": "Invalid period",
       "yearArchived": "That academic year is archived — its sessions and money records cannot be changed.",
       "forbidden": "You do not have permission for this action.",
-      "invalid": "That value is not valid."
+      "invalid": "That value is not valid.",
+      "duplicate": "Duplicate value — the QID, employee no. or teacher is already used by another record.",
+      "invalid_qid": "The QID must be exactly 11 digits.",
+      "invalid_iban": "Invalid IBAN — 29 characters starting QA.",
+      "invalid_email": "Invalid email address."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -109,7 +113,8 @@
     "terms": "Terms",
     "roster": "Roster",
     "scan": "Scan cards",
-    "qrCards": "QR cards"
+    "qrCards": "QR cards",
+    "hr": "HR"
   },
   "auth": {
     "login": "Log in",
@@ -565,7 +570,32 @@
       "5": "Friday",
       "6": "Saturday"
     },
-    "trial": "Trial"
+    "trial": "Trial",
+    "department": {
+      "TEACHING": "Teaching",
+      "RECEPTION": "Reception",
+      "ADMIN": "Administration",
+      "TRANSPORT": "Transport",
+      "OTHER": "Other"
+    },
+    "employeeStatus": {
+      "ACTIVE": "Active",
+      "ON_LEAVE": "On leave",
+      "TERMINATED": "Terminated"
+    },
+    "contractType": {
+      "UNLIMITED": "Unlimited",
+      "LIMITED": "Limited"
+    },
+    "docType": {
+      "QID": "Qatari ID (QID)",
+      "VISA": "Visa / residency",
+      "PASSPORT": "Passport",
+      "CONTRACT": "Employment contract",
+      "HEALTH_CARD": "Health card",
+      "LICENCE": "Licence / certificate",
+      "OTHER": "Other"
+    }
   },
   "paymentModes": {
     "SESSION": "Per session",
@@ -950,5 +980,48 @@
     "SALARY": "Salary only",
     "COMMISSION": "Commission only",
     "BOTH": "Salary + commission"
+  },
+  "hr": {
+    "title": "Human resources",
+    "subtitle": "Staff register, documents and expiry alerts — everyone at the centre, not only teachers.",
+    "addEmployee": "Add employee",
+    "employeeNo": "Employee no.",
+    "nationality": "Nationality",
+    "qid": "Qatari ID (QID)",
+    "qidHint": "11 digits. Leave blank if not issued yet.",
+    "visaId": "Visa ID",
+    "visaHint": "Used while no QID has been issued.",
+    "passportNo": "Passport no.",
+    "dob": "Date of birth",
+    "hireDate": "Hire date",
+    "jobTitle": "Job title",
+    "department": "Department",
+    "contractType": "Contract type",
+    "linkedTeacher": "Linked teacher",
+    "linkedTeacherHint": "Link when this employee also teaches — one payslip combines salary and commission.",
+    "basicSalary": "Basic salary",
+    "basicSalaryHint": "End-of-service gratuity is calculated on basic only.",
+    "allowances": "Allowances",
+    "bank": "Bank",
+    "iban": "IBAN",
+    "ibanHint": "29 characters, starting QA.",
+    "secIdentity": "Identity",
+    "secEmployment": "Employment",
+    "secPay": "Pay & bank",
+    "secContact": "Contact",
+    "documents": "Documents",
+    "documentsFor": "Documents — {name}",
+    "docType": "Document type",
+    "docNumber": "Number",
+    "issuedOn": "Issued on",
+    "expiresOn": "Expires on",
+    "addDocument": "Add document",
+    "expiryAlerts": "{n} documents expiring soon or expired",
+    "expiredAgo": "expired {n} days ago",
+    "expiresIn": "expires in {n} days",
+    "terminateTitle": "End service — {name}",
+    "terminateHint": "The record is not deleted — it becomes Terminated and leave accrual stops. Documents and payslips remain.",
+    "terminateAction": "End service",
+    "lastWorkingDay": "Last working day"
   }
 }

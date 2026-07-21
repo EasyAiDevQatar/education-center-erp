@@ -46,3 +46,25 @@ export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
 /** How a teacher is paid. Per-teacher; falls back to the centre default. */
 export const TEACHER_PAYMENT_MODES = ["SESSION", "MONTH", "TERM"] as const;
 export type TeacherPaymentMode = (typeof TEACHER_PAYMENT_MODES)[number];
+
+/** HR: broad staffing areas, not an org chart. */
+export const DEPARTMENTS = ["TEACHING", "RECEPTION", "ADMIN", "TRANSPORT", "OTHER"] as const;
+export type Department = (typeof DEPARTMENTS)[number];
+
+export const EMPLOYEE_STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
+export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
+
+export const CONTRACT_TYPES = ["UNLIMITED", "LIMITED"] as const;
+export type ContractType = (typeof CONTRACT_TYPES)[number];
+
+/** Document kinds tracked for expiry. A renewal is a new row, never an edit. */
+export const EMPLOYEE_DOC_TYPES = [
+  "QID",
+  "VISA",
+  "PASSPORT",
+  "CONTRACT",
+  "HEALTH_CARD",
+  "LICENCE",
+  "OTHER",
+] as const;
+export type EmployeeDocType = (typeof EMPLOYEE_DOC_TYPES)[number];
