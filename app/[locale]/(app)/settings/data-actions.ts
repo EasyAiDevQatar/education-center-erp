@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
 import { WIPE_PHRASE, SEED_SPEC, type SeedKey } from "@/lib/data-zone";
+import { ensureLeaveTypes } from "@/lib/leave-data";
 import { LEAD_STATUSES } from "@/lib/leads";
 
 export type DataState = {
@@ -397,6 +398,178 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     expenses++;
   }
   summary.expenses = expenses;
+
+
+  // --- HR: employees, documents, leave, payroll runs ---
+  // Seeded last so teacher links and dates can lean on everything above.
+  await ensureLeaveTypes();
+
+  const HR_TITLES = [
+    ["موظفة استقبال", "RECEPTION"],
+    ["محاسب", "ADMIN"],
+    ["منسق إداري", "ADMIN"],
+    ["سائق", "TRANSPORT"],
+    ["مشرفة نظافة", "OTHER"],
+  ] as const;
+  const HR_BANKS = ["QNB", "DBQ", "CBQ"] as const;
+  const employeeIds: string[] = [];
+  // First few employees are the seeded teachers themselves — the case the HR
+  // module was built around (one payslip combining salary + commission).
+  const linkedTeacherCount = Math.min(3, n.employees, teacherIds.length);
+  for (let i = 0; i < n.employees; i++) {
+    const linkedTeacherId = i < linkedTeacherCount ? teacherIds[i] : null;
+    const teacher = linkedTeacherId
+      ? await db.teacher.findUnique({ where: { id: linkedTeacherId } })
+      : null;
+    const [jobTitle, department] = linkedTeacherId
+      ? (["معلم/ة", "TEACHING"] as const)
+      : HR_TITLES[(i - linkedTeacherCount) % HR_TITLES.length];
+    // Hire dates spread 0.5–6.5 years back; one lands near the 5-year mark so
+    // the leave-rate blend and gratuity accrual are demoable out of the box.
+    const yearsBack = i === 0 ? 5.5 : 0.5 + rand() * 6;
+    const hire = new Date(today);
+    hire.setUTCDate(hire.getUTCDate() - Math.round(yearsBack * 365));
+    const bank = pick([...HR_BANKS]);
+    const e = await db.employee.create({
+      data: {
+        name: teacher?.name ?? `${jobTitle} ${i + 1}`,
+        nameEn: teacher?.nameEn ?? null,
+        teacherId: linkedTeacherId,
+        employeeNo: `EMP${String(101 + i)}`,
+        jobTitle,
+        department,
+        // Synthetic but shape-valid: 11-digit QID, 29-char Qatari IBAN — so
+        // the WPS export demo validates instead of tripping on the fixtures.
+        qid: `284${String(10000000 + Math.floor(rand() * 89999999))}`,
+        bankShortName: bank,
+        iban: `QA58${bank.padEnd(4, "X")}QAQAXXX000000${String(100000 + Math.floor(rand() * 899999))}`,
+        basicSalary: linkedTeacherId ? pick([2000, 3000, 4000]) : pick([2500, 3500, 4500]),
+        allowances: pick([0, 0, 500, 800]),
+        hireDate: hire,
+        phone: `5566${String(1000 + i)}`,
+        contractType: pick(["UNLIMITED", "UNLIMITED", "LIMITED"]),
+      },
+    });
+    employeeIds.push(e.id);
+  }
+  summary.employees = employeeIds.length;
+
+  // Documents: cycle types; roughly a third expire soon (or just expired) so
+  // the HR expiry banner has something to show.
+  const DOC_TYPES = ["QID", "VISA", "CONTRACT", "HEALTH_CARD"] as const;
+  let docs = 0;
+  for (let i = 0; i < n.employeeDocs && employeeIds.length; i++) {
+    const type = DOC_TYPES[i % DOC_TYPES.length];
+    const bucket = i % 3;
+    const expires = new Date(today);
+    expires.setUTCDate(
+      expires.getUTCDate() +
+        (bucket === 0
+          ? 7 + Math.floor(rand() * 40) // expiring soon → amber/red
+          : bucket === 1
+            ? -(3 + Math.floor(rand() * 20)) // already expired
+            : 120 + Math.floor(rand() * 400)), // comfortably valid
+    );
+    const issued = new Date(expires);
+    issued.setUTCFullYear(issued.getUTCFullYear() - 1);
+    await db.employeeDocument.create({
+      data: {
+        employeeId: employeeIds[i % employeeIds.length],
+        type,
+        number: `${type.slice(0, 2)}${String(100000 + Math.floor(rand() * 899999))}`,
+        issuedOn: issued,
+        expiresOn: expires,
+      },
+    });
+    docs++;
+  }
+  summary.employeeDocs = docs;
+
+  // Leave: one request per slot, never overlapping — each employee gets its
+  // own month window, mixing approved history with a pending queue.
+  const LEAVE_MIX = [
+    { typeCode: "ANNUAL", status: "APPROVED" },
+    { typeCode: "SICK", status: "APPROVED" },
+    { typeCode: "ANNUAL", status: "PENDING" },
+    { typeCode: "UNPAID", status: "APPROVED" },
+  ] as const;
+  let leave = 0;
+  for (let i = 0; i < n.leaveRequests && employeeIds.length; i++) {
+    const mix = LEAVE_MIX[i % LEAVE_MIX.length];
+    const start = new Date(today);
+    // Spread windows backwards a month per request slot to avoid overlaps for
+    // the same employee; pending ones sit in the future.
+    const offset = mix.status === "PENDING" ? 10 + i : -(20 + i * 30);
+    start.setUTCDate(start.getUTCDate() + offset);
+    const days = 1 + Math.floor(rand() * 5);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + days - 1);
+    await db.leaveRequest.create({
+      data: {
+        employeeId: employeeIds[i % employeeIds.length],
+        typeCode: mix.typeCode,
+        startDate: start,
+        endDate: end,
+        days,
+        status: mix.status,
+        decidedAt: mix.status === "APPROVED" ? new Date() : null,
+      },
+    });
+    leave++;
+  }
+  summary.leaveRequests = leave;
+
+  // Payroll runs: one per previous month, PAID, with a payslip per employee.
+  // Simple flat math — the point is populated screens, not payroll truth.
+  let runs = 0;
+  for (let r = 0; r < n.payrollRuns && employeeIds.length; r++) {
+    const m = new Date(today);
+    m.setUTCMonth(m.getUTCMonth() - (r + 1));
+    const month = `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, "0")}`;
+    const periodStart = new Date(`${month}-01T00:00:00.000Z`);
+    const periodEnd = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 0, 23, 59, 59));
+    const run = await db.payrollRun.create({
+      data: {
+        month,
+        periodStart,
+        periodEnd,
+        status: "PAID",
+        paymentMethod: "BANK",
+        paidAt: periodEnd,
+      },
+    });
+    for (const [idx, employeeId] of employeeIds.entries()) {
+      const e = await db.employee.findUnique({ where: { id: employeeId } });
+      if (!e) continue;
+      const basic = Number(e.basicSalary);
+      const allowances = Number(e.allowances);
+      const commission = e.teacherId ? pick([300, 450, 600, 750]) : 0;
+      const net = basic + allowances + commission;
+      await db.teacherPayout.create({
+        data: {
+          teacherId: e.teacherId,
+          employeeId,
+          runId: run.id,
+          periodStart,
+          periodEnd,
+          grossCommission: commission,
+          fixedSalary: basic + allowances,
+          basicSalary: basic,
+          allowances,
+          netPaid: net,
+          workingDays: 30,
+          status: "PAID",
+          paidAt: periodEnd,
+          paymentMethod: "BANK",
+          payMode: "MONTH",
+          earnMode: e.teacherId ? "BOTH" : "SALARY",
+        },
+      });
+      void idx;
+    }
+    runs++;
+  }
+  summary.payrollRuns = runs;
 
   await writeAudit("System", "seed-demo", "CREATE", { after: summary });
   revalidatePath(`/${locale}`, "layout");

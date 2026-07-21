@@ -23,6 +23,11 @@ export const SEED_SPEC = [
   { key: "availability", max: 500, default: 20 },
   { key: "templates", max: 500, default: 12 },
   { key: "leads", max: 500, default: 10 },
+  // HR module
+  { key: "employees", max: 100, default: 6 },
+  { key: "employeeDocs", max: 300, default: 10 },
+  { key: "leaveRequests", max: 200, default: 8 },
+  { key: "payrollRuns", max: 6, default: 1 },
 ] as const;
 
 export type SeedKey = (typeof SEED_SPEC)[number]["key"];

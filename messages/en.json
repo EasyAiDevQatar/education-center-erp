@@ -800,7 +800,11 @@
       "expenses": "Expenses",
       "availability": "Teacher availability",
       "templates": "Planner templates",
-      "leads": "Leads"
+      "leads": "Leads",
+      "employees": "Employees (HR)",
+      "employeeDocs": "Employee documents",
+      "leaveRequests": "Leave requests",
+      "payrollRuns": "Payroll runs"
     }
   },
   "availability": {
