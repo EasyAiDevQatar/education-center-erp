@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronLeft,
@@ -20,6 +21,7 @@ import {
   LayoutTemplate,
   Printer,
   MapPin,
+  CalendarRange,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
@@ -65,6 +67,11 @@ import {
   defaultPrintOpts,
   type PrintOpts,
 } from "./print-sheet";
+import {
+  TimetableDialog,
+  TimetableSheet,
+  type TimetableRequest,
+} from "./timetable-print";
 
 export type PlannerSession = {
   id: string;
@@ -131,6 +138,8 @@ export function PlannerClient({
   availability,
   templates,
   centerName,
+  centerLogo,
+  printedBy,
 }: {
   day: string;
   sessions: PlannerSession[];
@@ -144,6 +153,8 @@ export function PlannerClient({
   availability: AvailabilityRow[];
   templates: PlannerTemplateRow[];
   centerName: string;
+  centerLogo: string;
+  printedBy: string;
 }) {
   const t = useTranslations("planner");
   const tc = useTranslations("common");
@@ -159,6 +170,16 @@ export function PlannerClient({
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
+  const [showTimetable, setShowTimetable] = useState(false);
+  const [timetable, setTimetable] = useState<TimetableRequest | null>(null);
+  /**
+   * Which document is being printed.
+   *
+   * Both sheets are `hidden print:block`, so leaving them both mounted would
+   * put the day sheet *and* the timetables on the same print job. Only the
+   * active one is rendered, and only for the duration of the print call.
+   */
+  const [printing, setPrinting] = useState<null | "sheet" | "timetable">(null);
   // Drag-and-drop: draft card → any teacher row, then a time prompt on drop.
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverTeacher, setHoverTeacher] = useState<string | null>(null);
@@ -181,9 +202,46 @@ export function PlannerClient({
   };
 
   const runPrint = () => {
-    setShowPrint(false);
-    // Let the dialog unmount before window.print() blocks the main thread.
-    requestAnimationFrame(() => requestAnimationFrame(() => printDoc("A4 landscape")));
+    // flushSync, not requestAnimationFrame: rAF does not fire while the page is
+    // hidden, so a deferred print can simply never happen. This commits the
+    // closed dialog to the DOM and then prints, with no timing assumption.
+    flushSync(() => {
+      setShowPrint(false);
+      setPrinting("sheet");
+    });
+    try {
+      // The browser derives the "Save as PDF" filename from document.title.
+      printDoc({ size: "A4 landscape", margin: 8, fileName: `Planner-${day}` });
+    } finally {
+      setPrinting(null);
+    }
+  };
+
+  /**
+   * Commit the fetched timetable to the DOM, then print it.
+   *
+   * flushSync is what makes this safe: printing in the same tick as a plain
+   * setState would capture the document before the sheet existed, and deferring
+   * with requestAnimationFrame would never fire at all if the page is hidden.
+   */
+  const runTimetable = (req: TimetableRequest) => {
+    flushSync(() => {
+      setTimetable(req);
+      setShowTimetable(false);
+      setPrinting("timetable");
+    });
+    const scope = req.from === req.to ? req.from : `${req.from}_${req.to}`;
+    const kind = req.kind === "student" ? "Students" : "Teachers";
+    try {
+      printDoc({
+        size: "A4 portrait",
+        // The extra bottom margin is what the repeating footer sits in.
+        margin: { top: 10, side: 10, bottom: 18 },
+        fileName: `Timetable-${kind}-${scope}`,
+      });
+    } finally {
+      setPrinting(null);
+    }
   };
 
   // Group + sort each teacher's day.
@@ -281,6 +339,16 @@ export function PlannerClient({
 
   return (
     <div className="space-y-3">
+      {/* Day summary — the numbers staff check first, so they lead rather than
+          trailing a row of buttons that pushed them off-screen on a laptop. */}
+      <div className="no-print flex flex-wrap items-center gap-2">
+        <Badge variant="warning">{t("draftCount", { n: drafts.length })}</Badge>
+        <Badge variant="success">{t("confirmedCount", { n: confirmed.length })}</Badge>
+        <Badge variant="default">
+          {t("expectedTotal")}: {formatMoney(expectedTotal)} {currency}
+        </Badge>
+      </div>
+
       {/* Toolbar */}
       <div className="no-print flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
         <Button variant="secondary" size="sm" onClick={() => go(today)}>
@@ -305,11 +373,6 @@ export function PlannerClient({
         />
 
         <div className="ms-auto flex flex-wrap items-center gap-2">
-          <Badge variant="warning">{t("draftCount", { n: drafts.length })}</Badge>
-          <Badge variant="success">{t("confirmedCount", { n: confirmed.length })}</Badge>
-          <Badge variant="default">
-            {t("expectedTotal")}: {formatMoney(expectedTotal)} {currency}
-          </Badge>
           <Button
             size="sm"
             className="gap-1"
@@ -355,6 +418,15 @@ export function PlannerClient({
           </Button>
           <Button
             size="sm"
+            variant="secondary"
+            className="gap-1"
+            onClick={() => setShowTimetable(true)}
+          >
+            <CalendarRange className="size-4" />
+            {t("timetableShort")}
+          </Button>
+          <Button
+            size="sm"
             variant="ghost"
             aria-label={t("settings")}
             onClick={() => setShowSettings(true)}
@@ -385,14 +457,17 @@ export function PlannerClient({
 
       {/* The printed sheet is a separate, purpose-built document — see
           print-sheet.tsx. The interactive grid below never prints. */}
+      {printing === "sheet" && (
       <PlannerPrintSheet
         day={day}
         weekdayLabel={te(`weekday.${weekday}`)}
         centerName={centerName}
+        centerLogo={centerLogo}
         teachers={teachers}
         sessions={sessions}
         opts={printOpts}
       />
+      )}
 
       {/* Planner grid (paper layout: teacher rows × numbered slots) */}
       <div className="no-print overflow-x-auto rounded-lg border border-border bg-card">
@@ -669,6 +744,25 @@ export function PlannerClient({
             setShowSettings(false);
             router.refresh();
           }}
+        />
+      )}
+
+      {/* Student / teacher timetables */}
+      {showTimetable && (
+        <TimetableDialog
+          day={day}
+          students={students.map((st) => ({ id: st.id, label: st.name }))}
+          teachers={teachers}
+          onReady={runTimetable}
+          onClose={() => setShowTimetable(false)}
+        />
+      )}
+      {printing === "timetable" && timetable && (
+        <TimetableSheet
+          req={timetable}
+          centerName={centerName}
+          centerLogo={centerLogo}
+          printedBy={printedBy}
         />
       )}
 

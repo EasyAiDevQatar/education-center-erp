@@ -640,7 +640,31 @@
     "printShowLevel": "إظهار المرحلة الدراسية",
     "printSummary": "ستُطبع {teachers} معلم/ة في {columns} عمود.",
     "printCounts": "{teachers} معلم/ة · {sessions} حصة",
-    "printShowHomeCode": "إظهار كود المنزل"
+    "printShowHomeCode": "إظهار كود المنزل",
+    "timetableTitle": "طباعة الجداول",
+    "timetableShort": "جداول",
+    "timetableFor": "الجدول لـ",
+    "timetableStudents": "الطلاب",
+    "timetableTeachers": "المعلمون",
+    "timetableScope": "المدى",
+    "timetableWeekly": "أسبوعي",
+    "timetableDaily": "يومي",
+    "timetableSummary": "تم اختيار {count} — كل واحد في صفحة مستقلة.",
+    "timetableStudentSheet": "جدول الطالب/ة",
+    "timetableTeacherSheet": "جدول المعلم/ة",
+    "timetableNoSessions": "لا توجد حصص في هذه الفترة.",
+    "timetableDisclaimer": "هذا الجدول خطة مبدئية وقابل للتغيير.",
+    "timetablePrintedAt": "طُبع في {at}",
+    "timetablePrintedBy": "بواسطة {by}",
+    "timetableErrors": {
+      "forbidden": "لا تملك صلاحية لهذا الإجراء.",
+      "noSelection": "اختر شخصاً واحداً على الأقل.",
+      "invalid": "المدى الزمني غير صالح."
+    },
+    "time": "الوقت",
+    "student": "الطالب/ة",
+    "level": "المرحلة",
+    "location": "المكان"
   },
   "users": {
     "add": "إضافة مستخدم",

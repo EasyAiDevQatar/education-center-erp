@@ -252,6 +252,7 @@ export function PlannerPrintSheet({
   day,
   weekdayLabel,
   centerName,
+  centerLogo,
   teachers,
   sessions,
   opts,
@@ -259,6 +260,7 @@ export function PlannerPrintSheet({
   day: string;
   weekdayLabel: string;
   centerName: string;
+  centerLogo: string;
   teachers: Opt[];
   sessions: PlannerSession[];
   opts: PrintOpts;
@@ -280,9 +282,13 @@ export function PlannerPrintSheet({
   return (
     <div data-print="A4L" className="hidden print:block">
       <div className="mb-1.5 flex items-baseline justify-between border-b border-black pb-1">
-        <div>
+        <div className="flex items-center gap-2">
+          {centerLogo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={centerLogo} alt="" className="max-h-8 object-contain" />
+          )}
           <span className="text-[13px] font-bold">{centerName || t("sheetTitle")}</span>
-          <span className="ms-2 text-[10px]">{t("sheetTitle")}</span>
+          <span className="text-[10px]">{t("sheetTitle")}</span>
         </div>
         <div className="text-[10px]">
           <span dir="ltr">{day}</span> · {weekdayLabel} · {t("printCounts", {

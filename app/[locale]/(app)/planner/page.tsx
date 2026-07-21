@@ -22,7 +22,7 @@ export default async function PlannerPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  const auth = await requireRole(locale, STAFF_ROLES);
 
   const t = await getTranslations("planner");
   const sp = await searchParams;
@@ -49,7 +49,7 @@ export default async function PlannerPage({
       currentPriceMatrix(),
       db.setting.findMany({
         where: {
-          key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin", "centerName"] },
+          key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin", "centerName", "centerLogo"] },
         },
       }),
       db.teacherAvailability.findMany({
@@ -117,6 +117,8 @@ export default async function PlannerPage({
         availability={availability}
         templates={templateRows}
         centerName={settings.centerName ?? ""}
+        centerLogo={settings.centerLogo ?? ""}
+        printedBy={auth.name}
       />
     </div>
   );

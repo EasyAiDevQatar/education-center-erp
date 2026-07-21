@@ -187,3 +187,58 @@ body.print-pos80 {
   size: 80mm auto;
   margin: 3mm;
 }
+
+@media print {
+  /* Timetables handed to a family or a teacher: portrait, one person per page,
+     with a footer that repeats on every sheet. `position: fixed` is what makes
+     a footer repeat when printing; it sits in the page's bottom margin, which
+     the print call widens to make room. */
+  [data-print="A4P"] {
+    width: 100% !important;
+    font-size: 10px !important;
+    color: #000 !important;
+  }
+  [data-print="A4P"] table {
+    width: 100% !important;
+    table-layout: fixed;
+  }
+  [data-print="A4P"] th,
+  [data-print="A4P"] td {
+    border: 1px solid #666 !important;
+    padding: 3px 4px !important;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+  [data-print="A4P"] th {
+    background: #eee !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-print="A4P"] thead {
+    display: table-header-group;
+  }
+  [data-print="A4P"] tr {
+    break-inside: avoid;
+  }
+  [data-print="A4P"] section {
+    /* A person's sheet should not be split mid-header. */
+    break-inside: auto;
+  }
+  .print-footer {
+    position: fixed;
+    bottom: -12mm;
+    inset-inline: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    border-top: 1px solid #999;
+    padding-top: 2px;
+    font-size: 8px;
+    color: #000;
+  }
+}
+
+/* The footer is print-only furniture; it must never appear on screen. */
+.print-footer {
+  display: none;
+}

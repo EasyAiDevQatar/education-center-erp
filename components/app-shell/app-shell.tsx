@@ -111,14 +111,14 @@ export function AppShell({
   return (
     <div className="flex min-h-svh">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col overflow-y-auto border-e border-border bg-card md:flex">
+      <aside className="no-print sticky top-0 hidden h-svh w-64 shrink-0 flex-col overflow-y-auto border-e border-border bg-card md:flex">
         {brand}
         {nav}
       </aside>
 
       {/* Mobile drawer */}
       {open && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="no-print fixed inset-0 z-40 md:hidden">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setOpen(false)}
@@ -132,7 +132,7 @@ export function AppShell({
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 backdrop-blur">
+        <header className="no-print sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 backdrop-blur">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -159,7 +159,7 @@ export function AppShell({
             </form>
           </div>
         </header>
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="flex-1 p-4 print:p-0 sm:p-6">{children}</main>
       </div>
     </div>
   );

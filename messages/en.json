@@ -640,7 +640,31 @@
     "printShowLevel": "Show grade level",
     "printSummary": "{teachers} teachers across {columns} columns will be printed.",
     "printCounts": "{teachers} teachers · {sessions} sessions",
-    "printShowHomeCode": "Show home code"
+    "printShowHomeCode": "Show home code",
+    "timetableTitle": "Print timetables",
+    "timetableShort": "Timetables",
+    "timetableFor": "Timetable for",
+    "timetableStudents": "Students",
+    "timetableTeachers": "Teachers",
+    "timetableScope": "Range",
+    "timetableWeekly": "Weekly",
+    "timetableDaily": "Daily",
+    "timetableSummary": "{count} selected — one page each.",
+    "timetableStudentSheet": "Student timetable",
+    "timetableTeacherSheet": "Teacher timetable",
+    "timetableNoSessions": "No sessions in this period.",
+    "timetableDisclaimer": "This timetable is a plan and is subject to change.",
+    "timetablePrintedAt": "Printed {at}",
+    "timetablePrintedBy": "by {by}",
+    "timetableErrors": {
+      "forbidden": "You do not have permission for this action.",
+      "noSelection": "Select at least one person.",
+      "invalid": "The date range is not valid."
+    },
+    "time": "Time",
+    "student": "Student",
+    "level": "Grade level",
+    "location": "Location"
   },
   "users": {
     "add": "Add user",
