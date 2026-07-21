@@ -1166,6 +1166,8 @@
     "payerIBAN": "Payer IBAN",
     "payerIbanHint": "29 characters, starting QA.",
     "sifVersion": "SIF version",
-    "sifVersionHint": "1 = the new format (QCB Circular 2020/7)."
+    "sifVersionHint": "1 = the new format (QCB Circular 2020/7).",
+    "basicFloor": "Declared basic in the file (optional)",
+    "basicFloorHint": "e.g. 2000. For commission-paid staff: this amount is declared as Basic in the WPS file and taken out of the commission; the remainder shows as Extra Income (bonus). Net pay is untouched — it only relabels between two columns, and if the month's earnings are below the amount, the whole sum is declared as basic with nothing added. Leave empty to disable."
   }
 }

@@ -28,6 +28,8 @@ const schema = z.object({
     .regex(/^QA\d{2}[A-Z0-9]{25}$/)
     .or(z.literal("")),
   wpsSifVersion: z.string().trim().max(35).default("1"),
+  // Whole riyals; empty disables the floor entirely.
+  wpsBasicFloor: z.string().trim().regex(/^\d{1,6}$/).or(z.literal("")),
 });
 
 export async function saveWpsSettings(
@@ -45,6 +47,7 @@ export async function saveWpsSettings(
     wpsPayerBank: (formData.get("wpsPayerBank") ?? "").toString(),
     wpsPayerIBAN: (formData.get("wpsPayerIBAN") ?? "").toString(),
     wpsSifVersion: (formData.get("wpsSifVersion") ?? "1").toString(),
+    wpsBasicFloor: (formData.get("wpsBasicFloor") ?? "").toString(),
   });
   if (!parsed.success) {
     const field = parsed.error.issues[0]?.path[0];

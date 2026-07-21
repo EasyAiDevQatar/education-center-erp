@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "../db";
 import { toNumber } from "../money";
 import type { WpsPayload, WpsEmployeeRecord } from "./generate";
+import { applyBasicFloor } from "./basic-floor";
 
 /**
  * A payroll run → the canonical WPS payload.
@@ -11,9 +12,12 @@ import type { WpsPayload, WpsEmployeeRecord } from "./generate";
  * (allowances, overtime, commission) is Extra Income, and deductions carry
  * their reason code. net = basic + extra − deductions falls out of computePay.
  *
- * A commission-only teacher (basic = 0) will FAIL WPS validation downstream —
- * deliberately: the spec demands basic > 0, so the fix is a declared basic on
- * the employee record, not a fudged file.
+ * A commission-only teacher (basic = 0) fails WPS validation downstream unless
+ * the centre sets `wpsBasicFloor`: the standard filing practice of declaring
+ * the contract basic in the Basic column and reporting the commission
+ * remainder as Extra Income. The floor only relabels between the two earning
+ * columns (see lib/wps/basic-floor.ts) — gross and net are untouched, so the
+ * file still says exactly what was paid.
  */
 export async function buildWpsPayload(
   runId: string,
@@ -35,11 +39,13 @@ export async function buildWpsPayload(
           "wpsPayerBank",
           "wpsPayerIBAN",
           "wpsSifVersion",
+          "wpsBasicFloor",
         ],
       },
     },
   });
   const s = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
+  const basicFloor = Number(s.wpsBasicFloor ?? 0) || 0;
 
   const records: WpsEmployeeRecord[] = run.items
     // Only employee-linked payslips can be filed — WPS identity lives there.
@@ -53,6 +59,12 @@ export async function buildWpsPayload(
         toNumber(p.overtime) +
         toNumber(p.extraIncome) +
         toNumber(p.grossCommission);
+      // The declared-basic floor relabels between the two earning columns and
+      // changes neither gross nor net.
+      const split = applyBasicFloor(
+        { basicSalary: toNumber(p.basicSalary), extraIncome },
+        basicFloor,
+      );
       return {
         qid: e.qid,
         visaId: e.qid ? null : e.visaId,
@@ -62,9 +74,9 @@ export async function buildWpsPayload(
         salaryFrequency: e.salaryFrequency,
         workingDays: p.workingDays,
         netSalary: toNumber(p.netPaid),
-        basicSalary: toNumber(p.basicSalary),
+        basicSalary: split.basicSalary,
         extraHours: 0,
-        extraIncome,
+        extraIncome: split.extraIncome,
         deductions,
         paymentType: "",
         notes: "",

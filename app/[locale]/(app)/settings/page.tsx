@@ -193,6 +193,7 @@ export default async function SettingsPage({
               wpsPayerBank: settings.wpsPayerBank ?? "",
               wpsPayerIBAN: settings.wpsPayerIBAN ?? "",
               wpsSifVersion: settings.wpsSifVersion ?? "1",
+              wpsBasicFloor: settings.wpsBasicFloor ?? "",
             }}
           />
         </CollapsibleCard>

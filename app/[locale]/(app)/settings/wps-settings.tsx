@@ -17,6 +17,7 @@ export type WpsSettingsValues = {
   wpsPayerBank: string;
   wpsPayerIBAN: string;
   wpsSifVersion: string;
+  wpsBasicFloor: string;
 };
 
 export function WpsSettings({ values }: { values: WpsSettingsValues }) {
@@ -71,6 +72,17 @@ export function WpsSettings({ values }: { values: WpsSettingsValues }) {
         </FormField>
         <FormField label={t("sifVersion")} htmlFor="wps-ver" hint={t("sifVersionHint")}>
           <Input id="wps-ver" name="wpsSifVersion" dir="ltr" defaultValue={values.wpsSifVersion || "1"} />
+        </FormField>
+        <FormField label={t("basicFloor")} htmlFor="wps-floor" hint={t("basicFloorHint")}>
+          <Input
+            id="wps-floor"
+            name="wpsBasicFloor"
+            type="number"
+            min="0"
+            step="50"
+            dir="ltr"
+            defaultValue={values.wpsBasicFloor}
+          />
         </FormField>
       </div>
 
