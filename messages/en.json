@@ -73,7 +73,8 @@
     "clearFilter": "Clear filter",
     "prev": "Previous",
     "refresh": "Refresh",
-    "close": "Close"
+    "close": "Close",
+    "password": "Password"
   },
   "nav": {
     "dashboard": "Dashboard",

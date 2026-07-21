@@ -73,7 +73,8 @@
     "clearFilter": "مسح التصفية",
     "prev": "السابق",
     "refresh": "تحديث",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "password": "كلمة المرور"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
