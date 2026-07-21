@@ -70,7 +70,11 @@
       "runPaid": "A paid run cannot be deleted.",
       "noSelection": "Select at least one employee.",
       "noHireDate": "This employee has no hire date.",
-      "alreadySettled": "An end-of-service settlement already exists for this employee."
+      "alreadySettled": "An end-of-service settlement already exists for this employee.",
+      "invalid_folder": "The folder id is not valid.",
+      "invalid_sa": "Invalid JSON — make sure it is a service-account key containing client_email and private_key.",
+      "notConfigured": "Enter the folder id and key and save first.",
+      "driveFailed": "Drive upload failed"
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -492,7 +496,8 @@
     "earningsOverrideCount": "{n} of {total} teachers have their own mode.",
     "appliedToTeachers": "Applied to {n} teachers.",
     "wpsSettings": "Wage Protection System (WPS)",
-    "siteSettings": "Homepage & website"
+    "siteSettings": "Homepage & website",
+    "backups": "Backups"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -617,6 +622,13 @@
     "runStatus": {
       "DRAFT": "Draft",
       "PAID": "Paid"
+    },
+    "backupTier": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "predeploy": "Pre-deploy",
+      "other": "Other"
     }
   },
   "paymentModes": {
@@ -1279,5 +1291,27 @@
     },
     "erpCtaTitle": "Ready to start?",
     "erpCtaText": "Sign in to the system, or get to know the centre."
+  },
+  "backups": {
+    "serverIntro": "A daily dump at 03:00 on the server, promoted weekly (Mondays) and monthly (1st). Download any copy here.",
+    "file": "File",
+    "tier": "Tier",
+    "size": "Size",
+    "download": "Download",
+    "noBackups": "No backups yet — the first one is created tonight.",
+    "driveTitle": "Copy to Google Drive",
+    "driveConfigured": "Enabled",
+    "guide1": "Open console.cloud.google.com, create (or reuse) a project, and enable the Google Drive API.",
+    "guide2": "Under IAM → Service Accounts create a service account, then under Keys create and download a JSON key.",
+    "guide3": "Create a folder in Google Drive for the backups.",
+    "guide4": "Share that folder with the service account's email ({email}) as Editor — the step everyone forgets.",
+    "guide5": "Copy the folder id from its URL (after /folders/), paste the JSON key below, save, then test.",
+    "guideEmailPlaceholder": "shown here once the key is pasted",
+    "folderId": "Drive folder id",
+    "folderIdHint": "From the folder URL: drive.google.com/drive/folders/⟨id⟩",
+    "saJson": "Service-account key (JSON)",
+    "saJsonHint": "Stored in the database and never shown again. Leave empty to keep the current key, or clear both fields to disable.",
+    "testUpload": "Test upload now",
+    "testOk": "Upload succeeded — look for an edu-erp-test file in the folder."
   }
 }

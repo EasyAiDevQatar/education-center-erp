@@ -70,7 +70,11 @@
       "runPaid": "لا يمكن حذف دفعة مدفوعة.",
       "noSelection": "اختر موظفاً واحداً على الأقل.",
       "noHireDate": "لا يوجد تاريخ تعيين لهذا الموظف.",
-      "alreadySettled": "تم تسجيل تسوية نهاية خدمة لهذا الموظف من قبل."
+      "alreadySettled": "تم تسجيل تسوية نهاية خدمة لهذا الموظف من قبل.",
+      "invalid_folder": "معرف المجلد غير صالح.",
+      "invalid_sa": "ملف JSON غير صالح — تأكد أنه مفتاح حساب خدمة يحوي client_email و private_key.",
+      "notConfigured": "أدخل المعرف والمفتاح واحفظ أولاً.",
+      "driveFailed": "فشل الرفع إلى Drive"
     },
     "price": "السعر",
     "searchPlaceholder": "بحث…",
@@ -492,7 +496,8 @@
     "earningsOverrideCount": "{n} من {total} معلم لديهم وضع خاص.",
     "appliedToTeachers": "تم التطبيق على {n} معلم.",
     "wpsSettings": "نظام حماية الأجور (WPS)",
-    "siteSettings": "الصفحة الرئيسية والموقع"
+    "siteSettings": "الصفحة الرئيسية والموقع",
+    "backups": "النسخ الاحتياطي"
   },
   "integrations": {
     "baseUrl": "رابط الـ API",
@@ -617,6 +622,13 @@
     "runStatus": {
       "DRAFT": "مسودة",
       "PAID": "مدفوعة"
+    },
+    "backupTier": {
+      "daily": "يومية",
+      "weekly": "أسبوعية",
+      "monthly": "شهرية",
+      "predeploy": "قبل التحديث",
+      "other": "أخرى"
     }
   },
   "paymentModes": {
@@ -1279,5 +1291,27 @@
     },
     "erpCtaTitle": "جاهز للانطلاق؟",
     "erpCtaText": "سجّل دخولك للنظام أو تعرف على المركز."
+  },
+  "backups": {
+    "serverIntro": "نسخة يومية عند 3:00 فجراً على الخادم، مع ترقية أسبوعية (كل اثنين) وشهرية (أول الشهر). حمّل أي نسخة من هنا.",
+    "file": "الملف",
+    "tier": "النوع",
+    "size": "الحجم",
+    "download": "تحميل",
+    "noBackups": "لا توجد نسخ بعد — تُنشأ النسخة الأولى في الليلة القادمة.",
+    "driveTitle": "نسخة إلى Google Drive",
+    "driveConfigured": "مُفعّل",
+    "guide1": "افتح console.cloud.google.com وأنشئ مشروعاً (أو استخدم مشروعاً قائماً) وفعّل Google Drive API.",
+    "guide2": "من IAM ثم Service Accounts أنشئ حساب خدمة، ثم من Keys أنشئ مفتاح JSON ونزّله.",
+    "guide3": "أنشئ مجلداً في Google Drive خاصاً بالنسخ.",
+    "guide4": "شارك المجلد مع بريد حساب الخدمة ({email}) بصلاحية Editor — هذه هي الخطوة التي ينساها الجميع.",
+    "guide5": "انسخ معرف المجلد من رابطه (الجزء بعد /folders/) والصق مفتاح JSON بالأسفل ثم احفظ وجرّب.",
+    "guideEmailPlaceholder": "سيظهر هنا بعد لصق المفتاح",
+    "folderId": "معرف مجلد Drive",
+    "folderIdHint": "من رابط المجلد: drive.google.com/drive/folders/⟨المعرف⟩",
+    "saJson": "مفتاح حساب الخدمة (JSON)",
+    "saJsonHint": "يُحفظ مشفّراً ضمن قاعدة البيانات ولا يُعرض مرة أخرى. اتركه فارغاً للإبقاء على الحالي، أو احذف الحقلين معاً للتعطيل.",
+    "testUpload": "اختبار الرفع الآن",
+    "testOk": "نجح الرفع — ابحث عن ملف edu-erp-test في المجلد."
   }
 }

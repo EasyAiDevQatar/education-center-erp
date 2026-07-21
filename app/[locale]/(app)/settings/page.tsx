@@ -16,6 +16,9 @@ import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
 import { WpsSettings } from "./wps-settings";
 import { SiteSettings } from "./site-settings";
+import { BackupSettings } from "./backup-settings";
+import { listBackups } from "@/lib/backups";
+import { parseServiceAccount } from "@/lib/drive";
 import { DEFAULT_EARNINGS_MODE, isEarningsMode } from "@/lib/earnings-mode";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
@@ -105,6 +108,8 @@ export default async function SettingsPage({
   }));
 
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
+  const backups = await listBackups();
+  const driveSa = settings.backupDriveSa ? parseServiceAccount(settings.backupDriveSa) : null;
   const matrixRows: MatrixRow[] = matrix.map((m) => ({
     id: m.gradeLevel.id,
     code: m.gradeLevel.code,
@@ -201,6 +206,15 @@ export default async function SettingsPage({
               siteBranches: settings.siteBranches ?? "",
               siteWhatsApp: settings.siteWhatsApp ?? "",
             }}
+          />
+        </CollapsibleCard>
+
+        <CollapsibleCard title={t("backups")} className="lg:col-span-2">
+          <BackupSettings
+            backups={backups}
+            driveConfigured={!!driveSa}
+            driveEmail={driveSa?.client_email ?? null}
+            driveFolder={settings.backupDriveFolder ?? ""}
           />
         </CollapsibleCard>
 
