@@ -635,7 +635,8 @@
     "printShowAmounts": "Show amounts",
     "printShowLevel": "Show grade level",
     "printSummary": "{teachers} teachers across {columns} columns will be printed.",
-    "printCounts": "{teachers} teachers · {sessions} sessions"
+    "printCounts": "{teachers} teachers · {sessions} sessions",
+    "printShowHomeCode": "Show home code"
   },
   "users": {
     "add": "Add user",

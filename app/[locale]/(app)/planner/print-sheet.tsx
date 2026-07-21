@@ -28,6 +28,9 @@ export type PrintOpts = {
   hideCancelled: boolean;
   showAmounts: boolean;
   showLevel: boolean;
+  /** The student's home location code on home visits. The visit itself is
+      always marked; this is the driving detail, which not every sheet wants. */
+  showHomeCode: boolean;
 };
 
 export function defaultPrintOpts(
@@ -45,6 +48,7 @@ export function defaultPrintOpts(
     hideCancelled: true,
     showAmounts: false,
     showLevel: false,
+    showHomeCode: true,
   };
 }
 
@@ -195,6 +199,7 @@ export function PlannerPrintDialog({
             {(
               [
                 ["hideCancelled", t("printHideCancelled")],
+                ["showHomeCode", t("printShowHomeCode")],
                 ["showAmounts", t("printShowAmounts")],
                 ["showLevel", t("printShowLevel")],
               ] as const
@@ -322,7 +327,7 @@ export function PlannerPrintSheet({
                     {s.location === "HOME" && (
                       <div className="truncate">
                         {te("location.HOME")}
-                        {s.homeCode ? ` · ${s.homeCode}` : ""}
+                        {opts.showHomeCode && s.homeCode ? ` · ${s.homeCode}` : ""}
                       </div>
                     )}
                     {(opts.showLevel || opts.showAmounts) && (

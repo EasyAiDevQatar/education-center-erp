@@ -635,7 +635,8 @@
     "printShowAmounts": "إظهار المبالغ",
     "printShowLevel": "إظهار المرحلة الدراسية",
     "printSummary": "ستُطبع {teachers} معلم/ة في {columns} عمود.",
-    "printCounts": "{teachers} معلم/ة · {sessions} حصة"
+    "printCounts": "{teachers} معلم/ة · {sessions} حصة",
+    "printShowHomeCode": "إظهار كود المنزل"
   },
   "users": {
     "add": "إضافة مستخدم",
