@@ -25,8 +25,10 @@ export type NavItem = {
   key: string;
   icon: LucideIcon;
   roles: Role[];
-  /** section key under `nav.sections` */
-  section: "operations" | "finance" | "admin";
+  /** section key under `nav.sections`. "transport" is reserved for the
+      coming Trips & Vehicles module — a section with no items renders
+      nothing, so declaring it now costs zero pixels. */
+  section: "operations" | "people" | "finance" | "hr" | "transport" | "admin";
   /** Nested links, shown indented while the parent branch is active. */
   children?: { href: string; key: string }[];
 };
@@ -54,10 +56,10 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { href: "/sessions", key: "sessions", icon: CalendarDays, roles: STAFF, section: "operations" },
-  { href: "/students", key: "students", icon: Users, roles: STAFF, section: "operations" },
-  { href: "/teachers", key: "teachers", icon: GraduationCap, roles: STAFF, section: "operations" },
-  { href: "/guardians", key: "guardians", icon: UserRound, roles: STAFF, section: "operations" },
-  { href: "/leads", key: "leads", icon: UserPlus, roles: STAFF, section: "operations" },
+  { href: "/students", key: "students", icon: Users, roles: STAFF, section: "people" },
+  { href: "/teachers", key: "teachers", icon: GraduationCap, roles: STAFF, section: "people" },
+  { href: "/guardians", key: "guardians", icon: UserRound, roles: STAFF, section: "people" },
+  { href: "/leads", key: "leads", icon: UserPlus, roles: STAFF, section: "people" },
   { href: "/payments", key: "payments", icon: Receipt, roles: STAFF, section: "finance" },
   { href: "/packages", key: "packages", icon: Package, roles: STAFF, section: "finance" },
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },
@@ -80,7 +82,7 @@ export const NAV_ITEMS: NavItem[] = [
     key: "hr",
     icon: BriefcaseBusiness,
     roles: ["ADMIN"],
-    section: "admin",
+    section: "hr",
     children: [
       { href: "/hr", key: "hrRegister" },
       { href: "/hr/leave", key: "hrLeave" },

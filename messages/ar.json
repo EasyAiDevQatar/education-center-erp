@@ -112,8 +112,11 @@
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
     "sections": {
-      "operations": "العمليات",
+      "operations": "التشغيل اليومي",
+      "people": "الأشخاص",
       "finance": "المالية",
+      "hr": "الموارد البشرية",
+      "transport": "النقل",
       "admin": "الإدارة"
     },
     "planner": "المخطط اليومي",

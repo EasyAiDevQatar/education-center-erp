@@ -11,7 +11,9 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import { Button } from "@/components/ui/button";
 
-const SECTIONS = ["operations", "finance", "admin"] as const;
+// Render order. Empty sections (e.g. transport, until Trips/Vehicles ship)
+// produce nothing.
+const SECTIONS = ["operations", "people", "finance", "hr", "transport", "admin"] as const;
 
 export function AppShell({
   role,

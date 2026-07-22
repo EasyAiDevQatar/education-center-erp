@@ -404,6 +404,22 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   // Seeded last so teacher links and dates can lean on everything above.
   await ensureLeaveTypes();
 
+  // WPS establishment settings — demo values so the SIF export works out of
+  // the box on seeded data. Only filled where EMPTY: a seed run on a system
+  // whose real EID and IBAN are configured must never clobber them.
+  for (const [key, value] of [
+    ["wpsEmployerEID", "10007230"],
+    ["wpsPayerEID", "10007230"],
+    ["wpsPayerBank", "QNB"],
+    ["wpsPayerIBAN", "QA87QNBAQAQAXXX00000693123456"],
+    ["wpsSifVersion", "1"],
+  ] as const) {
+    const existing = await db.setting.findUnique({ where: { key } });
+    if (!existing?.value) {
+      await db.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+    }
+  }
+
   const HR_TITLES = [
     ["موظفة استقبال", "RECEPTION"],
     ["محاسب", "ADMIN"],
@@ -413,6 +429,15 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   ] as const;
   const HR_BANKS = ["QNB", "DBQ", "CBQ"] as const;
   const employeeIds: string[] = [];
+  // employeeNo is unique — a reseed on top of existing employees must continue
+  // the sequence, not restart at EMP101 and crash.
+  const existingNos = await db.employee.findMany({ select: { employeeNo: true } });
+  let nextEmpNo =
+    101 +
+    existingNos.reduce((max, r) => {
+      const m = /^EMP(\d+)$/.exec(r.employeeNo ?? "");
+      return m ? Math.max(max, Number(m[1]) - 100) : max;
+    }, 0);
   // First few employees are the seeded teachers themselves — the case the HR
   // module was built around (one payslip combining salary + commission).
   const linkedTeacherCount = Math.min(3, n.employees, teacherIds.length);
@@ -435,14 +460,17 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         name: teacher?.name ?? `${jobTitle} ${i + 1}`,
         nameEn: teacher?.nameEn ?? null,
         teacherId: linkedTeacherId,
-        employeeNo: `EMP${String(101 + i)}`,
+        employeeNo: `EMP${String(nextEmpNo++)}`,
         jobTitle,
         department,
         // Synthetic but shape-valid: 11-digit QID, 29-char Qatari IBAN — so
         // the WPS export demo validates instead of tripping on the fixtures.
         qid: `284${String(10000000 + Math.floor(rand() * 89999999))}`,
         bankShortName: bank,
-        iban: `QA58${bank.padEnd(4, "X")}QAQAXXX000000${String(100000 + Math.floor(rand() * 899999))}`,
+        // 29 chars exactly (QA + 2 check digits + 25): the SIF validator
+        // rejects anything else, and the whole point of seeding is a demo
+        // export that passes.
+        iban: `QA58${bank.padEnd(4, "X")}QAQAXXX00000000${String(100000 + Math.floor(rand() * 899999))}`,
         basicSalary: linkedTeacherId ? pick([2000, 3000, 4000]) : pick([2500, 3500, 4500]),
         allowances: pick([0, 0, 500, 800]),
         hireDate: hire,

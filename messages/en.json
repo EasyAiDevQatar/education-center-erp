@@ -112,8 +112,11 @@
     "settings": "Settings",
     "logout": "Log out",
     "sections": {
-      "operations": "Operations",
+      "operations": "Daily operations",
+      "people": "People",
       "finance": "Finance",
+      "hr": "Human resources",
+      "transport": "Transport",
       "admin": "Administration"
     },
     "planner": "Daily planner",
