@@ -8,6 +8,7 @@ import { writeAudit } from "@/lib/audit";
 import { WIPE_PHRASE, SEED_SPEC, type SeedKey } from "@/lib/data-zone";
 import { ensureLeaveTypes } from "@/lib/leave-data";
 import { LEAD_STATUSES } from "@/lib/leads";
+import { hashPassword } from "@/lib/password";
 
 export type DataState = {
   ok?: boolean;
@@ -254,6 +255,10 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const price = priceOf(st.gradeLevelId, location);
     const status =
       dayOffset < 0 ? (rand() < 0.85 ? "COMPLETED" : "NO_SHOW") : dayOffset === 0 ? "DRAFT" : "SCHEDULED";
+    // Completed sessions carry attendance stamps so the check-in history and
+    // actual-hours reports have data to show.
+    const attended = status === "COMPLETED";
+    const checkOut = new Date(date.getTime() + hours * 3600_000);
     await db.session.create({
       data: {
         date,
@@ -266,11 +271,51 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         total: price * hours,
         paymentStatus: "UNPAID",
         status,
+        studentCheckInAt: attended ? date : null,
+        studentCheckOutAt: attended ? checkOut : null,
+        teacherCheckInAt: attended ? date : null,
+        checkInMethod: attended ? pick(["KIOSK", "KIOSK", "QR", "MANUAL"]) : null,
+        actualHours: attended ? hours : null,
       },
     });
     sessions++;
   }
   summary.sessions = sessions;
+
+  // --- today's roster: confirmed sessions around "now" in live check-in
+  // states, so the attendance screens demo without anyone scanning a card ---
+  let checkins = 0;
+  for (let i = 0; i < n.checkins && students.length && teacherIds.length; i++) {
+    const st = pick(students);
+    // Spread starts from 2h ago to 3h ahead of the actual current time.
+    const start = new Date(today.getTime() + (-120 + i * (300 / Math.max(1, n.checkins))) * 60_000);
+    const hours = pick([1, 1, 1.5]);
+    const end = new Date(start.getTime() + hours * 3600_000);
+    const started = start.getTime() <= today.getTime();
+    const finished = end.getTime() <= today.getTime();
+    const price = priceOf(st.gradeLevelId, "CENTER");
+    await db.session.create({
+      data: {
+        date: start,
+        studentId: st.id,
+        teacherId: pick(teacherIds),
+        gradeLevelId: st.gradeLevelId,
+        location: "CENTER",
+        hours,
+        pricePerHour: price,
+        total: price * hours,
+        paymentStatus: "UNPAID",
+        status: finished ? "COMPLETED" : started ? "CHECKED_IN" : "SCHEDULED",
+        studentCheckInAt: started ? start : null,
+        studentCheckOutAt: finished ? end : null,
+        teacherCheckInAt: started ? start : null,
+        checkInMethod: started ? pick(["KIOSK", "KIOSK", "QR"]) : null,
+        actualHours: finished ? hours : null,
+      },
+    });
+    checkins++;
+  }
+  summary.checkins = checkins;
 
   // --- terms (payroll TERM mode needs these) ---
   let terms = 0;
@@ -340,13 +385,13 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   summary.templates = templates;
 
   // --- leads (spread across the pipeline, some follow-ups already overdue) ---
-  let leads = 0;
+  const seededLeads: { id: string; name: string; phone: string | null; gradeLevelId: string | null; status: string }[] = [];
   for (let i = 0; i < n.leads; i++) {
     const status = LEAD_STATUSES[i % LEAD_STATUSES.length];
     const follow = new Date(today);
     // Every third lead is overdue so the board's highlighting is visible.
     follow.setUTCDate(follow.getUTCDate() + (i % 3 === 0 ? -Math.ceil(rand() * 5) : Math.ceil(rand() * 10)));
-    await db.lead.create({
+    const lead = await db.lead.create({
       data: {
         name: nameAt(STUDENT_NAMES, i + 100),
         phone: `3333${String(1000 + i).slice(-4)}`,
@@ -356,9 +401,86 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         followUpAt: new Date(follow.toISOString().slice(0, 10) + "T00:00:00.000Z"),
       },
     });
-    leads++;
+    seededLeads.push({ id: lead.id, name: lead.name, phone: lead.phone, gradeLevelId: lead.gradeLevelId, status });
   }
-  summary.leads = leads;
+  summary.leads = seededLeads.length;
+
+  // --- trial sessions: mirror bookTrialSession — inactive placeholder
+  // student, zero-price DRAFT session, lead moved to TRIAL ---
+  let trials = 0;
+  // Early-pipeline leads first: booking a trial for a WON lead makes no sense.
+  const trialCandidates = [
+    ...seededLeads.filter((l) => l.status === "NEW" || l.status === "CONTACTED"),
+    ...seededLeads.filter((l) => l.status === "TRIAL"),
+  ];
+  for (let i = 0; i < n.trialSessions && trialCandidates.length && teacherIds.length && levels.length; i++) {
+    const lead = trialCandidates[i % trialCandidates.length];
+    if (i >= trialCandidates.length) break; // one trial per lead
+    const gradeLevelId = lead.gradeLevelId ?? levels[0].id;
+    const placeholder = await db.student.create({
+      data: {
+        name: lead.name,
+        phone: lead.phone,
+        gradeLevelId,
+        active: false,
+        notes: `TRIAL — lead ${lead.id}`,
+      },
+    });
+    await db.lead.update({
+      where: { id: lead.id },
+      data: { studentId: placeholder.id, status: "TRIAL" },
+    });
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() + 1 + i); // upcoming days, one per day
+    const start = new Date(`${d.toISOString().slice(0, 10)}T${String(15 + (i % 4)).padStart(2, "0")}:00:00.000Z`);
+    await db.session.create({
+      data: {
+        date: start,
+        studentId: placeholder.id,
+        teacherId: pick(teacherIds),
+        gradeLevelId,
+        location: "CENTER",
+        hours: 1,
+        pricePerHour: 0,
+        total: 0,
+        paymentStatus: "PAID", // nothing to collect
+        status: "DRAFT",
+        isTrial: true,
+        leadId: lead.id,
+      },
+    });
+    trials++;
+  }
+  summary.trialSessions = trials;
+
+  // --- portal demo accounts (teacher + parent), password demo1234 ---
+  // Upserted by email so a reseed relinks them to the freshly seeded people
+  // instead of leaving them pointing at deleted rows.
+  let portalUsers = 0;
+  if (n.portalUsers > 0) {
+    const portalHash = await hashPassword("demo1234");
+    for (let i = 0; i < n.portalUsers; i++) {
+      const k = Math.floor(i / 2);
+      const isTeacher = i % 2 === 0;
+      if (isTeacher && !teacherIds[k]) continue;
+      if (!isTeacher && !guardianIds[k]) continue;
+      const email = isTeacher ? `teacher${k + 1}@demo.qa` : `parent${k + 1}@demo.qa`;
+      const linked = isTeacher
+        ? await db.teacher.findUnique({ where: { id: teacherIds[k] } })
+        : await db.guardian.findUnique({ where: { id: guardianIds[k] } });
+      const data = {
+        name: linked?.name ?? email,
+        role: isTeacher ? "TEACHER" : "PARENT",
+        active: true,
+        passwordHash: portalHash,
+        teacherId: isTeacher ? teacherIds[k] : null,
+        guardianId: isTeacher ? null : guardianIds[k],
+      };
+      await db.user.upsert({ where: { email }, create: { email, ...data }, update: data });
+      portalUsers++;
+    }
+  }
+  summary.portalUsers = portalUsers;
 
   // --- payments ---
   const existingMax = await db.payment.findMany({ select: { receiptNo: true } });

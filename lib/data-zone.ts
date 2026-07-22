@@ -18,11 +18,17 @@ export const SEED_SPEC = [
   { key: "terms", max: 12, default: 2 },
   { key: "packages", max: 200, default: 5 },
   { key: "sessions", max: 2000, default: 60 },
+  // Today's roster: sessions stamped checked-in/completed so the attendance
+  // screens are alive in a demo, not empty until someone scans a card.
+  { key: "checkins", max: 100, default: 8 },
   { key: "payments", max: 1000, default: 20 },
   { key: "expenses", max: 500, default: 12 },
   { key: "availability", max: 500, default: 20 },
   { key: "templates", max: 500, default: 12 },
   { key: "leads", max: 500, default: 10 },
+  { key: "trialSessions", max: 50, default: 3 },
+  // Demo teacher/parent portal accounts (password: demo1234).
+  { key: "portalUsers", max: 20, default: 2 },
   // HR module
   { key: "employees", max: 100, default: 6 },
   { key: "employeeDocs", max: 300, default: 10 },
