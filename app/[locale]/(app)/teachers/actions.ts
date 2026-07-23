@@ -65,15 +65,39 @@ export async function saveTeacher(
   if (!parsed.success) return { error: "invalid" };
 
   const data = parsed.data;
+  // The subjects a teacher teaches — a multi-select, so the submitted list is
+  // the desired state and is written replace-all.
+  const subjectIds = formData.getAll("subjectIds").map(String).filter(Boolean);
+
+  let teacherId: string;
   if (id) {
     await db.teacher.update({ where: { id }, data });
     await writeAudit("Teacher", id, "UPDATE", { after: data });
+    teacherId = id;
   } else {
     const created = await db.teacher.create({ data });
     await writeAudit("Teacher", created.id, "CREATE", { after: data });
+    teacherId = created.id;
   }
+  await setTeacherSubjects(teacherId, subjectIds);
   revalidate(locale);
   return { ok: true };
+}
+
+/** Replace a teacher's subject links with exactly the submitted set. */
+async function setTeacherSubjects(teacherId: string, subjectIds: string[]) {
+  await db.$transaction(async (tx) => {
+    await tx.teacherSubject.deleteMany({
+      where: { teacherId, subjectId: { notIn: subjectIds.length ? subjectIds : ["__none__"] } },
+    });
+    for (const subjectId of subjectIds) {
+      await tx.teacherSubject.upsert({
+        where: { teacherId_subjectId: { teacherId, subjectId } },
+        create: { teacherId, subjectId },
+        update: {},
+      });
+    }
+  });
 }
 
 export async function deleteTeacher(

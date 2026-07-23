@@ -221,7 +221,10 @@
     "startTime": "Start time",
     "priceAuto": "Price is calculated automatically from grade level and location",
     "searchPlaceholder": "Search by student, teacher or date…",
-    "assignedTag": "assigned"
+    "assignedTag": "assigned",
+    "subject": "Subject",
+    "subjectHint": "Optional — shown on the booking card when set.",
+    "subjectNone": "— No subject —"
   },
   "group": {
     "title": "Group booking",
@@ -404,7 +407,10 @@
     "earningsMode": "Earnings basis",
     "earningsModeDefault": "Follow centre default",
     "earningsModeHint": "Salary only, commission only, or both.",
-    "paymentModeHint": "How often the payout is cut."
+    "paymentModeHint": "How often the payout is cut.",
+    "subjects": "Subjects",
+    "subjectsHint": "Subjects the teacher teaches — shown when booking.",
+    "noSubjects": "No subjects selected"
   },
   "guardians": {
     "title": "Guardians",
@@ -531,7 +537,8 @@
     "siteSettings": "Homepage & website",
     "backups": "Backups",
     "accountingSettings": "Accounting module",
-    "transportSettings": "Transport module"
+    "transportSettings": "Transport module",
+    "subjects": "Subjects"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -1550,5 +1557,14 @@
     "pingDaysHint": "Older tracking points are deleted automatically.",
     "trackingVisibility": "Who sees driver locations",
     "trackingVisibilityHint": "This is staff location data — share it as narrowly as possible."
+  },
+  "subjects": {
+    "title": "Subjects",
+    "add": "Add subject",
+    "edit": "Edit subject",
+    "name": "Subject",
+    "teachers": "Teachers",
+    "manageHint": "Subjects that can be chosen when booking a lesson.",
+    "sortOrder": "Order"
   }
 }

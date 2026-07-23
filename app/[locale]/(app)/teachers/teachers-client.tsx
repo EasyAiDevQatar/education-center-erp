@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, CircleUserRound } from "lucide-react";
@@ -11,6 +11,7 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -45,9 +46,15 @@ export type TeacherRow = {
   earningsMode: string | null;
   active: boolean;
   notes: string | null;
+  /** Subject ids the teacher teaches (for the edit form). */
+  subjectIds: string[];
+  /** Localised subject names, for the table badges. */
+  subjectLabels: string[];
 };
 
-function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
+export type SubjectOpt = { id: string; label: string };
+
+function TeacherFields({ teacher, subjects }: { teacher?: TeacherRow; subjects: SubjectOpt[] }) {
   const t = useTranslations("teachers");
   const tc = useTranslations("common");
   const tm = useTranslations("paymentModes");
@@ -65,6 +72,7 @@ function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
       <FormField label={tc("phone")} htmlFor="phone">
         <Input id="phone" name="phone" dir="ltr" defaultValue={teacher?.phone ?? ""} />
       </FormField>
+      <SubjectsPicker subjects={subjects} initial={teacher?.subjectIds ?? []} />
       <FormField label={t("commissionPct")} htmlFor="commissionPct">
         <Input
           id="commissionPct"
@@ -137,17 +145,36 @@ function TeacherFields({ teacher }: { teacher?: TeacherRow }) {
   );
 }
 
-export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
+function SubjectsPicker({ subjects, initial }: { subjects: SubjectOpt[]; initial: string[] }) {
+  const t = useTranslations("teachers");
+  const [ids, setIds] = useState<string[]>(initial);
+  if (subjects.length === 0) return null;
+  return (
+    <FormField label={t("subjects")} htmlFor="subjectIds" hint={t("subjectsHint")}>
+      <MultiSelect
+        id="subjectIds"
+        name="subjectIds"
+        options={subjects.map((s) => ({ value: s.id, label: s.label }))}
+        value={ids}
+        onChange={setIds}
+        placeholder={t("noSubjects")}
+      />
+    </FormField>
+  );
+}
+
+export function TeachersClient({ teachers, subjects }: { teachers: TeacherRow[]; subjects: SubjectOpt[] }) {
   const t = useTranslations("teachers");
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const search = useTableSearch(teachers, (x) => [nameSearchText(x), x.phone, x.notes]);
+  const search = useTableSearch(teachers, (x) => [nameSearchText(x), x.phone, x.notes, ...x.subjectLabels]);
   const columns = useMemo<ColumnDef<TeacherRow>[]>(
     () => [
       { key: "name", label: tc("name"), value: (x) => displayName(x, locale) },
       { key: "phone", label: tc("phone"), value: (x) => x.phone },
       { key: "commissionPct", label: t("commissionPct"), type: "number", value: (x) => x.commissionPct },
+      { key: "subjects", label: t("subjects"), value: (x) => x.subjectLabels.join("، ") },
       {
         key: "status",
         label: tc("status"),
@@ -176,7 +203,7 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
         <EntityDialog
           title={t("add")}
           action={saveTeacher.bind(null, locale, null)}
-          fields={<TeacherFields />}
+          fields={<TeacherFields subjects={subjects} />}
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
@@ -194,7 +221,7 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -204,6 +231,17 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
                 <TableCell className="font-medium">{displayName(teacher, locale)}</TableCell>
                 <TableCell className="text-start"><span dir="ltr">{teacher.phone ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{teacher.commissionPct}%</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {teacher.subjectLabels.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      teacher.subjectLabels.map((label) => (
+                        <Badge key={label} variant="default">{label}</Badge>
+                      ))
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   {teacher.active ? (
                     <Badge variant="success">{tc("active")}</Badge>
@@ -221,7 +259,7 @@ export function TeachersClient({ teachers }: { teachers: TeacherRow[] }) {
                     <EntityDialog
                       title={t("edit")}
                       action={saveTeacher.bind(null, locale, teacher.id)}
-                      fields={<TeacherFields teacher={teacher} />}
+                      fields={<TeacherFields teacher={teacher} subjects={subjects} />}
                       trigger={
                         <Button variant="ghost" size="icon" aria-label={tc("edit")}>
                           <Pencil className="size-4" />

@@ -11,6 +11,7 @@ import { PROVIDERS, maskSecret } from "@/lib/integrations/registry";
 import { CenterProfileForm } from "./center-profile-form";
 import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
 import { CategoriesManager, type CategoryRow } from "./categories-manager";
+import { SubjectsManager, type SubjectRow } from "./subjects-manager";
 import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
 import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
@@ -51,11 +52,15 @@ export default async function SettingsPage({
   const tatt = await getTranslations("attendanceSettings");
   const tyear = await getTranslations("years");
 
-  const [settingsRows, years, matrix, categories, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
+  const [settingsRows, years, matrix, categories, subjects, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
     listAcademicYears(),
     currentPriceMatrix(),
     db.expenseCategory.findMany({ orderBy: { sortOrder: "asc" } }),
+    db.subject.findMany({
+      orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
+      include: { _count: { select: { teachers: true } } },
+    }),
     db.integration.findMany(),
     db.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 300 }),
     db.term.findMany({ orderBy: { startDate: "desc" } }),
@@ -126,6 +131,15 @@ export default async function SettingsPage({
     nameEn: c.nameEn,
     sortOrder: c.sortOrder,
     active: c.active,
+  }));
+
+  const subjectRows: SubjectRow[] = subjects.map((sbj) => ({
+    id: sbj.id,
+    nameAr: sbj.nameAr,
+    nameEn: sbj.nameEn,
+    sortOrder: sbj.sortOrder,
+    active: sbj.active,
+    teacherCount: sbj._count.teachers,
   }));
 
   const now = new Date();
@@ -290,6 +304,10 @@ export default async function SettingsPage({
         <CollapsibleCard title={t("priceMatrix")}>
             <PriceMatrixEditor rows={matrixRows} />
           </CollapsibleCard>
+
+        <CollapsibleCard title={t("subjects")} className="lg:col-span-2">
+          <SubjectsManager subjects={subjectRows} />
+        </CollapsibleCard>
 
         <CollapsibleCard title={t("expenseCategories")} className="lg:col-span-2">
             <CategoriesManager categories={catRows} />

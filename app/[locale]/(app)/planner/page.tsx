@@ -40,7 +40,7 @@ export default async function PlannerPage({
     await Promise.all([
       db.session.findMany({
         where: { date: { gte: start, lt: end } },
-        include: { student: true, gradeLevel: true },
+        include: { student: true, gradeLevel: true, subject: true },
         orderBy: { date: "asc" },
       }),
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -80,6 +80,7 @@ export default async function PlannerPage({
     status: s.status,
     total: toNumber(s.total),
     homeCode: s.student.homeCode,
+    subjectLabel: s.subject ? (locale === "ar" ? s.subject.nameAr : s.subject.nameEn) : null,
     isTrial: s.isTrial,
   }));
 

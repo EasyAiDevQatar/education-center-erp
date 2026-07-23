@@ -79,6 +79,7 @@ model Teacher {
   availability TeacherAvailability[]
   templates    PlannerTemplate[]
   students     StudentTeacher[]
+  subjects     TeacherSubject[]
   employee     Employee?
 
   createdAt DateTime @default(now())
@@ -238,6 +239,11 @@ model Session {
   teacher      Teacher?   @relation(fields: [teacherId], references: [id])
   gradeLevelId String
   gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  /// Optional at booking. When set, shown on the booking card. A session's
+  /// subject is independent of the teacher's subject list — a cover lesson can
+  /// be any subject — so this is not constrained to the teacher's subjects.
+  subjectId    String?
+  subject      Subject?   @relation(fields: [subjectId], references: [id])
   location     String     // CENTER | HOME
   hours        Decimal
   pricePerHour Decimal
@@ -346,6 +352,40 @@ model PaymentAllocation {
 
   @@unique([paymentId, sessionId])
   @@index([sessionId])
+}
+
+/// A subject a lesson can be about (رياضيات، فيزياء، …). A reference table like
+/// grade levels and expense categories: managed in Settings, shown in the
+/// booking form, and surfaced on the booking card when chosen.
+model Subject {
+  id        String  @id @default(cuid())
+  nameAr    String
+  nameEn    String
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  teachers TeacherSubject[]
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+}
+
+/// Which subjects a teacher teaches. A teacher may teach one or many; a subject
+/// may be taught by many teachers. Explicit join, matching StudentTeacher.
+model TeacherSubject {
+  id        String  @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([teacherId, subjectId])
+  @@index([subjectId])
 }
 
 model ExpenseCategory {

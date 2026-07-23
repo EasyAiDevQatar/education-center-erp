@@ -26,6 +26,7 @@ const schema = z.object({
   paymentStatus: z.enum(PAYMENT_STATUSES).default("UNPAID"),
   notes: z.string().trim().optional().nullable(),
   packageId: z.string().trim().optional().nullable(),
+  subjectId: z.string().trim().optional().nullable(),
 });
 
 async function guard() {
@@ -52,6 +53,7 @@ export async function saveSession(
     paymentStatus: formData.get("paymentStatus") || "UNPAID",
     notes: formData.get("notes") || null,
     packageId: formData.get("packageId") || null,
+    subjectId: formData.get("subjectId") || null,
   });
   if (!parsed.success) return { error: "invalid" };
 
@@ -78,6 +80,7 @@ export async function saveSession(
     paymentStatus: d.paymentStatus,
     notes: d.notes,
     packageId: d.packageId || null,
+    subjectId: d.subjectId || null,
   };
 
   if (id) {

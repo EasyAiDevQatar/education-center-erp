@@ -30,13 +30,13 @@ export default async function SessionsPage({
     select: { id: true },
   });
 
-  const [sessions, students, teachers, levels, matrix, settingsRows, activePackages] =
+  const [sessions, students, teachers, levels, matrix, settingsRows, activePackages, subjectList, teacherSubjectRows] =
     await Promise.all([
       db.session.findMany({
         where: sessionWhere(filters),
         orderBy: { date: "desc" },
         take: 500,
-        include: { student: true, teacher: true, gradeLevel: true },
+        include: { student: true, teacher: true, gradeLevel: true, subject: true },
       }),
       db.student.findMany({
       where: { active: true },
@@ -52,6 +52,11 @@ export default async function SessionsPage({
         include: { student: true },
         orderBy: { purchasedAt: "desc" },
       }),
+      db.subject.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
+      }),
+      db.teacherSubject.findMany({ select: { teacherId: true, subjectId: true } }),
     ]);
 
   const currency = settingsRows[0]?.value ?? "QAR";
@@ -68,6 +73,8 @@ export default async function SessionsPage({
     studentId: s.studentId,
     teacherId: s.teacherId ?? "",
     gradeLevelId: s.gradeLevelId,
+    subjectId: s.subjectId,
+    subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
     location: s.location as "CENTER" | "HOME",
     hours: toNumber(s.hours),
     paymentStatus: s.paymentStatus,
@@ -94,6 +101,11 @@ export default async function SessionsPage({
     }`,
   }));
   const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }));
+  const subjectOpts = subjectList.map((sbj) => ({ id: sbj.id, label: label(sbj.nameAr, sbj.nameEn) }));
+  const teacherSubjectIds: Record<string, string[]> = {};
+  for (const r of teacherSubjectRows) {
+    (teacherSubjectIds[r.teacherId] ??= []).push(r.subjectId);
+  }
   const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));
 
   // Export link carries the current filters.
@@ -112,6 +124,8 @@ export default async function SessionsPage({
         matrix={matrixMap}
         currency={currency}
         packages={packageOpts}
+        subjects={subjectOpts}
+        teacherSubjectIds={teacherSubjectIds}
         filters={filters}
         exportHref={exportHref}
       />

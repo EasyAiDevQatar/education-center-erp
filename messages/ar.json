@@ -221,7 +221,10 @@
     "startTime": "وقت البدء",
     "priceAuto": "يُحتسب السعر تلقائياً من المرحلة والمكان",
     "searchPlaceholder": "ابحث بالطالب أو المعلم أو التاريخ…",
-    "assignedTag": "معلم الطالب"
+    "assignedTag": "معلم الطالب",
+    "subject": "المادة",
+    "subjectHint": "اختياري — تظهر على بطاقة الحجز عند تحديدها.",
+    "subjectNone": "— بدون مادة —"
   },
   "group": {
     "title": "حجز جماعي",
@@ -404,7 +407,10 @@
     "earningsMode": "طريقة الاحتساب",
     "earningsModeDefault": "اتّباع افتراضي المركز",
     "earningsModeHint": "راتب فقط، عمولة فقط، أو الاثنان.",
-    "paymentModeHint": "كل كم يُصرف المستحق."
+    "paymentModeHint": "كل كم يُصرف المستحق.",
+    "subjects": "المواد",
+    "subjectsHint": "المواد التي يدرّسها المعلم — تظهر عند الحجز.",
+    "noSubjects": "لا توجد مواد محددة"
   },
   "guardians": {
     "title": "أولياء الأمور",
@@ -531,7 +537,8 @@
     "siteSettings": "الصفحة الرئيسية والموقع",
     "backups": "النسخ الاحتياطي",
     "accountingSettings": "وحدة الحسابات",
-    "transportSettings": "وحدة النقل"
+    "transportSettings": "وحدة النقل",
+    "subjects": "المواد"
   },
   "integrations": {
     "baseUrl": "رابط الـ API",
@@ -1550,5 +1557,14 @@
     "pingDaysHint": "تُحذف نقاط التتبع الأقدم تلقائياً.",
     "trackingVisibility": "من يرى مواقع السائقين",
     "trackingVisibilityHint": "بيانات موقع الموظفين — شاركها بأضيق نطاق ممكن."
+  },
+  "subjects": {
+    "title": "المواد",
+    "add": "إضافة مادة",
+    "edit": "تعديل مادة",
+    "name": "المادة",
+    "teachers": "المعلمون",
+    "manageHint": "المواد التي يمكن اختيارها عند حجز حصة.",
+    "sortOrder": "الترتيب"
   }
 }

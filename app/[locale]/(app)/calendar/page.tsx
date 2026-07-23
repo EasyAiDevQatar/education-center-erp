@@ -70,7 +70,7 @@ export default async function CalendarPage({
   const rangeStart = parseUTC(days[0]);
   const rangeEnd = addDays(parseUTC(days[days.length - 1]), 1);
 
-  const [sessions, students, teachers, levels, matrix, settingsRows] =
+  const [sessions, students, teachers, levels, matrix, settingsRows, subjectList, teacherSubjectRows] =
     await Promise.all([
       db.session.findMany({
         where: {
@@ -78,7 +78,7 @@ export default async function CalendarPage({
           ...(teacherFilter ? { teacherId: teacherFilter } : {}),
           ...(studentFilter ? { studentId: studentFilter } : {}),
         },
-        include: { student: true, teacher: true, gradeLevel: true },
+        include: { student: true, teacher: true, gradeLevel: true, subject: true },
         orderBy: { date: "asc" },
       }),
       db.student.findMany({
@@ -90,6 +90,11 @@ export default async function CalendarPage({
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
       db.setting.findMany({ where: { key: { in: ["currency", "centerName"] } } }),
+      db.subject.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
+      }),
+      db.teacherSubject.findMany({ select: { teacherId: true, subjectId: true } }),
     ]);
 
   const settingsMap = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
@@ -113,6 +118,8 @@ export default async function CalendarPage({
       status: s.status,
       paymentStatus: s.paymentStatus,
       total: toNumber(s.total),
+      subjectId: s.subjectId,
+      subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
     };
   });
 
@@ -127,6 +134,9 @@ export default async function CalendarPage({
     studyLocation: s.studyLocation as "CENTER" | "HOME",
   }));
   const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }));
+  const subjectOpts = subjectList.map((sbj) => ({ id: sbj.id, label: label(sbj.nameAr, sbj.nameEn) }));
+  const teacherSubjectIds: Record<string, string[]> = {};
+  for (const r of teacherSubjectRows) (teacherSubjectIds[r.teacherId] ??= []).push(r.subjectId);
   const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));
 
   return (
@@ -142,6 +152,8 @@ export default async function CalendarPage({
         teachers={teacherOpts}
         levels={levelOpts}
         matrix={matrixMap}
+        subjects={subjectOpts}
+        teacherSubjectIds={teacherSubjectIds}
         teacherFilter={teacherFilter}
         studentFilter={studentFilter}
         centerName={settingsMap.centerName ?? ""}

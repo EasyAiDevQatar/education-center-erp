@@ -42,6 +42,7 @@ export type SessionRow = SessionInit & {
   studentName: string;
   teacherName: string;
   levelLabel: string;
+  subjectLabel: string | null;
   pricePerHour: number;
   total: number;
 };
@@ -62,6 +63,8 @@ export function SessionsClient({
   matrix,
   currency,
   packages = [],
+  subjects = [],
+  teacherSubjectIds = {},
   filters,
   exportHref,
 }: {
@@ -72,6 +75,8 @@ export function SessionsClient({
   matrix: PriceMatrix;
   currency: string;
   packages?: PackageOpt[];
+  subjects?: Opt[];
+  teacherSubjectIds?: Record<string, string[]>;
   filters: Filters;
   exportHref: string;
 }) {
@@ -86,6 +91,7 @@ export function SessionsClient({
     x.studentName,
     x.teacherName,
     x.levelLabel,
+    x.subjectLabel,
     x.date,
     x.notes,
   ]);
@@ -95,6 +101,7 @@ export function SessionsClient({
       { key: "student", label: t("student"), value: (s) => s.studentName, filterable: true },
       { key: "teacher", label: t("teacher"), value: (s) => s.teacherName, filterable: true },
       { key: "level", label: t("gradeLevel"), value: (s) => s.levelLabel, filterable: true },
+      { key: "subject", label: t("subject"), value: (s) => s.subjectLabel, filterable: true },
       {
         key: "location",
         label: t("location"),
@@ -207,6 +214,8 @@ export function SessionsClient({
           matrix={matrix}
           currency={currency}
           packages={packages}
+          subjects={subjects}
+          teacherSubjectIds={teacherSubjectIds}
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
@@ -224,7 +233,7 @@ export function SessionsClient({
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -235,6 +244,13 @@ export function SessionsClient({
                 <TableCell className="font-medium">{s.studentName}</TableCell>
                 <TableCell>{s.teacherName}</TableCell>
                 <TableCell>{s.levelLabel}</TableCell>
+                <TableCell>
+                  {s.subjectLabel ? (
+                    <Badge variant="default">{s.subjectLabel}</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
                 <TableCell>{te(`location.${s.location}`)}</TableCell>
                 <TableCell className="text-end tabular-nums">{formatHours(s.hours)}</TableCell>
                 <TableCell className="text-end tabular-nums">{formatMoney(s.total)} {currency}</TableCell>
@@ -263,6 +279,8 @@ export function SessionsClient({
                       matrix={matrix}
                       currency={currency}
                       packages={packages}
+                      subjects={subjects}
+                      teacherSubjectIds={teacherSubjectIds}
                       session={s}
                       trigger={
                         <Button variant="ghost" size="icon" aria-label={tc("edit")}>

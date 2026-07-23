@@ -44,6 +44,7 @@ export type SessionInit = {
   paymentStatus: string;
   notes: string | null;
   packageId?: string | null;
+  subjectId?: string | null;
 };
 
 type ActionFn = (
@@ -61,6 +62,8 @@ export function SessionDialog({
   matrix,
   currency,
   packages = [],
+  subjects = [],
+  teacherSubjectIds = {},
   session,
   // Controlled-open + prefill support (used by the calendar's click-to-create).
   open: openProp,
@@ -79,6 +82,10 @@ export function SessionDialog({
   matrix: PriceMatrix;
   currency: string;
   packages?: PackageOpt[];
+  /** All active subjects, for the optional subject picker. */
+  subjects?: Opt[];
+  /** teacherId -> the subject ids that teacher teaches, to narrow the list. */
+  teacherSubjectIds?: Record<string, string[]>;
   session?: SessionInit;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
@@ -112,6 +119,7 @@ export function SessionDialog({
   const [date, setDate] = useState(session?.date ?? defaultDate ?? today);
   const [time, setTime] = useState(session?.time ?? defaultTime ?? "16:00");
   const [teacherId, setTeacherId] = useState(session?.teacherId ?? defaultTeacherId ?? "");
+  const [subjectId, setSubjectId] = useState(session?.subjectId ?? "");
 
   // When opened fresh for quick-create, reset the light fields.
   useEffect(() => {
@@ -124,6 +132,7 @@ export function SessionDialog({
       setDate(defaultDate ?? today);
       setTime(defaultTime ?? "16:00");
       setTeacherId(defaultTeacherId ?? "");
+      setSubjectId("");
       setError(null);
     }
     // `today` is stable for the life of the dialog.
@@ -167,6 +176,28 @@ export function SessionDialog({
       ...rest.map((tt) => ({ value: tt.id, label: tt.label })),
     ];
   }, [teachers, students, studentId, t]);
+
+  // Subjects offered in the picker: narrowed to the chosen teacher's subjects
+  // when they have any, otherwise the full active list — a cover lesson can be
+  // any subject, so this never becomes a dead end. Never restricts saving.
+  const subjectOptions = useMemo(() => {
+    const own = teacherId ? teacherSubjectIds[teacherId] : undefined;
+    if (own && own.length) {
+      const set = new Set(own);
+      return subjects.filter((sbj) => set.has(sbj.id));
+    }
+    return subjects;
+  }, [subjects, teacherSubjectIds, teacherId]);
+
+  // If the picked subject isn't offered by the newly chosen teacher, keep it
+  // only when it's the value already on an existing session (history), else clear.
+  useEffect(() => {
+    if (!subjectId) return;
+    if (subjectOptions.some((sbj) => sbj.id === subjectId)) return;
+    if (session?.subjectId === subjectId) return;
+    setSubjectId("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectOptions]);
 
   const pricePerHour = useMemo(() => {
     const row = matrix[gradeLevelId];
@@ -288,6 +319,22 @@ export function SessionDialog({
             </Select>
           </FormField>
         </div>
+
+        {subjects.length > 0 && (
+          <FormField label={t("subject")} htmlFor="subjectId" hint={t("subjectHint")}>
+            <Select
+              id="subjectId"
+              name="subjectId"
+              value={subjectId}
+              onChange={(e) => setSubjectId(e.target.value)}
+            >
+              <option value="">{t("subjectNone")}</option>
+              {subjectOptions.map((sbj) => (
+                <option key={sbj.id} value={sbj.id}>{sbj.label}</option>
+              ))}
+            </Select>
+          </FormField>
+        )}
 
         <FormField label={t("paymentStatus")} htmlFor="paymentStatus">
           <Select id="paymentStatus" name="paymentStatus" defaultValue={session?.paymentStatus ?? "UNPAID"}>

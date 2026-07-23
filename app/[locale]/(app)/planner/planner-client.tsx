@@ -86,6 +86,8 @@ export type PlannerSession = {
   total: number;
   /** Student's home location code — only meaningful for HOME sessions. */
   homeCode: string | null;
+  /** Subject, when the booking has one. Shown on the card. */
+  subjectLabel: string | null;
   /** Free trial lesson booked from the leads board. */
   isTrial: boolean;
 };
@@ -612,6 +614,11 @@ export function PlannerClient({
                               </Badge>
                             )}
                           </div>
+                          {s.subjectLabel && (
+                            <div className="truncate text-xs font-medium opacity-90">
+                              {s.subjectLabel}
+                            </div>
+                          )}
                           {/* Where the teacher is actually going — only home
                               visits need a location, and only if one is set. */}
                           {s.location === "HOME" && s.homeCode && (

@@ -41,6 +41,8 @@ export type CalEvent = {
   teacherName: string;
   gradeLevelId: string;
   levelLabel: string;
+  subjectId?: string | null;
+  subjectLabel: string | null;
   location: "CENTER" | "HOME";
   status: string;
   paymentStatus: string;
@@ -134,6 +136,8 @@ export function CalendarClient({
   teachers,
   levels,
   matrix,
+  subjects = [],
+  teacherSubjectIds = {},
   teacherFilter,
   studentFilter,
   centerName,
@@ -147,6 +151,8 @@ export function CalendarClient({
   teachers: Opt[];
   levels: Opt[];
   matrix: PriceMatrix;
+  subjects?: Opt[];
+  teacherSubjectIds?: Record<string, string[]>;
   teacherFilter: string;
   studentFilter: string;
   centerName: string;
@@ -514,6 +520,9 @@ export function CalendarClient({
                           {!compact && (
                             <>
                               <div className="truncate opacity-80">{ev.teacherName}</div>
+                              {ev.subjectLabel && (
+                                <div className="truncate font-medium opacity-90">{ev.subjectLabel}</div>
+                              )}
                               <div className="tabular-nums opacity-70">
                                 {fmtTime(ev.startMinutes)} · {ev.hours}
                                 {"h"} · {formatMoney(ev.total)} {currency}
@@ -546,6 +555,8 @@ export function CalendarClient({
           teachers={teachers}
           levels={levels}
           matrix={matrix}
+          subjects={subjects}
+          teacherSubjectIds={teacherSubjectIds}
           currency={currency}
           open={!!createAt}
           onOpenChange={(v) => !v && setCreateAt(null)}
@@ -564,6 +575,8 @@ export function CalendarClient({
           teachers={teachers}
           levels={levels}
           matrix={matrix}
+          subjects={subjects}
+          teacherSubjectIds={teacherSubjectIds}
           currency={currency}
           session={editInit}
           open={!!editEv}
@@ -646,7 +659,12 @@ function ListView({
               <TableCell className="tabular-nums" dir="ltr">{ev.day}</TableCell>
               <TableCell className="tabular-nums" dir="ltr">{fmtTime(ev.startMinutes)}</TableCell>
               <TableCell className="font-medium">{ev.studentName}</TableCell>
-              <TableCell>{ev.teacherName}</TableCell>
+              <TableCell>
+                {ev.teacherName}
+                {ev.subjectLabel && (
+                  <span className="ms-1 text-xs text-muted-foreground">· {ev.subjectLabel}</span>
+                )}
+              </TableCell>
               <TableCell>{te(`location.${ev.location}`)}</TableCell>
               <TableCell className="text-end tabular-nums">{ev.hours}</TableCell>
               <TableCell>

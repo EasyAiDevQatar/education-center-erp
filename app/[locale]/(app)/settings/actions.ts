@@ -155,3 +155,47 @@ export async function deleteExpenseCategory(locale: string, id: string): Promise
   revalidate(locale);
   return { ok: true };
 }
+
+/* ---- Subjects (reference table for the booking form) ---- */
+const subjectSchema = z.object({
+  nameAr: z.string().trim().min(1),
+  nameEn: z.string().trim().min(1),
+  sortOrder: z.coerce.number().int().default(0),
+  active: z.coerce.boolean().default(true),
+});
+
+export async function saveSubject(
+  locale: string,
+  id: string | null,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  if (await guardAdmin()) return { error: "forbidden" };
+  const parsed = subjectSchema.safeParse({
+    nameAr: formData.get("nameAr"),
+    nameEn: formData.get("nameEn"),
+    sortOrder: formData.get("sortOrder") || 0,
+    active: formData.get("active") === "on" || formData.get("active") === "true",
+  });
+  if (!parsed.success) return { error: "invalid" };
+  if (id) await db.subject.update({ where: { id }, data: parsed.data });
+  else await db.subject.create({ data: parsed.data });
+  await writeAudit("Subject", id ?? "new", id ? "UPDATE" : "CREATE", { after: parsed.data });
+  revalidate(locale);
+  return { ok: true };
+}
+
+export async function deleteSubject(locale: string, id: string): Promise<ActionState> {
+  if (await guardAdmin()) return { error: "forbidden" };
+  // Sessions keep their subject for history; a subject that has ever been
+  // booked is deactivated rather than deleted so nothing loses its label.
+  const used = await db.session.count({ where: { subjectId: id } });
+  if (used > 0) {
+    await db.subject.update({ where: { id }, data: { active: false } });
+  } else {
+    await db.subject.delete({ where: { id } });
+  }
+  await writeAudit("Subject", id, "DELETE");
+  revalidate(locale);
+  return { ok: true };
+}

@@ -81,7 +81,12 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.employeeDocuments = (await tx.employeeDocument.deleteMany()).count;
     summary.employees = (await tx.employee.deleteMany()).count;
     summary.leaveTypes = (await tx.leaveType.deleteMany()).count;
+    // TeacherSubject cascades from teachers, but delete it explicitly first so
+    // the summary is honest and a future FK change can't leave orphans.
+    summary.teacherSubjects = (await tx.teacherSubject.deleteMany()).count;
     summary.teachers = (await tx.teacher.deleteMany()).count;
+    // Subjects go after sessions (deleted above) cleared their subjectId links.
+    summary.subjects = (await tx.subject.deleteMany()).count;
     summary.terms = (await tx.term.deleteMany()).count;
     summary.gradeLevels = (await tx.gradeLevel.deleteMany()).count;
   });
@@ -209,17 +214,50 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     if (!existing) await db.expenseCategory.create({ data: { nameAr, nameEn, sortOrder: i + 1 } });
   }
 
+  // Subjects (reference data, idempotent) — the list a booking can pick from.
+  const SUBJECTS: [string, string][] = [
+    ["الرياضيات", "Mathematics"],
+    ["الفيزياء", "Physics"],
+    ["الكيمياء", "Chemistry"],
+    ["الأحياء", "Biology"],
+    ["اللغة العربية", "Arabic"],
+    ["اللغة الإنجليزية", "English"],
+    ["العلوم", "Science"],
+    ["الدراسات الاجتماعية", "Social studies"],
+  ];
+  const subjectIds: string[] = [];
+  for (let i = 0; i < SUBJECTS.length; i++) {
+    const [nameAr, nameEn] = SUBJECTS[i];
+    const sbj = await db.subject.upsert({
+      where: { id: `seed-subject-${i}` },
+      update: {},
+      create: { id: `seed-subject-${i}`, nameAr, nameEn, sortOrder: i + 1 },
+    });
+    subjectIds.push(sbj.id);
+  }
+
   const summary: Record<string, number> = {};
 
   // --- teachers / guardians / students ---
   const teacherIds: string[] = [];
+  const teacherSubjectMap: Record<string, string[]> = {};
   for (let i = 0; i < n.teachers; i++) {
     const t = await db.teacher.create({
       data: { name: nameAt(TEACHER_NAMES, i), commissionPct: 50, phone: `5555${String(1000 + i)}` },
     });
     teacherIds.push(t.id);
+    // Give each teacher one or two subjects so the booking picker demos the
+    // teacher-filtered list. Deterministic per index for a stable demo.
+    const own = i % 3 === 0
+      ? [subjectIds[i % subjectIds.length], subjectIds[(i + 1) % subjectIds.length]]
+      : [subjectIds[i % subjectIds.length]];
+    teacherSubjectMap[t.id] = [...new Set(own)];
+    for (const subjectId of teacherSubjectMap[t.id]) {
+      await db.teacherSubject.create({ data: { teacherId: t.id, subjectId } });
+    }
   }
   summary.teachers = teacherIds.length;
+  summary.subjects = subjectIds.length;
 
   const guardianIds: string[] = [];
   for (let i = 0; i < n.guardians; i++) {
@@ -283,12 +321,17 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     // actual-hours reports have data to show.
     const attended = status === "COMPLETED";
     const checkOut = new Date(date.getTime() + hours * 3600_000);
+    // Most lessons carry a subject drawn from the teacher's own list, so the
+    // booking card demos with subjects; some stay blank (subject is optional).
+    const sTeacherId = pick(teacherIds);
+    const sTeacherSubs = teacherSubjectMap[sTeacherId] ?? [];
     await db.session.create({
       data: {
         date,
         studentId: st.id,
-        teacherId: pick(teacherIds),
+        teacherId: sTeacherId,
         gradeLevelId: st.gradeLevelId,
+        subjectId: sTeacherSubs.length && rand() < 0.75 ? pick(sTeacherSubs) : null,
         location,
         hours,
         pricePerHour: price,
