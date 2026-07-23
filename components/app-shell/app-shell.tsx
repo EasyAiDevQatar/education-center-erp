@@ -28,7 +28,7 @@ export function AppShell({
   roleLabel: string;
   onLogout: () => void;
   /** Optional-module switches, read from Settings by the server layout. */
-  flags?: { accounting?: boolean };
+  flags?: { accounting?: boolean; transport?: boolean };
   children: React.ReactNode;
 }) {
   const t = useTranslations("nav");

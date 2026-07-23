@@ -16,6 +16,7 @@ import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
 import { WpsSettings } from "./wps-settings";
 import { AccountingSettings } from "./accounting-settings";
+import { TransportSettings } from "./transport-settings";
 import { SiteSettings } from "./site-settings";
 import { BackupSettings } from "./backup-settings";
 import { listBackups } from "@/lib/backups";
@@ -216,6 +217,25 @@ export default async function SettingsPage({
             driveConfigured={!!driveSa}
             driveEmail={driveSa?.client_email ?? null}
             driveFolder={settings.backupDriveFolder ?? ""}
+          />
+        </CollapsibleCard>
+
+        <CollapsibleCard title={t("transportSettings")} className="lg:col-span-2">
+          <TransportSettings
+            values={{
+              enabled: settings.transportEnabled === "1",
+              centerLat: settings.centerLat ?? "",
+              centerLng: settings.centerLng ?? "",
+              avgSpeedKmh: settings.transportAvgSpeedKmh ?? "40",
+              rushSpeedKmh: settings.transportRushSpeedKmh ?? "25",
+              rushWindows: settings.transportRushWindows ?? "07:00-09:00,16:00-19:00",
+              detourFactor: settings.transportDetourFactor ?? "1.35",
+              minTripMin: settings.transportMinTripMin ?? "5",
+              bufferMin: settings.transportBufferMin ?? "10",
+              maxDeadheadKm: settings.transportMaxDeadheadKm ?? "25",
+              pingDays: settings.transportPingDays ?? "14",
+              trackingVisibility: settings.transportTrackingVisibility ?? "ADMIN_ONLY",
+            }}
           />
         </CollapsibleCard>
 

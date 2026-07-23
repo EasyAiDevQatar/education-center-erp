@@ -110,3 +110,9 @@ export type ChequeStatus = (typeof CHEQUE_STATUSES)[number];
 /** When incoming cheques hit the books: on receipt / deposit / clearance. */
 export const CHEQUE_POLICIES = ["ON_RECEIPT", "ON_DEPOSIT", "ON_CLEARANCE"] as const;
 export type ChequePolicy = (typeof CHEQUE_POLICIES)[number];
+
+/* --- Transport (optional module) --- */
+
+/** Who may see live driver positions. Staff location data is sensitive. */
+export const TRACKING_VISIBILITY = ["ADMIN_ONLY", "ADMIN_STAFF"] as const;
+export type TrackingVisibility = (typeof TRACKING_VISIBILITY)[number];

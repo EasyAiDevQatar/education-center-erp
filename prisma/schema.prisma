@@ -66,6 +66,12 @@ model Teacher {
   /// centre default so changing that setting moves everyone who never opted out.
   earningsMode    String?
 
+  /// Where the teacher is collected from / dropped home by the transport
+  /// module. Optional: only teachers who actually get a lift need it.
+  address       String?
+  homeLat       Float?
+  homeLng       Float?
+
   user         User?
   sessions     Session[]
   payments     Payment[]      // payments allocated to this teacher
@@ -676,6 +682,12 @@ model Employee {
   nameEn     String?
   phone      String?
   email      String?
+  /// Where a driver's shift starts and ends. Deliberately separate from
+  /// Teacher's copy: for a teacher-who-drives they answer different questions
+  /// (where to collect the teacher vs where the driver begins the day).
+  address    String?
+  homeLat    Float?
+  homeLng    Float?
 
   qid         String?   @unique
   visaId      String?

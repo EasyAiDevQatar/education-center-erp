@@ -530,7 +530,8 @@
     "wpsSettings": "Wage Protection System (WPS)",
     "siteSettings": "Homepage & website",
     "backups": "Backups",
-    "accountingSettings": "Accounting module"
+    "accountingSettings": "Accounting module",
+    "transportSettings": "Transport module"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -697,6 +698,10 @@
       "REPLACED": "Replaced",
       "CANCELLED": "Cancelled",
       "VOID": "Void"
+    },
+    "trackingVisibility": {
+      "ADMIN_ONLY": "Admin only",
+      "ADMIN_STAFF": "Admin and office staff"
     }
   },
   "paymentModes": {
@@ -1517,5 +1522,33 @@
     },
     "agingHint": "Uncollected incoming amounts by how far past their due date they are.",
     "printHint": "Place the cheque leaf at the top of the tray and print — positions are calibrated in millimetres from the accounting settings."
+  },
+  "transport": {
+    "moduleTitle": "Transport module",
+    "moduleIntro": "Plans rides that move teachers and students between homes and the centre, allocates drivers by distance and the time left before the next lesson, and tracks trips on the map.",
+    "enableLabel": "Enable the transport module",
+    "enableHint": "Turning it off hides the module and stops trip generation without deleting anything — everything returns when re-enabled.",
+    "centreLocation": "Centre location",
+    "centreLocationHint": "The start and end of most trips — set it once on the map.",
+    "centreMissing": "Not set yet",
+    "pickOnMap": "Pick on map",
+    "lat": "Latitude",
+    "lng": "Longitude",
+    "etaTitle": "Travel-time estimate",
+    "etaHint": "Times are computed locally from straight-line distance × a detour factor ÷ speed — no address ever leaves your server. The estimate is approximate (±20%).",
+    "avgSpeed": "Speed (km/h)",
+    "rushSpeed": "Rush speed",
+    "detourFactor": "Detour factor",
+    "minTripMin": "Min trip (min)",
+    "rushWindows": "Rush windows",
+    "rushWindowsHint": "e.g. 07:00-09:00,16:00-19:00",
+    "bufferMin": "Arrive before (min)",
+    "bufferHint": "Margin to arrive before the lesson starts.",
+    "maxDeadhead": "Max empty distance",
+    "maxDeadheadHint": "Kilometres allowed to reach a pickup.",
+    "pingDays": "Keep tracking (days)",
+    "pingDaysHint": "Older tracking points are deleted automatically.",
+    "trackingVisibility": "Who sees driver locations",
+    "trackingVisibilityHint": "This is staff location data — share it as narrowly as possible."
   }
 }

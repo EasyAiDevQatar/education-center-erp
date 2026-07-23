@@ -21,9 +21,10 @@ export default async function AppLayout({
   // Optional-module switches. Read here (server) and passed down so the nav
   // updates on the next render after the setting changes — pages still guard
   // themselves; hiding items is UX, not enforcement.
-  const accountingRow = await db.setting.findUnique({
-    where: { key: "accountingEnabled" },
+  const flagRows = await db.setting.findMany({
+    where: { key: { in: ["accountingEnabled", "transportEnabled"] } },
   });
+  const flagOn = (key: string) => flagRows.some((r) => r.key === key && r.value === "1");
 
   return (
     <AppShell
@@ -31,7 +32,7 @@ export default async function AppLayout({
       userName={session.name}
       roleLabel={tr(session.role)}
       onLogout={logoutAction.bind(null, locale)}
-      flags={{ accounting: accountingRow?.value === "1" }}
+      flags={{ accounting: flagOn("accountingEnabled"), transport: flagOn("transportEnabled") }}
     >
       {children}
     </AppShell>
