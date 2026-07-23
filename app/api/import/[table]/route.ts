@@ -159,6 +159,24 @@ async function importRows(
           created++;
           break;
         }
+        case "suppliers": {
+          if (!r.name) { fail(r, "name required"); break; }
+          const dupe = await db.supplier.findFirst({ where: { name: r.name } });
+          if (dupe) { fail(r, "duplicate name"); break; }
+          await db.supplier.create({
+            data: {
+              name: r.name,
+              nameEn: r.nameEn || null,
+              phone: r.phone || null,
+              email: r.email || null,
+              taxNo: r.taxNo || null,
+              address: r.address || null,
+              notes: r.notes || null,
+            },
+          });
+          created++;
+          break;
+        }
         case "accounts": {
           if (!r.code || !r.nameAr) { fail(r, "code/name required"); break; }
           const type = String(r.type ?? "").trim().toUpperCase();

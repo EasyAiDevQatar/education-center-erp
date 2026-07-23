@@ -1,20 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useTransition } from "react";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, CheckCircle2 } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -25,10 +25,13 @@ import {
   type ColumnDef,
 } from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
+import { useRouter } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
-import { saveExpense, deleteExpense } from "./actions";
+import { EXPENSE_STATUSES } from "@/lib/enums";
+import { saveExpense, deleteExpense, approveExpense } from "./actions";
 
 export type CatOpt = { id: string; label: string };
+export type SupplierOpt = { id: string; label: string };
 export type ExpenseRow = {
   id: string;
   date: string;
@@ -37,10 +40,21 @@ export type ExpenseRow = {
   categoryLabel: string;
   amount: number;
   paidTo: string | null;
+  supplierId: string | null;
+  supplierLabel: string | null;
   receiptNo: string | null;
+  status: string;
 };
 
-function Fields({ expense, categories }: { expense?: ExpenseRow; categories: CatOpt[] }) {
+function Fields({
+  expense,
+  categories,
+  suppliers,
+}: {
+  expense?: ExpenseRow;
+  categories: CatOpt[];
+  suppliers: SupplierOpt[];
+}) {
   const t = useTranslations("expenses");
   const tc = useTranslations("common");
   const today = new Date().toISOString().slice(0, 10);
@@ -65,6 +79,16 @@ function Fields({ expense, categories }: { expense?: ExpenseRow; categories: Cat
           ))}
         </Select>
       </FormField>
+      {suppliers.length > 0 && (
+        <FormField label={t("supplier")} htmlFor="supplierId" hint={t("supplierHint")}>
+          <Select id="supplierId" name="supplierId" defaultValue={expense?.supplierId ?? ""}>
+            <option value="">—</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </Select>
+        </FormField>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <FormField label={t("paidTo")} htmlFor="paidTo">
           <Input id="paidTo" name="paidTo" defaultValue={expense?.paidTo ?? ""} />
@@ -77,32 +101,81 @@ function Fields({ expense, categories }: { expense?: ExpenseRow; categories: Cat
   );
 }
 
+function ApproveButton({ id }: { id: string }) {
+  const t = useTranslations("expenses");
+  const locale = useLocale();
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={t("approve")}
+      title={t("approve")}
+      disabled={pending}
+      onClick={() => start(async () => {
+        await approveExpense(locale, id);
+        router.refresh();
+      })}
+    >
+      <CheckCircle2 className="size-4 text-[var(--success)]" />
+    </Button>
+  );
+}
+
+const STATUS_BADGE: Record<string, "muted" | "default" | "success"> = {
+  DRAFT: "muted",
+  APPROVED: "default",
+  POSTED: "success",
+};
+
 export function ExpensesClient({
   expenses,
   categories,
+  suppliers,
   currency,
+  accounting,
 }: {
   expenses: ExpenseRow[];
   categories: CatOpt[];
+  suppliers: SupplierOpt[];
   currency: string;
+  /** Accounting module flag — status column and approve button only make
+      sense when the journal exists. */
+  accounting: boolean;
 }) {
   const t = useTranslations("expenses");
   const tc = useTranslations("common");
+  const te = useTranslations("enums");
   const locale = useLocale();
-  const search = useTableSearch(expenses, (e) => [e.description, e.categoryLabel, e.paidTo, e.receiptNo, e.date]);
+  const search = useTableSearch(expenses, (e) => [e.description, e.categoryLabel, e.paidTo, e.supplierLabel, e.receiptNo, e.date]);
   const columns = useMemo<ColumnDef<ExpenseRow>[]>(
     () => [
       { key: "date", label: tc("date"), type: "date", value: (e) => e.date },
       { key: "description", label: t("description"), value: (e) => e.description },
       { key: "category", label: t("category"), value: (e) => e.categoryLabel, filterable: true },
-      { key: "paidTo", label: t("paidTo"), value: (e) => e.paidTo },
+      { key: "paidTo", label: t("paidTo"), value: (e) => e.supplierLabel ?? e.paidTo },
       { key: "amount", label: tc("amount"), type: "number", value: (e) => e.amount, className: "text-end" },
+      ...(accounting
+        ? [
+            {
+              key: "status",
+              label: tc("status"),
+              type: "enum",
+              value: (e) => e.status,
+              filterable: true,
+              options: [...EXPENSE_STATUSES],
+              optionLabel: (v) => te(`expenseStatus.${v}`),
+            } as ColumnDef<ExpenseRow>,
+          ]
+        : []),
       { key: "actions", label: tc("actions"), className: "text-end" },
     ],
-    [t, tc],
+    [t, tc, te, accounting],
   );
   const sf = useTableSortFilter(search.filtered, columns);
   const pg = usePagination(sf.rows, 20, sf.version);
+  const colSpan = accounting ? 7 : 6;
 
   return (
     <>
@@ -116,7 +189,7 @@ export function ExpensesClient({
         <EntityDialog
           title={t("add")}
           action={saveExpense.bind(null, locale, null)}
-          fields={<Fields categories={categories} />}
+          fields={<Fields categories={categories} suppliers={suppliers} />}
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
@@ -133,7 +206,7 @@ export function ExpensesClient({
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={colSpan} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -143,14 +216,22 @@ export function ExpensesClient({
                 <TableCell className="text-start tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
                 <TableCell className="font-medium">{e.description}</TableCell>
                 <TableCell>{e.categoryLabel}</TableCell>
-                <TableCell>{e.paidTo ?? "—"}</TableCell>
+                <TableCell>{e.supplierLabel ?? e.paidTo ?? "—"}</TableCell>
                 <TableCell className="text-end tabular-nums font-medium">{formatMoney(e.amount)} {currency}</TableCell>
+                {accounting && (
+                  <TableCell>
+                    <Badge variant={STATUS_BADGE[e.status] ?? "default"}>
+                      {te(`expenseStatus.${e.status as "DRAFT"}`)}
+                    </Badge>
+                  </TableCell>
+                )}
                 <TableCell className="text-end">
                   <div className="flex justify-end gap-1">
+                    {accounting && e.status === "DRAFT" && <ApproveButton id={e.id} />}
                     <EntityDialog
                       title={t("edit")}
                       action={saveExpense.bind(null, locale, e.id)}
-                      fields={<Fields expense={e} categories={categories} />}
+                      fields={<Fields expense={e} categories={categories} suppliers={suppliers} />}
                       trigger={
                         <Button variant="ghost" size="icon" aria-label={tc("edit")}>
                           <Pencil className="size-4" />

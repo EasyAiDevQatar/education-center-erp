@@ -27,6 +27,7 @@ export const SEED_SPEC = [
   { key: "templates", max: 500, default: 12 },
   { key: "leads", max: 500, default: 10 },
   { key: "trialSessions", max: 50, default: 3 },
+  { key: "suppliers", max: 100, default: 5 },
   // Demo teacher/parent portal accounts (password: demo1234).
   { key: "portalUsers", max: 20, default: 2 },
   // HR module
@@ -51,7 +52,8 @@ export type TableKey =
   | "leads"
   | "terms"
   | "accounts"
-  | "journal";
+  | "journal"
+  | "suppliers";
 
 export type TableSpec = {
   key: TableKey;
@@ -215,6 +217,20 @@ export const TABLES: TableSpec[] = [
       { key: "type", ar: "النوع", required: true },
       { key: "parentCode", ar: "الحساب الأب" },
       { key: "active", ar: "نشط" },
+    ],
+  },
+  {
+    key: "suppliers",
+    finance: true,
+    importable: true,
+    columns: [
+      { key: "name", ar: "الاسم", required: true },
+      { key: "nameEn", ar: "الاسم بالإنجليزية" },
+      { key: "phone", ar: "الهاتف" },
+      { key: "email", ar: "البريد الإلكتروني" },
+      { key: "taxNo", ar: "الرقم الضريبي" },
+      { key: "address", ar: "العنوان" },
+      { key: "notes", ar: "ملاحظات" },
     ],
   },
   {

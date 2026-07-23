@@ -59,6 +59,7 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.availability = (await tx.teacherAvailability.deleteMany()).count;
     summary.packages = (await tx.package.deleteMany()).count;
     summary.expenses = (await tx.expense.deleteMany()).count;
+    summary.suppliers = (await tx.supplier.deleteMany()).count;
     summary.expenseCategories = (await tx.expenseCategory.deleteMany()).count;
     summary.accounts = (await tx.account.deleteMany()).count;
     summary.priceRules = (await tx.priceRule.deleteMany()).count;
@@ -512,6 +513,27 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   }
   summary.payments = payments;
 
+  // --- suppliers (accounting module vendor register) ---
+  const SUPPLIER_NAMES = [
+    "مكتبة الريان",
+    "شركة النظافة الحديثة",
+    "قرطاسية الوكرة",
+    "مؤسسة الصيانة المتحدة",
+    "مطبعة الخليج",
+    "شركة النقل السريع",
+  ];
+  const supplierIds: string[] = [];
+  for (let i = 0; i < n.suppliers; i++) {
+    const s = await db.supplier.create({
+      data: {
+        name: nameAt(SUPPLIER_NAMES, i),
+        phone: `4444${String(1000 + i)}`,
+      },
+    });
+    supplierIds.push(s.id);
+  }
+  summary.suppliers = supplierIds.length;
+
   // --- expenses ---
   const cats = await db.expenseCategory.findMany();
   let expenses = 0;
@@ -524,6 +546,8 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         description: pick(EXPENSE_DESCRIPTIONS),
         categoryId: pick(cats).id,
         amount: pick([50, 90, 100, 150, 250, 375, 500]),
+        // Half the expenses carry a vendor so the supplier register demos.
+        supplierId: supplierIds.length && i % 2 === 0 ? pick(supplierIds) : null,
       },
     });
     expenses++;

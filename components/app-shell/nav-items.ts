@@ -89,6 +89,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { href: "/accounting/journal", key: "accountingJournal" },
       { href: "/accounting/accounts", key: "accountingAccounts" },
+      { href: "/accounting/suppliers", key: "accountingSuppliers" },
       { href: "/accounting/reports", key: "accountingReports" },
     ],
   },

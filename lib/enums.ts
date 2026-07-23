@@ -84,3 +84,8 @@ export type AccountType = (typeof ACCOUNT_TYPES)[number];
 /** What created a journal entry. MANUAL entries carry a null sourceId. */
 export const JOURNAL_SOURCES = ["PAYMENT", "EXPENSE", "PAYROLL", "CHEQUE", "MANUAL"] as const;
 export type JournalSource = (typeof JOURNAL_SOURCES)[number];
+
+/** Expense approval flow (accounting module). APPROVED = real but not on the
+    books (the pre-module default); POSTED = journalised. */
+export const EXPENSE_STATUSES = ["DRAFT", "APPROVED", "POSTED"] as const;
+export type ExpenseStatus = (typeof EXPENSE_STATUSES)[number];

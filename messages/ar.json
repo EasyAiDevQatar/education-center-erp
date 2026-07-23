@@ -81,7 +81,8 @@
       "accountInUse": "لا يمكن حذف حساب عليه قيود أو حسابات فرعية — أوقفه بدلاً من ذلك.",
       "unbalanced": "القيد غير متوازن — مجموع المدين يجب أن يساوي مجموع الدائن.",
       "notManual": "القيود الآلية تُحذف مع مستندها الأصلي فقط.",
-      "notEnabled": "وحدة الحسابات غير مفعّلة."
+      "notEnabled": "وحدة الحسابات غير مفعّلة.",
+      "supplierInUse": "لا يمكن حذف مورد عليه مصروفات — أوقفه بدلاً من ذلك."
     },
     "price": "السعر",
     "searchPlaceholder": "بحث…",
@@ -144,7 +145,8 @@
     "accounting": "الحسابات",
     "accountingAccounts": "شجرة الحسابات",
     "accountingJournal": "دفتر اليومية",
-    "accountingReports": "التقارير المحاسبية"
+    "accountingReports": "التقارير المحاسبية",
+    "accountingSuppliers": "الموردون"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -445,7 +447,10 @@
     "category": "نوع المصروف",
     "paidTo": "المستفيد",
     "receiptNo": "رقم الإيصال",
-    "searchPlaceholder": "ابحث بالوصف أو النوع…"
+    "searchPlaceholder": "ابحث بالوصف أو النوع…",
+    "supplier": "المورد",
+    "supplierHint": "اختياري — يظهر السجل في وحدة الحسابات عند التفعيل.",
+    "approve": "اعتماد وترحيل"
   },
   "payroll": {
     "title": "مستحقات المعلمين",
@@ -662,6 +667,11 @@
       "PAYROLL": "راتب",
       "CHEQUE": "شيك",
       "MANUAL": "يدوي"
+    },
+    "expenseStatus": {
+      "DRAFT": "مسودة",
+      "APPROVED": "معتمد",
+      "POSTED": "مرحّل"
     }
   },
   "paymentModes": {
@@ -852,7 +862,8 @@
       "employees": "الموظفون (HR)",
       "employeeDocs": "مستندات الموظفين",
       "leaveRequests": "طلبات الإجازات",
-      "payrollRuns": "دفعات الرواتب"
+      "payrollRuns": "دفعات الرواتب",
+      "suppliers": "الموردون"
     }
   },
   "availability": {
@@ -1398,5 +1409,17 @@
     "backfillRun": "ترحيل الآن",
     "backfillDone": "تم ترحيل {created} قيداً من أصل {scanned} عملية.",
     "openingBalanceHint": "الأرصدة الافتتاحية (خزينة/بنك) تُسجَّل كقيد يدوي مقابل حساب حقوق الملكية 3000."
+  },
+  "suppliers": {
+    "title": "الموردون",
+    "subtitle": "سجل الموردين المرتبط بالمصروفات والشيكات الصادرة.",
+    "add": "إضافة مورد",
+    "edit": "تعديل مورد",
+    "email": "البريد الإلكتروني",
+    "taxNo": "الرقم الضريبي",
+    "address": "العنوان",
+    "expensesCount": "عدد المصروفات",
+    "expensesTotal": "إجمالي المصروفات",
+    "searchPlaceholder": "بحث بالاسم أو الهاتف…"
   }
 }

@@ -106,6 +106,18 @@ async function loadRows(
         active: a.active ? "1" : "0",
       }));
     }
+    case "suppliers": {
+      const rows = await db.supplier.findMany({ orderBy: { name: "asc" } });
+      return rows.map((s) => ({
+        name: s.name,
+        nameEn: s.nameEn ?? "",
+        phone: s.phone ?? "",
+        email: s.email ?? "",
+        taxNo: s.taxNo ?? "",
+        address: s.address ?? "",
+        notes: s.notes ?? "",
+      }));
+    }
     case "journal": {
       const rows = await db.journalLine.findMany({
         include: {

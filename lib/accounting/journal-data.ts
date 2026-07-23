@@ -141,8 +141,9 @@ export async function backfillJournal(fromDate: Date): Promise<Record<string, nu
     summary.payments++;
   }
 
+  // DRAFT expenses are pending approval — not money yet, so not books yet.
   const expenses = await db.expense.findMany({
-    where: { date: { gte: fromDate } },
+    where: { date: { gte: fromDate }, status: { not: "DRAFT" } },
     include: { category: { include: { account: { select: { code: true } } } } },
   });
   for (const e of expenses) {
@@ -158,6 +159,11 @@ export async function backfillJournal(fromDate: Date): Promise<Record<string, nu
     });
     summary.expenses++;
   }
+  // Backfilled = journalised: reflect it on the rows.
+  await db.expense.updateMany({
+    where: { date: { gte: fromDate }, status: "APPROVED" },
+    data: { status: "POSTED" },
+  });
 
   const payouts = await db.teacherPayout.findMany({
     where: { status: "PAID", periodEnd: { gte: fromDate } },

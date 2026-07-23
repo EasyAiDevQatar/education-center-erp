@@ -81,7 +81,8 @@
       "accountInUse": "An account with entries or sub-accounts cannot be deleted — deactivate it instead.",
       "unbalanced": "The entry is not balanced — total debit must equal total credit.",
       "notManual": "Auto-posted entries can only be removed with their source document.",
-      "notEnabled": "The accounting module is not enabled."
+      "notEnabled": "The accounting module is not enabled.",
+      "supplierInUse": "A supplier with expenses cannot be deleted — deactivate it instead."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -144,7 +145,8 @@
     "accounting": "Accounting",
     "accountingAccounts": "Chart of accounts",
     "accountingJournal": "Journal",
-    "accountingReports": "Accounting reports"
+    "accountingReports": "Accounting reports",
+    "accountingSuppliers": "Suppliers"
   },
   "auth": {
     "login": "Log in",
@@ -445,7 +447,10 @@
     "category": "Category",
     "paidTo": "Paid to",
     "receiptNo": "Receipt no.",
-    "searchPlaceholder": "Search by description or category…"
+    "searchPlaceholder": "Search by description or category…",
+    "supplier": "Supplier",
+    "supplierHint": "Optional — the register appears in the accounting module when enabled.",
+    "approve": "Approve & post"
   },
   "payroll": {
     "title": "Teacher dues",
@@ -662,6 +667,11 @@
       "PAYROLL": "Payroll",
       "CHEQUE": "Cheque",
       "MANUAL": "Manual"
+    },
+    "expenseStatus": {
+      "DRAFT": "Draft",
+      "APPROVED": "Approved",
+      "POSTED": "Posted"
     }
   },
   "paymentModes": {
@@ -852,7 +862,8 @@
       "employees": "Employees (HR)",
       "employeeDocs": "Employee documents",
       "leaveRequests": "Leave requests",
-      "payrollRuns": "Payroll runs"
+      "payrollRuns": "Payroll runs",
+      "suppliers": "Suppliers"
     }
   },
   "availability": {
@@ -1398,5 +1409,17 @@
     "backfillRun": "Backfill now",
     "backfillDone": "Posted {created} entries out of {scanned} documents.",
     "openingBalanceHint": "Opening balances (cash/bank) are recorded as one manual entry against equity account 3000."
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "subtitle": "Vendor register linked to expenses and outgoing cheques.",
+    "add": "Add supplier",
+    "edit": "Edit supplier",
+    "email": "Email",
+    "taxNo": "Tax number",
+    "address": "Address",
+    "expensesCount": "Expenses",
+    "expensesTotal": "Expenses total",
+    "searchPlaceholder": "Search by name or phone…"
   }
 }

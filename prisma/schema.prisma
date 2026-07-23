@@ -364,6 +364,13 @@ model Expense {
   amount      Decimal
   paidTo      String?
   branchId    String?
+  /// DRAFT | APPROVED | POSTED (lib/enums.ts). Existing rows are real paid
+  /// expenses, so the default is APPROVED. With accounting on, new expenses
+  /// start DRAFT and the approve action posts them to the journal (POSTED).
+  status      String          @default("APPROVED")
+  /// Optional vendor link; `paidTo` free text stays as the fallback.
+  supplierId  String?
+  supplier    Supplier?       @relation(fields: [supplierId], references: [id])
 
   createdById String?
   createdAt   DateTime @default(now())
@@ -371,6 +378,27 @@ model Expense {
 
   @@index([date])
   @@index([categoryId])
+}
+
+/// Vendor register: who the centre buys from and pays. Linked from expenses
+/// (and outgoing cheques in the cheque module).
+model Supplier {
+  id      String  @id @default(cuid())
+  name    String
+  nameEn  String?
+  phone   String?
+  email   String?
+  taxNo   String?
+  address String?
+  notes   String?
+  active  Boolean @default(true)
+
+  expenses Expense[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
 }
 
 /// A teacher payroll run for a period.

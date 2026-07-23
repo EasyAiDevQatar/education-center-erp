@@ -23,6 +23,7 @@ const schema = z.object({
   categoryId: z.string().min(1),
   amount: z.coerce.number().positive(),
   paidTo: z.string().trim().optional().nullable(),
+  supplierId: z.string().trim().optional().nullable(),
   receiptNo: z.string().trim().optional().nullable(),
 });
 
@@ -44,6 +45,7 @@ export async function saveExpense(
     categoryId: formData.get("categoryId"),
     amount: formData.get("amount"),
     paidTo: formData.get("paidTo") || null,
+    supplierId: formData.get("supplierId") || null,
     receiptNo: formData.get("receiptNo") || null,
   });
   if (!parsed.success) return { error: "invalid" };
@@ -58,40 +60,78 @@ export async function saveExpense(
     categoryId: d.categoryId,
     amount: d.amount,
     paidTo: d.paidTo,
+    supplierId: d.supplierId,
     receiptNo: d.receiptNo,
   };
-  // Category→account mapping resolved once; the posting builder falls back to
-  // 5900 when the category was never mapped.
-  const posting = await accountingEnabled();
-  const category = posting
-    ? await db.expenseCategory.findUnique({
-        where: { id: d.categoryId },
-        include: { account: { select: { code: true } } },
-      })
-    : null;
-  const draft = (expenseId: string) => ({
-    date: data.date,
-    memo: `مصروف — ${d.description}`,
-    sourceType: "EXPENSE" as const,
-    sourceId: expenseId,
-    lines: linesForExpense({
-      amount: d.amount,
-      categoryAccountCode: category?.account?.code ?? null,
-    }),
-  });
 
+  // Approval flow: with accounting on, new expenses start DRAFT and reach the
+  // journal only through approveExpense. An edit to an already-POSTED expense
+  // reposts in the same transaction so the books track the row.
+  const posting = await accountingEnabled();
   let createdId: string | null = null;
   await db.$transaction(async (tx) => {
     if (id) {
-      await tx.expense.update({ where: { id }, data });
-      if (posting) await repostSource(tx, draft(id));
+      const updated = await tx.expense.update({ where: { id }, data });
+      if (posting && updated.status === "POSTED") {
+        await repostSource(tx, await expenseDraft(id, data.date, d.description, d.amount, d.categoryId));
+      }
     } else {
-      const created = await tx.expense.create({ data });
+      const created = await tx.expense.create({
+        data: { ...data, status: posting ? "DRAFT" : "APPROVED" },
+      });
       createdId = created.id;
-      if (posting) await postSource(tx, draft(created.id));
     }
   });
   await writeAudit("Expense", id ?? createdId!, id ? "UPDATE" : "CREATE", { after: data });
+  revalidatePath(`/${locale}/expenses`);
+  return { ok: true };
+}
+
+async function expenseDraft(
+  expenseId: string,
+  date: Date,
+  description: string,
+  amount: number,
+  categoryId: string,
+) {
+  const category = await db.expenseCategory.findUnique({
+    where: { id: categoryId },
+    include: { account: { select: { code: true } } },
+  });
+  return {
+    date,
+    memo: `مصروف — ${description}`,
+    sourceType: "EXPENSE" as const,
+    sourceId: expenseId,
+    lines: linesForExpense({
+      amount,
+      categoryAccountCode: category?.account?.code ?? null,
+    }),
+  };
+}
+
+/** Approve a draft expense: post it to the journal and mark it POSTED, one tx.
+ *  Re-approving is harmless — the [EXPENSE, id] unique makes the post a skip. */
+export async function approveExpense(locale: string, id: string): Promise<ActionState> {
+  if (await guard()) return { error: "forbidden" };
+  if (!(await accountingEnabled())) return { error: "notEnabled" };
+  const expense = await db.expense.findUnique({ where: { id } });
+  if (!expense) return { error: "notfound" };
+  const frozen = await guardArchived(expense.date);
+  if (frozen) return { error: frozen };
+
+  const draft = await expenseDraft(
+    id,
+    expense.date,
+    expense.description,
+    Number(expense.amount),
+    expense.categoryId,
+  );
+  await db.$transaction(async (tx) => {
+    await postSource(tx, draft);
+    await tx.expense.update({ where: { id }, data: { status: "POSTED" } });
+  });
+  await writeAudit("Expense", id, "UPDATE", { after: { status: "POSTED" } });
   revalidatePath(`/${locale}/expenses`);
   return { ok: true };
 }
