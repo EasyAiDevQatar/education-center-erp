@@ -78,7 +78,10 @@
       "invalidParent": "الحساب الأب غير صالح — يجب أن يكون من نفس النوع.",
       "duplicateCode": "رمز الحساب مستخدم من قبل.",
       "systemAccount": "هذا حساب أساسي للنظام — يمكن إيقافه لكن لا يمكن حذفه.",
-      "accountInUse": "لا يمكن حذف حساب عليه قيود أو حسابات فرعية — أوقفه بدلاً من ذلك."
+      "accountInUse": "لا يمكن حذف حساب عليه قيود أو حسابات فرعية — أوقفه بدلاً من ذلك.",
+      "unbalanced": "القيد غير متوازن — مجموع المدين يجب أن يساوي مجموع الدائن.",
+      "notManual": "القيود الآلية تُحذف مع مستندها الأصلي فقط.",
+      "notEnabled": "وحدة الحسابات غير مفعّلة."
     },
     "price": "السعر",
     "searchPlaceholder": "بحث…",
@@ -98,7 +101,8 @@
     "password": "كلمة المرور",
     "nameAr": "الاسم بالعربية",
     "nameEn": "الاسم بالإنجليزية",
-    "nameEnHint": "اختياري — يُعرض عند اختيار اللغة الإنجليزية."
+    "nameEnHint": "اختياري — يُعرض عند اختيار اللغة الإنجليزية.",
+    "apply": "تطبيق"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -138,7 +142,9 @@
     "payrollDues": "المستحقات",
     "payrollRuns": "دفعات الرواتب و WPS",
     "accounting": "الحسابات",
-    "accountingAccounts": "شجرة الحسابات"
+    "accountingAccounts": "شجرة الحسابات",
+    "accountingJournal": "دفتر اليومية",
+    "accountingReports": "التقارير المحاسبية"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -649,6 +655,13 @@
       "EQUITY": "حقوق ملكية",
       "INCOME": "إيرادات",
       "EXPENSE": "مصروفات"
+    },
+    "journalSource": {
+      "PAYMENT": "دفعة",
+      "EXPENSE": "مصروف",
+      "PAYROLL": "راتب",
+      "CHEQUE": "شيك",
+      "MANUAL": "يدوي"
     }
   },
   "paymentModes": {
@@ -1355,6 +1368,35 @@
     "entriesCount": "عدد القيود",
     "addAccount": "إضافة حساب",
     "editAccount": "تعديل حساب",
-    "searchPlaceholder": "بحث بالرمز أو الاسم…"
+    "searchPlaceholder": "بحث بالرمز أو الاسم…",
+    "journalTitle": "دفتر اليومية",
+    "journalSubtitle": "قيود مزدوجة مرحّلة آلياً من المدفوعات والمصروفات والرواتب، مع إمكانية القيد اليدوي.",
+    "journalSearchPlaceholder": "بحث في البيان أو الحسابات…",
+    "addEntry": "قيد يدوي",
+    "addLine": "إضافة سطر",
+    "memo": "البيان",
+    "source": "المصدر",
+    "account": "الحساب",
+    "debit": "مدين",
+    "credit": "دائن",
+    "balance": "الرصيد",
+    "balanced": "متوازن ✓",
+    "notBalanced": "غير متوازن",
+    "reportsTitle": "التقارير المحاسبية",
+    "reportsSubtitle": "ميزان المراجعة وقائمة الأرباح والخسائر عن أي فترة.",
+    "trialBalance": "ميزان المراجعة",
+    "profitAndLoss": "الأرباح والخسائر",
+    "incomeSection": "الإيرادات",
+    "expenseSection": "المصروفات",
+    "netResult": "صافي النتيجة",
+    "allTime": "كل الفترات",
+    "statementTitle": "كشف حساب",
+    "statementSubtitle": "حركة الحساب برصيد جارٍ.",
+    "closingBalance": "الرصيد الختامي",
+    "backfillTitle": "ترحيل العمليات السابقة",
+    "backfillHint": "يرحّل المدفوعات والمصروفات والرواتب المدفوعة من التاريخ المحدد إلى دفتر اليومية. آمن للتكرار — ما رُحّل من قبل يُتجاهل.",
+    "backfillRun": "ترحيل الآن",
+    "backfillDone": "تم ترحيل {created} قيداً من أصل {scanned} عملية.",
+    "openingBalanceHint": "الأرصدة الافتتاحية (خزينة/بنك) تُسجَّل كقيد يدوي مقابل حساب حقوق الملكية 3000."
   }
 }

@@ -7,6 +7,13 @@ import { getSession } from "@/lib/session";
 import { FINANCE_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { guardArchived } from "@/lib/academic-year";
+import {
+  accountingEnabled,
+  postSource,
+  repostSource,
+  unpostSource,
+} from "@/lib/accounting/journal-data";
+import { linesForExpense } from "@/lib/accounting/posting";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -53,13 +60,38 @@ export async function saveExpense(
     paidTo: d.paidTo,
     receiptNo: d.receiptNo,
   };
-  if (id) {
-    await db.expense.update({ where: { id }, data });
-    await writeAudit("Expense", id, "UPDATE", { after: data });
-  } else {
-    const created = await db.expense.create({ data });
-    await writeAudit("Expense", created.id, "CREATE", { after: data });
-  }
+  // Category→account mapping resolved once; the posting builder falls back to
+  // 5900 when the category was never mapped.
+  const posting = await accountingEnabled();
+  const category = posting
+    ? await db.expenseCategory.findUnique({
+        where: { id: d.categoryId },
+        include: { account: { select: { code: true } } },
+      })
+    : null;
+  const draft = (expenseId: string) => ({
+    date: data.date,
+    memo: `مصروف — ${d.description}`,
+    sourceType: "EXPENSE" as const,
+    sourceId: expenseId,
+    lines: linesForExpense({
+      amount: d.amount,
+      categoryAccountCode: category?.account?.code ?? null,
+    }),
+  });
+
+  let createdId: string | null = null;
+  await db.$transaction(async (tx) => {
+    if (id) {
+      await tx.expense.update({ where: { id }, data });
+      if (posting) await repostSource(tx, draft(id));
+    } else {
+      const created = await tx.expense.create({ data });
+      createdId = created.id;
+      if (posting) await postSource(tx, draft(created.id));
+    }
+  });
+  await writeAudit("Expense", id ?? createdId!, id ? "UPDATE" : "CREATE", { after: data });
   revalidatePath(`/${locale}/expenses`);
   return { ok: true };
 }
@@ -69,7 +101,10 @@ export async function deleteExpense(locale: string, id: string): Promise<ActionS
   const existing = await db.expense.findUnique({ where: { id } });
   const frozen = await guardArchived(existing?.date);
   if (frozen) return { error: frozen };
-  await db.expense.delete({ where: { id } });
+  await db.$transaction(async (tx) => {
+    await tx.expense.delete({ where: { id } });
+    await unpostSource(tx, "EXPENSE", id);
+  });
   await writeAudit("Expense", id, "DELETE");
   revalidatePath(`/${locale}/expenses`);
   return { ok: true };

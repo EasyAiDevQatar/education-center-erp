@@ -78,7 +78,10 @@
       "invalidParent": "Invalid parent account — it must be of the same type.",
       "duplicateCode": "This account code is already in use.",
       "systemAccount": "This is a system account — it can be deactivated but not deleted.",
-      "accountInUse": "An account with entries or sub-accounts cannot be deleted — deactivate it instead."
+      "accountInUse": "An account with entries or sub-accounts cannot be deleted — deactivate it instead.",
+      "unbalanced": "The entry is not balanced — total debit must equal total credit.",
+      "notManual": "Auto-posted entries can only be removed with their source document.",
+      "notEnabled": "The accounting module is not enabled."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -98,7 +101,8 @@
     "password": "Password",
     "nameAr": "Name (Arabic)",
     "nameEn": "Name (English)",
-    "nameEnHint": "Optional — shown when the interface is in English."
+    "nameEnHint": "Optional — shown when the interface is in English.",
+    "apply": "Apply"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -138,7 +142,9 @@
     "payrollDues": "Dues",
     "payrollRuns": "Payroll runs & WPS",
     "accounting": "Accounting",
-    "accountingAccounts": "Chart of accounts"
+    "accountingAccounts": "Chart of accounts",
+    "accountingJournal": "Journal",
+    "accountingReports": "Accounting reports"
   },
   "auth": {
     "login": "Log in",
@@ -649,6 +655,13 @@
       "EQUITY": "Equity",
       "INCOME": "Income",
       "EXPENSE": "Expense"
+    },
+    "journalSource": {
+      "PAYMENT": "Payment",
+      "EXPENSE": "Expense",
+      "PAYROLL": "Payroll",
+      "CHEQUE": "Cheque",
+      "MANUAL": "Manual"
     }
   },
   "paymentModes": {
@@ -1355,6 +1368,35 @@
     "entriesCount": "Entries",
     "addAccount": "Add account",
     "editAccount": "Edit account",
-    "searchPlaceholder": "Search by code or name…"
+    "searchPlaceholder": "Search by code or name…",
+    "journalTitle": "Journal",
+    "journalSubtitle": "Double-entry records auto-posted from payments, expenses and payroll, plus manual entries.",
+    "journalSearchPlaceholder": "Search memo or accounts…",
+    "addEntry": "Manual entry",
+    "addLine": "Add line",
+    "memo": "Memo",
+    "source": "Source",
+    "account": "Account",
+    "debit": "Debit",
+    "credit": "Credit",
+    "balance": "Balance",
+    "balanced": "Balanced ✓",
+    "notBalanced": "Not balanced",
+    "reportsTitle": "Accounting reports",
+    "reportsSubtitle": "Trial balance and profit & loss over any period.",
+    "trialBalance": "Trial balance",
+    "profitAndLoss": "Profit & loss",
+    "incomeSection": "Income",
+    "expenseSection": "Expenses",
+    "netResult": "Net result",
+    "allTime": "All time",
+    "statementTitle": "Account statement",
+    "statementSubtitle": "Account activity with a running balance.",
+    "closingBalance": "Closing balance",
+    "backfillTitle": "Backfill history",
+    "backfillHint": "Posts payments, expenses and paid payslips from the chosen date into the journal. Safe to re-run — anything already posted is skipped.",
+    "backfillRun": "Backfill now",
+    "backfillDone": "Posted {created} entries out of {scanned} documents.",
+    "openingBalanceHint": "Opening balances (cash/bank) are recorded as one manual entry against equity account 3000."
   }
 }

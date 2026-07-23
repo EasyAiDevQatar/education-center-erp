@@ -11,6 +11,9 @@ import { guardArchived } from "@/lib/academic-year";
 import { notifyPayout } from "@/lib/integrations/notify";
 import { effectiveMode, monthRange } from "@/lib/payroll-period";
 import { computePay, DEFAULT_EARNINGS_MODE } from "@/lib/earnings-mode";
+import { toNumber } from "@/lib/money";
+import { accountingEnabled, postSource, unpostSource } from "@/lib/accounting/journal-data";
+import { linesForPayslip } from "@/lib/accounting/posting";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -120,7 +123,26 @@ export async function createPayout(
 
 export async function markPayoutPaid(locale: string, id: string): Promise<ActionState> {
   if (await guard()) return { error: "forbidden" };
-  await db.teacherPayout.update({ where: { id }, data: { status: "PAID" } });
+  const posting = await accountingEnabled();
+  await db.$transaction(async (tx) => {
+    const payout = await tx.teacherPayout.update({
+      where: { id },
+      data: { status: "PAID" },
+      include: { teacher: { select: { name: true } }, employee: { select: { name: true } } },
+    });
+    if (posting) {
+      await postSource(tx, {
+        date: new Date(),
+        memo: `راتب — ${payout.teacher?.name ?? payout.employee?.name ?? id}`,
+        sourceType: "PAYROLL",
+        sourceId: id,
+        lines: linesForPayslip({
+          net: toNumber(payout.netPaid),
+          method: payout.paymentMethod,
+        }),
+      });
+    }
+  });
   await writeAudit("TeacherPayout", id, "UPDATE", { after: { status: "PAID" } });
   await notifyPayout(id);
   revalidatePath(`/${locale}/payroll`);
@@ -132,7 +154,10 @@ export async function deletePayout(locale: string, id: string): Promise<ActionSt
   const prior = await db.teacherPayout.findUnique({ where: { id } });
   const frozen = await guardArchived(prior?.periodStart, prior?.periodEnd);
   if (frozen) return { error: frozen };
-  await db.teacherPayout.delete({ where: { id } });
+  await db.$transaction(async (tx) => {
+    await tx.teacherPayout.delete({ where: { id } });
+    await unpostSource(tx, "PAYROLL", id);
+  });
   await writeAudit("TeacherPayout", id, "DELETE");
   revalidatePath(`/${locale}/payroll`);
   return { ok: true };

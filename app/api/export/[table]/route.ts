@@ -106,6 +106,25 @@ async function loadRows(
         active: a.active ? "1" : "0",
       }));
     }
+    case "journal": {
+      const rows = await db.journalLine.findMany({
+        include: {
+          entry: { select: { date: true, memo: true, sourceType: true } },
+          account: { select: { code: true, nameAr: true } },
+        },
+        orderBy: { entry: { date: "desc" } },
+        take: 20000,
+      });
+      return rows.map((l) => ({
+        date: ymd(l.entry.date),
+        memo: l.entry.memo,
+        source: l.entry.sourceType,
+        accountCode: l.account.code,
+        accountName: l.account.nameAr,
+        debit: toNumber(l.debit),
+        credit: toNumber(l.credit),
+      }));
+    }
     case "teachers": {
       const rows = await db.teacher.findMany({ orderBy: { name: "asc" } });
       return rows.map((t) => ({

@@ -50,7 +50,8 @@ export type TableKey =
   | "payouts"
   | "leads"
   | "terms"
-  | "accounts";
+  | "accounts"
+  | "journal";
 
 export type TableSpec = {
   key: TableKey;
@@ -214,6 +215,23 @@ export const TABLES: TableSpec[] = [
       { key: "type", ar: "النوع", required: true },
       { key: "parentCode", ar: "الحساب الأب" },
       { key: "active", ar: "نشط" },
+    ],
+  },
+  {
+    // Export-only: the journal is derived from source documents (or entered
+    // through the balanced manual dialog) — importing raw lines would bypass
+    // the balance check.
+    key: "journal",
+    finance: true,
+    importable: false,
+    columns: [
+      { key: "date", ar: "التاريخ" },
+      { key: "memo", ar: "البيان" },
+      { key: "source", ar: "المصدر" },
+      { key: "accountCode", ar: "رمز الحساب" },
+      { key: "accountName", ar: "الحساب" },
+      { key: "debit", ar: "مدين" },
+      { key: "credit", ar: "دائن" },
     ],
   },
 ];

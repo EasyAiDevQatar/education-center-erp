@@ -14,6 +14,8 @@ import { computePay, resolveEarningsMode } from "@/lib/earnings-mode";
 import { resolveSalary } from "@/lib/salary-source";
 import { leaveDays } from "@/lib/leave";
 import { PAYSLIP_METHODS } from "@/lib/enums";
+import { accountingEnabled, postSource } from "@/lib/accounting/journal-data";
+import { linesForPayslip } from "@/lib/accounting/posting";
 
 export type RunState = { ok?: boolean; error?: string; count?: number; runId?: string };
 
@@ -189,19 +191,39 @@ export async function markRunPaid(locale: string, runId: string): Promise<RunSta
   if (run.status === "PAID") return { error: "alreadyDecided" };
 
   const now = new Date();
-  const res = await db.$transaction([
-    db.teacherPayout.updateMany({
+  const posting = await accountingEnabled();
+  let count = 0;
+  await db.$transaction(async (tx) => {
+    const res = await tx.teacherPayout.updateMany({
       where: { runId, status: "DRAFT" },
       data: { status: "PAID", paidAt: now },
-    }),
-    db.payrollRun.update({ where: { id: runId }, data: { status: "PAID", paidAt: now } }),
-  ]);
+    });
+    count = res.count;
+    await tx.payrollRun.update({ where: { id: runId }, data: { status: "PAID", paidAt: now } });
+    if (posting) {
+      // One journal entry per payslip, keyed on the payout id — a re-run (or
+      // a payslip already paid individually) is a P2002 skip inside postSource.
+      const slips = await tx.teacherPayout.findMany({
+        where: { runId },
+        include: { teacher: { select: { name: true } }, employee: { select: { name: true } } },
+      });
+      for (const p of slips) {
+        await postSource(tx, {
+          date: now,
+          memo: `راتب — ${p.teacher?.name ?? p.employee?.name ?? p.id}`,
+          sourceType: "PAYROLL",
+          sourceId: p.id,
+          lines: linesForPayslip({ net: toNumber(p.netPaid), method: p.paymentMethod }),
+        });
+      }
+    }
+  });
   await writeAudit("PayrollRun", runId, "UPDATE", {
-    after: { status: "PAID", items: res[0].count },
+    after: { status: "PAID", items: count },
   });
   revalidatePath(`/${locale}/payroll/runs`);
   revalidatePath(`/${locale}/payroll/runs/${runId}`);
-  return { ok: true, count: res[0].count };
+  return { ok: true, count };
 }
 
 /**

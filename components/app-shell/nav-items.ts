@@ -86,9 +86,11 @@ export const NAV_ITEMS: NavItem[] = [
     roles: FINANCE,
     section: "finance",
     flag: "accounting",
-    // Children grow with the module: journal + reports arrive in the next
-    // phase; keeping only live routes here means no dead links meanwhile.
-    children: [{ href: "/accounting/accounts", key: "accountingAccounts" }],
+    children: [
+      { href: "/accounting/journal", key: "accountingJournal" },
+      { href: "/accounting/accounts", key: "accountingAccounts" },
+      { href: "/accounting/reports", key: "accountingReports" },
+    ],
   },
   // ADMIN only: the HR register carries QID/passport/IBAN — a categorically
   // more sensitive surface than anything else in the app.

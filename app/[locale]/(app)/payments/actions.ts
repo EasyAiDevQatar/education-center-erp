@@ -10,6 +10,13 @@ import { guardArchived } from "@/lib/academic-year";
 import { notifyPayment } from "@/lib/integrations/notify";
 import { nextReceiptNo } from "@/lib/balances";
 import { PAYMENT_METHODS } from "@/lib/enums";
+import {
+  accountingEnabled,
+  postSource,
+  repostSource,
+  unpostSource,
+} from "@/lib/accounting/journal-data";
+import { linesForPayment } from "@/lib/accounting/posting";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -60,19 +67,51 @@ export async function savePayment(
     notes: d.notes,
   };
 
+  // GL posting rides the same transaction as the payment write: an edit that
+  // updated the row but failed to re-post would silently desync the books.
+  const posting = await accountingEnabled();
+  let createdId: string | null = null;
   try {
-    if (id) {
-      await db.payment.update({ where: { id }, data });
-      await writeAudit("Payment", id, "UPDATE", { after: data });
-    } else {
-      const receiptNo = d.receiptNo?.trim() || (await nextReceiptNo());
-      const created = await db.payment.create({ data: { ...data, receiptNo } });
-      await writeAudit("Payment", created.id, "CREATE", { after: { ...data, receiptNo } });
-      await notifyPayment(created.id);
-    }
-  } catch (e) {
+    await db.$transaction(async (tx) => {
+      if (id) {
+        const updated = await tx.payment.update({ where: { id }, data });
+        if (posting) {
+          await repostSource(tx, {
+            date: data.date,
+            memo: `دفعة — إيصال ${updated.receiptNo}`,
+            sourceType: "PAYMENT",
+            sourceId: id,
+            lines: linesForPayment({
+              amount: d.amount,
+              method: d.method,
+              receiptNo: updated.receiptNo,
+            }),
+          });
+        }
+      } else {
+        const receiptNo = d.receiptNo?.trim() || (await nextReceiptNo());
+        const created = await tx.payment.create({ data: { ...data, receiptNo } });
+        createdId = created.id;
+        if (posting) {
+          await postSource(tx, {
+            date: data.date,
+            memo: `دفعة — إيصال ${receiptNo}`,
+            sourceType: "PAYMENT",
+            sourceId: created.id,
+            lines: linesForPayment({ amount: d.amount, method: d.method, receiptNo }),
+          });
+        }
+      }
+    });
+  } catch {
     // Unique receiptNo collision
     return { error: "duplicate" };
+  }
+  if (id) {
+    await writeAudit("Payment", id, "UPDATE", { after: data });
+  } else if (createdId) {
+    await writeAudit("Payment", createdId, "CREATE", { after: data });
+    await notifyPayment(createdId);
   }
 
   revalidatePath(`/${locale}/payments`);
@@ -84,7 +123,10 @@ export async function deletePayment(locale: string, id: string): Promise<ActionS
   const prior = await db.payment.findUnique({ where: { id } });
   const frozen = await guardArchived(prior?.date);
   if (frozen) return { error: frozen };
-  await db.payment.delete({ where: { id } });
+  await db.$transaction(async (tx) => {
+    await tx.payment.delete({ where: { id } });
+    await unpostSource(tx, "PAYMENT", id);
+  });
   await writeAudit("Payment", id, "DELETE");
   revalidatePath(`/${locale}/payments`);
   return { ok: true };

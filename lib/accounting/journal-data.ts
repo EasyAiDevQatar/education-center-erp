@@ -1,7 +1,14 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { toNumber } from "@/lib/money";
 import { DEFAULT_ACCOUNTS } from "./coa";
-import { isBalanced, type DraftEntry } from "./posting";
+import {
+  isBalanced,
+  linesForExpense,
+  linesForPayment,
+  linesForPayslip,
+  type DraftEntry,
+} from "./posting";
 
 /**
  * The module's on switch. Read per request — never cached at module level, so
@@ -104,4 +111,69 @@ export async function unpostSource(
   sourceId: string,
 ): Promise<void> {
   await tx.journalEntry.deleteMany({ where: { sourceType, sourceId } });
+}
+
+/**
+ * Post every historical payment, expense and PAID payslip from `fromDate`
+ * onwards. Safe to run repeatedly — the `[sourceType, sourceId]` unique turns
+ * already-posted documents into skips — which also makes it the repair tool
+ * for gaps created while the module was switched off.
+ */
+export async function backfillJournal(fromDate: Date): Promise<Record<string, number>> {
+  await ensureChartOfAccounts();
+  const summary = { payments: 0, expenses: 0, payslips: 0 };
+
+  const before = await db.journalEntry.count();
+
+  const payments = await db.payment.findMany({ where: { date: { gte: fromDate } } });
+  for (const p of payments) {
+    await postSource(db, {
+      date: p.date,
+      memo: `دفعة — إيصال ${p.receiptNo}`,
+      sourceType: "PAYMENT",
+      sourceId: p.id,
+      lines: linesForPayment({
+        amount: toNumber(p.amount),
+        method: p.method,
+        receiptNo: p.receiptNo,
+      }),
+    });
+    summary.payments++;
+  }
+
+  const expenses = await db.expense.findMany({
+    where: { date: { gte: fromDate } },
+    include: { category: { include: { account: { select: { code: true } } } } },
+  });
+  for (const e of expenses) {
+    await postSource(db, {
+      date: e.date,
+      memo: `مصروف — ${e.description}`,
+      sourceType: "EXPENSE",
+      sourceId: e.id,
+      lines: linesForExpense({
+        amount: toNumber(e.amount),
+        categoryAccountCode: e.category?.account?.code ?? null,
+      }),
+    });
+    summary.expenses++;
+  }
+
+  const payouts = await db.teacherPayout.findMany({
+    where: { status: "PAID", periodEnd: { gte: fromDate } },
+    include: { teacher: { select: { name: true } }, employee: { select: { name: true } } },
+  });
+  for (const p of payouts) {
+    await postSource(db, {
+      date: p.paidAt ?? p.periodEnd,
+      memo: `راتب — ${p.teacher?.name ?? p.employee?.name ?? p.id}`,
+      sourceType: "PAYROLL",
+      sourceId: p.id,
+      lines: linesForPayslip({ net: toNumber(p.netPaid), method: p.paymentMethod }),
+    });
+    summary.payslips++;
+  }
+
+  const after = await db.journalEntry.count();
+  return { ...summary, created: after - before };
 }

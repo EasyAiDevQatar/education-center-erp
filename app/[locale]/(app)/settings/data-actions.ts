@@ -9,6 +9,7 @@ import { WIPE_PHRASE, SEED_SPEC, type SeedKey } from "@/lib/data-zone";
 import { ensureLeaveTypes } from "@/lib/leave-data";
 import { LEAD_STATUSES } from "@/lib/leads";
 import { hashPassword } from "@/lib/password";
+import { accountingEnabled, backfillJournal } from "@/lib/accounting/journal-data";
 
 export type DataState = {
   ok?: boolean;
@@ -728,6 +729,15 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     runs++;
   }
   summary.payrollRuns = runs;
+
+  // With the accounting module on, put the seeded money on the books too —
+  // otherwise the journal and reports demo empty against a full ERP.
+  if (await accountingEnabled()) {
+    const horizon = new Date(today);
+    horizon.setUTCFullYear(horizon.getUTCFullYear() - 2);
+    const posted = await backfillJournal(horizon);
+    summary.journalEntries = posted.created ?? 0;
+  }
 
   await writeAudit("System", "seed-demo", "CREATE", { after: summary });
   revalidatePath(`/${locale}`, "layout");

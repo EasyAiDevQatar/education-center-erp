@@ -4,9 +4,17 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
-import { ensureChartOfAccounts } from "@/lib/accounting/journal-data";
+import {
+  accountingEnabled,
+  backfillJournal,
+  ensureChartOfAccounts,
+} from "@/lib/accounting/journal-data";
 
-export type AccountingSettingsState = { ok?: boolean; error?: string };
+export type AccountingSettingsState = {
+  ok?: boolean;
+  error?: string;
+  summary?: Record<string, number>;
+};
 
 /**
  * Toggle the optional accounting module. Turning it ON seeds (or repairs) the
@@ -34,4 +42,25 @@ export async function saveAccountingSettings(
   // Layout-wide: the sidebar item appears/disappears with the flag.
   revalidatePath(`/${locale}`, "layout");
   return { ok: true };
+}
+
+/**
+ * Post historical payments/expenses/paid-payslips from the given date into
+ * the journal. Idempotent — the [sourceType, sourceId] unique turns anything
+ * already posted into a skip, so re-running heals gaps instead of duplicating.
+ */
+export async function runBackfill(
+  locale: string,
+  fromDateStr: string,
+): Promise<AccountingSettingsState> {
+  const s = await getSession();
+  if (!s || s.role !== "ADMIN") return { error: "forbidden" };
+  if (!(await accountingEnabled())) return { error: "notEnabled" };
+  const fromDate = new Date(`${fromDateStr}T00:00:00.000Z`);
+  if (Number.isNaN(fromDate.getTime())) return { error: "invalid" };
+
+  const summary = await backfillJournal(fromDate);
+  await writeAudit("System", "journal-backfill", "CREATE", { after: summary });
+  revalidatePath(`/${locale}/accounting/journal`);
+  return { ok: true, summary };
 }
