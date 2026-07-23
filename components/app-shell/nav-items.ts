@@ -15,6 +15,7 @@ import {
   UserPlus,
   BriefcaseBusiness,
   Landmark,
+  Truck,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -26,9 +27,8 @@ export type NavItem = {
   key: string;
   icon: LucideIcon;
   roles: Role[];
-  /** section key under `nav.sections`. "transport" is reserved for the
-      coming Trips & Vehicles module — a section with no items renders
-      nothing, so declaring it now costs zero pixels. */
+  /** section key under `nav.sections`. A section with no visible items renders
+      nothing, so a flagged-off module costs zero pixels. */
   section: "operations" | "people" | "finance" | "hr" | "transport" | "admin";
   /** Nested links, shown indented while the parent branch is active. */
   children?: { href: string; key: string }[];
@@ -92,6 +92,18 @@ export const NAV_ITEMS: NavItem[] = [
       { href: "/accounting/cheques", key: "accountingCheques" },
       { href: "/accounting/suppliers", key: "accountingSuppliers" },
       { href: "/accounting/reports", key: "accountingReports" },
+    ],
+  },
+  {
+    href: "/transport",
+    key: "transport",
+    icon: Truck,
+    roles: STAFF,
+    section: "transport",
+    flag: "transport",
+    children: [
+      { href: "/transport/vehicles", key: "transportVehicles" },
+      { href: "/transport/drivers", key: "transportDrivers" },
     ],
   },
   // ADMIN only: the HR register carries QID/passport/IBAN — a categorically

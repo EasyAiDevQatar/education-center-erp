@@ -88,7 +88,11 @@
       "depositBeforeReceived": "تاريخ الإيداع قبل تاريخ الاستلام.",
       "clearanceBeforeDeposit": "تاريخ التحصيل قبل تاريخ الإيداع.",
       "chequeNoRequired": "أدخل رقم الشيك.",
-      "alreadyCheque": "هذا المصروف مرتبط بشيك بالفعل."
+      "alreadyCheque": "هذا المصروف مرتبط بشيك بالفعل.",
+      "plateTaken": "رقم اللوحة مسجل بالفعل لمركبة أخرى.",
+      "vehicleInUse": "لا يمكن حذف مركبة مسندة إلى سائق — قم بإلغاء تنشيطها بدلاً من ذلك.",
+      "driverExists": "هذا الموظف مسجل بالفعل كسائق.",
+      "invalidShift": "يجب أن تكون نهاية المناوبة بعد بدايتها — عيّن الحقلين أو اتركهما فارغين."
     },
     "price": "السعر",
     "searchPlaceholder": "بحث…",
@@ -153,7 +157,10 @@
     "accountingJournal": "دفتر اليومية",
     "accountingReports": "التقارير المحاسبية",
     "accountingSuppliers": "الموردون",
-    "accountingCheques": "الشيكات"
+    "accountingCheques": "الشيكات",
+    "transport": "النقل",
+    "transportVehicles": "المركبات",
+    "transportDrivers": "السائقون"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -710,6 +717,12 @@
     "trackingVisibility": {
       "ADMIN_ONLY": "المدير فقط",
       "ADMIN_STAFF": "المدير وطاقم المكتب"
+    },
+    "vehicleDocType": {
+      "REGISTRATION": "استمارة المركبة",
+      "INSURANCE": "التأمين",
+      "INSPECTION": "الفحص الفني",
+      "OTHER": "أخرى"
     }
   },
   "paymentModes": {
@@ -902,7 +915,10 @@
       "leaveRequests": "طلبات الإجازات",
       "payrollRuns": "دفعات الرواتب",
       "suppliers": "الموردون",
-      "cheques": "الشيكات"
+      "cheques": "الشيكات",
+      "vehicles": "المركبات",
+      "vehicleDocs": "مستندات المركبات",
+      "drivers": "السائقون"
     },
     "presetLabel": "حجم جاهز:",
     "presets": {
@@ -1567,5 +1583,46 @@
     "teachers": "المعلمون",
     "manageHint": "المواد التي يمكن اختيارها عند حجز حصة.",
     "sortOrder": "الترتيب"
+  },
+  "vehicles": {
+    "title": "المركبات",
+    "subtitle": "أسطول المركز والأوراق التي يجب أن تبقى سارية.",
+    "add": "إضافة مركبة",
+    "edit": "تعديل المركبة",
+    "plate": "رقم اللوحة",
+    "make": "الصانع",
+    "model": "الطراز",
+    "makeModel": "الصانع والطراز",
+    "year": "سنة الصنع",
+    "capacity": "عدد المقاعد",
+    "odometerKm": "عداد الكيلومترات",
+    "papers": "الأوراق",
+    "documents": "المستندات",
+    "documentsFor": "مستندات المركبة — {plate}",
+    "docType": "نوع المستند",
+    "docNumber": "الرقم",
+    "issuedOn": "تاريخ الإصدار",
+    "expiresOn": "تاريخ الانتهاء",
+    "addDocument": "إضافة مستند",
+    "expiryAlert": "{count, plural, =1 {مستند مركبة واحد} =2 {مستندا مركبات} other {# مستندات مركبات}} منتهية أو تنتهي خلال {days} يوماً",
+    "searchPlaceholder": "ابحث برقم اللوحة أو الصانع أو الطراز…"
+  },
+  "drivers": {
+    "title": "السائقون",
+    "subtitle": "الموظفون المصرح لهم بالقيادة، ورخصهم ومناوباتهم ومركباتهم المعتادة.",
+    "add": "إضافة سائق",
+    "edit": "تعديل السائق",
+    "employee": "الموظف",
+    "licence": "الرخصة",
+    "licenceNo": "رقم الرخصة",
+    "licenceExpiry": "انتهاء الرخصة",
+    "defaultVehicle": "المركبة المعتادة",
+    "shift": "المناوبة",
+    "shiftStart": "بداية المناوبة",
+    "shiftEnd": "نهاية المناوبة",
+    "shiftHint": "اترك الحقلين فارغين إذا لم تكن للسائق مناوبة ثابتة — عندها يُعتبر متاحاً طوال اليوم.",
+    "noShift": "بدون مناوبة ثابتة",
+    "licenceAlert": "{count, plural, =1 {رخصة سائق واحدة} =2 {رخصتا سائقين} other {# رخص سائقين}} منتهية أو تنتهي خلال {days} يوماً",
+    "searchPlaceholder": "ابحث بالاسم أو الرخصة أو رقم اللوحة…"
   }
 }

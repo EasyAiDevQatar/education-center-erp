@@ -116,3 +116,12 @@ export type ChequePolicy = (typeof CHEQUE_POLICIES)[number];
 /** Who may see live driver positions. Staff location data is sensitive. */
 export const TRACKING_VISIBILITY = ["ADMIN_ONLY", "ADMIN_STAFF"] as const;
 export type TrackingVisibility = (typeof TRACKING_VISIBILITY)[number];
+
+/** Expiring vehicle papers. Like EMPLOYEE_DOC_TYPES, a renewal is a new row. */
+export const VEHICLE_DOC_TYPES = [
+  "REGISTRATION",
+  "INSURANCE",
+  "INSPECTION",
+  "OTHER",
+] as const;
+export type VehicleDocType = (typeof VEHICLE_DOC_TYPES)[number];

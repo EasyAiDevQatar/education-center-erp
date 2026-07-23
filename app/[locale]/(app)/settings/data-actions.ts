@@ -74,6 +74,12 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     await tx.user.updateMany({ data: { teacherId: null, guardianId: null } });
     summary.students = (await tx.student.deleteMany()).count;
     summary.guardians = (await tx.guardian.deleteMany()).count;
+    // Transport: the driving role points at both an employee and a vehicle, so
+    // it goes before either. Documents cascade from the vehicle, but the
+    // explicit delete keeps the summary honest.
+    summary.drivers = (await tx.driver.deleteMany()).count;
+    summary.vehicleDocuments = (await tx.vehicleDocument.deleteMany()).count;
+    summary.vehicles = (await tx.vehicle.deleteMany()).count;
     // HR: employees reference teachers, so they go first. The children cascade,
     // but explicit deletes are self-documenting and survive a future FK change.
     summary.leaveRequests = (await tx.leaveRequest.deleteMany()).count;
@@ -767,6 +773,104 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     docs++;
   }
   summary.employeeDocs = docs;
+
+  // --- Transport: fleet + drivers ---
+  // Seeded regardless of the module flag, so an admin who switches transport on
+  // lands on populated screens instead of three empty registers.
+  const VEHICLE_MODELS: [string, string, number, number][] = [
+    ["Toyota", "Hiace", 2021, 11],
+    ["Nissan", "Urvan", 2019, 12],
+    ["Toyota", "Corolla", 2022, 4],
+    ["Hyundai", "Staria", 2023, 8],
+    ["Kia", "Carnival", 2020, 6],
+  ];
+  const vehicleIds: string[] = [];
+  for (let i = 0; i < n.vehicles; i++) {
+    const [make, model, year, capacity] = VEHICLE_MODELS[i % VEHICLE_MODELS.length];
+    // Qatari plates are up to 6 digits; keep them unique across a reseed by
+    // continuing from whatever is already there.
+    const plate = String(100000 + i + Math.floor(rand() * 800000));
+    const existing = await db.vehicle.findUnique({ where: { plate } });
+    if (existing) continue;
+    const v = await db.vehicle.create({
+      data: {
+        plate,
+        make,
+        model,
+        year,
+        capacity,
+        odometerKm: 20_000 + Math.floor(rand() * 180_000),
+        active: true,
+      },
+    });
+    vehicleIds.push(v.id);
+  }
+  summary.vehicles = vehicleIds.length;
+
+  // Vehicle papers: same three-bucket spread as the HR documents, so the
+  // expiry banner has an expired one, an expiring one and a healthy one.
+  const V_DOC_TYPES = ["REGISTRATION", "INSURANCE", "INSPECTION"] as const;
+  let vDocs = 0;
+  for (let i = 0; i < n.vehicleDocs && vehicleIds.length; i++) {
+    const bucket = i % 3;
+    const expires = new Date(today);
+    expires.setUTCDate(
+      expires.getUTCDate() +
+        (bucket === 0
+          ? 7 + Math.floor(rand() * 40) // expiring soon → amber
+          : bucket === 1
+            ? -(3 + Math.floor(rand() * 20)) // already expired → red
+            : 120 + Math.floor(rand() * 400)), // comfortably valid
+    );
+    const issued = new Date(expires);
+    issued.setUTCFullYear(issued.getUTCFullYear() - 1);
+    const type = V_DOC_TYPES[i % V_DOC_TYPES.length];
+    await db.vehicleDocument.create({
+      data: {
+        vehicleId: vehicleIds[i % vehicleIds.length],
+        type,
+        number: `${type.slice(0, 3)}${String(100000 + Math.floor(rand() * 899999))}`,
+        issuedOn: issued,
+        expiresOn: expires,
+      },
+    });
+    vDocs++;
+  }
+  summary.vehicleDocs = vDocs;
+
+  // Drivers: the driving role layered onto seeded employees. Prefer the ones in
+  // the TRANSPORT department (the seeded «سائق»), then fall back to anyone —
+  // a small centre really does have the receptionist drive.
+  let driverCount = 0;
+  if (n.drivers > 0 && employeeIds.length) {
+    const candidates = await db.employee.findMany({
+      where: { id: { in: employeeIds }, driver: { is: null } },
+      orderBy: [{ department: "asc" }, { name: "asc" }],
+    });
+    const ordered = [
+      ...candidates.filter((e) => e.department === "TRANSPORT"),
+      ...candidates.filter((e) => e.department !== "TRANSPORT"),
+    ];
+    for (let i = 0; i < n.drivers && i < ordered.length; i++) {
+      // One driver's licence expires inside the alert window so the banner demos.
+      const licence = new Date(today);
+      licence.setUTCDate(licence.getUTCDate() + (i === 0 ? 25 : 300 + Math.floor(rand() * 400)));
+      const start = pick([6 * 60, 7 * 60, 12 * 60]);
+      await db.driver.create({
+        data: {
+          employeeId: ordered[i].id,
+          licenceNo: `QD${String(100000 + Math.floor(rand() * 899999))}`,
+          licenceExpiry: licence,
+          defaultVehicleId: vehicleIds.length ? vehicleIds[i % vehicleIds.length] : null,
+          shiftStartMin: start,
+          shiftEndMin: start + pick([480, 540, 600]),
+          active: true,
+        },
+      });
+      driverCount++;
+    }
+  }
+  summary.drivers = driverCount;
 
   // Leave: one request per slot, never overlapping — each employee gets its
   // own month window, mixing approved history with a pending queue.

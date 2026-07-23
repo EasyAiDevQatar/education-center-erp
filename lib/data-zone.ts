@@ -38,6 +38,11 @@ export const SEED_SPEC = [
   // Up to two years of monthly runs — the old cap of 6 rejected any realistic
   // "show me a year of payroll" demo and surfaced as a bare "invalid".
   { key: "payrollRuns", max: 24, default: 1 },
+  // Transport module (seeded regardless of the flag, so switching it on finds
+  // a populated fleet instead of three empty screens).
+  { key: "vehicles", max: 100, default: 3 },
+  { key: "vehicleDocs", max: 300, default: 6 },
+  { key: "drivers", max: 50, default: 2 },
 ] as const;
 
 export type SeedKey = (typeof SEED_SPEC)[number]["key"];
@@ -81,7 +86,9 @@ export type TableKey =
   | "accounts"
   | "journal"
   | "suppliers"
-  | "cheques";
+  | "cheques"
+  | "vehicles"
+  | "drivers";
 
 export type TableSpec = {
   key: TableKey;
@@ -275,6 +282,37 @@ export const TABLES: TableSpec[] = [
       { key: "bankName", ar: "البنك" },
       { key: "amount", ar: "المبلغ" },
       { key: "dueDate", ar: "تاريخ الاستحقاق" },
+    ],
+  },
+  {
+    key: "vehicles",
+    finance: false,
+    importable: true,
+    columns: [
+      { key: "plate", ar: "رقم اللوحة", required: true },
+      { key: "make", ar: "الصانع" },
+      { key: "model", ar: "الطراز" },
+      { key: "year", ar: "سنة الصنع" },
+      { key: "capacity", ar: "عدد المقاعد" },
+      { key: "odometerKm", ar: "عداد الكيلومترات" },
+      { key: "active", ar: "نشط" },
+      { key: "notes", ar: "ملاحظات" },
+    ],
+  },
+  {
+    // Imported by employee number: a driver is a role layered onto an existing
+    // employee, so the person must already be in the HR register.
+    key: "drivers",
+    finance: false,
+    importable: true,
+    columns: [
+      { key: "employeeNo", ar: "رقم الموظف", required: true },
+      { key: "licenceNo", ar: "رقم الرخصة" },
+      { key: "licenceExpiry", ar: "انتهاء الرخصة" },
+      { key: "plate", ar: "المركبة المعتادة" },
+      { key: "shiftStart", ar: "بداية المناوبة" },
+      { key: "shiftEnd", ar: "نهاية المناوبة" },
+      { key: "active", ar: "نشط" },
     ],
   },
   {

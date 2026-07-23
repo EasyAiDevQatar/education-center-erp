@@ -177,6 +177,66 @@ async function importRows(
           created++;
           break;
         }
+        case "vehicles": {
+          if (!r.plate) { fail(r, "plate required"); break; }
+          const plate = r.plate.trim().toUpperCase().replace(/\s+/g, " ");
+          const dupe = await db.vehicle.findUnique({ where: { plate } });
+          if (dupe) { fail(r, "duplicate plate"); break; }
+          await db.vehicle.create({
+            data: {
+              plate,
+              make: r.make || null,
+              model: r.model || null,
+              year: r.year ? Math.trunc(num(r.year)) || null : null,
+              capacity: r.capacity ? Math.max(1, Math.trunc(num(r.capacity, 4))) : 4,
+              odometerKm: Math.max(0, Math.trunc(num(r.odometerKm, 0))),
+              active: !/^(0|false|no|لا)$/i.test(String(r.active ?? "").trim()),
+              notes: r.notes || null,
+            },
+          });
+          created++;
+          break;
+        }
+        case "drivers": {
+          if (!r.employeeNo) { fail(r, "employeeNo required"); break; }
+          const employee = await db.employee.findUnique({
+            where: { employeeNo: r.employeeNo.trim() },
+            select: { id: true },
+          });
+          if (!employee) { fail(r, "employee not found"); break; }
+          const dupe = await db.driver.findUnique({ where: { employeeId: employee.id } });
+          if (dupe) { fail(r, "already a driver"); break; }
+          const plate = r.plate ? r.plate.trim().toUpperCase().replace(/\s+/g, " ") : "";
+          const vehicle = plate
+            ? await db.vehicle.findUnique({ where: { plate }, select: { id: true } })
+            : null;
+          if (plate && !vehicle) { fail(r, "vehicle not found"); break; }
+          // Blank or malformed times mean "no fixed shift" rather than 00:00,
+          // which would roster the driver for a minute at midnight.
+          const mins = (v?: string) => {
+            const m = /^(\d{1,2}):(\d{2})$/.exec(String(v ?? "").trim());
+            if (!m) return null;
+            const total = Number(m[1]) * 60 + Number(m[2]);
+            return total >= 0 && total <= 1440 ? total : null;
+          };
+          const start = mins(r.shiftStart);
+          const end = mins(r.shiftEnd);
+          const bothOrNeither = start !== null && end !== null && start < end;
+          const expiry = dateOf(r.licenceExpiry);
+          await db.driver.create({
+            data: {
+              employeeId: employee.id,
+              licenceNo: r.licenceNo || null,
+              licenceExpiry: expiry ? new Date(`${expiry}T00:00:00.000Z`) : null,
+              defaultVehicleId: vehicle?.id ?? null,
+              shiftStartMin: bothOrNeither ? start : null,
+              shiftEndMin: bothOrNeither ? end : null,
+              active: !/^(0|false|no|لا)$/i.test(String(r.active ?? "").trim()),
+            },
+          });
+          created++;
+          break;
+        }
         case "accounts": {
           if (!r.code || !r.nameAr) { fail(r, "code/name required"); break; }
           const type = String(r.type ?? "").trim().toUpperCase();

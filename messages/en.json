@@ -88,7 +88,11 @@
       "depositBeforeReceived": "Deposit date is before the received date.",
       "clearanceBeforeDeposit": "Clearance date is before the deposit date.",
       "chequeNoRequired": "Enter the cheque number.",
-      "alreadyCheque": "This expense is already linked to a cheque."
+      "alreadyCheque": "This expense is already linked to a cheque.",
+      "plateTaken": "This plate is already registered to another vehicle.",
+      "vehicleInUse": "A vehicle assigned to a driver cannot be deleted — deactivate it instead.",
+      "driverExists": "This employee is already registered as a driver.",
+      "invalidShift": "The shift end must be after the shift start — set both, or leave both blank."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -153,7 +157,10 @@
     "accountingJournal": "Journal",
     "accountingReports": "Accounting reports",
     "accountingSuppliers": "Suppliers",
-    "accountingCheques": "Cheques"
+    "accountingCheques": "Cheques",
+    "transport": "Transport",
+    "transportVehicles": "Vehicles",
+    "transportDrivers": "Drivers"
   },
   "auth": {
     "login": "Log in",
@@ -710,6 +717,12 @@
     "trackingVisibility": {
       "ADMIN_ONLY": "Admin only",
       "ADMIN_STAFF": "Admin and office staff"
+    },
+    "vehicleDocType": {
+      "REGISTRATION": "Registration (Istimara)",
+      "INSURANCE": "Insurance",
+      "INSPECTION": "Inspection",
+      "OTHER": "Other"
     }
   },
   "paymentModes": {
@@ -902,7 +915,10 @@
       "leaveRequests": "Leave requests",
       "payrollRuns": "Payroll runs",
       "suppliers": "Suppliers",
-      "cheques": "Cheques"
+      "cheques": "Cheques",
+      "vehicles": "Vehicles",
+      "vehicleDocs": "Vehicle documents",
+      "drivers": "Drivers"
     },
     "presetLabel": "Preset size:",
     "presets": {
@@ -1567,5 +1583,46 @@
     "teachers": "Teachers",
     "manageHint": "Subjects that can be chosen when booking a lesson.",
     "sortOrder": "Order"
+  },
+  "vehicles": {
+    "title": "Vehicles",
+    "subtitle": "The fleet the centre can dispatch, and the papers that must stay valid.",
+    "add": "Add vehicle",
+    "edit": "Edit vehicle",
+    "plate": "Plate",
+    "make": "Make",
+    "model": "Model",
+    "makeModel": "Make & model",
+    "year": "Year",
+    "capacity": "Seats",
+    "odometerKm": "Odometer (km)",
+    "papers": "Papers",
+    "documents": "Documents",
+    "documentsFor": "Documents — {plate}",
+    "docType": "Document type",
+    "docNumber": "Number",
+    "issuedOn": "Issued on",
+    "expiresOn": "Expires on",
+    "addDocument": "Add document",
+    "expiryAlert": "{count, plural, =1 {# vehicle document} other {# vehicle documents}} expired or expiring within {days} days",
+    "searchPlaceholder": "Search by plate, make or model…"
+  },
+  "drivers": {
+    "title": "Drivers",
+    "subtitle": "Staff cleared to drive, their licence, shift and usual vehicle.",
+    "add": "Add driver",
+    "edit": "Edit driver",
+    "employee": "Employee",
+    "licence": "Licence",
+    "licenceNo": "Licence number",
+    "licenceExpiry": "Licence expiry",
+    "defaultVehicle": "Usual vehicle",
+    "shift": "Shift",
+    "shiftStart": "Shift start",
+    "shiftEnd": "Shift end",
+    "shiftHint": "Leave both blank if this driver has no fixed shift — they will be considered available all day.",
+    "noShift": "No fixed shift",
+    "licenceAlert": "{count, plural, =1 {# driver licence} other {# driver licences}} expired or expiring within {days} days",
+    "searchPlaceholder": "Search by name, licence or plate…"
   }
 }

@@ -137,6 +137,38 @@ async function loadRows(
         notes: s.notes ?? "",
       }));
     }
+    case "vehicles": {
+      const rows = await db.vehicle.findMany({ orderBy: { plate: "asc" } });
+      return rows.map((v) => ({
+        plate: v.plate,
+        make: v.make ?? "",
+        model: v.model ?? "",
+        year: v.year ?? "",
+        capacity: v.capacity,
+        odometerKm: v.odometerKm,
+        active: v.active ? "1" : "0",
+        notes: v.notes ?? "",
+      }));
+    }
+    case "drivers": {
+      const rows = await db.driver.findMany({
+        include: { employee: true, defaultVehicle: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const hhmm = (min: number | null) =>
+        min == null
+          ? ""
+          : `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+      return rows.map((d) => ({
+        employeeNo: d.employee.employeeNo ?? "",
+        licenceNo: d.licenceNo ?? "",
+        licenceExpiry: d.licenceExpiry ? ymd(d.licenceExpiry) : "",
+        plate: d.defaultVehicle?.plate ?? "",
+        shiftStart: hhmm(d.shiftStartMin),
+        shiftEnd: hhmm(d.shiftEndMin),
+        active: d.active ? "1" : "0",
+      }));
+    }
     case "journal": {
       const rows = await db.journalLine.findMany({
         include: {

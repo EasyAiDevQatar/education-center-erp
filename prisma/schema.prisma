@@ -770,6 +770,8 @@ model Employee {
   leaveAdjustments LeaveAdjustment[]
   payslips         TeacherPayout[]
   settlements      EndOfService[]
+  /// Set only while this employee drives (transport module).
+  driver Driver?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1095,4 +1097,83 @@ model ChequeEvent {
   at         DateTime @default(now())
 
   @@index([chequeId, at])
+}
+
+/* --------------------------- Transport: the fleet -------------------------- */
+
+/// A vehicle the centre can dispatch. Kept deliberately thin: everything that
+/// expires lives in VehicleDocument, and everything that costs money arrives in
+/// Z5 (fuel/maintenance), so this row rarely changes once created.
+model Vehicle {
+  id    String @id @default(cuid())
+  /// Registration plate — the number staff actually say out loud, so it is the
+  /// natural key and must be unique.
+  plate String @unique
+  make  String?
+  model String?
+  year  Int?
+  /// Passenger seats excluding the driver — the capacity the allocator honours.
+  capacity   Int     @default(4)
+  odometerKm Int     @default(0)
+  active     Boolean @default(true)
+  notes      String?
+
+  documents VehicleDocument[]
+  /// Drivers whose default vehicle this is (back-relation, not ownership).
+  drivers Driver[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
+/// Every expiring vehicle paper. Same rule as EmployeeDocument: a renewal is a
+/// new row, never an edit, so history survives and alerts read the latest row.
+model VehicleDocument {
+  id        String    @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type      String // REGISTRATION | INSURANCE | INSPECTION | OTHER
+  number    String?
+  issuedOn  DateTime?
+  expiresOn DateTime?
+  /// Path to the scan on disk — never a DB blob (see EmployeeDocument).
+  fileUrl String?
+  notes   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId])
+  @@index([expiresOn])
+}
+
+/// The driving role layered onto an existing Employee — the person stays one
+/// Employee record (one payslip, one QID, one leave balance) and gains a Driver
+/// row only while they drive. Deleting the employee removes the role with them.
+model Driver {
+  id         String   @id @default(cuid())
+  employeeId String   @unique
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  licenceNo     String?
+  licenceExpiry DateTime?
+
+  /// The vehicle this driver normally takes; the allocator starts here and may
+  /// still be overridden per trip. SetNull so retiring a vehicle never deletes
+  /// a driver.
+  defaultVehicleId String?
+  defaultVehicle   Vehicle? @relation(fields: [defaultVehicleId], references: [id], onDelete: SetNull)
+
+  /// Shift window in minutes from midnight — the bounds allocate() must respect.
+  shiftStartMin Int?
+  shiftEndMin   Int?
+
+  active Boolean @default(true)
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
 }
