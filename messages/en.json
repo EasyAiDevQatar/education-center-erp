@@ -82,7 +82,13 @@
       "unbalanced": "The entry is not balanced — total debit must equal total credit.",
       "notManual": "Auto-posted entries can only be removed with their source document.",
       "notEnabled": "The accounting module is not enabled.",
-      "supplierInUse": "A supplier with expenses cannot be deleted — deactivate it instead."
+      "supplierInUse": "A supplier with expenses cannot be deleted — deactivate it instead.",
+      "bookExhausted": "This book has no leaves left — create a new one.",
+      "badTransition": "This transition is not allowed from the current status.",
+      "depositBeforeReceived": "Deposit date is before the received date.",
+      "clearanceBeforeDeposit": "Clearance date is before the deposit date.",
+      "chequeNoRequired": "Enter the cheque number.",
+      "alreadyCheque": "This expense is already linked to a cheque."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -146,7 +152,8 @@
     "accountingAccounts": "Chart of accounts",
     "accountingJournal": "Journal",
     "accountingReports": "Accounting reports",
-    "accountingSuppliers": "Suppliers"
+    "accountingSuppliers": "Suppliers",
+    "accountingCheques": "Cheques"
   },
   "auth": {
     "login": "Log in",
@@ -425,7 +432,10 @@
     "unpaidSessionsCount": "{n} unpaid session(s)",
     "amountPrefilledHint": "Pre-filled with the outstanding balance — edit it for a part payment.",
     "selectedCount": "{n} selected",
-    "paySelected": "Pay selected"
+    "paySelected": "Pay selected",
+    "chequeNo": "Cheque no.",
+    "chequeBank": "Cheque bank",
+    "chequeDueDate": "Due date"
   },
   "packages": {
     "title": "Packages",
@@ -672,6 +682,21 @@
       "DRAFT": "Draft",
       "APPROVED": "Approved",
       "POSTED": "Posted"
+    },
+    "chequeDirection": {
+      "INCOMING": "Incoming",
+      "OUTGOING": "Outgoing"
+    },
+    "chequeStatus": {
+      "DRAFT": "Draft",
+      "RECEIVED": "Received",
+      "PENDING_DEPOSIT": "Pending deposit",
+      "DEPOSITED": "Deposited",
+      "CLEARED": "Cleared",
+      "BOUNCED": "Bounced",
+      "REPLACED": "Replaced",
+      "CANCELLED": "Cancelled",
+      "VOID": "Void"
     }
   },
   "paymentModes": {
@@ -863,7 +888,8 @@
       "employeeDocs": "Employee documents",
       "leaveRequests": "Leave requests",
       "payrollRuns": "Payroll runs",
-      "suppliers": "Suppliers"
+      "suppliers": "Suppliers",
+      "cheques": "Cheques"
     }
   },
   "availability": {
@@ -1408,7 +1434,28 @@
     "backfillHint": "Posts payments, expenses and paid payslips from the chosen date into the journal. Safe to re-run — anything already posted is skipped.",
     "backfillRun": "Backfill now",
     "backfillDone": "Posted {created} entries out of {scanned} documents.",
-    "openingBalanceHint": "Opening balances (cash/bank) are recorded as one manual entry against equity account 3000."
+    "openingBalanceHint": "Opening balances (cash/bank) are recorded as one manual entry against equity account 3000.",
+    "chequeSettingsTitle": "Cheque settings",
+    "confReceived": "Received confidence %",
+    "confPending": "Pending-deposit confidence %",
+    "confDeposited": "Deposited confidence %",
+    "alertDays": "Alert days before due",
+    "templateTitle": "Cheque print template (mm)",
+    "templateHint": "Field positions in millimetres from the leaf's top-left — calibrated once per bank book using the test print.",
+    "tpl": {
+      "leafW": "Leaf width",
+      "leafH": "Leaf height",
+      "dateX": "Date X",
+      "dateY": "Date Y",
+      "payeeX": "Payee X",
+      "payeeY": "Payee Y",
+      "wordsX": "Words X",
+      "wordsY": "Words Y",
+      "wordsW": "Words width",
+      "digitsX": "Digits X",
+      "digitsY": "Digits Y"
+    },
+    "testPrint": "Test print with placeholder values"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -1421,5 +1468,47 @@
     "expensesCount": "Expenses",
     "expensesTotal": "Expenses total",
     "searchPlaceholder": "Search by name or phone…"
+  },
+  "cheques": {
+    "title": "Cheques",
+    "subtitle": "Incoming and outgoing cheque register with lifecycle and cash-flow forecast.",
+    "tabs": {
+      "register": "Register",
+      "books": "Cheque books"
+    },
+    "chequeNo": "Cheque no.",
+    "direction": "Direction",
+    "party": "Party",
+    "dueDate": "Due date",
+    "overdue": "Overdue",
+    "searchPlaceholder": "Search by cheque no. or party…",
+    "addOutgoing": "Issue cheque",
+    "addBook": "New cheque book",
+    "editBook": "Edit book",
+    "book": "Book",
+    "bookHint": "The next leaf number is consumed automatically on issue.",
+    "payee": "Payee",
+    "bankName": "Bank",
+    "accountNo": "Account no.",
+    "startNo": "First leaf",
+    "endNo": "Last leaf",
+    "nextLeaf": "Next leaf",
+    "range": "Range",
+    "remaining": "Remaining",
+    "bounceReason": "Bounce reason",
+    "bounceFee": "Fee",
+    "confirmBounce": "Confirm bounce",
+    "forecastTitle": "Projected cash flow (6 weeks)",
+    "forecastHint": "Light bar = gross due; dark bar = confidence-weighted by each cheque's status.",
+    "agingTitle": "Open incoming cheque aging",
+    "aging": {
+      "current": "Not yet due",
+      "d7": "≤ 7 days",
+      "d30": "≤ 30 days",
+      "d60": "≤ 60 days",
+      "d60Plus": "> 60 days"
+    },
+    "agingHint": "Uncollected incoming amounts by how far past their due date they are.",
+    "printHint": "Place the cheque leaf at the top of the tray and print — positions are calibrated in millimetres from the accounting settings."
   }
 }

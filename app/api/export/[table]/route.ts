@@ -106,6 +106,25 @@ async function loadRows(
         active: a.active ? "1" : "0",
       }));
     }
+    case "cheques": {
+      const rows = await db.cheque.findMany({
+        include: {
+          student: { select: { name: true } },
+          supplier: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10000,
+      });
+      return rows.map((c) => ({
+        chequeNo: c.chequeNo,
+        direction: c.direction,
+        status: c.status,
+        party: c.student?.name ?? c.supplier?.name ?? c.payeeName ?? c.drawerName ?? "",
+        bankName: c.bankName ?? "",
+        amount: toNumber(c.amount),
+        dueDate: c.dueDate ? ymd(c.dueDate) : "",
+      }));
+    }
     case "suppliers": {
       const rows = await db.supplier.findMany({ orderBy: { name: "asc" } });
       return rows.map((s) => ({

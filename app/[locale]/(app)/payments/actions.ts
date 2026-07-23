@@ -28,6 +28,10 @@ const schema = z.object({
   teacherId: z.string().trim().optional().nullable(),
   receiptNo: z.string().trim().optional().nullable(),
   notes: z.string().trim().optional().nullable(),
+  // Cheque details, read only when method === CHEQUE.
+  chequeNo: z.string().trim().optional().nullable(),
+  chequeBank: z.string().trim().optional().nullable(),
+  chequeDueDate: z.string().trim().optional().nullable(),
 });
 
 async function guard() {
@@ -51,8 +55,14 @@ export async function savePayment(
     teacherId: formData.get("teacherId") || null,
     receiptNo: formData.get("receiptNo") || null,
     notes: formData.get("notes") || null,
+    chequeNo: formData.get("chequeNo") || null,
+    chequeBank: formData.get("chequeBank") || null,
+    chequeDueDate: formData.get("chequeDueDate") || null,
   });
   if (!parsed.success) return { error: "invalid" };
+  if (parsed.data.method === "CHEQUE" && !id && !parsed.data.chequeNo?.trim()) {
+    return { error: "chequeNoRequired" };
+  }
 
   const d = parsed.data;
   const priorPayment = id ? await db.payment.findUnique({ where: { id } }) : null;
@@ -101,6 +111,24 @@ export async function savePayment(
             lines: linesForPayment({ amount: d.amount, method: d.method, receiptNo }),
           });
         }
+        // A cheque payment carries its own tracked cheque through the
+        // lifecycle (deposit → clear / bounce). Created RECEIVED.
+        if (d.method === "CHEQUE" && d.chequeNo?.trim()) {
+          await tx.cheque.create({
+            data: {
+              direction: "INCOMING",
+              status: "RECEIVED",
+              chequeNo: d.chequeNo.trim(),
+              amount: d.amount,
+              bankName: d.chequeBank,
+              studentId: d.studentId,
+              paymentId: created.id,
+              receivedDate: data.date,
+              dueDate: d.chequeDueDate ? new Date(`${d.chequeDueDate}T00:00:00.000Z`) : null,
+              events: { create: { toStatus: "RECEIVED" } },
+            },
+          });
+        }
       }
     });
   } catch {
@@ -124,6 +152,15 @@ export async function deletePayment(locale: string, id: string): Promise<ActionS
   const frozen = await guardArchived(prior?.date);
   if (frozen) return { error: frozen };
   await db.$transaction(async (tx) => {
+    // A linked incoming cheque is meaningless without its payment: remove it
+    // and any ledger hops it posted before the payment row goes.
+    const cheque = await tx.cheque.findUnique({ where: { paymentId: id } });
+    if (cheque) {
+      for (const status of ["DEPOSITED", "CLEARED", "BOUNCED"]) {
+        await unpostSource(tx, "CHEQUE", `${cheque.id}:${status}`);
+      }
+      await tx.cheque.delete({ where: { id: cheque.id } });
+    }
     await tx.payment.delete({ where: { id } });
     await unpostSource(tx, "PAYMENT", id);
   });

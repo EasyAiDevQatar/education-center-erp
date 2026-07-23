@@ -89,3 +89,24 @@ export type JournalSource = (typeof JOURNAL_SOURCES)[number];
     books (the pre-module default); POSTED = journalised. */
 export const EXPENSE_STATUSES = ["DRAFT", "APPROVED", "POSTED"] as const;
 export type ExpenseStatus = (typeof EXPENSE_STATUSES)[number];
+
+export const CHEQUE_DIRECTIONS = ["INCOMING", "OUTGOING"] as const;
+export type ChequeDirection = (typeof CHEQUE_DIRECTIONS)[number];
+
+/** Cheque lifecycle (ported from staff-flow, hardened by lib/accounting/cheques). */
+export const CHEQUE_STATUSES = [
+  "DRAFT",
+  "RECEIVED",
+  "PENDING_DEPOSIT",
+  "DEPOSITED",
+  "CLEARED",
+  "BOUNCED",
+  "REPLACED",
+  "CANCELLED",
+  "VOID",
+] as const;
+export type ChequeStatus = (typeof CHEQUE_STATUSES)[number];
+
+/** When incoming cheques hit the books: on receipt / deposit / clearance. */
+export const CHEQUE_POLICIES = ["ON_RECEIPT", "ON_DEPOSIT", "ON_CLEARANCE"] as const;
+export type ChequePolicy = (typeof CHEQUE_POLICIES)[number];

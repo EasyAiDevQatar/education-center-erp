@@ -220,7 +220,37 @@ export default async function SettingsPage({
         </CollapsibleCard>
 
         <CollapsibleCard title={t("accountingSettings")} className="lg:col-span-2">
-          <AccountingSettings enabled={settings.accountingEnabled === "1"} />
+          <AccountingSettings
+            enabled={settings.accountingEnabled === "1"}
+            cheque={(() => {
+              let tpl: Record<string, { x?: number; y?: number; w?: number } | number> = {};
+              try {
+                tpl = JSON.parse(settings.chequeTemplate ?? "{}");
+              } catch {
+                /* stale JSON → defaults */
+              }
+              const pos = (k: string) => (tpl[k] ?? {}) as { x?: number; y?: number; w?: number };
+              return {
+                confReceived: settings.chequeConfReceived ?? "70",
+                confPending: settings.chequeConfPending ?? "80",
+                confDeposited: settings.chequeConfDeposited ?? "95",
+                alertDays: settings.chequeAlertDays ?? "7",
+                template: {
+                  leafW: (tpl.leafW as number) ?? 176,
+                  leafH: (tpl.leafH as number) ?? 89,
+                  dateX: pos("date").x ?? 130,
+                  dateY: pos("date").y ?? 10,
+                  payeeX: pos("payee").x ?? 25,
+                  payeeY: pos("payee").y ?? 28,
+                  wordsX: pos("amountWords").x ?? 30,
+                  wordsY: pos("amountWords").y ?? 42,
+                  wordsW: pos("amountWords").w ?? 120,
+                  digitsX: pos("amountDigits").x ?? 135,
+                  digitsY: pos("amountDigits").y ?? 42,
+                },
+              };
+            })()}
+          />
         </CollapsibleCard>
 
         <CollapsibleCard title={t("wpsSettings")} className="lg:col-span-2">

@@ -167,6 +167,7 @@ model Student {
   templates PlannerTemplate[]
   leads     Lead[]
   teachers  StudentTeacher[]
+  cheques   Cheque[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -315,6 +316,7 @@ model Payment {
   branchId  String?
 
   allocations PaymentAllocation[]
+  cheque      Cheque?
 
   createdById String?
   createdAt   DateTime @default(now())
@@ -371,6 +373,7 @@ model Expense {
   /// Optional vendor link; `paidTo` free text stays as the fallback.
   supplierId  String?
   supplier    Supplier?       @relation(fields: [supplierId], references: [id])
+  cheque      Cheque?
 
   createdById String?
   createdAt   DateTime @default(now())
@@ -394,6 +397,7 @@ model Supplier {
   active  Boolean @default(true)
 
   expenses Expense[]
+  cheques  Cheque[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -455,6 +459,7 @@ model TeacherPayout {
   /// CASH | BANK | CHEQUE — surfaces as the WPS Payment Type.
   paymentMethod String?
   paidAt        DateTime?
+  cheque        Cheque?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -951,4 +956,91 @@ model JournalLine {
 
   @@index([accountId])
   @@index([entryId])
+}
+
+/// A physical cheque book: bank, serial range, and the next unused leaf.
+/// Outgoing cheques consume `nextNo` inside the issuing transaction.
+model ChequeBook {
+  id        String  @id @default(cuid())
+  bankName  String
+  accountNo String?
+  startNo   Int
+  endNo     Int
+  nextNo    Int
+  active    Boolean @default(true)
+  notes     String?
+
+  cheques Cheque[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// One cheque, incoming (from a student/guardian) or outgoing (to a supplier
+/// or payslip). Lifecycle statuses in lib/enums.ts CHEQUE_STATUSES; every
+/// transition appends a ChequeEvent and may post ledger hops per the centre's
+/// `chequePolicy` setting.
+model Cheque {
+  id         String  @id @default(cuid())
+  direction  String  // INCOMING | OUTGOING
+  status     String  @default("DRAFT")
+  chequeNo   String
+  amount     Decimal @default(0)
+  /// Incoming: the drawer's bank/name. Outgoing: the printed payee.
+  bankName   String?
+  drawerName String?
+  payeeName  String?
+
+  bookId     String?
+  book       ChequeBook? @relation(fields: [bookId], references: [id])
+  supplierId String?
+  supplier   Supplier?   @relation(fields: [supplierId], references: [id])
+  studentId  String?
+  student    Student?    @relation(fields: [studentId], references: [id])
+  /// The money document this cheque settles — at most one each way.
+  paymentId  String? @unique
+  payment    Payment? @relation(fields: [paymentId], references: [id])
+  expenseId  String? @unique
+  expense    Expense? @relation(fields: [expenseId], references: [id])
+  payoutId   String? @unique
+  payout     TeacherPayout? @relation(fields: [payoutId], references: [id])
+
+  issueDate     DateTime?
+  dueDate       DateTime?
+  receivedDate  DateTime?
+  depositDate   DateTime?
+  clearanceDate DateTime?
+  bounceDate    DateTime?
+  bounceReason  String?
+  bounceFee     Decimal @default(0)
+
+  /// Replacement chain: a bounced cheque points at the cheque replacing it.
+  replacedById String? @unique
+  replacedBy   Cheque? @relation("ChequeReplacement", fields: [replacedById], references: [id])
+  replaces     Cheque? @relation("ChequeReplacement")
+
+  notes       String?
+  createdById String?
+  events      ChequeEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([bookId, chequeNo])
+  @@index([status, dueDate])
+  @@index([direction])
+}
+
+/// Append-only status history for a cheque.
+model ChequeEvent {
+  id         String  @id @default(cuid())
+  chequeId   String
+  cheque     Cheque  @relation(fields: [chequeId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  note       String?
+  byUserId   String?
+  at         DateTime @default(now())
+
+  @@index([chequeId, at])
 }

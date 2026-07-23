@@ -28,6 +28,7 @@ export const SEED_SPEC = [
   { key: "leads", max: 500, default: 10 },
   { key: "trialSessions", max: 50, default: 3 },
   { key: "suppliers", max: 100, default: 5 },
+  { key: "cheques", max: 100, default: 6 },
   // Demo teacher/parent portal accounts (password: demo1234).
   { key: "portalUsers", max: 20, default: 2 },
   // HR module
@@ -53,7 +54,8 @@ export type TableKey =
   | "terms"
   | "accounts"
   | "journal"
-  | "suppliers";
+  | "suppliers"
+  | "cheques";
 
 export type TableSpec = {
   key: TableKey;
@@ -231,6 +233,22 @@ export const TABLES: TableSpec[] = [
       { key: "taxNo", ar: "الرقم الضريبي" },
       { key: "address", ar: "العنوان" },
       { key: "notes", ar: "ملاحظات" },
+    ],
+  },
+  {
+    // Export-only: cheques are created through payments (incoming) or the
+    // cheque-book issue flow (outgoing) — never imported raw.
+    key: "cheques",
+    finance: true,
+    importable: false,
+    columns: [
+      { key: "chequeNo", ar: "رقم الشيك" },
+      { key: "direction", ar: "الاتجاه" },
+      { key: "status", ar: "الحالة" },
+      { key: "party", ar: "الطرف" },
+      { key: "bankName", ar: "البنك" },
+      { key: "amount", ar: "المبلغ" },
+      { key: "dueDate", ar: "تاريخ الاستحقاق" },
     ],
   },
   {

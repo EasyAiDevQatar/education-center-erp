@@ -38,8 +38,11 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.loginAttempts = (await tx.loginAttempt.deleteMany()).count;
     summary.auditLogs = (await tx.auditLog.deleteMany()).count;
     // Accounting: entries (lines cascade) before accounts; the accounts row
-    // itself waits until after expenseCategories, which reference it.
+    // itself waits until after expenseCategories, which reference it. Cheques
+    // reference payments/expenses/payouts, so they go before all of them.
     summary.journalEntries = (await tx.journalEntry.deleteMany()).count;
+    summary.cheques = (await tx.cheque.deleteMany()).count;
+    summary.chequeBooks = (await tx.chequeBook.deleteMany()).count;
     // HR: settlements and exports before their parents; payouts before runs.
     summary.endOfService = (await tx.endOfService.deleteMany()).count;
     summary.wpsExports = (await tx.wpsExport.deleteMany()).count;
@@ -753,6 +756,55 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     runs++;
   }
   summary.payrollRuns = runs;
+
+  // --- cheques: a book plus a lifecycle mix so the register, forecast and
+  // aging cards demo out of the box (only when the accounting module is on,
+  // since the whole surface is flag-gated) ---
+  let chequesSeeded = 0;
+  if (n.cheques > 0 && (await accountingEnabled())) {
+    const book = await db.chequeBook.create({
+      data: { bankName: "QNB", accountNo: "0123456789", startNo: 101, endNo: 150, nextNo: 101 },
+    });
+    const CHEQUE_MIX = [
+      { direction: "INCOMING", status: "RECEIVED", dueIn: 10 },
+      { direction: "INCOMING", status: "DEPOSITED", dueIn: 3 },
+      { direction: "INCOMING", status: "CLEARED", dueIn: -10 },
+      { direction: "INCOMING", status: "RECEIVED", dueIn: -8 }, // overdue → aging demo
+      { direction: "OUTGOING", status: "RECEIVED", dueIn: 14 },
+      { direction: "OUTGOING", status: "CLEARED", dueIn: -5 },
+    ] as const;
+    for (let i = 0; i < n.cheques; i++) {
+      const mix = CHEQUE_MIX[i % CHEQUE_MIX.length];
+      const due = new Date(today);
+      due.setUTCDate(due.getUTCDate() + mix.dueIn);
+      const outgoing = mix.direction === "OUTGOING";
+      await db.cheque.create({
+        data: {
+          direction: mix.direction,
+          status: mix.status,
+          chequeNo: outgoing ? String(book.nextNo + i) : `77${String(4000 + i)}`,
+          amount: pick([500, 750, 1000, 1500, 2000]),
+          bankName: outgoing ? book.bankName : pick(["QNB", "Doha Bank", "QIB"]),
+          bookId: outgoing ? book.id : null,
+          supplierId: outgoing && supplierIds.length ? pick(supplierIds) : null,
+          studentId: !outgoing && students.length ? pick(students).id : null,
+          payeeName: outgoing ? "مورد تجريبي" : null,
+          issueDate: outgoing ? new Date(today) : null,
+          receivedDate: outgoing ? null : new Date(today),
+          dueDate: due,
+          events: { create: { toStatus: mix.status } },
+        },
+      });
+      chequesSeeded++;
+    }
+    if (chequesSeeded) {
+      await db.chequeBook.update({
+        where: { id: book.id },
+        data: { nextNo: book.nextNo + Math.ceil(chequesSeeded / 3) },
+      });
+    }
+  }
+  summary.cheques = chequesSeeded;
 
   // With the accounting module on, put the seeded money on the books too —
   // otherwise the journal and reports demo empty against a full ERP.

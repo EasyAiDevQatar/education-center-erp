@@ -38,6 +38,39 @@ export async function saveAccountingSettings(
   });
   if (enabled === "1") await ensureChartOfAccounts();
 
+  // Cheque module knobs — written only when the form carried them (the
+  // fields render only while the module is enabled).
+  const num = (name: string, fallback: string) => {
+    const v = (formData.get(name) ?? "").toString().trim();
+    return /^\d+(\.\d+)?$/.test(v) ? v : fallback;
+  };
+  if (formData.has("chequeConfReceived")) {
+    const writes: [string, string][] = [
+      ["chequeConfReceived", num("chequeConfReceived", "70")],
+      ["chequeConfPending", num("chequeConfPending", "80")],
+      ["chequeConfDeposited", num("chequeConfDeposited", "95")],
+      ["chequeAlertDays", num("chequeAlertDays", "7")],
+      [
+        "chequeTemplate",
+        JSON.stringify({
+          leafW: Number(num("tplLeafW", "176")),
+          leafH: Number(num("tplLeafH", "89")),
+          date: { x: Number(num("tplDateX", "130")), y: Number(num("tplDateY", "10")) },
+          payee: { x: Number(num("tplPayeeX", "25")), y: Number(num("tplPayeeY", "28")) },
+          amountWords: {
+            x: Number(num("tplWordsX", "30")),
+            y: Number(num("tplWordsY", "42")),
+            w: Number(num("tplWordsW", "120")),
+          },
+          amountDigits: { x: Number(num("tplDigitsX", "135")), y: Number(num("tplDigitsY", "42")) },
+        }),
+      ],
+    ];
+    for (const [key, value] of writes) {
+      await db.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+    }
+  }
+
   await writeAudit("Setting", "accounting", "UPDATE", { after: { enabled } });
   // Layout-wide: the sidebar item appears/disappears with the flag.
   revalidatePath(`/${locale}`, "layout");

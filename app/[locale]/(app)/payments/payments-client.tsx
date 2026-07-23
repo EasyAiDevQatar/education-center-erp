@@ -78,6 +78,7 @@ function PaymentFields({
     payment?.amount != null ? String(payment.amount) : defaultAmount != null ? String(defaultAmount) : "",
   );
   const [teacherId, setTeacherId] = useState(payment?.teacherId ?? "");
+  const [method, setMethod] = useState(payment?.method ?? "CASH");
   const [info, setInfo] = useState<OutstandingInfo | null>(null);
   const [loading, setLoading] = useState(false);
   // Only auto-fill until the user types their own figure — a part payment must
@@ -170,7 +171,12 @@ function PaymentFields({
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label={t("method")} htmlFor="method">
-          <Select id="method" name="method" defaultValue={payment?.method ?? "CASH"}>
+          <Select
+            id="method"
+            name="method"
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+          >
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>{te(`method.${m}`)}</option>
             ))}
@@ -180,6 +186,23 @@ function PaymentFields({
           <Input id="receiptNo" name="receiptNo" dir="ltr" defaultValue={payment?.receiptNo ?? ""} placeholder="auto" disabled={!!payment} />
         </FormField>
       </div>
+
+      {/* Cheque details — the accounting module tracks the cheque's lifecycle
+          (deposit → clear / bounce) from these. Create-only: an edit keeps
+          the original cheque record. */}
+      {method === "CHEQUE" && !payment && (
+        <div className="grid grid-cols-3 gap-3 rounded-md border border-border bg-muted/30 p-3">
+          <FormField label={t("chequeNo")} htmlFor="chequeNo">
+            <Input id="chequeNo" name="chequeNo" dir="ltr" required />
+          </FormField>
+          <FormField label={t("chequeBank")} htmlFor="chequeBank">
+            <Input id="chequeBank" name="chequeBank" />
+          </FormField>
+          <FormField label={t("chequeDueDate")} htmlFor="chequeDueDate">
+            <Input id="chequeDueDate" name="chequeDueDate" type="date" dir="ltr" />
+          </FormField>
+        </div>
+      )}
 
       <FormField label={t("allocateTeacher")} htmlFor="teacherId">
         <Combobox

@@ -110,3 +110,73 @@ export function linesForPayslip(p: { net: number; method: string | null }): Draf
     { accountCode: account, debit: 0, credit: p.net },
   ];
 }
+
+export type ChequePolicy = "ON_RECEIPT" | "ON_DEPOSIT" | "ON_CLEARANCE";
+
+/**
+ * Ledger hops for a cheque status transition (staff-flow's fn_post_ledger_check
+ * adapted to this ERP's direct-to-revenue model).
+ *
+ * INCOMING (a student pays by cheque; the payment's own entry debited 1030
+ * cheques-in-hand against revenue):
+ *   deposited → move 1030 → 1040 (in clearing)
+ *   cleared   → move (1040 if deposited first, else 1030) → 1010 bank
+ *   bounced   → NO principal hop here. The bounce action UNWINDS instead:
+ *               it deletes the payment and unposts its entry plus every
+ *               cheque hop, leaving the books as if the cheque never was —
+ *               which matches the operational model, where deleting the
+ *               payment restores the student's outstanding balance. Only the
+ *               bank's bounce fee (if any) posts, as a 5900 expense.
+ * OUTGOING (issuing already credited 2110 cheques-issued):
+ *   cleared   → 2110 → 1010 (the bank finally paid it)
+ *
+ * Returns null when the hop posts nothing.
+ */
+export function linesForChequeEvent(c: {
+  direction: "INCOMING" | "OUTGOING";
+  toStatus: string;
+  amount: number;
+  wasDeposited?: boolean;
+  bounceFee?: number;
+}): DraftLine[] | null {
+  if (c.direction === "INCOMING") {
+    switch (c.toStatus) {
+      case "DEPOSITED":
+        return [
+          { accountCode: ACCOUNT_CODES.chequesInClearing, debit: c.amount, credit: 0 },
+          { accountCode: ACCOUNT_CODES.chequesInHand, debit: 0, credit: c.amount },
+        ];
+      case "CLEARED":
+        return [
+          { accountCode: ACCOUNT_CODES.bank, debit: c.amount, credit: 0 },
+          {
+            accountCode: c.wasDeposited
+              ? ACCOUNT_CODES.chequesInClearing
+              : ACCOUNT_CODES.chequesInHand,
+            debit: 0,
+            credit: c.amount,
+          },
+        ];
+      case "BOUNCED":
+        if (c.bounceFee && c.bounceFee > 0) {
+          return [
+            { accountCode: ACCOUNT_CODES.miscExpense, debit: c.bounceFee, credit: 0 },
+            { accountCode: ACCOUNT_CODES.bank, debit: 0, credit: c.bounceFee },
+          ];
+        }
+        return null;
+      default:
+        return null;
+    }
+  }
+  // OUTGOING
+  switch (c.toStatus) {
+    case "CLEARED":
+      return [
+        { accountCode: ACCOUNT_CODES.chequesIssued, debit: c.amount, credit: 0 },
+        { accountCode: ACCOUNT_CODES.bank, debit: 0, credit: c.amount },
+      ];
+    default:
+      return null;
+  }
+}
