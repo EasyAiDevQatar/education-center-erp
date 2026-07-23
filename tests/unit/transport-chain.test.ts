@@ -144,3 +144,35 @@ describe("buildDayLegs", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+describe("first-pickup ready window", () => {
+  it("does not offer the passenger for collection from midnight", () => {
+    // Unbounded (readyMin 0) the allocator departs just-in-time against
+    // midnight, i.e. at shift start, and delivers a teacher hours early.
+    const { legs } = legsForPassenger(teacherDay());
+    const first = legs[0];
+    expect(first.readyMin).toBe(600 - 60); // default one-hour window
+    expect(first.readyMin).toBeGreaterThan(0);
+  });
+
+  it("honours a custom advance window", () => {
+    const { legs } = legsForPassenger(teacherDay(), { maxAdvancePickupMin: 20 });
+    expect(legs[0].readyMin).toBe(580);
+  });
+
+  it("never goes negative for a lesson early in the day", () => {
+    const { legs } = legsForPassenger(
+      teacherDay({
+        points: [{ sessionId: "s1", at: CENTRE, label: "المركز", startMin: 30, endMin: 90 }],
+      }),
+      { maxAdvancePickupMin: 60 },
+    );
+    expect(legs[0].readyMin).toBe(0);
+  });
+
+  it("leaves the between-lesson ready time alone", () => {
+    // Mid-day legs already have a real ready time — the end of the last lesson.
+    const { legs } = legsForPassenger(teacherDay());
+    expect(legs[1].readyMin).toBe(660);
+  });
+});

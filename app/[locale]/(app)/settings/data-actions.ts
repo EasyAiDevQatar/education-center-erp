@@ -51,6 +51,12 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.wpsExports = (await tx.wpsExport.deleteMany()).count;
     summary.payouts = (await tx.teacherPayout.deleteMany()).count;
     summary.payrollRuns = (await tx.payrollRun.deleteMany()).count;
+    // Transport trips: stops and events cascade from the trip, but they are
+    // deleted explicitly so the summary is honest. Trips go before sessions,
+    // drivers and vehicles — everything a stop or a trip points at.
+    summary.tripEvents = (await tx.tripEvent.deleteMany()).count;
+    summary.tripStops = (await tx.tripStop.deleteMany()).count;
+    summary.trips = (await tx.trip.deleteMany()).count;
     summary.payments = (await tx.payment.deleteMany()).count;
     summary.sessions = (await tx.session.deleteMany()).count;
     // Leads are business records and must go too. Their links to student /
@@ -320,6 +326,10 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         // Roughly a quarter study at home so location-defaulted pricing and
         // the planner's HOME markers have data to show.
         studyLocation: i % 4 === 3 ? "HOME" : "CENTER",
+        // Roughly one student in six is driven by the centre, so the transport
+        // planner has student rides to chain as well as teacher ones. Opt-in
+        // per student — most families drive their own child.
+        needsTransport: i % 6 === 1,
         // Home coordinates so HOME sessions produce real transport legs.
         ...geoPoint(),
       },

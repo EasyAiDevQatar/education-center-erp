@@ -79,6 +79,16 @@ export type ChainOptions = {
    * plan.
    */
   arriveEarlyMin?: number;
+  /**
+   * How long before their first lesson a passenger may be collected.
+   *
+   * The first pickup is the one leg with no natural ready time — nothing
+   * precedes it. Left unbounded it reads as "collectable from midnight", and
+   * the allocator, departing just-in-time against that, sends a driver at shift
+   * start to deliver a teacher eight hours before their lesson. Bounding it
+   * keeps the first ride in the same shape as every other one.
+   */
+  maxAdvancePickupMin?: number;
 };
 
 /** Two points are the same place within ~50 m — no ride needed between them. */
@@ -105,6 +115,7 @@ export function legsForPassenger(
     includeFirstPickup = true,
     includeLastDropoff = true,
     arriveEarlyMin = 0,
+    maxAdvancePickupMin = 60,
   } = opts;
 
   const points = [...day.points].sort((a, b) => a.startMin - b.startMin);
@@ -160,8 +171,9 @@ export function legsForPassenger(
       day.homeLabel,
       first.at,
       first.label,
-      // Ready as early as needed; the allocator decides the actual pickup.
-      0,
+      // Bounded rather than 0: see maxAdvancePickupMin. The allocator still
+      // picks the exact minute inside this window.
+      Math.max(0, first.startMin - maxAdvancePickupMin),
       first.startMin,
       null,
       first.sessionId,

@@ -84,7 +84,7 @@
       "notEnabled": "The accounting module is not enabled.",
       "supplierInUse": "A supplier with expenses cannot be deleted — deactivate it instead.",
       "bookExhausted": "This book has no leaves left — create a new one.",
-      "badTransition": "This transition is not allowed from the current status.",
+      "badTransition": "That status change is not allowed from the trip's current status.",
       "depositBeforeReceived": "Deposit date is before the received date.",
       "clearanceBeforeDeposit": "Clearance date is before the deposit date.",
       "chequeNoRequired": "Enter the cheque number.",
@@ -92,7 +92,8 @@
       "plateTaken": "This plate is already registered to another vehicle.",
       "vehicleInUse": "A vehicle assigned to a driver cannot be deleted — deactivate it instead.",
       "driverExists": "This employee is already registered as a driver.",
-      "invalidShift": "The shift end must be after the shift start — set both, or leave both blank."
+      "invalidShift": "The shift end must be after the shift start — set both, or leave both blank.",
+      "notfound": "That record no longer exists."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -160,7 +161,9 @@
     "accountingCheques": "Cheques",
     "transport": "Transport",
     "transportVehicles": "Vehicles",
-    "transportDrivers": "Drivers"
+    "transportDrivers": "Drivers",
+    "transportPlanner": "Transport planner",
+    "transportTrips": "Trips"
   },
   "auth": {
     "login": "Log in",
@@ -723,6 +726,26 @@
       "INSURANCE": "Insurance",
       "INSPECTION": "Inspection",
       "OTHER": "Other"
+    },
+    "tripStatus": {
+      "PLANNED": "Planned",
+      "PROPOSED": "Proposed",
+      "ASSIGNED": "Assigned",
+      "STARTED": "On the road",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "tripStopKind": {
+      "PICKUP": "Pickup",
+      "DROPOFF": "Drop-off"
+    },
+    "tripProblem": {
+      "tooLate": "Cannot arrive in time",
+      "noCapacity": "No vehicle with enough seats",
+      "outsideShift": "Outside every driver's shift",
+      "tooFar": "Pickup too far",
+      "noDriver": "No driver available",
+      "noCoordinates": "Address has no map pin"
     }
   },
   "paymentModes": {
@@ -918,7 +941,8 @@
       "cheques": "Cheques",
       "vehicles": "Vehicles",
       "vehicleDocs": "Vehicle documents",
-      "drivers": "Drivers"
+      "drivers": "Drivers",
+      "trips": "Trips"
     },
     "presetLabel": "Preset size:",
     "presets": {
@@ -1624,5 +1648,41 @@
     "noShift": "No fixed shift",
     "licenceAlert": "{count, plural, =1 {# driver licence} other {# driver licences}} expired or expiring within {days} days",
     "searchPlaceholder": "Search by name, licence or plate…"
+  },
+  "transportPlanner": {
+    "title": "Transport planner",
+    "subtitle": "Generate the day's rides, review the proposed driver for each, then approve.",
+    "today": "Today",
+    "generate": "Generate proposals",
+    "approveAll": "Approve all ({count})",
+    "clearProposals": "Discard proposals",
+    "approve": "Approve",
+    "reject": "Reject",
+    "reassign": "Change driver",
+    "start": "Start",
+    "complete": "Complete",
+    "noDriver": "No driver",
+    "auto": "Auto",
+    "km": "{km} km",
+    "emptyKm": "{km} km empty",
+    "slack": "{min} min spare",
+    "statLegs": "Rides needed",
+    "statTrips": "Trips on the board",
+    "statKm": "Total km",
+    "statEmptyKm": "Empty km",
+    "problems": "{count, plural, =1 {# ride needs attention} other {# rides need attention}}",
+    "empty": "Nothing on the board for this day. Generate proposals to plan it.",
+    "noCentre": "Set the centre location on the map first (Settings → Transport module) — every trip to or from the centre depends on it."
+  },
+  "trips": {
+    "title": "Trips",
+    "subtitle": "Every planned and completed journey.",
+    "time": "Time",
+    "passenger": "Passenger",
+    "route": "Route",
+    "driver": "Driver",
+    "vehicle": "Vehicle",
+    "km": "km",
+    "searchPlaceholder": "Search by passenger, driver, plate or stop…"
   }
 }

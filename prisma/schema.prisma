@@ -81,6 +81,7 @@ model Teacher {
   students     StudentTeacher[]
   subjects     TeacherSubject[]
   employee     Employee?
+  tripStops    TripStop[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -167,6 +168,10 @@ model Student {
   /// their location — and therefore their price — from this; each session can
   /// still override it.
   studyLocation String @default("CENTER")
+  /// Opt-in to the transport module. Explicit rather than inferred from having
+  /// coordinates: most families drive their own child, and generating a car for
+  /// every student with a saved home pin would flood the planner.
+  needsTransport Boolean @default(false)
 
   sessions  Session[]
   payments  Payment[]
@@ -175,6 +180,7 @@ model Student {
   leads     Lead[]
   teachers  StudentTeacher[]
   cheques   Cheque[]
+  tripStops TripStop[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -272,6 +278,7 @@ model Session {
   lead        Lead?   @relation(fields: [leadId], references: [id])
 
   allocations PaymentAllocation[]
+  tripStops   TripStop[]
   /// True once this session's hours have been deducted from its package, so
   /// confirm/undo cycles can never double-count.
   packageApplied Boolean @default(false)
@@ -1121,6 +1128,7 @@ model Vehicle {
   documents VehicleDocument[]
   /// Drivers whose default vehicle this is (back-relation, not ownership).
   drivers Driver[]
+  trips   Trip[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1172,8 +1180,108 @@ model Driver {
   active Boolean @default(true)
   notes  String?
 
+  trips Trip[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([active])
+}
+
+/* -------------------------- Transport: trips ------------------------------ */
+
+/// One vehicle journey serving one or more passengers. Created by the planner's
+/// generator (status PROPOSED, awaiting a human) or by hand (PLANNED).
+model Trip {
+  id     String   @id @default(cuid())
+  /// The service day, stored at UTC midnight — the board is always "a day".
+  date   DateTime
+  status String   @default("PROPOSED") // PLANNED | PROPOSED | ASSIGNED | STARTED | COMPLETED | CANCELLED
+
+  /// Deterministic identity of the ride this trip serves:
+  /// `kind:passengerId:fromSession→toSession`. Re-running the generator for the
+  /// same day must refresh the board, never duplicate it — this plus the
+  /// [date, legKey] unique index is what makes generation idempotent.
+  /// Null for manually created trips, which the generator leaves alone.
+  legKey String?
+
+  driverId  String?
+  driver    Driver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicleId String?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  plannedStartMin Int
+  plannedEndMin   Int
+  estimatedKm     Decimal @default(0)
+  estimatedMin    Int     @default(0)
+
+  actualStartAt DateTime?
+  actualEndAt   DateTime?
+  actualKm      Decimal?
+
+  /// Provenance and the numbers behind the proposal, kept so the board can
+  /// explain *why* this driver was chosen rather than asking for blind trust.
+  autoAllocated   Boolean  @default(false)
+  allocationScore Decimal?
+  deadheadKm      Decimal?
+  slackMin        Int?
+
+  notes       String?
+  createdById String?
+
+  stops  TripStop[]
+  events TripEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, legKey])
+  @@index([date, status])
+  @@index([driverId, date])
+}
+
+/// An ordered stop on a trip. Modelling stops (rather than a from/to pair on the
+/// trip) is what makes house-to-house chains and shared rides expressible.
+model TripStop {
+  id     String @id @default(cuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  seq    Int
+  kind   String // PICKUP | DROPOFF
+
+  lat        Float
+  lng        Float
+  label      String
+  plannedMin Int
+  arrivedAt  DateTime?
+
+  /// Exactly one passenger link is set. Two nullable columns beat a polymorphic
+  /// id because the FK still protects them.
+  passengerTeacherId String?
+  passengerTeacher   Teacher? @relation(fields: [passengerTeacherId], references: [id], onDelete: SetNull)
+  passengerStudentId String?
+  passengerStudent   Student? @relation(fields: [passengerStudentId], references: [id], onDelete: SetNull)
+
+  /// The lesson this stop serves — the link back to why the trip exists.
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  notes String?
+
+  @@unique([tripId, seq])
+  @@index([sessionId])
+}
+
+/// Append-only status history for a trip (same shape as ChequeEvent).
+model TripEvent {
+  id         String   @id @default(cuid())
+  tripId     String
+  trip       Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  note       String?
+  byUserId   String?
+  at         DateTime @default(now())
+
+  @@index([tripId, at])
 }

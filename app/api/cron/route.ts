@@ -6,6 +6,8 @@ import { packageStatusFor } from "@/lib/billing-rules";
 import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { dispatch, centerSettings } from "@/lib/integrations/notify";
 import { OPEN_LEAD_STATUSES } from "@/lib/leads";
+import { transportEnabled } from "@/lib/transport/settings";
+import { buildDayPlan, generateDayTrips } from "@/lib/transport/trip-data";
 
 /**
  * Daily maintenance + reminders.
@@ -14,8 +16,9 @@ import { OPEN_LEAD_STATUSES } from "@/lib/leads";
  *   add `?dry=1` to compute without sending.
  *
  * Jobs: tomorrow's session reminders, outstanding-balance reminders (with a
- * cooldown), low/expiring package notices, package status sweeping, and due
- * lead follow-ups, and auto-completion of unmarked sessions.
+ * cooldown), low/expiring package notices, package status sweeping, due lead
+ * follow-ups, auto-completion of unmarked sessions, and — when the transport
+ * module is on — tomorrow's trip proposals.
  * Every job is best-effort — one failure never blocks the others.
  */
 
@@ -226,6 +229,29 @@ export async function GET(request: Request) {
     report.autoCompleteGraceHours = graceHours;
   } catch (e) {
     report.autoCompleteError = String(e);
+  }
+
+  /* 6. Tomorrow's transport proposals -------------------------------------- */
+  // Only when the module is on. The output is PROPOSED trips, never dispatched
+  // work: the coordinator still approves the board in the morning.
+  try {
+    if (await transportEnabled()) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + 1);
+      const day = ymd(d);
+      report.transportDay = day;
+      if (dry) {
+        const plan = await buildDayPlan("ar", day);
+        report.transportPlanned = plan.assignments.length;
+        report.transportUnassigned = plan.unassigned.length;
+      } else {
+        report.transport = await generateDayTrips("ar", day, null);
+      }
+    } else {
+      report.transport = "disabled";
+    }
+  } catch (e) {
+    report.transportError = String(e);
   }
 
   return NextResponse.json({ ok: true, ...report });

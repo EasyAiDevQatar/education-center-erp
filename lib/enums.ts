@@ -117,6 +117,23 @@ export type ChequePolicy = (typeof CHEQUE_POLICIES)[number];
 export const TRACKING_VISIBILITY = ["ADMIN_ONLY", "ADMIN_STAFF"] as const;
 export type TrackingVisibility = (typeof TRACKING_VISIBILITY)[number];
 
+/**
+ * Trip lifecycle. PROPOSED is the generator's output awaiting a human —
+ * allocation never dispatches unreviewed (see lib/transport/trips.ts).
+ */
+export const TRIP_STATUSES = [
+  "PLANNED",
+  "PROPOSED",
+  "ASSIGNED",
+  "STARTED",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+export type TripStatus = (typeof TRIP_STATUSES)[number];
+
+export const TRIP_STOP_KINDS = ["PICKUP", "DROPOFF"] as const;
+export type TripStopKind = (typeof TRIP_STOP_KINDS)[number];
+
 /** Expiring vehicle papers. Like EMPLOYEE_DOC_TYPES, a renewal is a new row. */
 export const VEHICLE_DOC_TYPES = [
   "REGISTRATION",
