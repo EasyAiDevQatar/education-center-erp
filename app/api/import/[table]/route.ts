@@ -159,6 +159,32 @@ async function importRows(
           created++;
           break;
         }
+        case "accounts": {
+          if (!r.code || !r.nameAr) { fail(r, "code/name required"); break; }
+          const type = String(r.type ?? "").trim().toUpperCase();
+          if (!["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"].includes(type)) {
+            fail(r, "invalid type"); break;
+          }
+          const dupe = await db.account.findUnique({ where: { code: r.code.trim() } });
+          if (dupe) { fail(r, "duplicate code"); break; }
+          // Parent resolved by code; a forward reference simply imports flat —
+          // re-running the file after all rows exist links it up.
+          const parent = r.parentCode
+            ? await db.account.findUnique({ where: { code: r.parentCode.trim() } })
+            : null;
+          await db.account.create({
+            data: {
+              code: r.code.trim(),
+              nameAr: r.nameAr,
+              nameEn: r.nameEn || r.nameAr,
+              type,
+              parentId: parent && parent.type === type ? parent.id : null,
+              active: r.active !== "0",
+            },
+          });
+          created++;
+          break;
+        }
         case "teachers": {
           if (!r.name) { fail(r, "name required"); break; }
           if (teacherByName.has(r.name)) { fail(r, "duplicate name"); break; }

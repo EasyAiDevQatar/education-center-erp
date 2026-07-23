@@ -36,6 +36,9 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.notificationLogs = (await tx.notificationLog.deleteMany()).count;
     summary.loginAttempts = (await tx.loginAttempt.deleteMany()).count;
     summary.auditLogs = (await tx.auditLog.deleteMany()).count;
+    // Accounting: entries (lines cascade) before accounts; the accounts row
+    // itself waits until after expenseCategories, which reference it.
+    summary.journalEntries = (await tx.journalEntry.deleteMany()).count;
     // HR: settlements and exports before their parents; payouts before runs.
     summary.endOfService = (await tx.endOfService.deleteMany()).count;
     summary.wpsExports = (await tx.wpsExport.deleteMany()).count;
@@ -56,6 +59,7 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.packages = (await tx.package.deleteMany()).count;
     summary.expenses = (await tx.expense.deleteMany()).count;
     summary.expenseCategories = (await tx.expenseCategory.deleteMany()).count;
+    summary.accounts = (await tx.account.deleteMany()).count;
     summary.priceRules = (await tx.priceRule.deleteMany()).count;
     // Non-admin accounts go; remaining admins lose teacher/guardian links.
     summary.users = (await tx.user.deleteMany({ where: { role: { not: "ADMIN" } } })).count;

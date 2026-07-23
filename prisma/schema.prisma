@@ -347,6 +347,11 @@ model ExpenseCategory {
   sortOrder Int       @default(0)
   active    Boolean   @default(true)
   expenses  Expense[]
+  /// Expense account this category posts to when the accounting module is on.
+  /// Null falls back to 5900 (miscellaneous) — mapping is a column, not a
+  /// table: one account per category is all a small centre needs.
+  accountId String?
+  account   Account?  @relation(fields: [accountId], references: [id])
 }
 
 model Expense {
@@ -849,4 +854,73 @@ model EndOfService {
   updatedAt DateTime @updatedAt
 
   @@index([employeeId])
+}
+
+/// --- Accounting (optional module, Setting key `accountingEnabled`) ---
+
+/// Chart of accounts. Codes follow the conventional 4-digit blocks
+/// (1000s assets … 5000s expenses). `system` accounts are seeded by
+/// `ensureChartOfAccounts` and posting rules depend on their codes, so the
+/// delete action refuses them (deactivate instead).
+model Account {
+  id       String    @id @default(cuid())
+  code     String    @unique
+  nameAr   String
+  nameEn   String
+  type     String    // ASSET | LIABILITY | EQUITY | INCOME | EXPENSE (lib/enums.ts)
+  parentId String?
+  parent   Account?  @relation("AccountTree", fields: [parentId], references: [id])
+  children Account[] @relation("AccountTree")
+  system   Boolean   @default(false)
+  active   Boolean   @default(true)
+  notes    String?
+
+  lines             JournalLine[]
+  expenseCategories ExpenseCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+}
+
+/// One double-entry journal entry (header). Lines must balance —
+/// sum(debit) = sum(credit) — enforced in the actions, never trusted from a
+/// form. `[sourceType, sourceId]` is the idempotency backbone for
+/// auto-posting: MANUAL entries carry a null sourceId (NULLs are distinct, so
+/// the unique never blocks them).
+model JournalEntry {
+  id         String  @id @default(cuid())
+  date       DateTime
+  memo       String
+  /// PAYMENT | EXPENSE | PAYROLL | CHEQUE | MANUAL (lib/enums.ts)
+  sourceType String  @default("MANUAL")
+  /// PAYMENT/EXPENSE → row id; PAYROLL → payout id; CHEQUE → `${id}:${status}`.
+  sourceId   String?
+
+  lines       JournalLine[]
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sourceType, sourceId])
+  @@index([date])
+}
+
+/// One leg of a journal entry: debit XOR credit > 0 (app-enforced).
+model JournalLine {
+  id      String       @id @default(cuid())
+  entryId String
+  entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  debit  Decimal @default(0)
+  credit Decimal @default(0)
+  memo   String?
+
+  @@index([accountId])
+  @@index([entryId])
 }

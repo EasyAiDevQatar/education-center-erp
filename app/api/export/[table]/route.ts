@@ -92,6 +92,20 @@ async function loadRows(
         notes: s.notes ?? "",
       }));
     }
+    case "accounts": {
+      const rows = await db.account.findMany({
+        orderBy: { code: "asc" },
+        include: { parent: { select: { code: true } } },
+      });
+      return rows.map((a) => ({
+        code: a.code,
+        nameAr: a.nameAr,
+        nameEn: a.nameEn,
+        type: a.type,
+        parentCode: a.parent?.code ?? "",
+        active: a.active ? "1" : "0",
+      }));
+    }
     case "teachers": {
       const rows = await db.teacher.findMany({ orderBy: { name: "asc" } });
       return rows.map((t) => ({

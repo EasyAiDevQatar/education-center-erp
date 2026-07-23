@@ -14,6 +14,7 @@ import {
   BarChart3,
   UserPlus,
   BriefcaseBusiness,
+  Landmark,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -31,6 +32,9 @@ export type NavItem = {
   section: "operations" | "people" | "finance" | "hr" | "transport" | "admin";
   /** Nested links, shown indented while the parent branch is active. */
   children?: { href: string; key: string }[];
+  /** Optional-module gate: item renders only when this flag is on. The flag
+      value comes from Settings, read server-side in the (app) layout. */
+  flag?: "accounting";
 };
 
 const ALL: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST", "TEACHER", "PARENT"];
@@ -75,6 +79,17 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { href: "/reports", key: "reports", icon: BarChart3, roles: FINANCE, section: "finance" },
+  {
+    href: "/accounting",
+    key: "accounting",
+    icon: Landmark,
+    roles: FINANCE,
+    section: "finance",
+    flag: "accounting",
+    // Children grow with the module: journal + reports arrive in the next
+    // phase; keeping only live routes here means no dead links meanwhile.
+    children: [{ href: "/accounting/accounts", key: "accountingAccounts" }],
+  },
   // ADMIN only: the HR register carries QID/passport/IBAN — a categorically
   // more sensitive surface than anything else in the app.
   {

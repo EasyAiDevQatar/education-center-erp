@@ -20,12 +20,15 @@ export function AppShell({
   userName,
   roleLabel,
   onLogout,
+  flags,
   children,
 }: {
   role: Role;
   userName: string;
   roleLabel: string;
   onLogout: () => void;
+  /** Optional-module switches, read from Settings by the server layout. */
+  flags?: { accounting?: boolean };
   children: React.ReactNode;
 }) {
   const t = useTranslations("nav");
@@ -33,7 +36,9 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const items = NAV_ITEMS.filter((i) => i.roles.includes(role));
+  const items = NAV_ITEMS.filter(
+    (i) => i.roles.includes(role) && (!i.flag || flags?.[i.flag]),
+  );
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);

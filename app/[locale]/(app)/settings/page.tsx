@@ -15,6 +15,7 @@ import { IntegrationsManager, type IntegrationView } from "./integrations-manage
 import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
 import { WpsSettings } from "./wps-settings";
+import { AccountingSettings } from "./accounting-settings";
 import { SiteSettings } from "./site-settings";
 import { BackupSettings } from "./backup-settings";
 import { listBackups } from "@/lib/backups";
@@ -216,6 +217,10 @@ export default async function SettingsPage({
             driveEmail={driveSa?.client_email ?? null}
             driveFolder={settings.backupDriveFolder ?? ""}
           />
+        </CollapsibleCard>
+
+        <CollapsibleCard title={t("accountingSettings")} className="lg:col-span-2">
+          <AccountingSettings enabled={settings.accountingEnabled === "1"} />
         </CollapsibleCard>
 
         <CollapsibleCard title={t("wpsSettings")} className="lg:col-span-2">

@@ -74,7 +74,11 @@
       "invalid_folder": "The folder id is not valid.",
       "invalid_sa": "Invalid JSON — make sure it is a service-account key containing client_email and private_key.",
       "notConfigured": "Enter the folder id and key and save first.",
-      "driveFailed": "Drive upload failed"
+      "driveFailed": "Drive upload failed",
+      "invalidParent": "Invalid parent account — it must be of the same type.",
+      "duplicateCode": "This account code is already in use.",
+      "systemAccount": "This is a system account — it can be deactivated but not deleted.",
+      "accountInUse": "An account with entries or sub-accounts cannot be deleted — deactivate it instead."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -132,7 +136,9 @@
     "hrRegister": "Staff register",
     "hrLeave": "Leave",
     "payrollDues": "Dues",
-    "payrollRuns": "Payroll runs & WPS"
+    "payrollRuns": "Payroll runs & WPS",
+    "accounting": "Accounting",
+    "accountingAccounts": "Chart of accounts"
   },
   "auth": {
     "login": "Log in",
@@ -502,7 +508,8 @@
     "appliedToTeachers": "Applied to {n} teachers.",
     "wpsSettings": "Wage Protection System (WPS)",
     "siteSettings": "Homepage & website",
-    "backups": "Backups"
+    "backups": "Backups",
+    "accountingSettings": "Accounting module"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -635,6 +642,13 @@
       "monthly": "Monthly",
       "predeploy": "Pre-deploy",
       "other": "Other"
+    },
+    "accountType": {
+      "ASSET": "Asset",
+      "LIABILITY": "Liability",
+      "EQUITY": "Equity",
+      "INCOME": "Income",
+      "EXPENSE": "Expense"
     }
   },
   "paymentModes": {
@@ -1325,5 +1339,22 @@
     "saJsonHint": "Stored in the database and never shown again. Leave empty to keep the current key, or clear both fields to disable.",
     "testUpload": "Test upload now",
     "testOk": "Upload succeeded — look for an edu-erp-test file in the folder."
+  },
+  "accounting": {
+    "moduleTitle": "Accounting module",
+    "moduleIntro": "Chart of accounts, double-entry journal, trial balance and P&L reports. Enabling seeds the default chart of accounts and auto-posts payments, expenses and payroll to the ledger.",
+    "enableLabel": "Enable the accounting module",
+    "enableHint": "Turning it off hides the module and pauses auto-posting without deleting any entries — everything resumes when re-enabled.",
+    "accountsTitle": "Chart of accounts",
+    "accountsSubtitle": "The centre's financial accounts — locked 🔒 accounts are system accounts and cannot be deleted.",
+    "code": "Account code",
+    "codeHint": "Digits only: 1000s assets, 2000s liabilities, 3000s equity, 4000s income, 5000s expenses.",
+    "type": "Account type",
+    "parent": "Parent account",
+    "parentHint": "Optional — same type only.",
+    "entriesCount": "Entries",
+    "addAccount": "Add account",
+    "editAccount": "Edit account",
+    "searchPlaceholder": "Search by code or name…"
   }
 }

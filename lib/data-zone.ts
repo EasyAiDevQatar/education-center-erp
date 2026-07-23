@@ -49,7 +49,8 @@ export type TableKey =
   | "expenses"
   | "payouts"
   | "leads"
-  | "terms";
+  | "terms"
+  | "accounts";
 
 export type TableSpec = {
   key: TableKey;
@@ -200,6 +201,19 @@ export const TABLES: TableSpec[] = [
       { key: "nameEn", ar: "الاسم بالإنجليزية" },
       { key: "startDate", ar: "تاريخ البداية", required: true },
       { key: "endDate", ar: "تاريخ النهاية", required: true },
+    ],
+  },
+  {
+    key: "accounts",
+    finance: true,
+    importable: true,
+    columns: [
+      { key: "code", ar: "رمز الحساب", required: true },
+      { key: "nameAr", ar: "الاسم بالعربية", required: true },
+      { key: "nameEn", ar: "الاسم بالإنجليزية" },
+      { key: "type", ar: "النوع", required: true },
+      { key: "parentCode", ar: "الحساب الأب" },
+      { key: "active", ar: "نشط" },
     ],
   },
 ];

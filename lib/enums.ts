@@ -75,3 +75,12 @@ export type PayslipMethod = (typeof PAYSLIP_METHODS)[number];
 
 export const RUN_STATUSES = ["DRAFT", "PAID"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
+
+/* --- Accounting (optional module) --- */
+
+export const ACCOUNT_TYPES = ["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"] as const;
+export type AccountType = (typeof ACCOUNT_TYPES)[number];
+
+/** What created a journal entry. MANUAL entries carry a null sourceId. */
+export const JOURNAL_SOURCES = ["PAYMENT", "EXPENSE", "PAYROLL", "CHEQUE", "MANUAL"] as const;
+export type JournalSource = (typeof JOURNAL_SOURCES)[number];
