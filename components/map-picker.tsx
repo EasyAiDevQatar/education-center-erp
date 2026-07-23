@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Search, MapPin, LocateFixed, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -17,6 +17,9 @@ import { Input } from "@/components/ui/input";
 import "leaflet/dist/leaflet.css";
 
 export type LatLng = { lat: number; lng: number };
+
+/** A single geocoding candidate returned by the search. */
+type GeoResult = { lat: number; lng: number; label: string };
 
 /** Doha, Qatar — sensible default view when nothing is set yet. */
 const DEFAULT_CENTER: LatLng = { lat: 25.2854, lng: 51.531 };
@@ -34,6 +37,7 @@ export function MapPicker({
 }) {
   const t = useTranslations("map");
   const tc = useTranslations("common");
+  const locale = useLocale();
 
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<LatLng | null>(value ?? null);
@@ -41,6 +45,7 @@ export function MapPicker({
   const [searching, setSearching] = useState(false);
   const [searchMsg, setSearchMsg] = useState<string | null>(null);
   const [address, setAddress] = useState<string | undefined>();
+  const [results, setResults] = useState<GeoResult[]>([]);
 
   const hostRef = useRef<HTMLDivElement>(null);
   // Leaflet types are loaded dynamically; keep loose refs.
@@ -137,25 +142,55 @@ export function MapPicker({
     }
   }
 
-  /** Free-text geocoding via OpenStreetMap Nominatim. */
+  /**
+   * Free-text geocoding via OpenStreetMap Nominatim.
+   * Returns several candidates (many named places aren't in OSM, so a single
+   * "limit=1" miss looked like a broken search); biases toward the map's
+   * current view and the UI language, then lists the hits to choose from.
+   */
   async function search() {
     const q = query.trim();
     if (!q) return;
     setSearching(true);
     setSearchMsg(null);
+    setResults([]);
     try {
+      const params = new URLSearchParams({
+        format: "jsonv2",
+        addressdetails: "0",
+        limit: "6",
+        "accept-language": `${locale},en,ar`,
+        q,
+      });
+      // Soft-bias to whatever the user is currently looking at (unbounded, so
+      // it still finds places elsewhere) — makes local street/area names win.
+      const map = mapRef.current;
+      if (map) {
+        const b = map.getBounds();
+        params.set(
+          "viewbox",
+          `${b.getWest()},${b.getNorth()},${b.getEast()},${b.getSouth()}`,
+        );
+      }
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
         { headers: { Accept: "application/json" } },
       );
-      const json = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
-      if (!json.length) {
-        setSearchMsg(t("noResults"));
+      if (!res.ok) {
+        setSearchMsg(t("searchFailed"));
         return;
       }
-      const hit = json[0];
-      setAddress(hit.display_name);
-      moveTo({ lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) });
+      const json = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+      const hits: GeoResult[] = json
+        .map((h) => ({ lat: parseFloat(h.lat), lng: parseFloat(h.lon), label: h.display_name }))
+        .filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lng));
+      if (!hits.length) {
+        setSearchMsg(t("noResultsHint"));
+        return;
+      }
+      setResults(hits);
+      // Jump to the best match immediately; the list lets them refine.
+      pickResult(hits[0]);
     } catch {
       setSearchMsg(t("searchFailed"));
     } finally {
@@ -163,8 +198,15 @@ export function MapPicker({
     }
   }
 
+  function pickResult(r: GeoResult) {
+    setAddress(r.label);
+    moveTo({ lat: r.lat, lng: r.lng });
+  }
+
   function useCurrent() {
     if (!("geolocation" in navigator)) return;
+    setResults([]);
+    setSearchMsg(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setAddress(undefined);
@@ -207,6 +249,23 @@ export function MapPicker({
               {t("useCurrent")}
             </Button>
           </div>
+
+          {results.length > 1 && (
+            <ul className="max-h-40 divide-y divide-border overflow-auto rounded-md border border-border bg-card text-sm">
+              {results.map((r, i) => (
+                <li key={`${r.lat},${r.lng},${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => pickResult(r)}
+                    className="flex w-full items-start gap-2 px-3 py-2 text-start hover:bg-accent"
+                  >
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <span className="line-clamp-2">{r.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <p className="text-xs text-muted-foreground">{t("hint")}</p>
 

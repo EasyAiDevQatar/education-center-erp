@@ -139,6 +139,23 @@ const EXPENSE_DESCRIPTIONS = [
   "كهرباء", "إيجار", "أدوات مكتبية", "دعاية انستغرام", "رسوم ترخيص",
 ];
 
+// Doha districts (Arabic name, lat, lng) so seeded homes cluster in real
+// places for the transport ETA/allocation demos rather than at (0,0). Points
+// are lightly jittered per person; the centre is the default trip endpoint.
+const DOHA_CENTER = { lat: 25.2854, lng: 51.531 };
+const DOHA_AREAS: [string, number, number][] = [
+  ["الوكرة", 25.171, 51.603],
+  ["الريان", 25.2919, 51.424],
+  ["الوعب", 25.264, 51.479],
+  ["الغرافة", 25.33, 51.443],
+  ["الخليج الغربي", 25.323, 51.531],
+  ["المنصورة", 25.279, 51.535],
+  ["أم صلال", 25.416, 51.402],
+  ["الدفنة", 25.321, 51.529],
+  ["معيذر", 25.256, 51.427],
+  ["الثمامة", 25.236, 51.547],
+];
+
 const nameAt = (pool: string[], i: number) =>
   i < pool.length ? pool[i] : `${pool[i % pool.length]} ${Math.floor(i / pool.length) + 1}`;
 
@@ -184,6 +201,17 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   const n = parsed.data;
   const rand = rng(Date.now() % 2147483647);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+  // A realistic Doha home: pick a district, jitter ~±1 km, label the plot. Feeds
+  // the transport module's coordinates so ETA/allocation demos on real geography.
+  const geoPoint = () => {
+    const [area, lat, lng] = pick(DOHA_AREAS);
+    const jitter = () => (rand() - 0.5) * 0.02;
+    return {
+      homeLat: +(lat + jitter()).toFixed(6),
+      homeLng: +(lng + jitter()).toFixed(6),
+      address: `${area} - قطعة ${100 + Math.floor(rand() * 800)}`,
+    };
+  };
 
   // --- reference data (idempotent) ---
   const EFFECTIVE_FROM = new Date("2024-09-01T00:00:00.000Z");
@@ -243,7 +271,13 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   const teacherSubjectMap: Record<string, string[]> = {};
   for (let i = 0; i < n.teachers; i++) {
     const t = await db.teacher.create({
-      data: { name: nameAt(TEACHER_NAMES, i), commissionPct: 50, phone: `5555${String(1000 + i)}` },
+      data: {
+        name: nameAt(TEACHER_NAMES, i),
+        commissionPct: 50,
+        phone: `5555${String(1000 + i)}`,
+        // Home pickup point for the transport module (house-to-house legs).
+        ...geoPoint(),
+      },
     });
     teacherIds.push(t.id);
     // Give each teacher one or two subjects so the booking picker demos the
@@ -280,6 +314,8 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         // Roughly a quarter study at home so location-defaulted pricing and
         // the planner's HOME markers have data to show.
         studyLocation: i % 4 === 3 ? "HOME" : "CENTER",
+        // Home coordinates so HOME sessions produce real transport legs.
+        ...geoPoint(),
       },
     });
     students.push({ id: s.id, gradeLevelId: level.id });
@@ -626,6 +662,10 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     ["wpsPayerBank", "QNB"],
     ["wpsPayerIBAN", "QA87QNBAQAQAXXX00000693123456"],
     ["wpsSifVersion", "1"],
+    // Centre location — the default endpoint of every transport trip. Filled
+    // only if empty so a reseed never moves a real, configured centre pin.
+    ["centerLat", String(DOHA_CENTER.lat)],
+    ["centerLng", String(DOHA_CENTER.lng)],
   ] as const) {
     const existing = await db.setting.findUnique({ where: { key } });
     if (!existing?.value) {
@@ -689,6 +729,8 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         hireDate: hire,
         phone: `5566${String(1000 + i)}`,
         contractType: pick(["UNLIMITED", "UNLIMITED", "LIMITED"]),
+        // Shift start/end point for a driver; harmless address for the rest.
+        ...geoPoint(),
       },
     });
     employeeIds.push(e.id);

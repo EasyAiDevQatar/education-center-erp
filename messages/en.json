@@ -386,7 +386,8 @@
     "noResults": "No results found",
     "searchFailed": "Search unavailable",
     "locationDenied": "Location permission denied",
-    "confirm": "Use this location"
+    "confirm": "Use this location",
+    "noResultsHint": "No match found — try a nearby street or area, or click the map to drop a pin."
   },
   "teachers": {
     "title": "Teachers",
