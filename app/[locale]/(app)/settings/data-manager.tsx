@@ -13,7 +13,15 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { TABLES, WIPE_PHRASE, SEED_SPEC, type TableKey } from "@/lib/data-zone";
+import {
+  TABLES,
+  WIPE_PHRASE,
+  SEED_SPEC,
+  SEED_PRESETS,
+  presetCounts,
+  type TableKey,
+  type SeedPresetKey,
+} from "@/lib/data-zone";
 import { wipeAllData, seedDemoData, type DataState } from "./data-actions";
 
 /* ------------------------------ import/export ------------------------------ */
@@ -148,6 +156,33 @@ export function DangerZone() {
   const summaryText = (s?: Record<string, number>) =>
     s ? Object.entries(s).filter(([, v]) => v > 0).map(([k, v]) => `${k}: ${v}`).join(" · ") : "";
 
+  /** Clamp to the field's own range so the action can never reject the form. */
+  const setCount = (key: string, raw: string) => {
+    const spec = SEED_SPEC.find((s) => s.key === key)!;
+    if (raw === "") return setCounts({ ...counts, [key]: "" });
+    const n = parseInt(raw, 10);
+    const clamped = Number.isFinite(n) ? Math.min(spec.max, Math.max(0, n)) : 0;
+    setCounts({ ...counts, [key]: String(clamped) });
+  };
+
+  const applyPreset = (preset: SeedPresetKey) => {
+    setRes(null);
+    setCounts(
+      Object.fromEntries(Object.entries(presetCounts(preset)).map(([k, v]) => [k, String(v)])),
+    );
+  };
+
+  /** Readable message for the modal — never a raw error code. */
+  const seedError = (r: DataState) => {
+    if (r.error === "seedRange" && r.field) {
+      return t("seedRangeError", {
+        field: t(`seedFields.${r.field}`),
+        max: r.max ?? 0,
+      });
+    }
+    return tc.has(`errors.${r.error}`) ? tc(`errors.${r.error}`) : (r.error ?? "");
+  };
+
   return (
     <div className="space-y-4">
       {/* Seed */}
@@ -198,12 +233,30 @@ export function DangerZone() {
             <DialogTitle>{t("seedTitle")}</DialogTitle>
           </DialogHeader>
           <p className="mb-2 text-sm text-muted-foreground">{t("seedDialogHint")}</p>
+
+          {/* One-click sizes — fills every count below; each is still editable. */}
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md bg-muted/40 p-2">
+            <span className="text-sm text-muted-foreground">{t("presetLabel")}</span>
+            {SEED_PRESETS.map((p) => (
+              <Button
+                key={p.key}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyPreset(p.key)}
+              >
+                {t(`presets.${p.key}`)}
+              </Button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             {SEED_SPEC.map((spec) => (
               <FormField
                 key={spec.key}
                 label={t(`seedFields.${spec.key}`)}
                 htmlFor={`seed-${spec.key}`}
+                hint={`0–${spec.max}`}
               >
                 <Input
                   id={`seed-${spec.key}`}
@@ -212,12 +265,13 @@ export function DangerZone() {
                   max={spec.max}
                   dir="ltr"
                   value={counts[spec.key]}
-                  onChange={(e) => setCounts({ ...counts, [spec.key]: e.target.value })}
+                  onChange={(e) => setCount(spec.key, e.target.value)}
+                  onBlur={(e) => setCount(spec.key, e.target.value || "0")}
                 />
               </FormField>
             ))}
           </div>
-          {res?.error && <p className="mt-2 text-sm text-destructive">{res.error}</p>}
+          {res?.error && <p className="mt-2 text-sm text-destructive">{seedError(res)}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">{tc("cancel")}</Button>

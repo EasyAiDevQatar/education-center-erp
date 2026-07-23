@@ -890,7 +890,14 @@
       "payrollRuns": "Payroll runs",
       "suppliers": "Suppliers",
       "cheques": "Cheques"
-    }
+    },
+    "presetLabel": "Preset size:",
+    "presets": {
+      "small": "Small centre",
+      "medium": "Medium centre",
+      "large": "Large centre"
+    },
+    "seedRangeError": "The value in “{field}” exceeds the allowed maximum ({max})."
   },
   "availability": {
     "tab": "Working hours",

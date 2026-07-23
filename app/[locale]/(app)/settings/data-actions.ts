@@ -14,6 +14,9 @@ import { accountingEnabled, backfillJournal } from "@/lib/accounting/journal-dat
 export type DataState = {
   ok?: boolean;
   error?: string;
+  /** Set with error "seedRange": which count was out of range, and its cap. */
+  field?: string;
+  max?: number;
   summary?: Record<string, number>;
 };
 
@@ -163,7 +166,16 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   const session = await guardAdmin();
   if (!session) return { error: "forbidden" };
   const parsed = countsSchema.safeParse(input);
-  if (!parsed.success) return { error: "invalid" };
+  if (!parsed.success) {
+    // Name the offending field and its allowed range — a bare "invalid" left
+    // the admin guessing which of twenty inputs the form disliked.
+    const issue = parsed.error.issues[0];
+    const key = String(issue?.path?.[0] ?? "");
+    const spec = SEED_SPEC.find((s) => s.key === key);
+    return spec
+      ? { error: "seedRange", field: key, max: spec.max }
+      : { error: "invalid" };
+  }
   const n = parsed.data;
   const rand = rng(Date.now() % 2147483647);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];

@@ -890,7 +890,14 @@
       "payrollRuns": "دفعات الرواتب",
       "suppliers": "الموردون",
       "cheques": "الشيكات"
-    }
+    },
+    "presetLabel": "حجم جاهز:",
+    "presets": {
+      "small": "مركز صغير",
+      "medium": "مركز متوسط",
+      "large": "مركز كبير"
+    },
+    "seedRangeError": "القيمة في حقل «{field}» أكبر من الحد المسموح ({max})."
   },
   "availability": {
     "tab": "أوقات الدوام",

@@ -35,10 +35,36 @@ export const SEED_SPEC = [
   { key: "employees", max: 100, default: 6 },
   { key: "employeeDocs", max: 300, default: 10 },
   { key: "leaveRequests", max: 200, default: 8 },
-  { key: "payrollRuns", max: 6, default: 1 },
+  // Up to two years of monthly runs — the old cap of 6 rejected any realistic
+  // "show me a year of payroll" demo and surfaced as a bare "invalid".
+  { key: "payrollRuns", max: 24, default: 1 },
 ] as const;
 
 export type SeedKey = (typeof SEED_SPEC)[number]["key"];
+
+/**
+ * One-click sizes for the seed modal. Multipliers scale every count off its
+ * SEED_SPEC default and are clamped to each field's max, so a preset can
+ * never produce a payload the action would reject.
+ *
+ * `small` is the default single-branch centre; `large` is a stress/demo size
+ * that still seeds in a few seconds.
+ */
+export const SEED_PRESETS = [
+  { key: "small", factor: 1 },
+  { key: "medium", factor: 3 },
+  { key: "large", factor: 8 },
+] as const;
+
+export type SeedPresetKey = (typeof SEED_PRESETS)[number]["key"];
+
+/** Counts for a preset: default x factor, capped at each field's max. */
+export function presetCounts(preset: SeedPresetKey): Record<SeedKey, number> {
+  const factor = SEED_PRESETS.find((p) => p.key === preset)?.factor ?? 1;
+  return Object.fromEntries(
+    SEED_SPEC.map((s) => [s.key, Math.min(s.max, Math.max(0, Math.round(s.default * factor)))]),
+  ) as Record<SeedKey, number>;
+}
 
 /** Tables exposed to XLSX export/import. `finance` gates to FINANCE_ROLES. */
 export type TableKey =
