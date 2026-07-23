@@ -14,7 +14,7 @@ export type Role = (typeof ROLES)[number];
 export const LOCATIONS = ["CENTER", "HOME"] as const;
 export type LocationType = (typeof LOCATIONS)[number];
 
-export const PAYMENT_METHODS = ["CASH", "POS", "QPAY", "TRANSFER"] as const;
+export const PAYMENT_METHODS = ["CASH", "POS", "QPAY", "TRANSFER", "CHEQUE"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_STATUSES = ["PAID", "PARTIAL", "UNPAID"] as const;

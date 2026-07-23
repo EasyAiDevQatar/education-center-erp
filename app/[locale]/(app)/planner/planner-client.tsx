@@ -108,7 +108,13 @@ export type AvailabilityRow = {
 };
 
 type Opt = { id: string; label: string };
-type StudentOpt = { id: string; name: string; gradeLevelId: string | null };
+type StudentOpt = {
+  id: string;
+  name: string;
+  gradeLevelId: string | null;
+  /** The student's usual study place — new drafts default to it. */
+  studyLocation?: "CENTER" | "HOME";
+};
 
 const CELL_STYLES: Record<string, string> = {
   DRAFT: "border-warning border-dashed bg-warning/10",
@@ -908,6 +914,11 @@ function AddDraftDialog({
                 setStudentId(v);
                 const st = students.find((x) => x.id === v);
                 if (st?.gradeLevelId) setGradeLevelId(st.gradeLevelId);
+                // Default location from the student's usual study place —
+                // through onLocationChange so the HOME travel gap re-suggests
+                // the start time too.
+                if (st?.studyLocation && st.studyLocation !== location)
+                  onLocationChange(st.studyLocation);
               }}
             />
           </FormField>

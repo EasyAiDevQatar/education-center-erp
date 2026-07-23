@@ -32,6 +32,7 @@ export default async function StudentProfilePage({
   const tc = await getTranslations("common");
   const tp = await getTranslations("profile");
   const tpk = await getTranslations("packages");
+  const te = await getTranslations("enums");
 
   const student = await db.student.findUnique({
     where: { id },
@@ -108,6 +109,10 @@ export default async function StudentProfilePage({
               <Row label={tc("phone")} value={student.guardian?.phone ?? "—"} />
               <Row icon={<MapPin className="size-4" />} label={t("address")} value={student.address ?? "—"} />
               <Row label={t("homeCode")} value={student.homeCode ?? "—"} />
+              <Row
+                label={t("studyLocation")}
+                value={te(`location.${student.studyLocation as "CENTER" | "HOME"}`)}
+              />
               <Row
                 label={t("homeLocation")}
                 value={

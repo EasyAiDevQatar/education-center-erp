@@ -124,6 +124,7 @@ export default async function CalendarPage({
     name: displayName(s, locale),
     gradeLevelId: s.gradeLevelId,
     teacherIds: s.teachers.map((x) => x.teacherId),
+    studyLocation: s.studyLocation as "CENTER" | "HOME",
   }));
   const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }));
   const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));

@@ -84,6 +84,7 @@ export default async function SessionsPage({
     name: displayName(s, locale),
     teacherIds: s.teachers.map((x) => x.teacherId),
     gradeLevelId: s.gradeLevelId,
+    studyLocation: s.studyLocation as "CENTER" | "HOME",
   }));
   const packageOpts = activePackages.map((p) => ({
     id: p.id,

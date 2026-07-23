@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import {
   getAttendance,
   getRevenueBreakdown,
+  getCollectionsByMethod,
   getPackageReport,
   getPayoutSummary,
   getTopDebtors,
@@ -11,7 +12,7 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { ReportsClient, type ReportTab } from "./reports-client";
 
-const TABS: ReportTab[] = ["attendance", "revenue", "packages", "payroll", "debtors"];
+const TABS: ReportTab[] = ["attendance", "revenue", "collections", "packages", "payroll", "debtors"];
 
 export default async function ReportsPage({
   params,
@@ -62,6 +63,8 @@ export default async function ReportsPage({
             locale,
           ),
         };
+      case "collections":
+        return { collections: await getCollectionsByMethod(range) };
       case "packages":
         return { packages: await getPackageReport(range) };
       case "payroll":

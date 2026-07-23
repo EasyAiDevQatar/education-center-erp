@@ -349,7 +349,9 @@
     "searchPlaceholder": "Search by name, phone or grade…",
     "assignedTeachers": "Assigned teachers",
     "assignedTeachersHint": "Teachers who teach this student this year — they appear first when booking.",
-    "noTeachersAssigned": "No teachers assigned"
+    "noTeachersAssigned": "No teachers assigned",
+    "studyLocation": "Study location",
+    "studyLocationHint": "New sessions auto-price by grade and study location; each session can still override it."
   },
   "map": {
     "title": "Pick location on map",
@@ -558,7 +560,8 @@
       "CASH": "Cash",
       "POS": "Card (POS)",
       "QPAY": "Qpay",
-      "TRANSFER": "Transfer"
+      "TRANSFER": "Transfer",
+      "CHEQUE": "Cheque"
     },
     "paymentStatus": {
       "PAID": "Paid",
@@ -856,7 +859,8 @@
       "revenue": "Revenue",
       "packages": "Packages",
       "payroll": "Payroll summary",
-      "debtors": "Debtors"
+      "debtors": "Debtors",
+      "collections": "Collections by method"
     },
     "groupings": {
       "teacher": "By teacher",
@@ -889,7 +893,9 @@
     "guardian": "Guardian",
     "charges": "Charges",
     "paid": "Paid",
-    "balance": "Balance due"
+    "balance": "Balance due",
+    "method": "Payment method",
+    "paymentsCount": "Payments"
   },
   "portal": {
     "teacherTitle": "Teacher portal",

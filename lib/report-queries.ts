@@ -140,6 +140,44 @@ export async function getRevenueBreakdown(
   return [...map.values()].sort((a, b) => b.expected - a.expected);
 }
 
+export type CollectionsRow = {
+  method: string;
+  count: number;
+  total: number;
+  /** Share of the period's collections, 0–100 rounded to one decimal. */
+  pct: number;
+};
+
+/**
+ * Actual money collected, broken down by payment method. Unlike the revenue
+ * report (session-based, expected income) this reads the payments table —
+ * what actually crossed the counter.
+ */
+export async function getCollectionsByMethod(range?: DateRange): Promise<CollectionsRow[]> {
+  const d = dateWhere(range);
+  const payments = await db.payment.findMany({
+    where: d ? { date: d } : {},
+    select: { method: true, amount: true },
+  });
+  const map = new Map<string, { count: number; total: number }>();
+  let grand = 0;
+  for (const p of payments) {
+    const row = map.get(p.method) ?? { count: 0, total: 0 };
+    row.count++;
+    row.total += toNumber(p.amount);
+    grand += toNumber(p.amount);
+    map.set(p.method, row);
+  }
+  return [...map.entries()]
+    .map(([method, r]) => ({
+      method,
+      count: r.count,
+      total: r.total,
+      pct: grand > 0 ? Math.round((r.total / grand) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export type PackageReportRow = {
   id: string;
   studentName: string;

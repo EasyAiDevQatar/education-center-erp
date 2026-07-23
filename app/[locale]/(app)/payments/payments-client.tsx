@@ -27,6 +27,7 @@ import {
   type ColumnDef,
 } from "@/components/ui/table-sort";
 import { formatMoney } from "@/lib/money";
+import { PAYMENT_METHODS } from "@/lib/enums";
 import { savePayment, deletePayment } from "./actions";
 import { getStudentOutstanding, type OutstandingInfo } from "./balance-actions";
 
@@ -170,10 +171,9 @@ function PaymentFields({
       <div className="grid grid-cols-2 gap-3">
         <FormField label={t("method")} htmlFor="method">
           <Select id="method" name="method" defaultValue={payment?.method ?? "CASH"}>
-            <option value="CASH">{te("method.CASH")}</option>
-            <option value="POS">{te("method.POS")}</option>
-            <option value="QPAY">{te("method.QPAY")}</option>
-            <option value="TRANSFER">{te("method.TRANSFER")}</option>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m} value={m}>{te(`method.${m}`)}</option>
+            ))}
           </Select>
         </FormField>
         <FormField label={t("receiptNo")} htmlFor="receiptNo" hint={payment ? undefined : "auto"}>
@@ -234,7 +234,7 @@ export function PaymentsClient({
         value: (p) => p.method,
         filterable: true,
         // Fixed order so every method shows even at zero count.
-        options: ["CASH", "POS", "QPAY", "TRANSFER"],
+        options: [...PAYMENT_METHODS],
         optionLabel: (v) => te(`method.${v}`),
       },
       { key: "teacher", label: t("allocateTeacher"), value: (p) => p.teacherName, filterable: true },
@@ -248,8 +248,39 @@ export function PaymentsClient({
   });
   const pg = usePagination(sf.rows, 20, sf.version);
 
+  // Per-method totals over the CURRENT filter/search result, so narrowing the
+  // table narrows the chips with it.
+  const methodTotals = useMemo(() => {
+    const totals = new Map<string, { count: number; total: number }>();
+    for (const p of sf.rows) {
+      const row = totals.get(p.method) ?? { count: 0, total: 0 };
+      row.count++;
+      row.total += p.amount;
+      totals.set(p.method, row);
+    }
+    return totals;
+  }, [sf.rows]);
+
   return (
     <>
+      <div className="mb-3 flex flex-wrap gap-2">
+        {PAYMENT_METHODS.map((m) => {
+          const row = methodTotals.get(m);
+          if (!row) return null;
+          return (
+            <div
+              key={m}
+              className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm"
+            >
+              <span className="text-muted-foreground">{te(`method.${m}`)}</span>
+              <span className="font-semibold tabular-nums" dir="ltr">
+                {formatMoney(row.total)} {currency}
+              </span>
+              <Badge variant="muted">{row.count}</Badge>
+            </div>
+          );
+        })}
+      </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <TableSearch
           value={search.query}

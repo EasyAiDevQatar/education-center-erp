@@ -70,6 +70,7 @@ export const TABLES: TableSpec[] = [
       { key: "nameEn", ar: "الاسم بالإنجليزية" },
       { key: "phone", ar: "الهاتف" },
       { key: "gradeCode", ar: "المرحلة" },
+      { key: "studyLocation", ar: "مكان الدراسة" },
       { key: "guardianName", ar: "ولي الأمر" },
       { key: "address", ar: "العنوان" },
       { key: "homeCode", ar: "كود موقع المنزل" },

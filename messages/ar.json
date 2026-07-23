@@ -349,7 +349,9 @@
     "searchPlaceholder": "ابحث بالاسم أو الهاتف أو المرحلة…",
     "assignedTeachers": "معلمو الطالب",
     "assignedTeachersHint": "اختر المعلمين الذين يدرّسون هذا الطالب هذا العام — سيظهرون أولاً عند حجز الحصص.",
-    "noTeachersAssigned": "لم يُحدَّد معلمون"
+    "noTeachersAssigned": "لم يُحدَّد معلمون",
+    "studyLocation": "مكان الدراسة",
+    "studyLocationHint": "تُحسب أسعار الحصص الجديدة تلقائياً حسب المرحلة ومكان الدراسة، مع إمكانية التغيير لكل حصة."
   },
   "map": {
     "title": "تحديد الموقع على الخريطة",
@@ -558,7 +560,8 @@
       "CASH": "نقداً",
       "POS": "شبكة",
       "QPAY": "Qpay",
-      "TRANSFER": "تحويل"
+      "TRANSFER": "تحويل",
+      "CHEQUE": "شيك"
     },
     "paymentStatus": {
       "PAID": "مدفوع",
@@ -856,7 +859,8 @@
       "revenue": "الإيرادات",
       "packages": "الباقات",
       "payroll": "ملخص الرواتب",
-      "debtors": "المديونيات"
+      "debtors": "المديونيات",
+      "collections": "المحصلات حسب طريقة الدفع"
     },
     "groupings": {
       "teacher": "حسب المعلم",
@@ -889,7 +893,9 @@
     "guardian": "ولي الأمر",
     "charges": "الرسوم",
     "paid": "المدفوع",
-    "balance": "الرصيد المستحق"
+    "balance": "الرصيد المستحق",
+    "method": "طريقة الدفع",
+    "paymentsCount": "عدد المدفوعات"
   },
   "portal": {
     "teacherTitle": "بوابة المعلم",

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { LOCATIONS } from "@/lib/enums";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -15,6 +16,7 @@ const schema = z.object({
   phone: z.string().trim().optional().nullable(),
   gradeLevelId: z.string().trim().optional().nullable(),
   guardianId: z.string().trim().optional().nullable(),
+  studyLocation: z.enum(LOCATIONS).default("CENTER"),
   active: z.coerce.boolean().default(true),
   notes: z.string().trim().optional().nullable(),
   // Home-session attendance
@@ -49,6 +51,7 @@ export async function saveStudent(
     phone: formData.get("phone") || null,
     gradeLevelId: formData.get("gradeLevelId") || null,
     guardianId: formData.get("guardianId") || null,
+    studyLocation: formData.get("studyLocation") || "CENTER",
     active: formData.get("active") === "on" || formData.get("active") === "true",
     notes: formData.get("notes") || null,
     address: orNull(formData.get("address")),

@@ -42,6 +42,7 @@ export type StudentRow = {
   gradeLevelLabel: string | null;
   guardianId: string | null;
   guardianLabel: string | null;
+  studyLocation: "CENTER" | "HOME";
   active: boolean;
   notes: string | null;
   address: string | null;
@@ -66,6 +67,7 @@ function StudentFields({
 }) {
   const t = useTranslations("students");
   const tc = useTranslations("common");
+  const te = useTranslations("enums");
   const [lat, setLat] = useState(student?.homeLat != null ? String(student.homeLat) : "");
   const [lng, setLng] = useState(student?.homeLng != null ? String(student.homeLng) : "");
   const [address, setAddress] = useState(student?.address ?? "");
@@ -97,14 +99,22 @@ function StudentFields({
       <FormField label={tc("phone")} htmlFor="phone">
         <Input id="phone" name="phone" dir="ltr" defaultValue={student?.phone ?? ""} />
       </FormField>
-      <FormField label={t("gradeLevel")} htmlFor="gradeLevelId">
-        <Select id="gradeLevelId" name="gradeLevelId" defaultValue={student?.gradeLevelId ?? ""}>
-          <option value="">—</option>
-          {levels.map((l) => (
-            <option key={l.id} value={l.id}>{l.label}</option>
-          ))}
-        </Select>
-      </FormField>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label={t("gradeLevel")} htmlFor="gradeLevelId">
+          <Select id="gradeLevelId" name="gradeLevelId" defaultValue={student?.gradeLevelId ?? ""}>
+            <option value="">—</option>
+            {levels.map((l) => (
+              <option key={l.id} value={l.id}>{l.label}</option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label={t("studyLocation")} htmlFor="studyLocation" hint={t("studyLocationHint")}>
+          <Select id="studyLocation" name="studyLocation" defaultValue={student?.studyLocation ?? "CENTER"}>
+            <option value="CENTER">{te("location.CENTER")}</option>
+            <option value="HOME">{te("location.HOME")}</option>
+          </Select>
+        </FormField>
+      </div>
       <FormField label={t("guardian")} htmlFor="guardianId">
         <Combobox
           id="guardianId"
@@ -205,6 +215,7 @@ export function StudentsClient({
   const t = useTranslations("students");
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
+  const te = useTranslations("enums");
   const locale = useLocale();
   const search = useTableSearch(students, (s) => [nameSearchText(s), s.phone, s.gradeLevelLabel, s.guardianLabel, s.homeCode]);
   const columns = useMemo<ColumnDef<StudentRow>[]>(
@@ -213,6 +224,15 @@ export function StudentsClient({
       { key: "level", label: t("gradeLevel"), value: (s) => s.gradeLevelLabel, filterable: true },
       { key: "guardian", label: t("guardian"), value: (s) => s.guardianLabel, filterable: true },
       { key: "phone", label: tc("phone"), value: (s) => s.phone },
+      {
+        key: "studyLocation",
+        label: t("studyLocation"),
+        type: "enum",
+        value: (s) => s.studyLocation,
+        filterable: true,
+        options: ["CENTER", "HOME"],
+        optionLabel: (v) => te(`location.${v as "CENTER"}`),
+      },
       {
         key: "status",
         label: tc("status"),
@@ -224,7 +244,7 @@ export function StudentsClient({
       },
       { key: "actions", label: tc("actions"), className: "text-end" },
     ],
-    [t, tc],
+    [t, tc, te],
   );
   const sf = useTableSortFilter(search.filtered, columns);
   const pg = usePagination(sf.rows, 20, sf.version);
@@ -258,7 +278,7 @@ export function StudentsClient({
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -269,6 +289,11 @@ export function StudentsClient({
                 <TableCell>{s.gradeLevelLabel ?? "—"}</TableCell>
                 <TableCell>{s.guardianLabel ?? "—"}</TableCell>
                 <TableCell className="text-start"><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
+                <TableCell>
+                  <Badge variant={s.studyLocation === "HOME" ? "warning" : "default"}>
+                    {te(`location.${s.studyLocation}`)}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   {s.active ? (
                     <Badge variant="success">{tc("active")}</Badge>

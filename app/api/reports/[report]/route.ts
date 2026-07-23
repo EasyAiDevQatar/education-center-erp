@@ -6,6 +6,7 @@ import { FINANCE_ROLES } from "@/lib/rbac";
 import {
   getAttendance,
   getRevenueBreakdown,
+  getCollectionsByMethod,
   getPackageReport,
   getPayoutSummary,
   getTopDebtors,
@@ -59,6 +60,12 @@ export async function GET(
       );
       header = ["البند", "الحصص", "الساعات", "الدخل المتوقع"];
       rows = data.map((r) => [r.label, r.sessions, r.hours, r.expected]);
+      break;
+    }
+    case "collections": {
+      const data = await getCollectionsByMethod(range);
+      header = ["طريقة الدفع", "عدد المدفوعات", "المبلغ", "النسبة %"];
+      rows = data.map((r) => [r.method, r.count, r.total, r.pct]);
       break;
     }
     case "packages": {

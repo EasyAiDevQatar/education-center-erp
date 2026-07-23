@@ -64,6 +64,7 @@ export default async function StudentsPage({
     homeLng: s.homeLng,
     checkinPin: s.checkinPin,
     homeCode: s.homeCode,
+    studyLocation: s.studyLocation as "CENTER" | "HOME",
     teacherIds: s.teachers.map((x) => x.teacherId),
   }));
 

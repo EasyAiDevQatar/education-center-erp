@@ -218,6 +218,9 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         gradeLevelId: level.id,
         guardianId: guardianIds.length ? guardianIds[i % guardianIds.length] : null,
         phone: `7777${String(1000 + i)}`,
+        // Roughly a quarter study at home so location-defaulted pricing and
+        // the planner's HOME markers have data to show.
+        studyLocation: i % 4 === 3 ? "HOME" : "CENTER",
       },
     });
     students.push({ id: s.id, gradeLevelId: level.id });
@@ -496,7 +499,8 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         studentId: pick(students).id,
         teacherId: pick(teacherIds),
         amount: pick([125, 150, 175, 200, 300, 350]),
-        method: pick(["CASH", "CASH", "POS", "QPAY"]),
+        // Every method appears so the collections-by-method report demos.
+        method: pick(["CASH", "CASH", "CASH", "POS", "POS", "QPAY", "TRANSFER", "CHEQUE"]),
       },
     });
     payments++;

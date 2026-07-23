@@ -25,6 +25,8 @@ export type StudentOpt = {
   gradeLevelId: string | null;
   /** Teachers assigned to this student for the current year, if any. */
   teacherIds?: string[];
+  /** The student's usual study place — new sessions default to it. */
+  studyLocation?: "CENTER" | "HOME";
 };
 export type PackageOpt = { id: string; studentId: string; label: string };
 export type Opt = { id: string; label: string };
@@ -176,6 +178,9 @@ export function SessionDialog({
     setStudentId(id);
     const s = students.find((x) => x.id === id);
     if (s?.gradeLevelId) setGradeLevelId(s.gradeLevelId);
+    // Default the location — and therefore the auto-price — from the student's
+    // usual study place. Only on create: editing keeps the session's own value.
+    if (!session && s?.studyLocation) setLocation(s.studyLocation);
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {

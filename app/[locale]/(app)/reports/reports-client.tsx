@@ -12,14 +12,15 @@ import { TablePagination, usePagination } from "@/components/ui/table-pagination
 import type {
   AttendanceRow,
   RevenueRow,
+  CollectionsRow,
   PackageReportRow,
   PayoutSummaryRow,
   DebtorRow,
 } from "@/lib/report-queries";
 
-export type ReportTab = "attendance" | "revenue" | "packages" | "payroll" | "debtors";
+export type ReportTab = "attendance" | "revenue" | "collections" | "packages" | "payroll" | "debtors";
 
-const TABS: ReportTab[] = ["attendance", "revenue", "packages", "payroll", "debtors"];
+const TABS: ReportTab[] = ["attendance", "revenue", "collections", "packages", "payroll", "debtors"];
 
 /** Which grouping options each report offers, if any. */
 const GROUPINGS: Partial<Record<ReportTab, string[]>> = {
@@ -37,6 +38,7 @@ export function ReportsClient({
   periodLabel,
   attendance,
   revenue,
+  collections,
   packages,
   payouts,
   debtors,
@@ -50,6 +52,7 @@ export function ReportsClient({
   periodLabel: string;
   attendance?: AttendanceRow[];
   revenue?: RevenueRow[];
+  collections?: CollectionsRow[];
   packages?: PackageReportRow[];
   payouts?: PayoutSummaryRow[];
   debtors?: DebtorRow[];
@@ -164,6 +167,9 @@ export function ReportsClient({
           <AttendanceTable rows={attendance} />
         )}
         {tab === "revenue" && revenue && <RevenueTable rows={revenue} currency={currency} te={te} />}
+        {tab === "collections" && collections && (
+          <CollectionsTable rows={collections} currency={currency} />
+        )}
         {tab === "packages" && packages && <PackagesTable rows={packages} currency={currency} />}
         {tab === "payroll" && payouts && <PayoutsSummaryTable rows={payouts} currency={currency} />}
         {tab === "debtors" && debtors && <DebtorsTable rows={debtors} currency={currency} />}
@@ -182,6 +188,57 @@ function Empty() {
 function Th({ children, end }: { children: React.ReactNode; end?: boolean }) {
   return (
     <th className={`p-2 ${end ? "text-end" : "text-start"} font-medium`}>{children}</th>
+  );
+}
+
+function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency: string }) {
+  const t = useTranslations("reports");
+  const tc = useTranslations("common");
+  const te = useTranslations("enums");
+  if (rows.length === 0) return <Empty />;
+
+  const totals = rows.reduce(
+    (a, r) => ({ count: a.count + r.count, total: a.total + r.total }),
+    { count: 0, total: 0 },
+  );
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-border bg-muted/40">
+            <Th>{t("method")}</Th>
+            <Th end>{t("paymentsCount")}</Th>
+            <Th end>{tc("amount")}</Th>
+            <Th end>{t("share")}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.method} className="border-b border-border/60">
+              <td className="p-2">{te(`method.${r.method as "CASH"}`)}</td>
+              <td className="p-2 text-end tabular-nums">{r.count}</td>
+              <td className="p-2 text-end tabular-nums" dir="ltr">
+                {formatMoney(r.total)} {currency}
+              </td>
+              <td className="p-2 text-end tabular-nums">
+                <Badge variant="default">{r.pct}%</Badge>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-border font-semibold">
+            <td className="p-2">{tc("total")}</td>
+            <td className="p-2 text-end tabular-nums">{totals.count}</td>
+            <td className="p-2 text-end tabular-nums" dir="ltr">
+              {formatMoney(totals.total)} {currency}
+            </td>
+            <td className="p-2 text-end tabular-nums">100%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 }
 

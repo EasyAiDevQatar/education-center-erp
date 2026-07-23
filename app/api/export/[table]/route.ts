@@ -84,8 +84,10 @@ async function loadRows(
         nameEn: s.nameEn ?? "",
         phone: s.phone ?? "",
         gradeCode: s.gradeLevel?.code ?? "",
+        studyLocation: s.studyLocation,
         guardianName: s.guardian?.name ?? "",
         address: s.address ?? "",
+        homeCode: s.homeCode ?? "",
         checkinPin: s.checkinPin ?? "",
         notes: s.notes ?? "",
       }));

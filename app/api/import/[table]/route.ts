@@ -149,6 +149,8 @@ async function importRows(
               guardianId: r.guardianName ? guardianByName.get(r.guardianName) ?? null : null,
               address: r.address || null,
               homeCode: r.homeCode || null,
+              // Accept the Arabic labels the export/template writes, plus raw codes.
+              studyLocation: /home|منزل/i.test(r.studyLocation ?? "") ? "HOME" : "CENTER",
               checkinPin: /^\d{4,6}$/.test(r.checkinPin ?? "") ? r.checkinPin : null,
               notes: r.notes || null,
             },

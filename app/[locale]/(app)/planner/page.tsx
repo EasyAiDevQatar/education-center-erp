@@ -108,6 +108,7 @@ export default async function PlannerPage({
           id: st.id,
           name: displayName(st, locale),
           gradeLevelId: st.gradeLevelId,
+          studyLocation: st.studyLocation as "CENTER" | "HOME",
         }))}
         levels={levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }))}
         matrix={matrixMap}

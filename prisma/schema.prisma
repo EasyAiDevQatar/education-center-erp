@@ -156,6 +156,10 @@ model Student {
   /// sheet). Shown on planner cards for HOME sessions so the teacher knows
   /// where they are going at a glance.
   homeCode   String?
+  /// Where this student usually studies (CENTER | HOME). New sessions default
+  /// their location — and therefore their price — from this; each session can
+  /// still override it.
+  studyLocation String @default("CENTER")
 
   sessions  Session[]
   payments  Payment[]
