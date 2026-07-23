@@ -1181,6 +1181,7 @@ model Driver {
   notes  String?
 
   trips Trip[]
+  pings DriverPing[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1231,6 +1232,7 @@ model Trip {
 
   stops  TripStop[]
   events TripEvent[]
+  pings  DriverPing[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1283,5 +1285,30 @@ model TripEvent {
   byUserId   String?
   at         DateTime @default(now())
 
+  @@index([tripId, at])
+}
+
+/// A driver's location fix while a trip is running.
+///
+/// The ONLY table here that grows without bound, so it is pruned by the daily
+/// cron after `transportPingDays`. Written only while a trip is STARTED —
+/// never in the background — and this is staff location data, so reads are
+/// gated by the transportTrackingVisibility setting, server-side.
+model DriverPing {
+  id       String  @id @default(cuid())
+  driverId String
+  driver   Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  tripId   String?
+  trip     Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  lat Float
+  lng Float
+  /// Reported accuracy in metres. Fixes worse than the configured ceiling are
+  /// rejected client-side; the column is kept so a stored path can be audited.
+  accuracyM Int?
+
+  at DateTime @default(now())
+
+  @@index([driverId, at])
   @@index([tripId, at])
 }

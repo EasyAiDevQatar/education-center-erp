@@ -69,6 +69,7 @@ export async function loginAction(
     locale: user!.locale,
     teacherId: user!.teacherId,
     guardianId: user!.guardianId,
+    employeeId: user!.employeeId,
   });
 
   // Send the user to the dashboard in their preferred locale.

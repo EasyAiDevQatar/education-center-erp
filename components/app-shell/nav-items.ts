@@ -104,6 +104,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { href: "/transport/planner", key: "transportPlanner" },
       { href: "/transport/trips", key: "transportTrips" },
+      { href: "/transport/map", key: "transportMap" },
       { href: "/transport/vehicles", key: "transportVehicles" },
       { href: "/transport/drivers", key: "transportDrivers" },
     ],

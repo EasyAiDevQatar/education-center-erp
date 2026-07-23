@@ -16,6 +16,9 @@ export type SessionPayload = {
   locale: string;
   teacherId?: string | null;
   guardianId?: string | null;
+  /// Set for staff who also have an Employee record — the driver app resolves
+  /// its Driver row from this, never from a route parameter.
+  employeeId?: string | null;
 };
 
 export async function encryptSession(payload: SessionPayload): Promise<string> {

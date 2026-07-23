@@ -64,6 +64,9 @@ export default async function DashboardPage({
   if (session.role === "PARENT" && session.guardianId) {
     redirect({ href: "/portal/parent", locale });
   }
+  if (session.role === "DRIVER" && session.employeeId) {
+    redirect({ href: "/portal/driver", locale });
+  }
 
   const t = await getTranslations("dashboard");
   const tc = await getTranslations("common");

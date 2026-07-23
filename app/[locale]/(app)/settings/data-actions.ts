@@ -83,6 +83,9 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     // Transport: the driving role points at both an employee and a vehicle, so
     // it goes before either. Documents cascade from the vehicle, but the
     // explicit delete keeps the summary honest.
+    // Pings cascade from the driver, but this is staff location data — delete
+    // it explicitly and report the count rather than letting it go silently.
+    summary.driverPings = (await tx.driverPing.deleteMany()).count;
     summary.drivers = (await tx.driver.deleteMany()).count;
     summary.vehicleDocuments = (await tx.vehicleDocument.deleteMany()).count;
     summary.vehicles = (await tx.vehicle.deleteMany()).count;

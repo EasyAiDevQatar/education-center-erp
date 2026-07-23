@@ -6,7 +6,8 @@ import { packageStatusFor } from "@/lib/billing-rules";
 import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { dispatch, centerSettings } from "@/lib/integrations/notify";
 import { OPEN_LEAD_STATUSES } from "@/lib/leads";
-import { transportEnabled } from "@/lib/transport/settings";
+import { transportEnabled, loadTransportConfig } from "@/lib/transport/settings";
+import { pingCutoff } from "@/lib/transport/tracking";
 import { buildDayPlan, generateDayTrips } from "@/lib/transport/trip-data";
 
 /**
@@ -18,7 +19,7 @@ import { buildDayPlan, generateDayTrips } from "@/lib/transport/trip-data";
  * Jobs: tomorrow's session reminders, outstanding-balance reminders (with a
  * cooldown), low/expiring package notices, package status sweeping, due lead
  * follow-ups, auto-completion of unmarked sessions, and — when the transport
- * module is on — tomorrow's trip proposals.
+ * module is on — tomorrow's trip proposals and pruning of old driver pings.
  * Every job is best-effort — one failure never blocks the others.
  */
 
@@ -252,6 +253,22 @@ export async function GET(request: Request) {
     }
   } catch (e) {
     report.transportError = String(e);
+  }
+
+  /* 7. Prune old driver pings ---------------------------------------------- */
+  // DriverPing is the only unbounded table in the system; without this the
+  // nightly pg_dump grows forever and staff movement is kept indefinitely.
+  try {
+    const config = await loadTransportConfig();
+    const cutoff = pingCutoff(new Date(), config.pingRetentionDays);
+    report.pingCutoff = cutoff.toISOString();
+    if (dry) {
+      report.pingsToPrune = await db.driverPing.count({ where: { at: { lt: cutoff } } });
+    } else {
+      report.pingsPruned = (await db.driverPing.deleteMany({ where: { at: { lt: cutoff } } })).count;
+    }
+  } catch (e) {
+    report.pingPruneError = String(e);
   }
 
   return NextResponse.json({ ok: true, ...report });

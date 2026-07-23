@@ -23,6 +23,29 @@ export async function requireTeacherPortal(locale: string): Promise<{
   return { session, teacherId: teacherId! };
 }
 
+/**
+ * Driver app access. Identity comes from the JWT's `employeeId`, which is
+ * resolved to a Driver row here — a driver can only ever load their own trips,
+ * and there is no id in the URL to tamper with.
+ */
+export async function requireDriverPortal(locale: string): Promise<{
+  session: SessionPayload;
+  driverId: string;
+  employeeId: string;
+}> {
+  const session = await requireAuth(locale);
+  const employeeId = session.employeeId;
+  if (!employeeId) redirect({ href: "/dashboard", locale });
+  const driver = await db.driver.findUnique({
+    where: { employeeId: employeeId! },
+    select: { id: true, active: true },
+  });
+  // No Driver row (or a deactivated one) means no driver app — the account may
+  // still be a perfectly good staff login, so send them to the dashboard.
+  if (!driver?.active) redirect({ href: "/dashboard", locale });
+  return { session, driverId: driver!.id, employeeId: employeeId! };
+}
+
 export async function requireParentPortal(locale: string): Promise<{
   session: SessionPayload;
   guardianId: string;

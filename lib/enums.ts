@@ -8,6 +8,9 @@ export const ROLES = [
   "RECEPTIONIST",
   "TEACHER",
   "PARENT",
+  /// Drives the centre's vehicles. Sees only the driver app: today's trips and
+  /// the stops on them — never students, money or anyone else's schedule.
+  "DRIVER",
 ] as const;
 export type Role = (typeof ROLES)[number];
 
