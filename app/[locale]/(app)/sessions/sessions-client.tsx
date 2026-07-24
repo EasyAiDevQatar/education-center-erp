@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, Download, Users } from "lucide-react";
-import { useRouter, usePathname } from "@/i18n/navigation";
+import { Plus, Pencil, Download, Users, Eye } from "lucide-react";
+import { useRouter, usePathname, Link } from "@/i18n/navigation";
 import { GroupBookingDialog, type GroupOpt } from "./group-booking-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,7 @@ export function SessionsClient({
   const columns = useMemo<ColumnDef<SessionRow>[]>(
     () => [
       { key: "date", label: tc("date"), type: "date", value: (s) => s.date },
+      { key: "time", label: t("time"), value: (s) => s.time ?? "" },
       { key: "student", label: t("student"), value: (s) => s.studentName, filterable: true },
       { key: "teacher", label: t("teacher"), value: (s) => s.teacherName, filterable: true },
       { key: "level", label: t("gradeLevel"), value: (s) => s.levelLabel, filterable: true },
@@ -256,7 +257,7 @@ export function SessionsClient({
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground">
+                <TableCell colSpan={11} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -264,6 +265,7 @@ export function SessionsClient({
             {pg.pageItems.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
+                <TableCell className="tabular-nums"><span dir="ltr">{s.time ?? "—"}</span></TableCell>
                 <TableCell className="font-medium">{s.studentName}</TableCell>
                 <TableCell>{s.teacherName}</TableCell>
                 <TableCell>{s.levelLabel}</TableCell>
@@ -293,6 +295,14 @@ export function SessionsClient({
                         teachers={teachers}
                       />
                     )}
+                    <Link
+                      href={`/sessions/${s.id}`}
+                      aria-label={t("view360")}
+                      title={t("view360")}
+                      className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+                    >
+                      <Eye className="size-4" />
+                    </Link>
                     <SessionDialog
                       title={t("edit")}
                       action={saveSession.bind(null, locale, s.id)}

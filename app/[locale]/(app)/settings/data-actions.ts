@@ -3,7 +3,6 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { generateDayTrips } from "@/lib/transport/trip-data";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
 import { WIPE_PHRASE, SEED_SPEC, type SeedKey } from "@/lib/data-zone";
@@ -423,7 +422,6 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     return (location === "HOME" ? l.home ?? l.center : l.center) ?? 150;
   };
   let sessions = 0;
-  const sessionDays = new Set<string>();
   const today = new Date();
   for (let i = 0; i < n.sessions && students.length && teacherIds.length; i++) {
     const st = pick(students);
@@ -465,7 +463,6 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         actualHours: attended ? hours : null,
       },
     });
-    sessionDays.add(date.toISOString().slice(0, 10));
     sessions++;
   }
   summary.sessions = sessions;
@@ -1043,47 +1040,6 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   summary.fuelLogs = fuelLogs;
   summary.maintenanceLogs = maintenanceLogs;
 
-  // --- trips: derived from the seeded HOME sessions, one board per day ---
-  // Run the real generator (legs from chain.ts, drivers from allocate.ts) for
-  // every day that has home sessions, so seeded trips ALWAYS match the seeded
-  // homes. Then age them: past days completed with actuals, today assigned,
-  // future days left as proposals to review.
-  let tripCount = 0;
-  // The live check-in roster below seeds more sessions on "today"; include it.
-  sessionDays.add(today.toISOString().slice(0, 10));
-  if (driverCount > 0 && vehicleIds.length && sessionDays.size) {
-    const todayIso = today.toISOString().slice(0, 10);
-    for (const dayIso of sessionDays) {
-      await generateDayTrips(locale, dayIso, null);
-    }
-    const start = new Date(`${[...sessionDays].sort()[0]}T00:00:00.000Z`);
-    const end = new Date(`${[...sessionDays].sort().at(-1)}T23:59:59.999Z`);
-    const trips = await db.trip.findMany({
-      where: { date: { gte: start, lte: end } },
-      select: { id: true, date: true, plannedStartMin: true, plannedEndMin: true, estimatedKm: true },
-    });
-    for (const t of trips) {
-      const dayIso = t.date.toISOString().slice(0, 10);
-      if (dayIso < todayIso) {
-        const startAt = new Date(t.date.getTime() + t.plannedStartMin * 60_000);
-        const endAt = new Date(t.date.getTime() + t.plannedEndMin * 60_000);
-        await db.trip.update({
-          where: { id: t.id },
-          data: {
-            status: "COMPLETED",
-            actualStartAt: startAt,
-            actualEndAt: endAt,
-            actualKm: t.estimatedKm,
-          },
-        });
-      } else if (dayIso === todayIso) {
-        await db.trip.update({ where: { id: t.id }, data: { status: "ASSIGNED" } });
-      }
-      // future days keep PROPOSED
-      tripCount++;
-    }
-  }
-  summary.trips = tripCount;
 
   // Leave: one request per slot, never overlapping — each employee gets its
   // own month window, mixing approved history with a pending queue.

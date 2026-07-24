@@ -248,7 +248,10 @@
     "subject": "Subject",
     "subjectHint": "Optional — shown on the booking card when set.",
     "subjectNone": "— No subject —",
-    "orBookGroup": "…or book a group"
+    "orBookGroup": "…or book a group",
+    "time": "Time",
+    "view360": "360 view",
+    "trial": "Trial"
   },
   "group": {
     "title": "Group booking",
@@ -806,6 +809,12 @@
       "TEACHERS": "Teachers only",
       "STUDENTS": "Students only",
       "BOTH": "Teachers and students"
+    },
+    "checkinMethod": {
+      "KIOSK": "Kiosk",
+      "GPS": "GPS",
+      "QR": "QR",
+      "MANUAL": "Manual"
     }
   },
   "paymentModes": {
@@ -2045,5 +2054,24 @@
       "notBroughtHome": "Not brought home at the end",
       "startsWithDropoff": "Dropped without a pickup"
     }
+  },
+  "session360": {
+    "overview": "Overview",
+    "time": "Time",
+    "hours": "Hours",
+    "pricePerHour": "Price / hour",
+    "total": "Total",
+    "group": "Group",
+    "attendance": "Attendance",
+    "studentCheckIn": "Student check-in",
+    "studentCheckOut": "Student check-out",
+    "teacherCheckIn": "Teacher check-in",
+    "method": "Method",
+    "actualHours": "Actual hours",
+    "payments": "Payments",
+    "noPayments": "No payments allocated yet.",
+    "transport": "Transport",
+    "noTrip": "No trip serves this lesson.",
+    "noDriver": "No driver"
   }
 }

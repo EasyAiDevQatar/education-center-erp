@@ -248,7 +248,10 @@
     "subject": "المادة",
     "subjectHint": "اختياري — تظهر على بطاقة الحجز عند تحديدها.",
     "subjectNone": "— بدون مادة —",
-    "orBookGroup": "…أو احجز مجموعة"
+    "orBookGroup": "…أو احجز مجموعة",
+    "time": "الوقت",
+    "view360": "عرض 360",
+    "trial": "تجريبية"
   },
   "group": {
     "title": "حجز جماعي",
@@ -806,6 +809,12 @@
       "TEACHERS": "المعلمون فقط",
       "STUDENTS": "الطلاب فقط",
       "BOTH": "المعلمون والطلاب"
+    },
+    "checkinMethod": {
+      "KIOSK": "جهاز",
+      "GPS": "GPS",
+      "QR": "رمز QR",
+      "MANUAL": "يدوي"
     }
   },
   "paymentModes": {
@@ -2045,5 +2054,24 @@
       "notBroughtHome": "لم يُعَد إلى المنزل في النهاية",
       "startsWithDropoff": "أُنزل دون اصطحاب"
     }
+  },
+  "session360": {
+    "overview": "نظرة عامة",
+    "time": "الوقت",
+    "hours": "الساعات",
+    "pricePerHour": "السعر / ساعة",
+    "total": "الإجمالي",
+    "group": "المجموعة",
+    "attendance": "الحضور",
+    "studentCheckIn": "حضور الطالب",
+    "studentCheckOut": "انصراف الطالب",
+    "teacherCheckIn": "حضور المعلم",
+    "method": "الطريقة",
+    "actualHours": "الساعات الفعلية",
+    "payments": "المدفوعات",
+    "noPayments": "لا توجد مدفوعات مخصصة بعد.",
+    "transport": "النقل",
+    "noTrip": "لا توجد رحلة تخدم هذه الحصة.",
+    "noDriver": "بدون سائق"
   }
 }

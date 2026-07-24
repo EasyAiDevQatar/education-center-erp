@@ -313,8 +313,8 @@ export function TransportPlannerClient({
                     {mapOpen.has(trip.id) ? t("hideMap") : t("routeMap")}
                   </button>
                   {mapOpen.has(trip.id) && (
-                    <div className="mt-2">
-                      <TripMiniMap stops={trip.stops} height={200} />
+                    <div className="mt-2 max-w-xl">
+                      <TripMiniMap stops={trip.stops} height={180} />
                     </div>
                   )}
                 </div>
