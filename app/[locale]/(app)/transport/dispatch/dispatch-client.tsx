@@ -17,28 +17,54 @@ function tripColour(v: string): string {
   return "bg-green-500/15 border-green-600/50 text-green-700 dark:text-green-400";
 }
 
+const ROW_H = 26;
+
+/** Stack trips that overlap in time onto separate rows (greedy interval pack),
+ *  so no two blocks in a lane ever draw on top of each other. */
+function packRows(trips: LaneTrip[]): { rows: number[]; count: number } {
+  const rowEnd: number[] = [];
+  const rows: number[] = [];
+  for (const t of trips) {
+    let r = rowEnd.findIndex((end) => end <= t.plannedStartMin);
+    if (r === -1) {
+      r = rowEnd.length;
+      rowEnd.push(t.plannedEndMin);
+    } else {
+      rowEnd[r] = t.plannedEndMin;
+    }
+    rows.push(r);
+  }
+  return { rows, count: Math.max(1, rowEnd.length) };
+}
+
 function TripBlock({
   trip,
   axis,
   kindLabel,
+  row,
+  rtl,
 }: {
   trip: LaneTrip;
   axis: { minMin: number; maxMin: number };
   kindLabel: (k: string | null) => string;
+  row: number;
+  rtl: boolean;
 }) {
   const range = Math.max(1, axis.maxMin - axis.minMin);
-  const left = ((trip.plannedStartMin - axis.minMin) / range) * 100;
-  const width = Math.max(6, ((trip.plannedEndMin - trip.plannedStartMin) / range) * 100);
+  const startPct = ((trip.plannedStartMin - axis.minMin) / range) * 100;
+  const width = Math.max(7, ((trip.plannedEndMin - trip.plannedStartMin) / range) * 100);
+  // Earliest sits at the inline start: left in LTR, right in Arabic RTL.
+  const horiz = rtl ? { right: `${startPct}%` } : { left: `${startPct}%` };
   return (
     <div
-      className={`absolute top-1 bottom-1 overflow-hidden rounded-md border px-1.5 py-0.5 text-[10px] leading-tight ${tripColour(trip.validationStatus)}`}
-      style={{ left: `${left}%`, width: `${width}%` }}
+      className={`absolute flex items-center gap-1 overflow-hidden rounded-md border px-1.5 text-[10px] leading-none ${tripColour(trip.validationStatus)}`}
+      style={{ ...horiz, width: `${width}%`, top: `${row * ROW_H + 2}px`, height: `${ROW_H - 4}px` }}
       title={`${kindLabel(trip.tripKind)} · ${minToHHMM(trip.plannedStartMin)}–${minToHHMM(trip.plannedEndMin)} · ${trip.passengerName ?? ""}`}
     >
-      <div className="truncate font-medium">{kindLabel(trip.tripKind)}</div>
-      <div className="truncate tabular-nums" dir="ltr">
-        {minToHHMM(trip.plannedStartMin)}–{minToHHMM(trip.plannedEndMin)}
-      </div>
+      <span className="truncate font-medium">{kindLabel(trip.tripKind)}</span>
+      <span className="shrink-0 tabular-nums opacity-80" dir="ltr">
+        {minToHHMM(trip.plannedStartMin)}
+      </span>
     </div>
   );
 }
@@ -51,7 +77,9 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const rtl = locale === "ar";
   const kindLabel = (k: string | null) => (k ? tp(`tripKind.${k}`) : "—");
+  const posStyle = (pct: number) => (rtl ? { right: `${pct}%` } : { left: `${pct}%` });
   const go = (d: string) => router.push(`${pathname}?date=${d}`);
   const shiftDay = (delta: number) => {
     const dt = new Date(`${board.day}T00:00:00.000Z`);
@@ -122,36 +150,45 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
         {/* Driver lanes */}
         <div className="rounded-lg border border-border bg-card p-3">
           <p className="mb-2 text-sm font-medium">{t("lanes")}</p>
-          {/* Timeline header */}
-          <div className="relative mb-1 h-4 text-[10px] text-muted-foreground" dir="ltr">
+          {/* Timeline header — RTL-aware: earliest hour on the right in Arabic. */}
+          <div className="relative mb-1 h-4 text-[10px] text-muted-foreground">
             {ticks.map((m) => (
-              <span key={m} className="absolute -translate-x-1/2 tabular-nums" style={{ left: `${((m - board.axis.minMin) / range) * 100}%` }}>
+              <span
+                key={m}
+                className={`absolute tabular-nums ${rtl ? "translate-x-1/2" : "-translate-x-1/2"}`}
+                style={posStyle(((m - board.axis.minMin) / range) * 100)}
+                dir="ltr"
+              >
                 {minToHHMM(m)}
               </span>
             ))}
           </div>
           <div className="space-y-2">
-            {board.lanes.map((lane: DriverLane) => (
-              <div key={lane.driverId} className="flex items-stretch gap-2">
-                <div className="w-28 shrink-0 text-xs">
-                  <div className="truncate font-medium">{lane.driverName}</div>
-                  <div className="text-muted-foreground" dir="ltr">
-                    {lane.plate ?? "—"} · {lane.capacity}
+            {board.lanes.map((lane: DriverLane) => {
+              const { rows, count } = packRows(lane.trips);
+              const laneH = Math.max(44, count * ROW_H + 4);
+              return (
+                <div key={lane.driverId} className="flex items-stretch gap-2">
+                  <div className="w-28 shrink-0 text-xs">
+                    <div className="truncate font-medium">{lane.driverName}</div>
+                    <div className="text-muted-foreground" dir="ltr">
+                      {lane.plate ?? "—"} · {lane.capacity}
+                    </div>
+                  </div>
+                  <div className="relative flex-1 rounded-md bg-muted/40" style={{ height: `${laneH}px` }}>
+                    {lane.trips.length === 0 ? (
+                      <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
+                        {t("noTrips")}
+                      </span>
+                    ) : (
+                      lane.trips.map((trip, i) => (
+                        <TripBlock key={trip.id} trip={trip} axis={board.axis} kindLabel={kindLabel} row={rows[i]} rtl={rtl} />
+                      ))
+                    )}
                   </div>
                 </div>
-                <div className="relative h-12 flex-1 rounded-md bg-muted/40" dir="ltr">
-                  {lane.trips.length === 0 ? (
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
-                      {t("noTrips")}
-                    </span>
-                  ) : (
-                    lane.trips.map((trip) => (
-                      <TripBlock key={trip.id} trip={trip} axis={board.axis} kindLabel={kindLabel} />
-                    ))
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
