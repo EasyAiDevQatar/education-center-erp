@@ -192,7 +192,8 @@
     "hrDocuments": "المستندات والانتهاء",
     "groups": "المجموعات",
     "assistant": "المساعد الذكي",
-    "transportManifest": "الاصطحاب والإنزال"
+    "transportManifest": "الاصطحاب والإنزال",
+    "transportDispatch": "لوحة الإرسال"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -2209,5 +2210,24 @@
       "OFFICE": "مكتب",
       "OTHER": "أخرى"
     }
+  },
+  "transportDispatch": {
+    "title": "المخطط اليومي للنقل",
+    "subtitle": "مسارات السائقين، الجدول الزمني لليوم، والمجمّع غير المسند في لمحة.",
+    "today": "اليوم",
+    "statUnassigned": "غير مسندة",
+    "statLate": "محظورة",
+    "statRemaining": "متبقية",
+    "statCompleted": "مكتملة",
+    "statTotal": "الرحلات الكلية",
+    "stopsTotal": "{n} توقفات",
+    "stopsHomes": "{n} منازل",
+    "toCentre": "{n} إلى المركز",
+    "fromCentre": "{n} من المركز",
+    "lanes": "مسارات السائقين",
+    "noTrips": "لا رحلات مسندة",
+    "unassignedPool": "غير مسندة ({n})",
+    "poolEmpty": "الجميع لديه رحلة.",
+    "reasonNotPlanned": "لم تُخطَّط بعد"
   }
 }

@@ -192,7 +192,8 @@
     "hrDocuments": "Documents & expiry",
     "groups": "Groups",
     "assistant": "AI Assistant",
-    "transportManifest": "Pickups & drop-offs"
+    "transportManifest": "Pickups & drop-offs",
+    "transportDispatch": "Dispatch board"
   },
   "auth": {
     "login": "Log in",
@@ -2209,5 +2210,24 @@
       "OFFICE": "Office",
       "OTHER": "Other"
     }
+  },
+  "transportDispatch": {
+    "title": "Daily transport board",
+    "subtitle": "Driver lanes, the day's timeline, and the unassigned pool at a glance.",
+    "today": "Today",
+    "statUnassigned": "Unassigned",
+    "statLate": "Blocked",
+    "statRemaining": "Remaining",
+    "statCompleted": "Completed",
+    "statTotal": "Total trips",
+    "stopsTotal": "{n} stops",
+    "stopsHomes": "{n} homes",
+    "toCentre": "{n} to centre",
+    "fromCentre": "{n} from centre",
+    "lanes": "Driver lanes",
+    "noTrips": "No trips assigned",
+    "unassignedPool": "Unassigned ({n})",
+    "poolEmpty": "Everyone has a ride.",
+    "reasonNotPlanned": "Not yet planned"
   }
 }
