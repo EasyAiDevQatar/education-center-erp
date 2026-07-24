@@ -265,6 +265,7 @@ export default async function SettingsPage({
               model: settings.aiModel ?? "",
               apiKeyMasked: maskSecret(settings.aiApiKey),
               autoTranslateNames: settings.aiAutoTranslateNames === "1",
+              floatingChat: settings.aiFloatingChat !== "0",
               assistantRoles: parseAssistantRoles(settings.aiAssistantRoles, [
                 "ADMIN",
                 "ACCOUNTANT",

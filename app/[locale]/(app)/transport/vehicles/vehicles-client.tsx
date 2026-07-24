@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, FileText, Trash2, TriangleAlert } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { RowActions, ViewDialog } from "@/components/crud/row-actions";
@@ -377,7 +377,7 @@ export function VehiclesClient({
               return (
                 <TableRow key={v.id} className={v.active ? undefined : "opacity-60"}>
                   <TableCell className="font-medium">
-                    <span dir="ltr">{v.plate}</span>
+                    <Link href={`/transport/vehicles/${v.id}`} className="hover:underline" dir="ltr">{v.plate}</Link>
                   </TableCell>
                   <TableCell>{[v.make, v.model].filter(Boolean).join(" ") || "—"}</TableCell>
                   <TableCell className="tabular-nums">{v.year ?? "—"}</TableCell>

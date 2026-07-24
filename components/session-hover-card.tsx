@@ -65,11 +65,25 @@ export function useSessionHover(currency: string) {
     null,
   );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clear = () => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
   };
-  useEffect(() => clear, []);
+  const clearHide = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = null;
+  };
+  // Grace period so the pointer can travel from the card INTO the popover
+  // (to read details or click the map link) without it vanishing.
+  const scheduleHide = () => {
+    clearHide();
+    hideTimer.current = setTimeout(() => setActive(null), 250);
+  };
+  useEffect(() => () => {
+    clear();
+    clearHide();
+  }, []);
 
   const bind = (data: HoverSessionData) => ({
     onMouseEnter: (e: React.MouseEvent) => {
@@ -77,6 +91,7 @@ export function useSessionHover(currency: string) {
       if (window.matchMedia?.("(hover: none)").matches) return;
       const { clientX: x, clientY: y } = e;
       clear();
+      clearHide();
       timer.current = setTimeout(() => {
         const W = 300;
         const H = 420;
@@ -89,11 +104,12 @@ export function useSessionHover(currency: string) {
     },
     onMouseLeave: () => {
       clear();
-      setActive(null);
+      scheduleHide();
     },
     // A drag or click supersedes the preview.
     onPointerDown: () => {
       clear();
+      clearHide();
       setActive(null);
     },
   });
@@ -101,7 +117,14 @@ export function useSessionHover(currency: string) {
   const portal =
     active && typeof document !== "undefined"
       ? createPortal(
-          <HoverCard data={active.data} currency={currency} x={active.x} y={active.y} />,
+          <HoverCard
+            data={active.data}
+            currency={currency}
+            x={active.x}
+            y={active.y}
+            onMouseEnter={clearHide}
+            onMouseLeave={scheduleHide}
+          />,
           document.body,
         )
       : null;
@@ -131,11 +154,15 @@ function HoverCard({
   currency,
   x,
   y,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   data: HoverSessionData;
   currency: string;
   x: number;
   y: number;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
   const t = useTranslations("hoverCard");
   const te = useTranslations("enums");
@@ -143,8 +170,10 @@ function HoverCard({
 
   return (
     <div
-      className="pointer-events-none fixed z-[100] w-72 space-y-1.5 rounded-lg border border-border bg-popover p-3 text-xs text-popover-foreground shadow-xl"
+      className="fixed z-[100] w-72 space-y-1.5 rounded-lg border border-border bg-popover p-3 text-xs text-popover-foreground shadow-xl"
       style={{ left: x, top: y }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-sm font-semibold">{d.studentName}</span>
@@ -209,7 +238,7 @@ function HoverCard({
           {d.mapDate && (
             <Link
               href={`/transport/map?date=${d.mapDate}`}
-              className="pointer-events-auto inline-flex items-center gap-1 text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-primary hover:underline"
             >
               <ExternalLink className="size-3" />
               {t("openMap")}

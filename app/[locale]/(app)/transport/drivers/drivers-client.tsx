@@ -1,5 +1,7 @@
 "use client";
 
+import { Link } from "@/i18n/navigation";
+
 import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, TriangleAlert } from "lucide-react";
@@ -251,7 +253,9 @@ export function DriversClient({
             )}
             {pg.pageItems.map((d) => (
               <TableRow key={d.id} className={d.active ? undefined : "opacity-60"}>
-                <TableCell className="font-medium">{d.name}</TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/transport/drivers/${d.id}`} className="hover:underline">{d.name}</Link>
+                </TableCell>
                 <TableCell>
                   <span dir="ltr">{d.phone ?? "—"}</span>
                 </TableCell>

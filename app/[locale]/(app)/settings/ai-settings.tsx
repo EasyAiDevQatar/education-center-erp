@@ -20,6 +20,7 @@ export type AiValues = {
   /** Masked for display; empty means no key stored yet. */
   apiKeyMasked: string;
   autoTranslateNames: boolean;
+  floatingChat: boolean;
   assistantRoles: string[];
 };
 
@@ -123,6 +124,17 @@ export function AiSettings({ values }: { values: AiValues }) {
         {t("autoTranslate")}
       </label>
       <p className="text-xs text-muted-foreground">{t("autoTranslateHint")}</p>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="aiFloatingChat"
+          defaultChecked={values.floatingChat}
+          className="size-4 accent-primary"
+        />
+        {t("floatingChat")}
+      </label>
+      <p className="text-xs text-muted-foreground">{t("floatingChatHint")}</p>
 
       <div className="space-y-1">
         <p className="text-sm font-medium">{t("assistantRoles")}</p>

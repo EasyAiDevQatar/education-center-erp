@@ -17,6 +17,8 @@ export type AiConfig = {
   apiKey: string;
   dialect: "openai" | "anthropic";
   autoTranslateNames: boolean;
+  /** Show the floating chat bubble on every staff page. */
+  floatingChat: boolean;
   /** Roles allowed to see/use the assistant (always includes ADMIN). */
   assistantRoles: string[];
 };
@@ -28,6 +30,7 @@ const KEYS = [
   "aiApiKey",
   "aiModel",
   "aiAutoTranslateNames",
+  "aiFloatingChat",
   "aiAssistantRoles",
 ] as const;
 
@@ -44,6 +47,7 @@ export async function loadAiConfig(): Promise<AiConfig> {
     apiKey: s.aiApiKey ?? "",
     dialect: ep.dialect,
     autoTranslateNames: s.aiAutoTranslateNames === "1",
+    floatingChat: s.aiFloatingChat !== "0", // default ON once the module is enabled
     assistantRoles: parseAssistantRoles(s.aiAssistantRoles, STAFF_ROLES),
   };
 }

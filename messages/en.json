@@ -1962,7 +1962,9 @@
     "translateMissing": "Translate missing names (AI)",
     "translating": "Translating…",
     "translateDone": "Translated {n}; {remaining} left",
-    "translateFailed": "Translation failed — check the AI settings"
+    "translateFailed": "Translation failed — check the AI settings",
+    "floatingChat": "Show a floating assistant bubble on every page",
+    "floatingChatHint": "A chat panel slides in from the side — no need to open it from the menu. Shown only to roles allowed below."
   },
   "assistant": {
     "title": "AI Assistant",
@@ -1978,6 +1980,35 @@
     "thinking": "Consulting centre data…",
     "failed": "The assistant could not answer — try again.",
     "notConfigured": "The AI module is not configured yet — add a provider key in Settings.",
-    "disclaimer": "Answers are generated from centre data by an AI model and can be imperfect — verify important figures on the reports pages. Questions are recorded in the audit log."
+    "disclaimer": "Answers are generated from centre data by an AI model and can be imperfect — verify important figures on the reports pages. Questions are recorded in the audit log.",
+    "openChat": "Open AI assistant",
+    "closeChat": "Close"
+  },
+  "transport360": {
+    "window": "Window",
+    "passenger": "Passenger",
+    "route": "Route",
+    "vehicle": "Vehicle",
+    "driver": "Driver",
+    "km": "Km",
+    "shift": "Shift",
+    "licence": "Licence",
+    "licenceExpiry": "Licence expiry",
+    "employeeFile": "Employee file",
+    "upcomingTrips": "Planned trips",
+    "completedTrips": "Completed trips",
+    "completedThisMonth": "Completed this month",
+    "totalKm": "Total km",
+    "tripHistory": "Trip history",
+    "capacity": "Seats",
+    "odometer": "Odometer",
+    "defaultDriverOf": "Default driver",
+    "documents": "Documents",
+    "recentCosts": "Recent costs",
+    "fuel": "Fuel",
+    "fuelCost": "Fuel cost",
+    "maintenanceCost": "Maintenance cost",
+    "kmDriven": "Km driven (trips)",
+    "allCosts": "All costs"
   }
 }

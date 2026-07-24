@@ -20,6 +20,7 @@ const schema = z.object({
   model: z.string().trim().max(120),
   apiKey: z.string().trim().max(500),
   autoTranslateNames: z.boolean(),
+  floatingChat: z.boolean(),
   assistantRoles: z.array(z.enum(STAFF)),
 });
 
@@ -42,6 +43,7 @@ export async function saveAiSettings(
     model: formData.get("aiModel") ?? "",
     apiKey: formData.get("aiApiKey") ?? "",
     autoTranslateNames: formData.get("aiAutoTranslateNames") === "on",
+    floatingChat: formData.get("aiFloatingChat") === "on",
     assistantRoles: formData.getAll("aiAssistantRoles").map(String),
   });
   if (!parsed.success) return { error: "invalid" };
@@ -55,6 +57,7 @@ export async function saveAiSettings(
   // never the secret, so an untouched field must not wipe it.
   if (d.apiKey) await upsert("aiApiKey", d.apiKey);
   await upsert("aiAutoTranslateNames", d.autoTranslateNames ? "1" : "0");
+  await upsert("aiFloatingChat", d.floatingChat ? "1" : "0");
   await upsert("aiAssistantRoles", JSON.stringify(d.assistantRoles));
 
   await writeAudit("Setting", "ai", "UPDATE", {
