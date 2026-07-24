@@ -1847,7 +1847,16 @@
     "statWarning": "{n} to review",
     "statFallback": "{n} estimated",
     "showReasons": "Why? ({n})",
-    "hideReasons": "Hide reasons"
+    "hideReasons": "Hide reasons",
+    "reviewIssues": "Review issues",
+    "overrideApprove": "Exceptional approval",
+    "overrideWarning": "This route is blocked by the validator. Approving it anyway is recorded and audited — the errors below still stand.",
+    "overrideReasonLabel": "Reason (required)",
+    "overrideReasonPlaceholder": "Why this route is being approved despite the errors",
+    "overrideReasonRequired": "A reason of at least 3 characters is required.",
+    "overrideConfirm": "Approve anyway",
+    "tightestMargin": "{min} min tightest margin",
+    "tightestMarginHint": "The smallest gap between a planned arrival and its deadline across this trip's legs."
   },
   "trips": {
     "title": "Trips",

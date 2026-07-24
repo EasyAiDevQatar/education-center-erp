@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireTransport } from "@/lib/transport/guard";
 import { buildDayPlan, loadDayTrips } from "@/lib/transport/trip-data";
+import { getSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
 import { TransportPlannerClient, type ProblemRow } from "./planner-client";
 
@@ -23,10 +24,14 @@ export default async function TransportPlannerPage({
       ? dParam
       : new Date().toISOString().slice(0, 10);
 
-  const [plan, trips] = await Promise.all([
+  const [plan, trips, session] = await Promise.all([
     buildDayPlan(locale, day),
     loadDayTrips(locale, day),
+    getSession(),
   ]);
+  // Only an ADMIN may exceptionally approve a blocked route (mirrors the
+  // overrideApprove server guard) — the button is hidden for everyone else.
+  const canOverride = session?.role === "ADMIN";
 
   // Everything the engine could not place, with the reason — the board must be
   // loud about these: each one is a passenger with no ride.
@@ -63,6 +68,7 @@ export default async function TransportPlannerPage({
         drivers={plan.drivers}
         legCount={plan.legs.length}
         centreSet={plan.centreSet}
+        canOverride={canOverride}
       />
     </div>
   );

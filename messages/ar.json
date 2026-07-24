@@ -1847,7 +1847,16 @@
     "statWarning": "{n} للمراجعة",
     "statFallback": "{n} تقديرية",
     "showReasons": "لماذا؟ ({n})",
-    "hideReasons": "إخفاء الأسباب"
+    "hideReasons": "إخفاء الأسباب",
+    "reviewIssues": "مراجعة المشكلات",
+    "overrideApprove": "اعتماد استثنائي",
+    "overrideWarning": "هذه الرحلة محظورة بواسطة المدقّق. اعتمادها استثناءً يُسجَّل ويُدقَّق — والأخطاء أدناه تبقى قائمة.",
+    "overrideReasonLabel": "السبب (إلزامي)",
+    "overrideReasonPlaceholder": "لماذا تُعتمد هذه الرحلة رغم الأخطاء",
+    "overrideReasonRequired": "يلزم سبب لا يقل عن ٣ أحرف.",
+    "overrideConfirm": "اعتماد رغم ذلك",
+    "tightestMargin": "أدنى هامش {min} د",
+    "tightestMarginHint": "أصغر فرق بين وصول مخطط وموعده النهائي عبر مراحل هذه الرحلة."
   },
   "trips": {
     "title": "الرحلات",

@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { minToHHMM } from "@/lib/planner";
 import { AddStopDialog } from "./add-stop-dialog";
 import { NewTripDialog } from "./new-trip-dialog";
+import { OverrideDialog } from "./override-dialog";
 import { TripMiniMap } from "@/components/trip-mini-map";
 import type { BoardTrip, PlannedDriver } from "@/lib/transport/trip-data";
 import {
@@ -87,6 +88,7 @@ export function TransportPlannerClient({
   drivers,
   legCount,
   centreSet,
+  canOverride,
 }: {
   day: string;
   trips: BoardTrip[];
@@ -94,6 +96,7 @@ export function TransportPlannerClient({
   drivers: PlannedDriver[];
   legCount: number;
   centreSet: boolean;
+  canOverride: boolean;
 }) {
   const t = useTranslations("transportPlanner");
   const tc = useTranslations("common");
@@ -121,6 +124,12 @@ export function TransportPlannerClient({
   const [briefBusy, setBriefBusy] = useState(false);
 
   const proposed = useMemo(() => trips.filter((x) => x.status === "PROPOSED"), [trips]);
+  // "Approve all" only ever approves routes the validator cleared — reflect that
+  // in the count so a board of blocked routes doesn't offer a misleading action.
+  const approvable = useMemo(
+    () => proposed.filter((x) => x.validationStatus !== "INVALID"),
+    [proposed],
+  );
   const totalKm = useMemo(
     () => trips.reduce((a, x) => a + x.estimatedKm, 0),
     [trips],
@@ -206,16 +215,18 @@ export function TransportPlannerClient({
           </Button>
           {proposed.length > 0 && (
             <>
-              <Button
-                type="button"
-                variant="secondary"
-                className="gap-2"
-                disabled={pending}
-                onClick={() => run(() => approveAll(locale, day))}
-              >
-                <CheckCheck className="size-4" />
-                {t("approveAll", { count: proposed.length })}
-              </Button>
+              {approvable.length > 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="gap-2"
+                  disabled={pending}
+                  onClick={() => run(() => approveAll(locale, day))}
+                >
+                  <CheckCheck className="size-4" />
+                  {t("approveAll", { count: approvable.length })}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -484,8 +495,8 @@ export function TransportPlannerClient({
                   <span dir="ltr">{t("emptyKm", { km: trip.deadheadKm.toFixed(1) })}</span>
                 )}
                 {trip.slackMin != null && (
-                  <Badge variant={slackVariant(trip.slackMin)}>
-                    {t("slack", { min: trip.slackMin })}
+                  <Badge variant={slackVariant(trip.slackMin)} title={t("tightestMarginHint")}>
+                    {t("tightestMargin", { min: trip.slackMin })}
                   </Badge>
                 )}
                 {trip.autoAllocated && <Badge variant="muted">{t("auto")}</Badge>}
@@ -518,16 +529,37 @@ export function TransportPlannerClient({
                 )}
                 {(trip.status === "PROPOSED" || trip.status === "PLANNED") && (
                   <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="gap-1"
-                      disabled={pending}
-                      onClick={() => run(() => setTripStatus(locale, trip.id, "ASSIGNED"))}
-                    >
-                      <Check className="size-3.5" />
-                      {t("approve")}
-                    </Button>
+                    {trip.validationStatus === "INVALID" ? (
+                      <>
+                        {/* A blocked route cannot be approved normally. The
+                            primary action is to look at why; only an admin sees
+                            the audited exceptional-approval path. */}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => toggleReasons(trip.id)}
+                        >
+                          <TriangleAlert className="size-3.5" />
+                          {t("reviewIssues")}
+                        </Button>
+                        {canOverride && (
+                          <OverrideDialog tripId={trip.id} onDone={() => router.refresh()} />
+                        )}
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-1"
+                        disabled={pending}
+                        onClick={() => run(() => setTripStatus(locale, trip.id, "ASSIGNED"))}
+                      >
+                        <Check className="size-3.5" />
+                        {t("approve")}
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       size="sm"
