@@ -16,6 +16,8 @@ export type LaneTrip = {
   tripKind: string | null;
   validationStatus: string;
   status: string;
+  /** `day:KIND:id` — the passenger this trip serves, for drag-to-unassign. */
+  linkGroup: string | null;
   passengerName: string | null;
   passengerCount: number;
   plannedStartMin: number;
@@ -118,6 +120,7 @@ export async function dispatchBoard(locale: string, day: string): Promise<Dispat
       tripKind: t.tripKind,
       validationStatus: t.validationStatus,
       status: t.status,
+      linkGroup: t.linkGroup,
       passengerName: t.passengerName,
       passengerCount: t.passengerCount,
       plannedStartMin: t.plannedStartMin,

@@ -1,15 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Users, TriangleAlert, Clock, CheckCircle2, Car, MapPin } from "lucide-react";
+import { Users, TriangleAlert, Clock, CheckCircle2, Car, MapPin, GripVertical } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { minToHHMM } from "@/lib/planner";
 import { DispatchMap, type MapTrip } from "@/components/dispatch-map";
+import { previewAssignAll, assignToDriver, unassignPassenger } from "./actions";
 import type { DispatchBoard, DriverLane, LaneTrip } from "@/lib/transport/dispatch";
+
+/** Halo colour for a lane while a pool card is being dragged over the board. */
+function haloClass(status: string | undefined): string {
+  if (!status) return "";
+  if (status === "INVALID") return "ring-2 ring-destructive/60";
+  if (status === "WARNING") return "ring-2 ring-amber-500/60";
+  return "ring-2 ring-green-500/70";
+}
 
 /** Distinct per-driver colours (readable in light and dark). */
 const DRIVER_PALETTE = ["#2563eb", "#16a34a", "#9333ea", "#dc2626", "#d97706", "#0891b2", "#db2777", "#4f46e5"];
@@ -47,12 +56,14 @@ function TripBlock({
   kindLabel,
   row,
   rtl,
+  onDragStart,
 }: {
   trip: LaneTrip;
   axis: { minMin: number; maxMin: number };
   kindLabel: (k: string | null) => string;
   row: number;
   rtl: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
 }) {
   const range = Math.max(1, axis.maxMin - axis.minMin);
   const startPct = ((trip.plannedStartMin - axis.minMin) / range) * 100;
@@ -61,7 +72,9 @@ function TripBlock({
   const horiz = rtl ? { right: `${startPct}%` } : { left: `${startPct}%` };
   return (
     <div
-      className={`absolute flex items-center gap-1 overflow-hidden rounded-md border px-1.5 text-[10px] leading-none ${tripColour(trip.validationStatus)}`}
+      draggable={!!onDragStart}
+      onDragStart={onDragStart}
+      className={`absolute flex items-center gap-1 overflow-hidden rounded-md border px-1.5 text-[10px] leading-none ${onDragStart ? "cursor-grab active:cursor-grabbing" : ""} ${tripColour(trip.validationStatus)}`}
       style={{ ...horiz, width: `${width}%`, top: `${row * ROW_H + 2}px`, height: `${ROW_H - 4}px` }}
       title={`${kindLabel(trip.tripKind)} · ${minToHHMM(trip.plannedStartMin)}–${minToHHMM(trip.plannedEndMin)} · ${trip.passengerName ?? ""}`}
     >
@@ -89,6 +102,44 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
     const dt = new Date(`${board.day}T00:00:00.000Z`);
     dt.setUTCDate(dt.getUTCDate() + delta);
     go(dt.toISOString().slice(0, 10));
+  };
+
+  // --- drag-to-assign -----------------------------------------------------
+  const [pending, start] = useTransition();
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [halo, setHalo] = useState<Map<string, string>>(new Map());
+  const [note, setNote] = useState<string | null>(null);
+
+  const run = (fn: () => Promise<{ ok?: boolean; error?: string }>) =>
+    start(async () => {
+      const res = await fn();
+      setNote(res.error ? (t.has(`err.${res.error}`) ? t(`err.${res.error}`) : t("assignFailed")) : null);
+      router.refresh();
+    });
+
+  /** Picking up a pool card: light up each lane by how well it would fit. */
+  const onPoolDragStart = (e: React.DragEvent, passengerKey: string) => {
+    e.dataTransfer.setData("application/x-assign", passengerKey);
+    e.dataTransfer.effectAllowed = "move";
+    setDragKey(passengerKey);
+    previewAssignAll(locale, board.day, passengerKey).then((r) => {
+      if (r.ok) setHalo(new Map(r.drivers.map((d) => [d.driverId, d.feasible ? d.status : "INVALID"])));
+    });
+  };
+  const endDrag = () => {
+    setDragKey(null);
+    setHalo(new Map());
+  };
+  const onLaneDrop = (e: React.DragEvent, driverId: string) => {
+    e.preventDefault();
+    const key = e.dataTransfer.getData("application/x-assign");
+    endDrag();
+    if (key) run(() => assignToDriver(locale, board.day, key, driverId));
+  };
+  const onPoolDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const key = e.dataTransfer.getData("application/x-unassign");
+    if (key) run(() => unassignPassenger(locale, board.day, key));
   };
 
   const s = board.stats;
@@ -144,6 +195,12 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
         <Button type="button" variant="secondary" size="sm" onClick={() => shiftDay(0)}>{t("today")}</Button>
       </div>
 
+      {note && (
+        <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
+          {note}
+        </p>
+      )}
+
       {/* Stat cards */}
       <div className="mb-4 grid gap-3 grid-cols-2 sm:grid-cols-5">
         {stats.map((st) => (
@@ -181,7 +238,10 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
       <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
         {/* Driver lanes */}
         <div className="rounded-lg border border-border bg-card p-3">
-          <p className="mb-2 text-sm font-medium">{t("lanes")}</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">{t("lanes")}</p>
+            <p className="text-[11px] text-muted-foreground">{t("dragHint")}</p>
+          </div>
           {/* Timeline header — RTL-aware: earliest hour on the right in Arabic. */}
           <div className="relative mb-1 h-4 text-[10px] text-muted-foreground">
             {ticks.map((m) => (
@@ -210,14 +270,35 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                       {lane.plate ?? "—"} · {lane.capacity}
                     </div>
                   </div>
-                  <div className="relative flex-1 rounded-md bg-muted/40" style={{ height: `${laneH}px` }}>
+                  <div
+                    className={`relative flex-1 rounded-md bg-muted/40 transition-shadow ${dragKey ? haloClass(halo.get(lane.driverId)) : ""}`}
+                    style={{ height: `${laneH}px` }}
+                    onDragOver={(e) => {
+                      if (e.dataTransfer.types.includes("application/x-assign")) e.preventDefault();
+                    }}
+                    onDrop={(e) => onLaneDrop(e, lane.driverId)}
+                  >
                     {lane.trips.length === 0 ? (
                       <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
                         {t("noTrips")}
                       </span>
                     ) : (
                       lane.trips.map((trip, i) => (
-                        <TripBlock key={trip.id} trip={trip} axis={board.axis} kindLabel={kindLabel} row={rows[i]} rtl={rtl} />
+                        <TripBlock
+                          key={trip.id}
+                          trip={trip}
+                          axis={board.axis}
+                          kindLabel={kindLabel}
+                          row={rows[i]}
+                          rtl={rtl}
+                          onDragStart={(e) => {
+                            const pkey = trip.linkGroup ? trip.linkGroup.replace(/^day:/, "") : null;
+                            if (pkey) {
+                              e.dataTransfer.setData("application/x-unassign", pkey);
+                              e.dataTransfer.effectAllowed = "move";
+                            }
+                          }}
+                        />
                       ))
                     )}
                   </div>
@@ -227,8 +308,15 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
           </div>
         </div>
 
-        {/* Unassigned pool */}
-        <div className="rounded-lg border border-border bg-card p-3">
+        {/* Unassigned pool — drag a card onto a lane to assign; drop a lane
+            trip back here to unassign. */}
+        <div
+          className="rounded-lg border border-border bg-card p-3"
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes("application/x-unassign")) e.preventDefault();
+          }}
+          onDrop={onPoolDrop}
+        >
           <p className="mb-2 flex items-center gap-1 text-sm font-medium">
             <Users className="size-4 text-orange-600 dark:text-orange-400" />
             {t("unassignedPool", { n: board.pool.length })}
@@ -238,15 +326,24 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
           ) : (
             <ul className="space-y-2">
               {board.pool.map((p) => (
-                <li key={p.passengerKey} className="rounded-md border border-border border-s-2 border-s-orange-500 p-2 text-xs">
-                  <div className="font-medium">{p.passengerName}</div>
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span>
-                      {te.has(`tripProblem.${p.reason}`) ? te(`tripProblem.${p.reason}`) : t("reasonNotPlanned")}
-                    </span>
-                    {p.needByMin != null && p.needByMin < 24 * 60 && (
-                      <span className="tabular-nums" dir="ltr">{minToHHMM(p.needByMin)}</span>
-                    )}
+                <li
+                  key={p.passengerKey}
+                  draggable={!pending}
+                  onDragStart={(e) => onPoolDragStart(e, p.passengerKey)}
+                  onDragEnd={endDrag}
+                  className="flex cursor-grab items-start gap-1 rounded-md border border-border border-s-2 border-s-orange-500 p-2 text-xs active:cursor-grabbing"
+                >
+                  <GripVertical className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{p.passengerName}</div>
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>
+                        {te.has(`tripProblem.${p.reason}`) ? te(`tripProblem.${p.reason}`) : t("reasonNotPlanned")}
+                      </span>
+                      {p.needByMin != null && p.needByMin < 24 * 60 && (
+                        <span className="tabular-nums" dir="ltr">{minToHHMM(p.needByMin)}</span>
+                      )}
+                    </div>
                   </div>
                 </li>
               ))}

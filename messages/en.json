@@ -2228,6 +2228,16 @@
     "noTrips": "No trips assigned",
     "unassignedPool": "Unassigned ({n})",
     "poolEmpty": "Everyone has a ride.",
-    "reasonNotPlanned": "Not yet planned"
+    "reasonNotPlanned": "Not yet planned",
+    "dragHint": "Drag a card from the pool onto a lane to assign",
+    "assignFailed": "Couldn't assign — try another driver.",
+    "err": {
+      "infeasible": "That driver can't make this passenger's timing.",
+      "locked": "This passenger has an approved trip — unassign it first.",
+      "forbidden": "You don't have permission.",
+      "noLegs": "This passenger has no ride to plan today.",
+      "notfound": "Nothing to unassign.",
+      "invalid": "Something went wrong."
+    }
   }
 }
