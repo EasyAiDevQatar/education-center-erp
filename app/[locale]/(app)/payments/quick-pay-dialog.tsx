@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Banknote } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
@@ -60,6 +60,9 @@ export function QuickPayDialog({
   const [error, setError] = useState<string | null>(null);
   // Controlled so the allocator can re-suggest as the figure is edited.
   const [payAmount, setPayAmount] = useState<string>(amount > 0 ? String(amount) : "");
+  // Follows the allocation until the desk picks a teacher by hand.
+  const [teacherSel, setTeacherSel] = useState("");
+  const teacherManual = useRef(false);
 
   const today = localToday();
 
@@ -145,7 +148,15 @@ export function QuickPayDialog({
                 </Select>
               </FormField>
               <FormField label={t("allocateTeacher")} htmlFor="qp-teacher">
-                <Select id="qp-teacher" name="teacherId" defaultValue="">
+                <Select
+                  id="qp-teacher"
+                  name="teacherId"
+                  value={teacherSel}
+                  onChange={(e) => {
+                    teacherManual.current = true;
+                    setTeacherSel(e.target.value);
+                  }}
+                >
                   <option value="">—</option>
                   {teachers.map((x) => (
                     <option key={x.id} value={x.id}>{x.label}</option>
@@ -159,6 +170,12 @@ export function QuickPayDialog({
               amount={parseFloat(payAmount) || 0}
               currency={currency}
               open={open}
+              onExplicitTotal={(total) => {
+                if (total > 0) setPayAmount(String(total));
+              }}
+              onTeacherInferred={(tid) => {
+                if (!teacherManual.current) setTeacherSel(tid ?? "");
+              }}
             />
 
             <FormField label={tc("notes")} htmlFor="qp-notes">

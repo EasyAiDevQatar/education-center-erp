@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { loadGroupOpts } from "@/lib/groups";
 import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
@@ -70,7 +71,7 @@ export default async function CalendarPage({
   const rangeStart = parseUTC(days[0]);
   const rangeEnd = addDays(parseUTC(days[days.length - 1]), 1);
 
-  const [sessions, students, teachers, levels, matrix, settingsRows, subjectList, teacherSubjectRows] =
+  const [sessions, students, teachers, levels, matrix, settingsRows, subjectList, teacherSubjectRows, groups] =
     await Promise.all([
       db.session.findMany({
         where: {
@@ -95,6 +96,7 @@ export default async function CalendarPage({
         orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
       }),
       db.teacherSubject.findMany({ select: { teacherId: true, subjectId: true } }),
+      loadGroupOpts(),
     ]);
 
   const settingsMap = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
@@ -130,6 +132,7 @@ export default async function CalendarPage({
     id: s.id,
     name: displayName(s, locale),
     gradeLevelId: s.gradeLevelId,
+    gradeYear: s.gradeYear,
     teacherIds: s.teachers.map((x) => x.teacherId),
     studyLocation: s.studyLocation as "CENTER" | "HOME",
   }));
@@ -154,6 +157,7 @@ export default async function CalendarPage({
         matrix={matrixMap}
         subjects={subjectOpts}
         teacherSubjectIds={teacherSubjectIds}
+        groups={groups}
         teacherFilter={teacherFilter}
         studentFilter={studentFilter}
         centerName={settingsMap.centerName ?? ""}

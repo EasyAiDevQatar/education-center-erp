@@ -231,6 +231,12 @@ export function StudentsClient({
     () => [
       { key: "name", label: tc("name"), value: (s) => displayName(s, locale) },
       { key: "level", label: t("gradeLevel"), value: (s) => s.gradeLevelLabel, filterable: true },
+      {
+        key: "gradeYear",
+        label: t("gradeYear"),
+        value: (s) => (s.gradeYear != null ? String(s.gradeYear) : null),
+        filterable: true,
+      },
       { key: "guardian", label: t("guardian"), value: (s) => s.guardianLabel, filterable: true },
       { key: "phone", label: tc("phone"), value: (s) => s.phone },
       {
@@ -287,7 +293,7 @@ export function StudentsClient({
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -296,6 +302,7 @@ export function StudentsClient({
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{displayName(s, locale)}</TableCell>
                 <TableCell>{s.gradeLevelLabel ?? "—"}</TableCell>
+                <TableCell className="tabular-nums">{s.gradeYear ?? "—"}</TableCell>
                 <TableCell>{s.guardianLabel ?? "—"}</TableCell>
                 <TableCell><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
                 <TableCell>

@@ -19,6 +19,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { formatMoney } from "@/lib/money";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { ConflictWarnings, useConflictCheck } from "@/components/conflict-warnings";
+import type { GroupOpt } from "./group-booking-dialog";
 
 export type StudentOpt = {
   id: string;
@@ -67,6 +68,8 @@ export function SessionDialog({
   packages = [],
   subjects = [],
   teacherSubjectIds = {},
+  groups = [],
+  onPickGroup,
   session,
   // Controlled-open + prefill support (used by the calendar's click-to-create).
   open: openProp,
@@ -89,6 +92,9 @@ export function SessionDialog({
   subjects?: Opt[];
   /** teacherId -> the subject ids that teacher teaches, to narrow the list. */
   teacherSubjectIds?: Record<string, string[]>;
+  /** Saved groups; picking one hands off to group booking (add mode only). */
+  groups?: GroupOpt[];
+  onPickGroup?: (groupId: string) => void;
   session?: SessionInit;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
@@ -274,16 +280,38 @@ export function SessionDialog({
           </FormField>
         </div>
 
-        <FormField label={t("student")} htmlFor="studentId">
-          <Combobox
-            id="studentId"
-            name="studentId"
-            required
-            options={students.map((s) => ({ value: s.id, label: s.name }))}
-            value={studentId}
-            onChange={onStudentChange}
-          />
-        </FormField>
+        <div className={!session && onPickGroup && groups.length > 0 ? "grid grid-cols-2 gap-3" : undefined}>
+          <FormField label={t("student")} htmlFor="studentId">
+            <Combobox
+              id="studentId"
+              name="studentId"
+              required
+              options={students.map((s) => ({ value: s.id, label: s.name }))}
+              value={studentId}
+              onChange={onStudentChange}
+            />
+          </FormField>
+          {!session && onPickGroup && groups.length > 0 && (
+            <FormField label={t("orBookGroup")} htmlFor="pickGroup">
+              <Select
+                id="pickGroup"
+                value=""
+                onChange={(e) => {
+                  const gid = e.target.value;
+                  if (!gid) return;
+                  // Hand off: this dialog closes, group booking opens preloaded.
+                  setOpen(false);
+                  onPickGroup(gid);
+                }}
+              >
+                <option value="">—</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+        </div>
 
         <FormField label={t("teacher")} htmlFor="teacherId">
           <Combobox

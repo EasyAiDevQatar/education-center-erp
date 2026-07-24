@@ -157,3 +157,27 @@ export function validateAllocation(
   }
   return { ok: true, allocated };
 }
+
+/**
+ * The teacher a payment header should record, inferred from the allocation.
+ *
+ * Picking sessions is also picking whose lessons the money settles: when every
+ * allocated line belongs to one teacher, that teacher is the obvious header
+ * value. A mixed split has no single honest answer, so null — the per-session
+ * allocations already carry the split for payouts.
+ */
+export function inferTeacher(
+  sessions: PayableSession[],
+  lines: { sessionId: string; amount: number }[],
+): string | null {
+  const byId = new Map(sessions.map((x) => [x.id, x]));
+  const ids = new Set<string>();
+  for (const l of lines) {
+    if (l.amount <= EPS) continue;
+    const row = byId.get(l.sessionId);
+    if (!row) continue;
+    if (!row.teacherId) return null; // a teacherless session breaks the claim
+    ids.add(row.teacherId);
+  }
+  return ids.size === 1 ? [...ids][0] : null;
+}

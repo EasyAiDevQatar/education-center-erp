@@ -46,6 +46,7 @@ export function GroupBookingDialog({
   defaultDate,
   defaultTime,
   defaultTeacherId,
+  initialGroupId,
   open: openProp,
   onOpenChange,
   onSaved,
@@ -60,6 +61,8 @@ export function GroupBookingDialog({
   defaultDate?: string;
   defaultTime?: string;
   defaultTeacherId?: string;
+  /** Preload this saved group when the dialog opens (add-session handoff). */
+  initialGroupId?: string;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
   onSaved?: () => void;
@@ -154,6 +157,13 @@ export function GroupBookingDialog({
     }
     setPriceOverride(po);
   }
+
+  // A caller can hand us a group to preload (picked in the add-session
+  // dialog); load it fresh each time the dialog opens on it.
+  useEffect(() => {
+    if (open && initialGroupId) loadGroup(initialGroupId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialGroupId]);
 
   // Gulf-ordered weekdays (Sat → Fri) with localized short labels.
   const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5];
@@ -261,6 +271,7 @@ export function GroupBookingDialog({
         prices: Object.entries(priceOverride)
           .filter(([id]) => selected.has(id))
           .map(([studentId, pricePerHour]) => ({ studentId, pricePerHour })),
+        groupId: loadedGroupId || null,
       });
       if (res.ok) {
         setResult({ created: res.created ?? 0, skipped: res.skipped ?? 0 });

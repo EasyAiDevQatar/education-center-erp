@@ -4,6 +4,7 @@ import {
   oldestFirst,
   suggestAllocation,
   validateAllocation,
+  inferTeacher,
   type PayableSession,
 } from "@/lib/allocation";
 
@@ -157,5 +158,31 @@ describe("validateAllocation", () => {
 
   it("rejects a line pointing at a session that is not on the list", () => {
     expect(validateAllocation(one, [{ sessionId: "ghost", amount: 10, partial: false }], 100).ok).toBe(false);
+  });
+});
+
+describe("inferTeacher", () => {
+  it("returns the teacher when every allocated line is theirs", () => {
+    const sessions = [s({ id: "a", teacherId: "t1" }), s({ id: "b", teacherId: "t1" })];
+    expect(inferTeacher(sessions, [{ sessionId: "a", amount: 50 }, { sessionId: "b", amount: 25 }])).toBe("t1");
+  });
+
+  it("returns null for a mixed-teacher split", () => {
+    const sessions = [s({ id: "a", teacherId: "t1" }), s({ id: "b", teacherId: "t2" })];
+    expect(inferTeacher(sessions, [{ sessionId: "a", amount: 50 }, { sessionId: "b", amount: 25 }])).toBeNull();
+  });
+
+  it("ignores zero-amount lines", () => {
+    const sessions = [s({ id: "a", teacherId: "t1" }), s({ id: "b", teacherId: "t2" })];
+    expect(inferTeacher(sessions, [{ sessionId: "a", amount: 50 }, { sessionId: "b", amount: 0 }])).toBe("t1");
+  });
+
+  it("returns null when an allocated session has no teacher", () => {
+    const sessions = [s({ id: "a", teacherId: null })];
+    expect(inferTeacher(sessions, [{ sessionId: "a", amount: 10 }])).toBeNull();
+  });
+
+  it("returns null with no allocation at all", () => {
+    expect(inferTeacher([s({ id: "a" })], [])).toBeNull();
   });
 });

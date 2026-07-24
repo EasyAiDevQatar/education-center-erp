@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { loadGroupOpts } from "@/lib/groups";
 import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { readSessionFilters, sessionWhere } from "@/lib/session-query";
@@ -57,11 +58,7 @@ export default async function SessionsPage({
         orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
       }),
       db.teacherSubject.findMany({ select: { teacherId: true, subjectId: true } }),
-      db.studentGroup.findMany({
-        where: { active: true },
-        orderBy: { name: "asc" },
-        include: { members: { select: { studentId: true, pricePerHour: true } } },
-      }),
+      loadGroupOpts(),
     ]);
 
   const currency = settingsRows[0]?.value ?? "QAR";
@@ -100,18 +97,6 @@ export default async function SessionsPage({
     studyLocation: s.studyLocation as "CENTER" | "HOME",
   }));
 
-  const groupOpts = groups.map((g) => ({
-    id: g.id,
-    name: g.name,
-    teacherId: g.teacherId,
-    location: g.location as "CENTER" | "HOME",
-    gradeLevelId: g.gradeLevelId,
-    defaultPricePerHour: g.defaultPricePerHour === null ? null : toNumber(g.defaultPricePerHour),
-    members: g.members.map((m) => ({
-      studentId: m.studentId,
-      pricePerHour: m.pricePerHour === null ? null : toNumber(m.pricePerHour),
-    })),
-  }));
   const packageOpts = activePackages.map((p) => ({
     id: p.id,
     studentId: p.studentId,
@@ -138,7 +123,7 @@ export default async function SessionsPage({
       <SessionsClient
         sessions={rows}
         students={studentOpts}
-        groups={groupOpts}
+        groups={groups}
         teachers={teacherOpts}
         levels={levelOpts}
         matrix={matrixMap}

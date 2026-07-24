@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Printer } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
@@ -81,6 +81,8 @@ function PaymentFields({
     payment?.amount != null ? String(payment.amount) : defaultAmount != null ? String(defaultAmount) : "",
   );
   const [teacherId, setTeacherId] = useState(payment?.teacherId ?? "");
+  // An existing payment's teacher (or a hand pick) is never auto-overwritten.
+  const teacherManual = useRef(!!payment?.teacherId);
   const [method, setMethod] = useState(payment?.method ?? "CASH");
   const [info, setInfo] = useState<OutstandingInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -213,7 +215,10 @@ function PaymentFields({
           name="teacherId"
           options={teachers.map((x) => ({ value: x.id, label: x.label }))}
           value={teacherId}
-          onChange={setTeacherId}
+          onChange={(v) => {
+            teacherManual.current = true;
+            setTeacherId(v);
+          }}
         />
       </FormField>
       {/* Radix mounts the dialog body only while it is open, so `open` is
@@ -223,6 +228,15 @@ function PaymentFields({
         amount={parseFloat(amount) || 0}
         currency={currency}
         open
+        onExplicitTotal={(total) => {
+          if (total > 0) {
+            setAmount(String(total));
+            setAmountTouched(true);
+          }
+        }}
+        onTeacherInferred={(tid) => {
+          if (!teacherManual.current) setTeacherId(tid ?? "");
+        }}
       />
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" defaultValue={payment?.notes ?? ""} />

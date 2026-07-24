@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/money";
 import {
   byTeacher,
+  inferTeacher,
   suggestAllocation,
   validateAllocation,
   type PayableSession,
@@ -28,12 +29,18 @@ export function PaymentAllocator({
   amount,
   currency,
   open,
+  onExplicitTotal,
+  onTeacherInferred,
 }: {
   studentId: string;
   amount: number;
   currency: string;
   /** Reload when the dialog opens; outstanding moves as other staff collect. */
   open: boolean;
+  /** Fires when the desk picks sessions by checkbox: the sum of all lines. */
+  onExplicitTotal?: (total: number) => void;
+  /** One teacher owns every allocated line → their id; mixed/none → null. */
+  onTeacherInferred?: (teacherId: string | null) => void;
 }) {
   const t = useTranslations("payments");
   const tc = useTranslations("common");
@@ -42,6 +49,8 @@ export function PaymentAllocator({
   const [sessions, setSessions] = useState<PayableSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  /** Sessions the desk explicitly ticked "pay this" on. */
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   /** Once the desk edits a line, stop overwriting their work on every keystroke. */
   const touched = useRef(false);
 
@@ -54,6 +63,7 @@ export function PaymentAllocator({
       .then((r) => {
         if (cancelled) return;
         setSessions(r.sessions);
+        setPicked(new Set());
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -76,6 +86,28 @@ export function PaymentAllocator({
     if (touched.current || sessions.length === 0) return;
     applySuggestion(amount);
   }, [amount, sessions, applySuggestion]);
+
+  /**
+   * Tick = "settle THIS lesson": the full outstanding lands on the ticked
+   * session and the payment amount follows the sum — an explicit choice that
+   * beats the oldest-first suggestion, old debt or not.
+   */
+  const togglePick = (sess: PayableSession, on: boolean) => {
+    touched.current = true;
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(sess.id);
+      else next.delete(sess.id);
+      return next;
+    });
+    const nextAmounts = { ...amounts, [sess.id]: on ? String(sess.outstanding) : "" };
+    setAmounts(nextAmounts);
+    const total =
+      Math.round(
+        Object.values(nextAmounts).reduce((a, v) => a + (parseFloat(v) || 0), 0) * 100,
+      ) / 100;
+    onExplicitTotal?.(total);
+  };
 
   const lines = useMemo(
     () =>
@@ -102,6 +134,12 @@ export function PaymentAllocator({
     [sessions, lines, amount],
   );
   const teachers = useMemo(() => byTeacher(sessions, lines), [sessions, lines]);
+  const inferredTeacher = useMemo(() => inferTeacher(sessions, lines), [sessions, lines]);
+  useEffect(() => {
+    onTeacherInferred?.(inferredTeacher);
+    // The callback identity changes per render; the inferred value is the signal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inferredTeacher]);
   const unallocated = Math.round((amount - allocated) * 100) / 100;
 
   if (!studentId) return null;
@@ -128,6 +166,7 @@ export function PaymentAllocator({
           disabled={loading || sessions.length === 0}
           onClick={() => {
             touched.current = false;
+            setPicked(new Set());
             applySuggestion(amount);
           }}
         >
@@ -150,6 +189,14 @@ export function PaymentAllocator({
               const partly = num > 0.005 && num + 0.005 < s.outstanding;
               return (
                 <li key={s.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-4 shrink-0 accent-primary"
+                    checked={picked.has(s.id)}
+                    onChange={(e) => togglePick(s, e.target.checked)}
+                    aria-label={`${t("payThis")} ${s.date}`}
+                    title={t("payThis")}
+                  />
                   {/* Oldest first, numbered, so "clear the old ones" is visible
                       rather than something the reader has to work out. */}
                   <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs tabular-nums">
@@ -174,6 +221,13 @@ export function PaymentAllocator({
                     onChange={(e) => {
                       touched.current = true;
                       setAmounts((prev) => ({ ...prev, [s.id]: e.target.value }));
+                      if (!e.target.value) {
+                        setPicked((prev) => {
+                          const next = new Set(prev);
+                          next.delete(s.id);
+                          return next;
+                        });
+                      }
                     }}
                   />
                   {partly && <Badge variant="warning">{t("partial")}</Badge>}

@@ -28,7 +28,7 @@ import {
   type SessionInit,
 } from "../sessions/session-dialog";
 import { saveSession } from "../sessions/actions";
-import { GroupBookingDialog } from "../sessions/group-booking-dialog";
+import { GroupBookingDialog, type GroupOpt } from "../sessions/group-booking-dialog";
 import { rescheduleSession, resizeSession } from "./actions";
 
 export type CalEvent = {
@@ -139,6 +139,7 @@ export function CalendarClient({
   matrix,
   subjects = [],
   teacherSubjectIds = {},
+  groups = [],
   teacherFilter,
   studentFilter,
   centerName,
@@ -154,6 +155,7 @@ export function CalendarClient({
   matrix: PriceMatrix;
   subjects?: Opt[];
   teacherSubjectIds?: Record<string, string[]>;
+  groups?: GroupOpt[];
   teacherFilter: string;
   studentFilter: string;
   centerName: string;
@@ -189,6 +191,8 @@ export function CalendarClient({
   }>(null);
 
   const [createAt, setCreateAt] = useState<{ date: string; time: string } | null>(null);
+  // Group picked inside the quick-create dialog; opens group booking preloaded.
+  const [handoffGroup, setHandoffGroup] = useState<string | null>(null);
   const [editEv, setEditEv] = useState<CalEvent | null>(null);
 
   // Compact is the same grid at half row height; list bypasses the grid entirely.
@@ -384,6 +388,7 @@ export function CalendarClient({
           students={students}
           teachers={teachers}
           levels={levels}
+          groups={groups}
           matrix={matrix}
           currency={currency}
           onSaved={() => router.refresh()}
@@ -568,7 +573,25 @@ export function CalendarClient({
           onOpenChange={(v) => !v && setCreateAt(null)}
           defaultDate={createAt.date}
           defaultTime={createAt.time}
+          groups={groups}
+          onPickGroup={(gid) => { setCreateAt(null); setHandoffGroup(gid); }}
           onSaved={() => { setCreateAt(null); router.refresh(); }}
+        />
+      )}
+
+      {/* Group-booking handoff from the quick-create dialog */}
+      {handoffGroup && (
+        <GroupBookingDialog
+          students={students}
+          teachers={teachers}
+          levels={levels}
+          groups={groups}
+          matrix={matrix}
+          currency={currency}
+          open={!!handoffGroup}
+          initialGroupId={handoffGroup}
+          onOpenChange={(v) => { if (!v) setHandoffGroup(null); }}
+          onSaved={() => router.refresh()}
         />
       )}
 

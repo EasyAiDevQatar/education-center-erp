@@ -245,7 +245,8 @@
     "assignedTag": "assigned",
     "subject": "Subject",
     "subjectHint": "Optional — shown on the booking card when set.",
-    "subjectNone": "— No subject —"
+    "subjectNone": "— No subject —",
+    "orBookGroup": "…or book a group"
   },
   "group": {
     "title": "Group booking",
@@ -485,7 +486,8 @@
     "stillOwing": "Still owing after this",
     "partial": "Part paid",
     "errorOverSession": "One lesson has been allocated more than it owes.",
-    "errorOverPayment": "The split adds up to more than the payment."
+    "errorOverPayment": "The split adds up to more than the payment.",
+    "payThis": "Pay this session"
   },
   "packages": {
     "title": "Packages",
@@ -1886,6 +1888,12 @@
     "priceHelp": "Leave blank to use the group default or the price matrix",
     "matrix": "matrix",
     "searchPlaceholder": "Search groups…",
-    "searchStudents": "Search students to add…"
+    "searchStudents": "Search students to add…",
+    "sessionsCount": "Sessions",
+    "totalHours": "Hours",
+    "revenue": "Revenue",
+    "groupSessions": "Sessions booked from this group",
+    "noSessionsYet": "No sessions booked from this group yet — load it in group booking to book one.",
+    "inherited": "inherited"
   }
 }

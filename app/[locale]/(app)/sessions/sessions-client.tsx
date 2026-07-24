@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Download, Users } from "lucide-react";
@@ -88,6 +88,8 @@ export function SessionsClient({
   const tg = useTranslations("group");
   const locale = useLocale();
   const router = useRouter();
+  // Group picked inside the add-session dialog; opens group booking preloaded.
+  const [handoffGroup, setHandoffGroup] = useState<string | null>(null);
   const pathname = usePathname();
   const search = useTableSearch(sessions, (x) => [
     x.studentName,
@@ -219,12 +221,26 @@ export function SessionsClient({
           packages={packages}
           subjects={subjects}
           teacherSubjectIds={teacherSubjectIds}
+          groups={groups}
+          onPickGroup={setHandoffGroup}
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
               {t("add")}
             </Button>
           }
+        />
+        <GroupBookingDialog
+          students={students}
+          teachers={teachers}
+          levels={levels}
+          groups={groups}
+          matrix={matrix}
+          currency={currency}
+          open={!!handoffGroup}
+          initialGroupId={handoffGroup ?? undefined}
+          onOpenChange={(v) => { if (!v) setHandoffGroup(null); }}
+          onSaved={() => router.refresh()}
         />
       </form>
 

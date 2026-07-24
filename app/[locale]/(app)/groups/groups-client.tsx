@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Users2, X } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { RowActions, ViewDialog } from "@/components/crud/row-actions";
@@ -329,7 +329,9 @@ export function GroupsClient({
             )}
             {pg.pageItems.map((g) => (
               <TableRow key={g.id} className={g.active ? undefined : "opacity-60"}>
-                <TableCell className="font-medium">{g.name}</TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/groups/${g.id}`} className="hover:underline">{g.name}</Link>
+                </TableCell>
                 <TableCell>{g.teacherName ?? "—"}</TableCell>
                 <TableCell>{g.subjectName ?? "—"}</TableCell>
                 <TableCell>{g.gradeLabel ?? "—"}</TableCell>

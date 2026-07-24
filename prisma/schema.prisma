@@ -250,6 +250,10 @@ model Session {
   /// taught it — no payroll moves until a teacher is assigned.
   teacherId    String?
   teacher      Teacher?   @relation(fields: [teacherId], references: [id])
+  /// The saved group ("course") this booking came from, when it was made
+  /// through group booking with a loaded group. Powers the group 360 view.
+  groupId      String?
+  group        StudentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   gradeLevelId String
   gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
   /// Optional at booking. When set, shown on the booking card. A session's
@@ -305,6 +309,7 @@ model Session {
   @@index([studentId])
   @@index([teacherId])
   @@index([status])
+  @@index([groupId])
 }
 
 /// Prepaid bundle of hours (باقة). Sessions decrement hoursUsed.
@@ -1405,7 +1410,8 @@ model StudentGroup {
   active       Boolean     @default(true)
   notes        String?
 
-  members GroupMember[]
+  members  GroupMember[]
+  sessions Session[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

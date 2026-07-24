@@ -133,6 +133,9 @@ const groupSchema = z.object({
   prices: z
     .array(z.object({ studentId: z.string().min(1), pricePerHour: z.coerce.number().nonnegative() }))
     .optional(),
+  // The saved group this booking was loaded from, stamped on every created
+  // session so the group 360 can list its lessons.
+  groupId: z.string().optional().nullable(),
 });
 
 export type GroupResult = { ok?: boolean; error?: string; created?: number; skipped?: number };
@@ -175,6 +178,7 @@ export async function createGroupSessions(
   const rows: {
     date: Date; studentId: string; teacherId: string; gradeLevelId: string;
     location: string; hours: number; pricePerHour: number; total: number; paymentStatus: string;
+    groupId: string | null;
   }[] = [];
   const skippedStudents = new Set<string>();
 
@@ -195,6 +199,7 @@ export async function createGroupSessions(
         pricePerHour,
         total: pricePerHour * d.hours,
         paymentStatus: d.paymentStatus,
+        groupId: d.groupId ?? null,
       });
     }
   }
