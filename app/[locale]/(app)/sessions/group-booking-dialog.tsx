@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { formatMoney } from "@/lib/money";
 import { weeklyOccurrences } from "@/lib/recurrence";
 import { useConflictCheck } from "@/components/conflict-warnings";
@@ -65,10 +66,10 @@ export function GroupBookingDialog({
     onOpenChange?.(v);
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const [teacherId, setTeacherId] = useState(defaultTeacherId ?? "");
   const [date, setDate] = useState(defaultDate ?? today);
-  const [time, setTime] = useState(defaultTime ?? "16:00");
+  const [time, setTime] = useState(defaultTime ?? localNowTime());
   const [hours, setHours] = useState("1");
   const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");
   const [gradeOverride, setGradeOverride] = useState("");

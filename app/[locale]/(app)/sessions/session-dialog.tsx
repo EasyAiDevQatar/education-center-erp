@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { formatMoney } from "@/lib/money";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { ConflictWarnings, useConflictCheck } from "@/components/conflict-warnings";
 
 export type StudentOpt = {
@@ -109,7 +110,8 @@ export function SessionDialog({
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
+  const now = localNowTime();
   const [studentId, setStudentId] = useState(session?.studentId ?? "");
   const [gradeLevelId, setGradeLevelId] = useState(session?.gradeLevelId ?? "");
   const [location, setLocation] = useState<"CENTER" | "HOME">(session?.location ?? "CENTER");
@@ -117,7 +119,7 @@ export function SessionDialog({
   const [packageId, setPackageId] = useState(session?.packageId ?? "");
   // Controlled so the conflict check can see them (they still post via `name`).
   const [date, setDate] = useState(session?.date ?? defaultDate ?? today);
-  const [time, setTime] = useState(session?.time ?? defaultTime ?? "16:00");
+  const [time, setTime] = useState(session?.time ?? defaultTime ?? now);
   const [teacherId, setTeacherId] = useState(session?.teacherId ?? defaultTeacherId ?? "");
   const [subjectId, setSubjectId] = useState(session?.subjectId ?? "");
 
@@ -129,8 +131,8 @@ export function SessionDialog({
       setLocation("CENTER");
       setHours("1");
       setPackageId("");
-      setDate(defaultDate ?? today);
-      setTime(defaultTime ?? "16:00");
+      setDate(defaultDate ?? localToday());
+      setTime(defaultTime ?? localNowTime());
       setTeacherId(defaultTeacherId ?? "");
       setSubjectId("");
       setError(null);

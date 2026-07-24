@@ -116,6 +116,15 @@ export type ChequePolicy = (typeof CHEQUE_POLICIES)[number];
 
 /* --- Transport (optional module) --- */
 
+/**
+ * Who the transport planner arranges rides for.
+ *
+ * A centre that only ferries its teachers should not have the board fill with
+ * student legs it will never action, and vice versa.
+ */
+export const TRANSPORT_PASSENGERS = ["TEACHERS", "STUDENTS", "BOTH"] as const;
+export type TransportPassengers = (typeof TRANSPORT_PASSENGERS)[number];
+
 /** Who may see live driver positions. Staff location data is sensitive. */
 export const TRACKING_VISIBILITY = ["ADMIN_ONLY", "ADMIN_STAFF"] as const;
 export type TrackingVisibility = (typeof TRACKING_VISIBILITY)[number];

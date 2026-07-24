@@ -7,6 +7,7 @@ import {
   type SpeedProfile,
 } from "./eta";
 import type { LatLng } from "./allocate";
+import { TRANSPORT_PASSENGERS, type TransportPassengers } from "@/lib/enums";
 
 /** Every Setting key the transport module reads. */
 export const TRANSPORT_SETTING_KEYS = [
@@ -22,6 +23,7 @@ export const TRANSPORT_SETTING_KEYS = [
   "transportMaxDeadheadKm",
   "transportPingDays",
   "transportTrackingVisibility",
+  "transportPassengers",
 ] as const;
 
 export type TransportConfig = {
@@ -33,6 +35,8 @@ export type TransportConfig = {
   maxDeadheadKm: number;
   pingRetentionDays: number;
   trackingVisibility: "ADMIN_ONLY" | "ADMIN_STAFF";
+  /** Which passenger kinds the planner generates legs for. */
+  passengers: TransportPassengers;
 };
 
 const num = (v: string | undefined, fallback: number): number => {
@@ -77,6 +81,11 @@ export async function loadTransportConfig(): Promise<TransportConfig> {
     pingRetentionDays: num(s.transportPingDays, 14),
     trackingVisibility:
       s.transportTrackingVisibility === "ADMIN_STAFF" ? "ADMIN_STAFF" : "ADMIN_ONLY",
+    // Unset means both — the module has always planned for whoever had the
+    // data, and an upgrade must not silently stop arranging someone's ride.
+    passengers: TRANSPORT_PASSENGERS.includes(s.transportPassengers as TransportPassengers)
+      ? (s.transportPassengers as TransportPassengers)
+      : "BOTH",
   };
 }
 

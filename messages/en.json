@@ -769,6 +769,11 @@
       "REPAIR": "Repair",
       "TYRES": "Tyres",
       "OTHER": "Other"
+    },
+    "transportPassengers": {
+      "TEACHERS": "Teachers only",
+      "STUDENTS": "Students only",
+      "BOTH": "Teachers and students"
     }
   },
   "paymentModes": {
@@ -1641,7 +1646,9 @@
     "pingDays": "Keep tracking (days)",
     "pingDaysHint": "Older tracking points are deleted automatically.",
     "trackingVisibility": "Who sees driver locations",
-    "trackingVisibilityHint": "This is staff location data — share it as narrowly as possible."
+    "trackingVisibilityHint": "This is staff location data — share it as narrowly as possible.",
+    "passengers": "Who gets a ride",
+    "passengersHint": "Which passengers the planner arranges transport for. Teachers opt in by having a home pin; students by the transport switch on their record."
   },
   "subjects": {
     "title": "Subjects",

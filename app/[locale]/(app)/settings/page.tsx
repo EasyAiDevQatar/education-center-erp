@@ -249,6 +249,7 @@ export default async function SettingsPage({
               maxDeadheadKm: settings.transportMaxDeadheadKm ?? "25",
               pingDays: settings.transportPingDays ?? "14",
               trackingVisibility: settings.transportTrackingVisibility ?? "ADMIN_ONLY",
+              passengers: settings.transportPassengers ?? "BOTH",
             }}
           />
         </CollapsibleCard>

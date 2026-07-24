@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
+import { localNowTime, localToday } from "@/lib/session-time";
 import {
   SessionDialog,
   type StudentOpt,
@@ -385,8 +386,6 @@ export function CalendarClient({
           levels={levels}
           matrix={matrix}
           currency={currency}
-          defaultDate={days[0]}
-          defaultTime="16:00"
           onSaved={() => router.refresh()}
           trigger={
             <Button size="sm" variant="secondary" className="gap-1">
@@ -395,7 +394,14 @@ export function CalendarClient({
             </Button>
           }
         />
-        <Button size="sm" className="gap-1" onClick={() => setCreateAt({ date: days[0], time: "16:00" })}>
+        {/* Today at the current time — not the first day of whatever week is
+            on screen, which is what made a Friday booking open on the 18th.
+            Clicking a specific grid slot still passes that slot instead. */}
+        <Button
+          size="sm"
+          className="gap-1"
+          onClick={() => setCreateAt({ date: localToday(), time: localNowTime() })}
+        >
           <Plus className="size-4" />
           {t("add")}
         </Button>

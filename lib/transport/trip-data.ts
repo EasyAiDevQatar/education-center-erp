@@ -75,6 +75,11 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
   const centre = config.centre;
   const centreLabel = locale === "ar" ? "المركز" : "Centre";
 
+  // Centre-wide scope: a centre that only ferries teachers should not have the
+  // board fill with student legs it will never action.
+  const wantTeachers = config.passengers !== "STUDENTS";
+  const wantStudents = config.passengers !== "TEACHERS";
+
   /** Where a lesson physically happens. */
   const placeOf = (s: (typeof sessions)[number]) =>
     s.location === "HOME"
@@ -100,7 +105,7 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
 
     // Teachers: having home coordinates IS the opt-in (see the Teacher.address
     // comment) — only teachers the centre actually collects have a pin.
-    if (s.teacher && s.teacher.homeLat != null && s.teacher.homeLng != null) {
+    if (wantTeachers && s.teacher && s.teacher.homeLat != null && s.teacher.homeLng != null) {
       const key = `TEACHER:${s.teacher.id}`;
       if (!days.has(key)) {
         days.set(key, {
@@ -116,7 +121,7 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
     }
 
     // Students: explicit opt-in, because most families drive their own child.
-    if (s.student.needsTransport && s.student.homeLat != null && s.student.homeLng != null) {
+    if (wantStudents && s.student.needsTransport && s.student.homeLat != null && s.student.homeLng != null) {
       const key = `STUDENT:${s.student.id}`;
       if (!days.has(key)) {
         days.set(key, {

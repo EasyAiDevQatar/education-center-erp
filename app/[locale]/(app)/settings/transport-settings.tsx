@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { FormField } from "@/components/crud/form-field";
 import { MapPicker } from "@/components/map-picker";
-import { TRACKING_VISIBILITY } from "@/lib/enums";
+import { TRACKING_VISIBILITY, TRANSPORT_PASSENGERS } from "@/lib/enums";
 import { saveTransportSettings } from "./transport-actions";
 
 export type TransportValues = {
@@ -26,6 +26,7 @@ export type TransportValues = {
   maxDeadheadKm: string;
   pingDays: string;
   trackingVisibility: string;
+  passengers: string;
 };
 
 export function TransportSettings({ values }: { values: TransportValues }) {
@@ -157,6 +158,13 @@ export function TransportSettings({ values }: { values: TransportValues }) {
         </FormField>
         <FormField label={t("pingDays")} htmlFor="pingDays" hint={t("pingDaysHint")}>
           <Input id="pingDays" name="transportPingDays" type="number" min="1" max="365" dir="ltr" defaultValue={values.pingDays} />
+        </FormField>
+        <FormField label={t("passengers")} htmlFor="passengers" hint={t("passengersHint")}>
+          <Select id="passengers" name="transportPassengers" defaultValue={values.passengers}>
+            {TRANSPORT_PASSENGERS.map((v) => (
+              <option key={v} value={v}>{te(`transportPassengers.${v}`)}</option>
+            ))}
+          </Select>
         </FormField>
         <FormField label={t("trackingVisibility")} htmlFor="visibility" hint={t("trackingVisibilityHint")}>
           <Select id="visibility" name="transportTrackingVisibility" defaultValue={values.trackingVisibility}>

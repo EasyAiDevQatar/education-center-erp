@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
-import { TRACKING_VISIBILITY } from "@/lib/enums";
+import { TRACKING_VISIBILITY, TRANSPORT_PASSENGERS } from "@/lib/enums";
 
 export type TransportSettingsState = { ok?: boolean; error?: string };
 
@@ -22,6 +22,7 @@ const schema = z.object({
   maxDeadheadKm: z.coerce.number().min(1).max(200),
   pingDays: z.coerce.number().int().min(1).max(365),
   trackingVisibility: z.enum(TRACKING_VISIBILITY),
+  passengers: z.enum(TRANSPORT_PASSENGERS),
 });
 
 /**
@@ -55,6 +56,7 @@ export async function saveTransportSettings(
     maxDeadheadKm: formData.get("transportMaxDeadheadKm") || 25,
     pingDays: formData.get("transportPingDays") || 14,
     trackingVisibility: formData.get("transportTrackingVisibility") || "ADMIN_ONLY",
+    passengers: formData.get("transportPassengers") || "BOTH",
   });
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
@@ -70,6 +72,7 @@ export async function saveTransportSettings(
     ["transportMaxDeadheadKm", String(d.maxDeadheadKm)],
     ["transportPingDays", String(d.pingDays)],
     ["transportTrackingVisibility", d.trackingVisibility],
+    ["transportPassengers", d.passengers],
   ];
   // Centre coordinates are cleared rather than stored as an empty string, so
   // "not set yet" stays distinguishable from "set to 0,0" (a real place).
