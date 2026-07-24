@@ -129,11 +129,18 @@ export async function aiChatJson<T>(
   }
 }
 
-/** Cheap connectivity probe for the Settings "test connection" button. */
+/**
+ * Connectivity probe for the Settings "test connection" button.
+ *
+ * Generous budget/timeout on purpose: reasoning models (e.g. DeepSeek v4) burn
+ * output tokens thinking before they emit any content, so a tiny cap returns
+ * empty and a short timeout aborts. This just needs to prove the key + URL +
+ * model round-trip, so give it real room.
+ */
 export async function aiPing(config?: AiConfig): Promise<ChatResult> {
   return aiChat([{ role: "user", content: "Reply with the single word: ok" }], {
-    maxTokens: 16,
-    timeoutMs: 15_000,
+    maxTokens: 512,
+    timeoutMs: 60_000,
     config,
   });
 }
