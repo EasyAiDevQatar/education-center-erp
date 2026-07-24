@@ -22,7 +22,7 @@ export default async function AppLayout({
   // updates on the next render after the setting changes — pages still guard
   // themselves; hiding items is UX, not enforcement.
   const flagRows = await db.setting.findMany({
-    where: { key: { in: ["accountingEnabled", "transportEnabled"] } },
+    where: { key: { in: ["accountingEnabled", "transportEnabled", "aiEnabled"] } },
   });
   const flagOn = (key: string) => flagRows.some((r) => r.key === key && r.value === "1");
 
@@ -32,7 +32,7 @@ export default async function AppLayout({
       userName={session.name}
       roleLabel={tr(session.role)}
       onLogout={logoutAction.bind(null, locale)}
-      flags={{ accounting: flagOn("accountingEnabled"), transport: flagOn("transportEnabled") }}
+      flags={{ accounting: flagOn("accountingEnabled"), transport: flagOn("transportEnabled"), ai: flagOn("aiEnabled") }}
     >
       {children}
     </AppShell>

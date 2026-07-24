@@ -592,7 +592,8 @@
     "backups": "Backups",
     "accountingSettings": "Accounting module",
     "transportSettings": "Transport module",
-    "subjects": "Subjects"
+    "subjects": "Subjects",
+    "aiSettings": "AI (assistant & translation)"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -1927,5 +1928,32 @@
     "later": "Later",
     "result": "Proposed {created} trip(s); {unassigned} could not be assigned. Review them in the transport planner.",
     "failed": "Could not plan trips — is the transport module enabled?"
+  },
+  "ai": {
+    "moduleTitle": "AI module",
+    "moduleIntro": "Connects the centre to an AI provider for the management assistant, automatic name translation, and plan briefings. Trip routing stays deterministic — no AI is used for allocation. Paste one API key from whichever provider you choose; you can switch any time.",
+    "enableLabel": "Enable the AI module",
+    "provider": "Provider",
+    "providerHint": "DeepSeek and Kimi are low-cost with good Arabic; custom accepts any OpenAI-compatible URL",
+    "providers": {
+      "deepseek": "DeepSeek",
+      "kimi": "Kimi (Moonshot)",
+      "openai": "OpenAI",
+      "anthropic": "Claude (Anthropic)",
+      "custom": "Custom (OpenAI-compatible)"
+    },
+    "model": "Model",
+    "baseUrl": "Base URL",
+    "apiKey": "API key",
+    "apiKeyHint": "Stored on the server only; never shown again after saving",
+    "apiKeyStored": "A key is stored ({masked}). Leave blank to keep it.",
+    "autoTranslate": "Automatically translate new names (Arabic ↔ English)",
+    "autoTranslateHint": "When on, newly added students/teachers/guardians get an English spelling filled in automatically; you can always edit it.",
+    "assistantRoles": "Who can use the AI assistant",
+    "assistantRolesHint": "The assistant answers questions from centre data (revenue, balances, schedules). Admin always has access.",
+    "testConnection": "Test connection",
+    "testing": "Testing…",
+    "testOk": "Connection works",
+    "testFail": "Connection failed"
   }
 }

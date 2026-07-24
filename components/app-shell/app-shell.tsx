@@ -30,7 +30,7 @@ export function AppShell({
   roleLabel: string;
   onLogout: () => void;
   /** Optional-module switches, read from Settings by the server layout. */
-  flags?: { accounting?: boolean; transport?: boolean };
+  flags?: { accounting?: boolean; transport?: boolean; ai?: boolean };
   children: React.ReactNode;
 }) {
   const t = useTranslations("nav");

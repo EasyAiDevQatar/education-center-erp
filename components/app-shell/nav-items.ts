@@ -35,7 +35,7 @@ export type NavItem = {
   children?: { href: string; key: string }[];
   /** Optional-module gate: item renders only when this flag is on. The flag
       value comes from Settings, read server-side in the (app) layout. */
-  flag?: "accounting" | "transport";
+  flag?: "accounting" | "transport" | "ai";
 };
 
 const ALL: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST", "TEACHER", "PARENT"];

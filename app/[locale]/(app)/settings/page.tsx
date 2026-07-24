@@ -18,6 +18,8 @@ import { TeacherPaymentsSettings } from "./teacher-payments-settings";
 import { WpsSettings } from "./wps-settings";
 import { AccountingSettings } from "./accounting-settings";
 import { TransportSettings } from "./transport-settings";
+import { AiSettings } from "./ai-settings";
+import { parseAssistantRoles } from "@/lib/ai/presets";
 import { SiteSettings } from "./site-settings";
 import { BackupSettings } from "./backup-settings";
 import { listBackups } from "@/lib/backups";
@@ -250,6 +252,24 @@ export default async function SettingsPage({
               pingDays: settings.transportPingDays ?? "14",
               trackingVisibility: settings.transportTrackingVisibility ?? "ADMIN_ONLY",
               passengers: settings.transportPassengers ?? "BOTH",
+            }}
+          />
+        </CollapsibleCard>
+
+        <CollapsibleCard title={t("aiSettings")} className="lg:col-span-2">
+          <AiSettings
+            values={{
+              enabled: settings.aiEnabled === "1",
+              provider: settings.aiProvider ?? "deepseek",
+              baseUrl: settings.aiBaseUrl ?? "",
+              model: settings.aiModel ?? "",
+              apiKeyMasked: maskSecret(settings.aiApiKey),
+              autoTranslateNames: settings.aiAutoTranslateNames === "1",
+              assistantRoles: parseAssistantRoles(settings.aiAssistantRoles, [
+                "ADMIN",
+                "ACCOUNTANT",
+                "RECEPTIONIST",
+              ]),
             }}
           />
         </CollapsibleCard>
