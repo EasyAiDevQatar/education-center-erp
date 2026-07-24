@@ -23,6 +23,7 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { cn } from "@/lib/utils";
 import { formatHours } from "@/lib/money";
 import { minToHHMM } from "@/lib/planner";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { Select } from "@/components/ui/select";
 import { markAttendance, markAll, undoAutoComplete, confirmAutoComplete } from "./actions";
 import { assignSessionTeacher } from "../settings/attendance-actions";
@@ -117,7 +118,7 @@ export function RosterBoard({
     .filter((i) => i.status === "COMPLETED")
     .reduce((sum, i) => sum + i.hours, 0);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const go = (d: string) => router.push(`${pathname}?date=${d}`);
   const run = (fn: () => Promise<unknown>) =>
     start(async () => {

@@ -25,6 +25,7 @@ import {
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { formatMoney } from "@/lib/money";
 import { MAINTENANCE_KINDS } from "@/lib/enums";
+import { localNowTime, localToday } from "@/lib/session-time";
 import {
   saveFuelLog,
   deleteFuelLog,
@@ -60,7 +61,7 @@ export type MaintRow = {
   nextDueOn: string | null;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localToday();
 
 function VehicleSupplierFields({
   vehicles,

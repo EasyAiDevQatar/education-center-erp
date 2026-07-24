@@ -34,6 +34,7 @@ import { usePagination, TablePagination } from "@/components/ui/table-pagination
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney } from "@/lib/money";
 import { JOURNAL_SOURCES } from "@/lib/enums";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { createManualEntry, deleteManualEntry } from "./actions";
 
 export type EntryRow = {
@@ -55,7 +56,7 @@ function ManualEntryDialog({ accounts, currency }: { accounts: AccountOpt[]; cur
   const tc = useTranslations("common");
   const locale = useLocale();
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => localToday());
   const [memo, setMemo] = useState("");
   const [lines, setLines] = useState<EditLine[]>([{ ...EMPTY_LINE }, { ...EMPTY_LINE }]);
   const [error, setError] = useState<string | null>(null);

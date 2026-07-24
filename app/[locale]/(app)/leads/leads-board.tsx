@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { LEAD_BOARD_ORDER, followUpState, funnelCounts, type LeadStatus } from "@/lib/leads";
 import { saveLead, moveLead, deleteLead, convertLead, bookTrialSession } from "./actions";
 import { displayName } from "@/lib/names";
+import { localNowTime, localToday } from "@/lib/session-time";
 
 export type LeadRow = {
   id: string;
@@ -540,8 +541,10 @@ function TrialDialog({
   const te = useTranslations("enums");
   const locale = useLocale();
 
-  const [date, setDate] = useState(today);
-  const [time, setTime] = useState("16:00");
+  // localToday(), not the `today` prop: that is computed on the server in UTC,
+  // so a trial booked before 3am local would default to yesterday.
+  const [date, setDate] = useState(localToday());
+  const [time, setTime] = useState(localNowTime());
   const [teacherId, setTeacherId] = useState(teachers[0]?.id ?? "");
   const [gradeLevelId, setGradeLevelId] = useState(lead.gradeLevelId ?? levels[0]?.id ?? "");
   const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");

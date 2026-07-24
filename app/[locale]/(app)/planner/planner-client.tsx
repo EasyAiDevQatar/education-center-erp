@@ -43,6 +43,7 @@ import { formatMoney } from "@/lib/money";
 import { printDoc } from "@/lib/print";
 import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
 import { findConflicts, weekdayOf, WEEKDAY_ORDER, type Conflict } from "@/lib/conflicts";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { ConflictWarnings } from "@/components/conflict-warnings";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { deleteSession } from "../sessions/actions";
@@ -273,7 +274,7 @@ export function PlannerClient({
     .filter((s) => s.status !== "CANCELLED")
     .reduce((sum, s) => sum + s.total, 0);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const go = (date: string) => router.push(`${pathname}?date=${date}`);
   const run = (fn: () => Promise<unknown>) =>
     start(async () => {

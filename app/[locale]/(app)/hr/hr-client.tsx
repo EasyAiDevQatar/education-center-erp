@@ -52,6 +52,7 @@ import { displayName, nameSearchText } from "@/lib/names";
 import { saveEmployee, terminateEmployee, saveDocument, deleteDocument } from "./actions";
 import { createSettlement } from "./eos-actions";
 import { computeGratuity, computeSettlement, dailyBasic } from "@/lib/gratuity";
+import { localNowTime, localToday } from "@/lib/session-time";
 
 export type DocRow = {
   id: string;
@@ -102,7 +103,7 @@ type TeacherOpt = { id: string; label: string; taken: boolean };
 
 /** Days from today, negative when already past. */
 function daysUntil(iso: string): number {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   return Math.round(
     (new Date(`${iso}T00:00:00Z`).getTime() - new Date(`${today}T00:00:00Z`).getTime()) / 86400000,
   );
@@ -392,7 +393,7 @@ function DocumentsDialog({
 function EosFields({ employee }: { employee: EmployeeRow }) {
   const t = useTranslations("eos");
   const tc = useTranslations("common");
-  const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
+  const [day, setDay] = useState(localToday());
   const [unusedLeave, setUnusedLeave] = useState(0);
   const [otherDues, setOtherDues] = useState(0);
   const [deductions, setDeductions] = useState(0);
@@ -526,7 +527,7 @@ function TerminateDialog({
   const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
-  const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
+  const [day, setDay] = useState(localToday());
   const [pending, start] = useTransition();
 
   return (

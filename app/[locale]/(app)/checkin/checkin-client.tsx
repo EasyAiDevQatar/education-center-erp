@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { distanceMeters, GEOFENCE_RADIUS_M } from "@/lib/geo";
+import { localNowTime, localToday } from "@/lib/session-time";
 import {
   checkInSession,
   checkOutSession,
@@ -69,7 +70,7 @@ export function CheckinClient({ day, items }: { day: string; items: CheckinItem[
   const [q, setQ] = useState("");
   const [panel, setPanel] = useState<Panel | null>(null);
   const [pending, start] = useTransition();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();

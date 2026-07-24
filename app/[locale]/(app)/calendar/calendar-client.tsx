@@ -295,7 +295,7 @@ export function CalendarClient({
     router.push(`${pathname}?${sp.toString()}`);
   }
   const step = view === "day" ? 1 : 7;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
 
   const rangeLabel = useMemo(() => {
     const fmt = (s: string) =>

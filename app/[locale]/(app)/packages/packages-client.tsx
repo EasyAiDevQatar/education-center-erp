@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney, formatHours } from "@/lib/money";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { savePackage, deletePackage } from "./actions";
 
 export type Opt = { id: string; label: string };
@@ -54,7 +55,7 @@ function Fields({ pkg, students }: { pkg?: PackageRow; students: Opt[] }) {
   const t = useTranslations("packages");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   return (
     <>
       <FormField label={tc("name")} htmlFor="studentId">

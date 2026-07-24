@@ -29,6 +29,7 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { useRouter } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
 import { EXPENSE_STATUSES } from "@/lib/enums";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { saveExpense, deleteExpense, approveExpense } from "./actions";
 
 export type CatOpt = { id: string; label: string };
@@ -58,7 +59,7 @@ function Fields({
 }) {
   const t = useTranslations("expenses");
   const tc = useTranslations("common");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   return (
     <>
       <div className="grid grid-cols-2 gap-3">

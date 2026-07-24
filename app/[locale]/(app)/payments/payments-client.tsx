@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table-sort";
 import { formatMoney } from "@/lib/money";
 import { PAYMENT_METHODS } from "@/lib/enums";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { savePayment, deletePayment } from "./actions";
 import { getStudentOutstanding, type OutstandingInfo } from "./balance-actions";
 
@@ -72,7 +73,7 @@ function PaymentFields({
   const t = useTranslations("payments");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
 
   const [studentId, setStudentId] = useState(payment?.studentId ?? defaultStudentId ?? "");
   const [amount, setAmount] = useState(

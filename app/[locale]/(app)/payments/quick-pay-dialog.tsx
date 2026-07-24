@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
+import { localNowTime, localToday } from "@/lib/session-time";
 import { savePayment } from "./actions";
 
 /**
@@ -57,7 +58,7 @@ export function QuickPayDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
