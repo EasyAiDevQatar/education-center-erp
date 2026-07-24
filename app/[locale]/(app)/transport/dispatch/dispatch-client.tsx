@@ -310,8 +310,13 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
           {/* Timeline table (image 1) */}
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <p className="border-b border-border p-3 text-sm font-medium">{t("scheduleTitle")}</p>
-            {/* Column header */}
-            <div className="flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground">
+            {/* Column header.
+                Reversed in Arabic so the row's identity comes first in reading
+                order: driver on the inline-start (right) edge, then status,
+                then the time axis running away from them. Without this the
+                driver column lands at the far left and is read last, after the
+                bars it is supposed to label. */}
+            <div className={`flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground ${rtl ? "flex-row-reverse" : ""}`}>
               <div className="relative flex-1 overflow-hidden">
                 {ticks.map((m) => {
                   const p = pct(m);
@@ -333,7 +338,7 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                 const trips = lane.trips.filter(tripPasses);
                 const st = laneStatus(lane);
                 return (
-                  <div key={lane.driverId} className="flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0">
+                  <div key={lane.driverId} className={`flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0 ${rtl ? "flex-row-reverse" : ""}`}>
                     {/* timeline cell — drop target */}
                     <div
                       className={`relative h-11 flex-1 rounded-md ${dragKey ? "bg-muted/40 " + haloClass(halo.get(lane.driverId)) : ""}`}
