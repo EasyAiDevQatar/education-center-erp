@@ -6,6 +6,7 @@ import { Plus, Pencil, Printer } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { RowActions, ViewDialog } from "@/components/crud/row-actions";
+import { PaymentAllocator } from "./payment-allocator";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -215,6 +216,14 @@ function PaymentFields({
           onChange={setTeacherId}
         />
       </FormField>
+      {/* Radix mounts the dialog body only while it is open, so `open` is
+          simply true here — the allocator loads outstanding on mount. */}
+      <PaymentAllocator
+        studentId={studentId}
+        amount={parseFloat(amount) || 0}
+        currency={currency}
+        open
+      />
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" defaultValue={payment?.notes ?? ""} />
       </FormField>
@@ -315,6 +324,7 @@ export function PaymentsClient({
         />
         <EntityDialog
           title={t("add")}
+          wide
           action={savePayment.bind(null, locale, null)}
           fields={<PaymentFields students={students} teachers={teachers} currency={currency} />}
           trigger={
@@ -368,6 +378,7 @@ export function PaymentsClient({
                     </a>
                     <EntityDialog
                       title={t("edit")}
+                      wide
                       action={savePayment.bind(null, locale, p.id)}
                       fields={<PaymentFields payment={p} students={students} teachers={teachers} currency={currency} />}
                       trigger={

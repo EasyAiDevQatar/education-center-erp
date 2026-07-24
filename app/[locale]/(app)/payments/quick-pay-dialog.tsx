@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { savePayment } from "./actions";
+import { PaymentAllocator } from "./payment-allocator";
 
 /**
  * "Pay now" — record a payment for a known student without leaving the page.
@@ -57,6 +58,8 @@ export function QuickPayDialog({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Controlled so the allocator can re-suggest as the figure is edited.
+  const [payAmount, setPayAmount] = useState<string>(amount > 0 ? String(amount) : "");
 
   const today = localToday();
 
@@ -98,7 +101,7 @@ export function QuickPayDialog({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("payNowFor", { name: studentName })}</DialogTitle>
           </DialogHeader>
@@ -125,7 +128,8 @@ export function QuickPayDialog({
                   step="0.5"
                   min="0"
                   dir="ltr"
-                  defaultValue={amount > 0 ? amount : ""}
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
                   required
                 />
               </FormField>
@@ -149,6 +153,13 @@ export function QuickPayDialog({
                 </Select>
               </FormField>
             </div>
+
+            <PaymentAllocator
+              studentId={studentId}
+              amount={parseFloat(payAmount) || 0}
+              currency={currency}
+              open={open}
+            />
 
             <FormField label={tc("notes")} htmlFor="qp-notes">
               <Input id="qp-notes" name="notes" />

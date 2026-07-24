@@ -23,11 +23,14 @@ type ActionFn = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 export function EntityDialog({
   title,
   trigger,
+  wide,
   action,
   fields,
 }: {
   title: string;
   trigger: ReactNode;
+  /** Roomier body — for dialogs carrying a table or a list. */
+  wide?: boolean;
   action: ActionFn;
   fields: ReactNode;
 }) {
@@ -50,7 +53,7 @@ export function EntityDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className={wide ? "max-w-2xl" : undefined}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

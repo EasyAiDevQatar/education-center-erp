@@ -17,8 +17,36 @@ import {
   unpostSource,
 } from "@/lib/accounting/journal-data";
 import { linesForPayment } from "@/lib/accounting/posting";
+import { syncSessionPaymentStatus } from "@/lib/billing";
+import { validateAllocation, type SuggestedLine } from "@/lib/allocation";
 
 export type ActionState = { ok?: boolean; error?: string };
+
+/**
+ * Read the per-session split the dialog posted.
+ *
+ * Absent means "the desk did not allocate" — a bare payment against the
+ * balance, which is how every payment behaved before this existed. It must
+ * stay valid: not every centre reconciles to the lesson.
+ */
+function parseAllocation(raw: FormDataEntryValue | null): SuggestedLine[] | null {
+  const text = (raw ?? "").toString().trim();
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text) as { sessionId?: string; amount?: number }[];
+    if (!Array.isArray(parsed)) return null;
+    return parsed
+      .filter((l) => typeof l?.sessionId === "string" && Number.isFinite(Number(l?.amount)))
+      .map((l) => ({
+        sessionId: String(l.sessionId),
+        amount: Math.round(Number(l.amount) * 100) / 100,
+        partial: false,
+      }))
+      .filter((l) => l.amount > 0.005);
+  } catch {
+    return null;
+  }
+}
 
 const schema = z.object({
   date: z.string().min(1),
@@ -65,6 +93,7 @@ export async function savePayment(
   }
 
   const d = parsed.data;
+  const allocation = parseAllocation(formData.get("allocations"));
   const priorPayment = id ? await db.payment.findUnique({ where: { id } }) : null;
   const frozen = await guardArchived(new Date(d.date), priorPayment?.date);
   if (frozen) return { error: frozen };
@@ -130,8 +159,52 @@ export async function savePayment(
           });
         }
       }
+
+      // Allocation is re-checked here against live outstanding figures, never
+      // trusted from the form: the browser could be minutes stale, and an
+      // over-allocation would mark a lesson paid that is not.
+      if (allocation) {
+        const paymentId = id ?? createdId!;
+        // Replacing wholesale keeps an edited payment's split consistent with
+        // its new amount instead of layering a second allocation on top.
+        await tx.paymentAllocation.deleteMany({ where: { paymentId } });
+
+        const touched = new Set(allocation.map((l) => l.sessionId));
+        const rows = await tx.session.findMany({
+          where: { id: { in: [...touched] }, studentId: d.studentId },
+          include: { allocations: { where: { paymentId: { not: paymentId } } } },
+        });
+        const payable = rows.map((r) => {
+          const other = r.allocations.reduce((a, x) => a + Number(x.amount), 0);
+          const total = Number(r.total);
+          return {
+            id: r.id,
+            date: r.date.toISOString().slice(0, 10),
+            teacherId: r.teacherId,
+            teacherName: "",
+            total,
+            allocated: other,
+            outstanding: Math.round(Math.max(0, total - other) * 100) / 100,
+          };
+        });
+
+        const check = validateAllocation(payable, allocation, d.amount);
+        if (!check.ok) throw new Error(check.error ?? "invalid");
+
+        for (const line of allocation) {
+          await tx.paymentAllocation.create({
+            data: { paymentId, sessionId: line.sessionId, amount: line.amount },
+          });
+        }
+        // Every touched session re-derives its own status from its allocations.
+        for (const sessionId of touched) {
+          await syncSessionPaymentStatus(tx, sessionId);
+        }
+      }
     });
-  } catch {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg === "overSession" || msg === "overPayment") return { error: msg };
     // Unique receiptNo collision
     return { error: "duplicate" };
   }

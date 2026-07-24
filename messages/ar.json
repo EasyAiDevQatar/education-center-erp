@@ -464,7 +464,19 @@
     "chequeBank": "بنك الشيك",
     "chequeDueDate": "تاريخ الاستحقاق",
     "teacher": "المعلم",
-    "amount": "المبلغ"
+    "amount": "المبلغ",
+    "allocateTitle": "ما الحصص التي تسددها هذه الدفعة؟",
+    "outstandingTotal": "المستحق",
+    "autoAllocate": "اقتراح التوزيع",
+    "nothingOutstanding": "لا يوجد مستحق — لا توجد حصص غير مدفوعة لهذا الطالب.",
+    "owes": "عليه",
+    "allocate": "تخصيص",
+    "allocated": "المخصص",
+    "unallocated": "المتبقي (رصيد)",
+    "stillOwing": "يتبقى بعد هذه الدفعة",
+    "partial": "مدفوع جزئياً",
+    "errorOverSession": "تم تخصيص مبلغ لحصة أكبر من المستحق عليها.",
+    "errorOverPayment": "مجموع التوزيع أكبر من قيمة الدفعة."
   },
   "packages": {
     "title": "الباقات",

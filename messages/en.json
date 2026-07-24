@@ -464,7 +464,19 @@
     "chequeBank": "Cheque bank",
     "chequeDueDate": "Due date",
     "teacher": "Teacher",
-    "amount": "Amount"
+    "amount": "Amount",
+    "allocateTitle": "Which lessons does this settle?",
+    "outstandingTotal": "Outstanding",
+    "autoAllocate": "Suggest split",
+    "nothingOutstanding": "Nothing outstanding — this student has no unpaid lessons.",
+    "owes": "owes",
+    "allocate": "Allocate",
+    "allocated": "Allocated",
+    "unallocated": "Left over (credit)",
+    "stillOwing": "Still owing after this",
+    "partial": "Part paid",
+    "errorOverSession": "One lesson has been allocated more than it owes.",
+    "errorOverPayment": "The split adds up to more than the payment."
   },
   "packages": {
     "title": "Packages",
