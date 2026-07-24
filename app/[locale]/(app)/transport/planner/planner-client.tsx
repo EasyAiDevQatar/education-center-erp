@@ -13,6 +13,7 @@ import {
   Clock,
   Route,
   Sparkles,
+  Map as MapIcon,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { minToHHMM } from "@/lib/planner";
 import { AddStopDialog } from "./add-stop-dialog";
+import { TripMiniMap } from "@/components/trip-mini-map";
 import type { BoardTrip, PlannedDriver } from "@/lib/transport/trip-data";
 import {
   generateTrips,
@@ -78,6 +80,13 @@ export function TransportPlannerClient({
   const router = useRouter();
   const pathname = usePathname();
   const [pending, start] = useTransition();
+  const [mapOpen, setMapOpen] = useState<Set<string>>(new Set());
+  const toggleMap = (id: string) =>
+    setMapOpen((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   const [note, setNote] = useState<string | null>(null);
   const [briefing, setBriefing] = useState<string | null>(null);
   const [briefBusy, setBriefBusy] = useState(false);
@@ -289,6 +298,26 @@ export function TransportPlannerClient({
                     </li>
                   ))}
                 </ol>
+              )}
+
+              {/* Route map — mounted only while open, so a busy board stays
+                  light (each card renders its own Leaflet only on demand). */}
+              {trip.stops.length > 1 && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleMap(trip.id)}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <MapIcon className="size-3.5" />
+                    {mapOpen.has(trip.id) ? t("hideMap") : t("routeMap")}
+                  </button>
+                  {mapOpen.has(trip.id) && (
+                    <div className="mt-2">
+                      <TripMiniMap stops={trip.stops} height={200} />
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

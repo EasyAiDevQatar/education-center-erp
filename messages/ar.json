@@ -1777,7 +1777,9 @@
     "dropoff": "إنزال",
     "bestPosition": "أفضل موضع (تلقائي)",
     "atStart": "في البداية",
-    "afterStop": "بعد المحطة {n}"
+    "afterStop": "بعد المحطة {n}",
+    "routeMap": "خريطة المسار",
+    "hideMap": "إخفاء الخريطة"
   },
   "trips": {
     "title": "الرحلات",

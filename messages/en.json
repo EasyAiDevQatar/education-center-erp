@@ -1777,7 +1777,9 @@
     "dropoff": "Drop off",
     "bestPosition": "Best position (auto)",
     "atStart": "At the start",
-    "afterStop": "After stop {n}"
+    "afterStop": "After stop {n}",
+    "routeMap": "Route map",
+    "hideMap": "Hide map"
   },
   "trips": {
     "title": "Trips",
