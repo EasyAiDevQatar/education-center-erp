@@ -49,17 +49,56 @@ describe("allocate — the happy path", () => {
 
   it("never collects a passenger before they are ready", () => {
     const { assignments } = allocate([leg({ readyMin: 700, dueMin: 800 })], [driver()], P, opts);
-    expect(assignments[0].pickupMin).toBe(700);
+    expect(assignments[0].pickupMin).toBeGreaterThanOrEqual(700);
+  });
+
+  it("collects late enough to arrive near the deadline, not at the first opportunity", () => {
+    // `readyMin` says "not before this", not "aim for this". Collecting at the
+    // earliest feasible minute is what delivered teachers an hour early.
+    const { assignments } = allocate([leg({ readyMin: 600, dueMin: 800 })], [driver()], P, opts);
+    const a = assignments[0];
+    expect(a.pickupMin).toBeGreaterThan(600);
+    expect(a.dropoffMin).toBeLessThanOrEqual(800);
+    expect(a.slackMin).toBeLessThan(15); // arrives close to when it is due
+  });
+
+  it("aims for the preferred arrival when the leg names one", () => {
+    const { assignments } = allocate(
+      [leg({ readyMin: 600, dueMin: 800, preferredMin: 750 })],
+      [driver()],
+      P,
+      opts,
+    );
+    // Targets 750, not the 800 deadline, and not the 600 earliest.
+    expect(assignments[0].dropoffMin).toBeLessThanOrEqual(750);
+    expect(assignments[0].dropoffMin).toBeGreaterThan(700);
   });
 
   it("leaves just in time instead of idling at the pickup", () => {
-    // A driver free since 08:00 with a 10:00 pickup departs late and arrives on
-    // time — they do not set off at 08:00 and wait two hours at the kerb.
+    // A driver free since 08:00 departs late and arrives on time — they do not
+    // set off at 08:00 and wait at the kerb.
     const { assignments } = allocate([leg({ readyMin: 600, dueMin: 700 })], [driver()], P, opts);
     const a = assignments[0];
-    expect(a.pickupMin).toBe(600);
+    expect(a.pickupMin).toBeGreaterThanOrEqual(600);
     expect(a.departMin).toBeGreaterThan(480);
     expect(a.idleMin).toBeGreaterThan(0); // idle before departing, not at the kerb
+  });
+
+  it("keeps the turnaround the validator will demand between two trips", () => {
+    // Two legs the same driver could otherwise run back-to-back. With a 10-min
+    // turnaround the second must not start the minute the first ends.
+    const { assignments } = allocate(
+      [
+        leg({ id: "A", readyMin: 600, dueMin: 660 }),
+        leg({ id: "B", from: NEAR, to: CENTRE, readyMin: 660, dueMin: 780 }),
+      ],
+      [driver()],
+      P,
+      { ...opts, turnaroundMin: 10 },
+    );
+    const a = assignments.find((x) => x.legId === "A")!;
+    const b = assignments.find((x) => x.legId === "B")!;
+    expect(b.departMin).toBeGreaterThanOrEqual(a.dropoffMin + 10);
   });
 
   it("moves the driver: a second leg starts from where the first ended", () => {

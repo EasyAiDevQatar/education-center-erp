@@ -25,8 +25,17 @@ export type AllocLeg = {
   to: LatLng;
   /** Earliest the passenger can be collected (minutes from midnight). */
   readyMin: number;
-  /** Latest they must arrive. */
+  /** Latest they must arrive — past this the ride is infeasible. */
   dueMin: number;
+  /**
+   * When they would ideally arrive (the preferred buffer before the lesson).
+   *
+   * Separate from `dueMin` because the two answer different questions: due is
+   * what makes a ride impossible, preferred is what makes it good. Aiming at
+   * the earliest feasible minute instead collects a teacher an hour before
+   * their lesson simply because a driver happened to be free.
+   */
+  preferredMin?: number;
   /** Seats needed (a shared ride for two students needs two). */
   passengers: number;
 };
@@ -93,11 +102,30 @@ export type AllocOptions = {
    * rejected as impossible. Returning null falls back to the estimate.
    */
   travelMin?: (a: LatLng, b: LatLng, departMin: number) => number | null;
+  /**
+   * Minutes a driver needs between finishing one ride and starting the next.
+   *
+   * The validator enforces this; without it here the allocator hands a driver
+   * a trip that starts the minute the last one ended, and every such trip is
+   * then rejected as INVALID after the fact.
+   */
+  turnaroundMin?: number;
+  /**
+   * Boarding + drop-off minutes the built trip will add to every ride.
+   *
+   * The trip is timed as road + service, so an allocator that sizes rides as
+   * road alone plans each one a few minutes short. The shortfall then has to
+   * come from somewhere, and it comes out of the gap before the trip — which
+   * is exactly the turnaround the validator checks.
+   */
+  serviceMin?: number;
 };
 
 type DriverRuntime = AllocDriver & {
   at: LatLng;
   freeAt: number;
+  /** Turnaround applies between trips, not before the first one of the day. */
+  servedAny: boolean;
   /** Total minutes already committed — the fairness term. */
   loadMin: number;
 };
@@ -123,6 +151,8 @@ export function allocate(
     maxDeadheadKm = Number.POSITIVE_INFINITY,
     weights,
     travelMin,
+    turnaroundMin = 0,
+    serviceMin = 0,
   } = opts;
   const w = { ...DEFAULT_WEIGHTS, ...(weights ?? {}) };
 
@@ -134,6 +164,7 @@ export function allocate(
     ...d,
     at: d.startAt,
     freeAt: Math.max(d.freeFromMin, d.shiftStartMin ?? d.freeFromMin),
+    servedAny: false,
     loadMin: 0,
   }));
 
@@ -170,16 +201,32 @@ export function allocate(
         continue;
       }
 
-      const deadheadMin = hopMinutes(d.at, leg.from, deadheadKm, d.freeAt);
+      // A driver is not free the moment they drop someone off — they need the
+      // turnaround the validator will check for.
+      const availableFrom = d.freeAt + (d.servedAny ? turnaroundMin : 0);
+      const deadheadMin = hopMinutes(d.at, leg.from, deadheadKm, availableFrom);
       // Leave just in time, not the instant the driver is free. Without this a
       // driver idle since shift start looks expensive purely for being idle,
       // which inverts the fairness term and hands the whole day to whoever was
       // busiest. Departing late is also what a real driver does.
-      const departMin = Math.max(d.freeAt, leg.readyMin - deadheadMin);
+      const departMin = Math.max(availableFrom, leg.readyMin - deadheadMin);
       const arriveAtPickup = departMin + deadheadMin;
-      const pickupMin = Math.max(leg.readyMin, arriveAtPickup);
+      const earliestPickup = Math.max(leg.readyMin, arriveAtPickup);
       const rideKm = distanceKm(leg.from, leg.to);
-      const rideMin = hopMinutes(leg.from, leg.to, rideKm, pickupMin);
+      // Ride time is barely sensitive to the exact departure minute, so it is
+      // safe to size it once from the earliest option and reuse it below.
+      const rideMin = hopMinutes(leg.from, leg.to, rideKm, earliestPickup) + serviceMin;
+      // Collect as late as still lands the passenger on time — ideally right at
+      // the preferred arrival. Collecting at the earliest feasible minute is
+      // what produced pickups an hour before the lesson: `readyMin` on a first
+      // pickup is only "not before this", not "aim for this".
+      // Collecting later must not push the drop-off past the deadline OR past
+      // the driver's clock-off; a ride that fitted the shift when collected
+      // early must still fit.
+      const lastDropoff = Math.min(leg.dueMin, d.shiftEndMin ?? Number.POSITIVE_INFINITY);
+      const latestPickup = lastDropoff - rideMin;
+      const target = (leg.preferredMin ?? leg.dueMin) - rideMin;
+      const pickupMin = Math.max(earliestPickup, Math.min(target, latestPickup));
       const dropoffMin = pickupMin + rideMin;
 
       if (dropoffMin > leg.dueMin + graceMin) {
@@ -235,6 +282,7 @@ export function allocate(
     assignments.push(best.a);
     best.driver.at = leg.to;
     best.driver.freeAt = best.a.dropoffMin;
+    best.driver.servedAny = true;
     best.driver.loadMin += best.a.dropoffMin - best.a.departMin;
   }
 

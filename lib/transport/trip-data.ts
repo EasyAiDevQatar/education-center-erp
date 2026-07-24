@@ -179,7 +179,12 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       : studentHasCenter.has(`STUDENT:${d.passengerId}`),
   );
   const built = buildDayLegs(chainDays, {
-    arriveEarlyMin: config.bufferMin,
+    // Target and hard line come from the two rules the validator already uses,
+    // rather than the legacy single `bufferMin`. With one number the target was
+    // also the deadline, so a gap the road covers comfortably was thrown away
+    // for missing an arbitrary preference by a minute.
+    arriveEarlyMin: config.rules.preferredArrivalBufferMin,
+    latestArriveEarlyMin: config.rules.minArrivalBufferMin,
     // Same buffer the validator's departure floor uses, so a ride is never
     // planned for a minute the validator will then call too early.
     departBufferMin: config.rules.dismissalBufferMin,
@@ -277,13 +282,30 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       to: l.to,
       readyMin: l.readyMin,
       dueMin: l.dueMin,
+      preferredMin: l.preferredMin,
       passengers: 1,
     })),
     // With no centre pin every CENTER stop is meaningless, so refuse to invent
     // a plan around (0,0) — the board tells the admin to set the pin instead.
     centre ? allocDrivers : [],
     config.profile,
-    { distanceKm, maxDeadheadKm: config.maxDeadheadKm, travelMin },
+    {
+      distanceKm,
+      maxDeadheadKm: config.maxDeadheadKm,
+      travelMin,
+      // The FULL gap the validator demands between consecutive trips, which is
+      // turnaround plus closing the previous trip and inspecting before the
+      // next. Passing turnaround alone leaves the allocator short by exactly
+      // those two allowances, and every back-to-back pair fails validation.
+      turnaroundMin:
+        Math.max(config.rules.minDriverTurnaroundMin, config.rules.minVehicleTurnaroundMin) +
+        config.rules.postTripCloseoutMin +
+        config.rules.preTripInspectionMin,
+      // The boarding + drop-off allowance the trip builder will add.
+      serviceMin: Math.ceil(
+        config.operational.boardingTimeMin + config.operational.dropoffTimeMin,
+      ),
+    },
   );
 
   return {

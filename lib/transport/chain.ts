@@ -54,6 +54,8 @@ export type Leg = {
   readyMin: number;
   /** Latest they must arrive (the next lesson's start). */
   dueMin: number;
+  /** When they would ideally arrive — earlier than `dueMin`, never required. */
+  preferredMin: number;
   /** The lesson this leg delivers them to, when there is one. */
   toSessionId: string | null;
   /** The lesson they are leaving, when there is one. */
@@ -79,6 +81,15 @@ export type ChainOptions = {
    * plan.
    */
   arriveEarlyMin?: number;
+  /**
+   * The LATEST a passenger may arrive before a lesson, as a buffer.
+   *
+   * `arriveEarlyMin` is the target; this is the hard line. Keeping them apart
+   * matters on back-to-back lessons: with a single number the target doubles as
+   * the deadline and legitimately drivable gaps are discarded as impossible.
+   * Defaults to `arriveEarlyMin`, which is the old single-number behaviour.
+   */
+  latestArriveEarlyMin?: number;
   /**
    * Minutes after a lesson ends before the passenger is actually ready to be
    * collected — packing up, seeing the student out. The leg's `readyMin` is
@@ -127,6 +138,7 @@ export function legsForPassenger(
     includeFirstPickup = true,
     includeLastDropoff = true,
     arriveEarlyMin = 0,
+    latestArriveEarlyMin = arriveEarlyMin,
     departBufferMin = 0,
     maxAdvancePickupMin = 60,
   } = opts;
@@ -145,6 +157,13 @@ export function legsForPassenger(
     dueMin: number,
     fromSessionId: string | null,
     toSessionId: string | null,
+    /**
+     * Ideal arrival, when it is not simply "a buffer before the next lesson".
+     * The ride home has no real deadline, so leaving it to be derived from the
+     * end-of-day sentinel would say the ideal time to take someone home is a
+     * quarter to midnight.
+     */
+    preferredAt?: number,
   ) => {
     seq++;
     if (!from || !to) {
@@ -168,7 +187,9 @@ export function legsForPassenger(
       to,
       toLabel,
       readyMin,
-      dueMin: dueMin - arriveEarlyMin,
+      // Hard line and target, kept apart — see latestArriveEarlyMin.
+      dueMin: dueMin - latestArriveEarlyMin,
+      preferredMin: preferredAt ?? dueMin - arriveEarlyMin,
       fromSessionId,
       toSessionId,
     });
@@ -222,6 +243,10 @@ export function legsForPassenger(
       24 * 60,
       last.sessionId,
       null,
+      // …but the ideal time to take someone home is the moment they are free,
+      // not "any time before midnight". Without this the sentinel above reads
+      // as the target and the ride home is planned for 23:45.
+      last.endMin + departBufferMin,
     );
   }
 
