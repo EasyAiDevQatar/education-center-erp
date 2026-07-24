@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { createSession } from "@/lib/session";
+import { parseRoleKeys } from "@/lib/permissions";
 import { redirect } from "@/i18n/navigation";
 import type { Role } from "@/lib/enums";
 
@@ -66,6 +67,8 @@ export async function loginAction(
     userId: user!.id,
     name: user!.name,
     role: user!.role as Role,
+    activeRoleKey: user!.role,
+    roleKeys: parseRoleKeys(user!.roleKeys, user!.role),
     locale: user!.locale,
     teacherId: user!.teacherId,
     guardianId: user!.guardianId,

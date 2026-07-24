@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Menu, GraduationCap, LogOut, ChevronDown } from "lucide-react";
+import { ProfileMenu, type RoleOption } from "./profile-menu";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/enums";
@@ -24,6 +25,8 @@ export function AppShell({
   onLogout,
   flags,
   perms,
+  roles,
+  activeRoleKey,
   children,
 }: {
   role: Role;
@@ -34,6 +37,9 @@ export function AppShell({
   flags?: { accounting?: boolean; transport?: boolean; ai?: boolean };
   /** Per-role menu narrowing (navKey → allowed). Only `false` entries hide. */
   perms?: Record<string, boolean>;
+  /** Roles the user may switch between, and the active one. */
+  roles?: RoleOption[];
+  activeRoleKey?: string;
   children: React.ReactNode;
 }) {
   const t = useTranslations("nav");
@@ -71,7 +77,7 @@ export function AppShell({
     (i) =>
       i.roles.includes(role) &&
       (!i.flag || flags?.[i.flag]) &&
-      (role === "ADMIN" || perms?.[i.key] !== false),
+      perms?.[i.key] !== false,
   );
 
   const isActive = (href: string) =>
@@ -199,10 +205,11 @@ export function AppShell({
             >
               {open ? <Menu className="size-5" /> : <Menu className="size-5" />}
             </Button>
-            <div className="hidden flex-col leading-tight sm:flex">
-              <span className="text-sm font-semibold">{userName}</span>
-              <span className="text-xs text-muted-foreground">{roleLabel}</span>
-            </div>
+            <ProfileMenu
+              userName={userName}
+              activeRoleKey={activeRoleKey ?? role}
+              roles={roles ?? [{ key: role, label: roleLabel }]}
+            />
           </div>
           <div className="flex items-center gap-2">
             <LocaleSwitcher />

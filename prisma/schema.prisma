@@ -27,6 +27,10 @@ model User {
   email        String   @unique
   passwordHash String
   role         String   @default("RECEPTIONIST") // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT
+  /// All roles this user may act as (JSON array of role identifiers — built-in
+  /// enum values or CustomRole.key). Null/empty means just `role`. The active
+  /// role lives in the session, not here, so switching never rewrites the row.
+  roleKeys     String?
   locale       String   @default("ar") // ar | en
   active       Boolean  @default(true)
 
@@ -1433,4 +1437,19 @@ model GroupMember {
 
   @@unique([groupId, studentId])
   @@index([studentId])
+}
+
+/// Admin-defined roles layered on the fixed enum. Each carries a `baseRole`
+/// capability (one of the built-in enum roles) so the existing route guards —
+/// which check the session's capability — keep working unchanged; `permissions`
+/// only narrows which modules show in the menu.
+model CustomRole {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  nameEn      String?
+  baseRole    String   // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT | DRIVER
+  permissions String   @default("{}") // JSON navKey -> bool (menu visibility)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

@@ -28,6 +28,7 @@ export type UserRow = {
   nameEn: string | null;
   email: string;
   role: string;
+  roleKeys: string[];
   locale: string;
   active: boolean;
   teacherId: string | null;
@@ -35,7 +36,7 @@ export type UserRow = {
   linkedLabel: string | null;
 };
 
-function UserFields({ user, teachers, guardians }: { user?: UserRow; teachers: Opt[]; guardians: Opt[] }) {
+function UserFields({ user, teachers, guardians, roleOptions }: { user?: UserRow; teachers: Opt[]; guardians: Opt[]; roleOptions: { key: string; label: string }[] }) {
   const t = useTranslations("users");
   const tc = useTranslations("common");
   const tr = useTranslations("roles");
@@ -67,6 +68,24 @@ function UserFields({ user, teachers, guardians }: { user?: UserRow; teachers: O
           </Select>
         </FormField>
       </div>
+      {roleOptions.length > 0 && (
+        <FormField label={t("additionalRoles")} htmlFor="u-roleKeys">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-border p-2">
+            {roleOptions.map((r) => (
+              <label key={r.key} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  name="roleKeys"
+                  value={r.key}
+                  defaultChecked={user?.roleKeys?.includes(r.key)}
+                  className="size-4 accent-primary"
+                />
+                {r.label}
+              </label>
+            ))}
+          </div>
+        </FormField>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <FormField label={t("linkTeacher")} htmlFor="u-teacher">
           <Select id="u-teacher" name="teacherId" defaultValue={user?.teacherId ?? ""}>
@@ -111,10 +130,12 @@ export function UsersManager({
   users,
   teachers,
   guardians,
+  roleOptions,
 }: {
   users: UserRow[];
   teachers: Opt[];
   guardians: Opt[];
+  roleOptions: { key: string; label: string }[];
 }) {
   const t = useTranslations("users");
   const tc = useTranslations("common");
@@ -128,7 +149,7 @@ export function UsersManager({
         <EntityDialog
           title={t("add")}
           action={saveUser.bind(null, locale, null)}
-          fields={<UserFields teachers={teachers} guardians={guardians} />}
+          fields={<UserFields teachers={teachers} guardians={guardians} roleOptions={roleOptions} />}
           trigger={
             <Button size="sm" className="gap-2">
               <Plus className="size-4" />
@@ -174,7 +195,7 @@ export function UsersManager({
                   <EntityDialog
                     title={t("edit")}
                     action={saveUser.bind(null, locale, u.id)}
-                    fields={<UserFields user={u} teachers={teachers} guardians={guardians} />}
+                    fields={<UserFields user={u} teachers={teachers} guardians={guardians} roleOptions={roleOptions} />}
                     trigger={
                       <Button variant="ghost" size="icon" aria-label={tc("edit")}>
                         <Pencil className="size-4" />

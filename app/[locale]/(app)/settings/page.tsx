@@ -30,7 +30,7 @@ import { UsersManager, type UserRow } from "./users-manager";
 import { AuditLogTable, type AuditRow } from "./audit-log-table";
 import { DataManager, DangerZone } from "./data-manager";
 import { NAV_ITEMS } from "@/components/app-shell/nav-items";
-import { EDITABLE_ROLES, loadRolePermissions } from "@/lib/permissions";
+import { EDITABLE_ROLES, loadRolePermissions, loadCustomRoles, parseRoleKeys } from "@/lib/permissions";
 import { RolePermissionsSettings } from "./role-permissions-settings";
 import { DemoUsersSettings } from "./demo-users-settings";
 
@@ -60,12 +60,20 @@ export default async function SettingsPage({
 
   // Roles & permissions: the staff modules an admin can narrow per role.
   const rolePerms = await loadRolePermissions();
+  const customRolesData = await loadCustomRoles();
   const staffModules = NAV_ITEMS.filter(
-    (i) =>
-      !["dashboard", "teacherPortal", "parentPortal"].includes(i.key) &&
-      EDITABLE_ROLES.some((r) => (i.roles as readonly string[]).includes(r)),
+    (i) => !["dashboard", "teacherPortal", "parentPortal"].includes(i.key),
   ).map((i) => ({ key: i.key, roles: i.roles as unknown as string[] }));
-  const permMatrixRoles = ["ADMIN", ...EDITABLE_ROLES];
+  const builtinMatrixRoles = ["ADMIN", ...EDITABLE_ROLES];
+  const customMatrix: Record<string, Record<string, boolean>> = Object.fromEntries(
+    customRolesData.map((c) => [c.key, c.permissions]),
+  );
+  const baseRoleOpts = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST", "TEACHER", "PARENT", "DRIVER"];
+  const trRoles = await getTranslations("roles");
+  const allRoleOptions = [
+    ...baseRoleOpts.map((k) => ({ key: k, label: trRoles(k) })),
+    ...customRolesData.map((c) => ({ key: c.key, label: c.name })),
+  ];
   const demoUsers = await db.user.findMany({
     where: { email: { endsWith: "@demo.qa" } },
     select: { name: true, email: true, role: true },
@@ -179,6 +187,7 @@ export default async function SettingsPage({
     nameEn: u.nameEn,
     email: u.email,
     role: u.role,
+    roleKeys: parseRoleKeys(u.roleKeys, u.role),
     locale: u.locale,
     active: u.active,
     teacherId: u.teacherId,
@@ -375,14 +384,17 @@ export default async function SettingsPage({
           </CollapsibleCard>
 
         <CollapsibleCard title={t("users")} className="lg:col-span-2">
-            <UsersManager users={users} teachers={teacherOpts} guardians={guardianOpts} />
+            <UsersManager users={users} teachers={teacherOpts} guardians={guardianOpts} roleOptions={allRoleOptions} />
           </CollapsibleCard>
 
         <CollapsibleCard title={t("rolePermissions")} className="lg:col-span-2">
             <RolePermissionsSettings
               modules={staffModules}
-              roles={permMatrixRoles}
-              initial={rolePerms}
+              builtinRoles={builtinMatrixRoles}
+              customRoles={customRolesData.map((c) => ({ id: c.id, key: c.key, name: c.name, baseRole: c.baseRole }))}
+              baseRoles={baseRoleOpts}
+              initialBuiltin={rolePerms}
+              initialCustom={customMatrix}
             />
           </CollapsibleCard>
 

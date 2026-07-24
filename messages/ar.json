@@ -835,7 +835,8 @@
     "recentSessions": "أحدث الحصص",
     "earningsSummary": "ملخص المستحقات",
     "view360": "عرض شامل 360",
-    "openStatement": "فتح كشف الحساب"
+    "openStatement": "فتح كشف الحساب",
+    "switchRole": "تبديل الدور"
   },
   "terms": {
     "title": "الفصول الدراسية",
@@ -956,7 +957,8 @@
     "changePassword": "تغيير كلمة المرور",
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
-    "confirmPassword": "تأكيد كلمة المرور"
+    "confirmPassword": "تأكيد كلمة المرور",
+    "additionalRoles": "يعمل أيضاً كـ"
   },
   "audit": {
     "user": "المستخدم",
@@ -2088,7 +2090,15 @@
     "module": "الوحدة",
     "save": "حفظ",
     "saving": "جارٍ الحفظ…",
-    "saved": "تم الحفظ"
+    "saved": "تم الحفظ",
+    "addRole": "إضافة دور",
+    "roleNameAr": "اسم الدور",
+    "roleNameEn": "الاسم (إنجليزي)",
+    "baseRole": "مبني على",
+    "duplicateFrom": "نسخ من",
+    "noCopy": "— فارغ —",
+    "createRole": "إنشاء الدور",
+    "deleteRole": "حذف الدور"
   },
   "demoUsers": {
     "passwordNote": "تتشارك جميع الحسابات التجريبية كلمة المرور:",

@@ -835,7 +835,8 @@
     "recentSessions": "Recent sessions",
     "earningsSummary": "Earnings summary",
     "view360": "360° view",
-    "openStatement": "Open statement"
+    "openStatement": "Open statement",
+    "switchRole": "Switch role"
   },
   "terms": {
     "title": "Study terms",
@@ -956,7 +957,8 @@
     "changePassword": "Change password",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "confirmPassword": "Confirm password"
+    "confirmPassword": "Confirm password",
+    "additionalRoles": "Also acts as"
   },
   "audit": {
     "user": "User",
@@ -2088,7 +2090,15 @@
     "module": "Module",
     "save": "Save",
     "saving": "Saving…",
-    "saved": "Saved"
+    "saved": "Saved",
+    "addRole": "Add role",
+    "roleNameAr": "Role name",
+    "roleNameEn": "Name (English)",
+    "baseRole": "Based on",
+    "duplicateFrom": "Duplicate from",
+    "noCopy": "— empty —",
+    "createRole": "Create role",
+    "deleteRole": "Delete role"
   },
   "demoUsers": {
     "passwordNote": "All demo accounts share the password:",

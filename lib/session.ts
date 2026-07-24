@@ -19,6 +19,10 @@ export type SessionPayload = {
   /// Set for staff who also have an Employee record — the driver app resolves
   /// its Driver row from this, never from a route parameter.
   employeeId?: string | null;
+  /// Multi-role: every role the user may act as, and the one active now. `role`
+  /// stays the ACTIVE role's capability so the route guards never change.
+  roleKeys?: string[];
+  activeRoleKey?: string;
 };
 
 export async function encryptSession(payload: SessionPayload): Promise<string> {
@@ -47,7 +51,11 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as unknown as SessionPayload;
+    const p = payload as unknown as SessionPayload;
+    // Old tokens (pre multi-role) carry no roleKeys — treat them as single-role.
+    if (!p.roleKeys || p.roleKeys.length === 0) p.roleKeys = [p.role];
+    if (!p.activeRoleKey) p.activeRoleKey = p.role;
+    return p;
   } catch {
     return null;
   }
