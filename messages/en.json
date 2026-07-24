@@ -1758,14 +1758,20 @@
   },
   "transportMap": {
     "title": "Live map",
-    "subtitle": "Where the vehicles are right now, for trips that are on the road.",
+    "subtitle": "The day's routes: each trip's suggested path, and where the vehicles actually are.",
     "live": "{count, plural, =0 {No vehicles running} =1 {# vehicle running} other {# vehicles running}}",
     "noneRunning": "No trips are on the road at the moment.",
     "recentre": "Recentre",
     "refresh": "Refresh",
     "centre": "Centre",
     "noFix": "No location yet",
-    "retention": "Location history is kept {days} days."
+    "retention": "Location history is kept {days} days.",
+    "plannedCount": "{count, plural, =0 {No trips planned} =1 {# trip planned} other {# trips planned}}",
+    "nonePlanned": "No trips planned for this day. Generate them on the transport planner.",
+    "showAll": "Show all trips",
+    "legendPlanned": "Suggested path",
+    "legendActual": "Actually driven",
+    "noDriver": "No driver"
   },
   "transportCosts": {
     "title": "Fuel & maintenance",
