@@ -63,6 +63,8 @@ export type DispatchStats = {
 export type DispatchBoard = {
   day: string;
   centreSet: boolean;
+  /** Centre coordinates for the map, or null when unset. */
+  centre: { lat: number; lng: number } | null;
   lanes: DriverLane[];
   pool: PoolItem[];
   stats: DispatchStats;
@@ -210,6 +212,7 @@ export async function dispatchBoard(locale: string, day: string): Promise<Dispat
   return {
     day,
     centreSet: plan.centreSet,
+    centre,
     lanes,
     pool,
     stats: {

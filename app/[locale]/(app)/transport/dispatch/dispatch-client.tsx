@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { minToHHMM } from "@/lib/planner";
+import { DispatchMap, type MapTrip } from "@/components/dispatch-map";
 import type { DispatchBoard, DriverLane, LaneTrip } from "@/lib/transport/dispatch";
+
+/** Distinct per-driver colours (readable in light and dark). */
+const DRIVER_PALETTE = ["#2563eb", "#16a34a", "#9333ea", "#dc2626", "#d97706", "#0891b2", "#db2777", "#4f46e5"];
 
 /** Validation → block colour classes (colour is secondary to the label). */
 function tripColour(v: string): string {
@@ -109,6 +113,27 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
   }, [board.axis]);
   const range = Math.max(1, board.axis.maxMin - board.axis.minMin);
 
+  // One colour per driver, shared by the map routes and the lane dots.
+  const driverColour = useMemo(() => {
+    const m = new Map<string, string>();
+    board.lanes.forEach((l, i) => m.set(l.driverId, DRIVER_PALETTE[i % DRIVER_PALETTE.length]));
+    return m;
+  }, [board.lanes]);
+
+  const mapTrips = useMemo<MapTrip[]>(
+    () =>
+      board.lanes.flatMap((lane) =>
+        lane.trips.map((trip) => ({
+          id: trip.id,
+          color: driverColour.get(lane.driverId) ?? "#2563eb",
+          dashed: trip.tripKind === "RETURN",
+          geometry: trip.routeGeometry,
+          stops: trip.stops.map((s) => ({ seq: s.seq, lat: s.lat, lng: s.lng, label: s.label })),
+        })),
+      ),
+    [board.lanes, driverColour],
+  );
+
   return (
     <>
       {/* Day bar */}
@@ -146,6 +171,13 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
         </div>
       )}
 
+      {/* Spatial view: every trip on one map, coloured by driver. */}
+      {mapTrips.length > 0 && (
+        <div className="mb-4">
+          <DispatchMap trips={mapTrips} centre={board.centre} height={340} />
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
         {/* Driver lanes */}
         <div className="rounded-lg border border-border bg-card p-3">
@@ -170,7 +202,10 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
               return (
                 <div key={lane.driverId} className="flex items-stretch gap-2">
                   <div className="w-28 shrink-0 text-xs">
-                    <div className="truncate font-medium">{lane.driverName}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-2 shrink-0 rounded-full" style={{ background: driverColour.get(lane.driverId) }} />
+                      <span className="truncate font-medium">{lane.driverName}</span>
+                    </div>
                     <div className="text-muted-foreground" dir="ltr">
                       {lane.plate ?? "—"} · {lane.capacity}
                     </div>
