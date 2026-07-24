@@ -233,8 +233,10 @@ export function RunsClient({ runs, employees }: { runs: RunRow[]; employees: Emp
             )}
             {runs.map((r) => (
               <TableRow key={r.id}>
-                <TableCell className="font-medium tabular-nums" dir="ltr">
-                  {r.month}
+                <TableCell className="font-medium tabular-nums">
+                  <span dir="ltr">
+                    {r.month}
+                  </span>
                 </TableCell>
                 <TableCell className="text-end tabular-nums">{r.itemCount}</TableCell>
                 <TableCell className="text-end tabular-nums font-medium">

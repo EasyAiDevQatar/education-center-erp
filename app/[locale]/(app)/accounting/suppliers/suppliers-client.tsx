@@ -159,8 +159,10 @@ export function SuppliersClient({
                 <TableCell className="font-medium">{displayName(s, locale)}</TableCell>
                 <TableCell className="text-start"><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
                 <TableCell className="text-end tabular-nums">{s.expenseCount}</TableCell>
-                <TableCell className="text-end tabular-nums" dir="ltr">
-                  {formatMoney(s.expenseTotal)} {currency}
+                <TableCell className="text-end tabular-nums">
+                  <span dir="ltr">
+                    {formatMoney(s.expenseTotal)} {currency}
+                  </span>
                 </TableCell>
                 <TableCell>
                   {s.active ? (

@@ -656,8 +656,8 @@ function ListView({
               className="cursor-pointer"
               onClick={() => onEdit(ev)}
             >
-              <TableCell className="tabular-nums" dir="ltr">{ev.day}</TableCell>
-              <TableCell className="tabular-nums" dir="ltr">{fmtTime(ev.startMinutes)}</TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{ev.day}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{fmtTime(ev.startMinutes)}</span></TableCell>
               <TableCell className="font-medium">{ev.studentName}</TableCell>
               <TableCell>
                 {ev.teacherName}

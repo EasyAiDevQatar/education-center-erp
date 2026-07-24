@@ -98,17 +98,23 @@ export function BackupSettings({
               )}
               {backups.slice(0, 15).map((b) => (
                 <TableRow key={b.name}>
-                  <TableCell className="font-mono text-xs" dir="ltr">
-                    {b.name}
+                  <TableCell className="font-mono text-xs">
+                    <span dir="ltr">
+                      {b.name}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge variant={tierVariant(b.tier)}>{te(`backupTier.${b.tier}`)}</Badge>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums" dir="ltr">
-                    {fmtSize(b.sizeBytes)}
+                  <TableCell className="text-end tabular-nums">
+                    <span dir="ltr">
+                      {fmtSize(b.sizeBytes)}
+                    </span>
                   </TableCell>
-                  <TableCell className="tabular-nums" dir="ltr">
-                    {b.modifiedAt.slice(0, 16).replace("T", " ")}
+                  <TableCell className="tabular-nums">
+                    <span dir="ltr">
+                      {b.modifiedAt.slice(0, 16).replace("T", " ")}
+                    </span>
                   </TableCell>
                   <TableCell className="text-end">
                     <a href={`/api/backups/${b.name}`} download>

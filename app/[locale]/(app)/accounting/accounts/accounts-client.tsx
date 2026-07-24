@@ -206,7 +206,7 @@ export function AccountsClient({ accounts }: { accounts: AccountRow[] }) {
             )}
             {pg.pageItems.map((a) => (
               <TableRow key={a.id} className={a.active ? undefined : "opacity-60"}>
-                <TableCell className="font-mono" dir="ltr">{a.code}</TableCell>
+                <TableCell className="font-mono"><span dir="ltr">{a.code}</span></TableCell>
                 <TableCell className="font-medium">
                   <span className="inline-flex items-center gap-1.5">
                     {a.system && <Lock className="size-3 text-muted-foreground" />}

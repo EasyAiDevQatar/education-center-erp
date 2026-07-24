@@ -327,8 +327,10 @@ export function LeaveClient({
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.employeeName}</TableCell>
                   <TableCell>{typeLabel(r.typeCode)}</TableCell>
-                  <TableCell className="tabular-nums" dir="ltr">
-                    {r.startDate} → {r.endDate}
+                  <TableCell className="tabular-nums">
+                    <span dir="ltr">
+                      {r.startDate} → {r.endDate}
+                    </span>
                   </TableCell>
                   <TableCell className="text-end tabular-nums">{r.days}</TableCell>
                   <TableCell>

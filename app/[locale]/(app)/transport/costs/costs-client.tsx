@@ -318,8 +318,10 @@ export function CostsClient({
                     <span dir="ltr">{x.plate}</span>
                   </TableCell>
                   <TableCell className="text-end tabular-nums">{x.litres.toFixed(2)}</TableCell>
-                  <TableCell className="text-end tabular-nums" dir="ltr">
-                    {formatMoney(x.cost)} {currency}
+                  <TableCell className="text-end tabular-nums">
+                    <span dir="ltr">
+                      {formatMoney(x.cost)} {currency}
+                    </span>
                   </TableCell>
                   <TableCell className="text-end tabular-nums">{x.odometerKm ?? "—"}</TableCell>
                   <TableCell>{x.supplierName ?? "—"}</TableCell>
@@ -359,8 +361,10 @@ export function CostsClient({
                     <Badge variant="default">{te(`maintenanceKind.${x.kind}`)}</Badge>
                   </TableCell>
                   <TableCell>{x.description}</TableCell>
-                  <TableCell className="text-end tabular-nums" dir="ltr">
-                    {formatMoney(x.cost)} {currency}
+                  <TableCell className="text-end tabular-nums">
+                    <span dir="ltr">
+                      {formatMoney(x.cost)} {currency}
+                    </span>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {x.nextDueOn && <span dir="ltr">{x.nextDueOn}</span>}

@@ -62,6 +62,7 @@ export default async function HrPage({
     documents: e.documents.map(
       (d): DocRow => ({
         id: d.id,
+        fileUrl: d.fileUrl,
         type: d.type,
         number: d.number,
         issuedOn: d.issuedOn?.toISOString().slice(0, 10) ?? null,
@@ -85,6 +86,7 @@ export default async function HrPage({
     .filter((d) => latest.get(`${d.employeeId}:${d.type}`)?.id === d.id)
     .map((d) => ({
       id: d.id,
+      employeeId: d.employeeId,
       employeeName: displayName(d.employee, locale),
       type: d.type,
       number: d.number,

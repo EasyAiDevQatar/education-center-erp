@@ -124,7 +124,7 @@ export default async function TeacherStatementPage({
             )}
             {sessions.map((s) => (
               <tr key={s.id} className="border-b border-border/60">
-                <td className="p-2 tabular-nums" dir="ltr">{s.date.toISOString().slice(0, 10)}</td>
+                <td className="p-2 tabular-nums"><span dir="ltr">{s.date.toISOString().slice(0, 10)}</span></td>
                 <td className="p-2">{displayName(s.student, locale)}</td>
                 <td className="p-2">{te(`sessionStatus.${s.status}`)}</td>
                 <td className="p-2 text-end tabular-nums">{formatHours(s.hours)}</td>
@@ -158,9 +158,11 @@ export default async function TeacherStatementPage({
             )}
             {payouts.map((p) => (
               <tr key={p.id} className="border-b border-border/60">
-                <td className="p-2 tabular-nums" dir="ltr">{formatDate(p.createdAt, locale)}</td>
-                <td className="p-2 tabular-nums" dir="ltr">
-                  {p.periodStart.toISOString().slice(0, 10)} → {p.periodEnd.toISOString().slice(0, 10)}
+                <td className="p-2 tabular-nums"><span dir="ltr">{formatDate(p.createdAt, locale)}</span></td>
+                <td className="p-2 tabular-nums">
+                  <span dir="ltr">
+                    {p.periodStart.toISOString().slice(0, 10)} → {p.periodEnd.toISOString().slice(0, 10)}
+                  </span>
                 </td>
                 <td className="p-2">{te(`payoutStatus.${p.status}`)}</td>
                 <td className="p-2 text-end tabular-nums">{formatMoney(p.netPaid)}</td>

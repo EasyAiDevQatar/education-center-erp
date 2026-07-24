@@ -115,7 +115,7 @@ export default async function AccountingReportsPage({
                 )}
                 {tb.rows.map((r) => (
                   <tr key={r.accountId} className="border-b border-border/60">
-                    <td className="p-2 font-mono" dir="ltr">{r.code}</td>
+                    <td className="p-2 font-mono"><span dir="ltr">{r.code}</span></td>
                     <td className="p-2">
                       <Link
                         href={`/accounting/accounts/${r.accountId}`}
@@ -124,17 +124,17 @@ export default async function AccountingReportsPage({
                         {r.name}
                       </Link>
                     </td>
-                    <td className="p-2 text-end tabular-nums" dir="ltr">{formatMoney(r.debit)}</td>
-                    <td className="p-2 text-end tabular-nums" dir="ltr">{formatMoney(r.credit)}</td>
-                    <td className="p-2 text-end tabular-nums" dir="ltr">{formatMoney(r.balance)}</td>
+                    <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.debit)}</span></td>
+                    <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.credit)}</span></td>
+                    <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.balance)}</span></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-border font-semibold">
                   <td className="p-2" colSpan={2}>{tc("total")}</td>
-                  <td className="p-2 text-end tabular-nums" dir="ltr">{money(tb.totalDebit)}</td>
-                  <td className="p-2 text-end tabular-nums" dir="ltr">{money(tb.totalCredit)}</td>
+                  <td className="p-2 text-end tabular-nums"><span dir="ltr">{money(tb.totalDebit)}</span></td>
+                  <td className="p-2 text-end tabular-nums"><span dir="ltr">{money(tb.totalCredit)}</span></td>
                   <td className="p-2 text-end">
                     {Math.abs(tb.totalDebit - tb.totalCredit) < 0.005 ? (
                       <Badge variant="success">{t("balanced")}</Badge>

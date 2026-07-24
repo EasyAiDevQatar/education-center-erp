@@ -166,8 +166,10 @@ export function StudentSessionsTable({
                     onChange={() => toggle(r.id)}
                   />
                 </TableCell>
-                <TableCell className="tabular-nums" dir="ltr">
-                  {r.date} {r.time}
+                <TableCell className="tabular-nums">
+                  <span dir="ltr">
+                    {r.date} {r.time}
+                  </span>
                 </TableCell>
                 <TableCell>{r.teacherName}</TableCell>
                 <TableCell>{r.levelLabel}</TableCell>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Menu, X, GraduationCap, LogOut } from "lucide-react";
+import { Menu, GraduationCap, LogOut, ChevronDown } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/enums";
@@ -11,9 +11,11 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import { Button } from "@/components/ui/button";
 
-// Render order. Empty sections (e.g. transport, until Trips/Vehicles ship)
-// produce nothing.
-const SECTIONS = ["operations", "people", "finance", "hr", "transport", "admin"] as const;
+// Render order. A section with no visible items produces nothing.
+const SECTIONS = ["operations", "people", "finance", "hr", "admin"] as const;
+
+/** Which groups the user has folded away, remembered between visits. */
+const COLLAPSED_KEY = "ec-nav-collapsed";
 
 export function AppShell({
   role,
@@ -35,6 +37,32 @@ export function AppShell({
   const tc = useTranslations("common");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // Everything starts expanded and the saved state is applied after mount:
+  // reading localStorage during render would make the server and client markup
+  // disagree and React would throw away the whole tree.
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(COLLAPSED_KEY);
+      if (raw) setCollapsed(JSON.parse(raw) as string[]);
+    } catch {
+      // A blocked or corrupt store just means the default: all expanded.
+    }
+  }, []);
+
+  const toggleSection = (section: string) =>
+    setCollapsed((prev) => {
+      const next = prev.includes(section)
+        ? prev.filter((s) => s !== section)
+        : [...prev, section];
+      try {
+        window.localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+      } catch {
+        // Not being able to remember it is not a reason to refuse the toggle.
+      }
+      return next;
+    });
 
   const items = NAV_ITEMS.filter(
     (i) => i.roles.includes(role) && (!i.flag || flags?.[i.flag]),
@@ -48,12 +76,27 @@ export function AppShell({
       {SECTIONS.map((section) => {
         const inSection = items.filter((i) => i.section === section);
         if (inSection.length === 0) return null;
+        // A group holding the current page stays open regardless of what was
+        // saved — losing sight of where you are is worse than an extra click.
+        const holdsActive = inSection.some((i) => isActive(i.href));
+        const isCollapsed = collapsed.includes(section) && !holdsActive;
         return (
           <div key={section} className="flex flex-col gap-1">
-            <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t(`sections.${section}`)}
-            </p>
-            {inSection.map((item) => {
+            <button
+              type="button"
+              onClick={() => toggleSection(section)}
+              aria-expanded={!isCollapsed}
+              className="flex w-full items-center gap-1 rounded-md px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span>{t(`sections.${section}`)}</span>
+              <ChevronDown
+                className={cn(
+                  "ms-auto size-3.5 shrink-0 transition-transform",
+                  isCollapsed && "-rotate-90 rtl:rotate-90",
+                )}
+              />
+            </button>
+            {!isCollapsed && inSection.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (

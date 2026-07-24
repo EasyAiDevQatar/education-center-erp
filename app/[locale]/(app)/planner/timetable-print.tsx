@@ -304,8 +304,10 @@ export function TimetableSheet({
                             </div>
                           </td>
                         )}
-                        <td className="tabular-nums" dir="ltr">
-                          {minToHHMM(e.startMin)}–{minToHHMM(e.startMin + e.hours * 60)}
+                        <td className="tabular-nums">
+                          <span dir="ltr">
+                            {minToHHMM(e.startMin)}–{minToHHMM(e.startMin + e.hours * 60)}
+                          </span>
                         </td>
                         <td>{e.counterpart}</td>
                         <td>{e.levelLabel}</td>

@@ -389,7 +389,7 @@ export function ChequesClient({
                 )}
                 {pg.pageItems.map((c) => (
                   <TableRow key={c.id} className={c.overdue ? "bg-destructive/5" : undefined}>
-                    <TableCell className="font-mono" dir="ltr">{c.chequeNo}</TableCell>
+                    <TableCell className="font-mono"><span dir="ltr">{c.chequeNo}</span></TableCell>
                     <TableCell>
                       <Badge variant={c.direction === "INCOMING" ? "success" : "warning"}>
                         {te(`chequeDirection.${c.direction}`)}
@@ -401,12 +401,16 @@ export function ChequesClient({
                         <span className="ms-1 text-xs text-muted-foreground" dir="ltr">#{c.receiptNo}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-end tabular-nums" dir="ltr">
-                      {formatMoney(c.amount)} {currency}
+                    <TableCell className="text-end tabular-nums">
+                      <span dir="ltr">
+                        {formatMoney(c.amount)} {currency}
+                      </span>
                     </TableCell>
-                    <TableCell className="tabular-nums" dir="ltr">
-                      {c.dueDate ?? "—"}
-                      {c.overdue && <Badge variant="destructive" className="ms-1">{t("overdue")}</Badge>}
+                    <TableCell className="tabular-nums">
+                      <span dir="ltr">
+                        {c.dueDate ?? "—"}
+                        {c.overdue && <Badge variant="destructive" className="ms-1">{t("overdue")}</Badge>}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge variant={STATUS_BADGE[c.status]}>{te(`chequeStatus.${c.status}`)}</Badge>
@@ -456,11 +460,13 @@ export function ChequesClient({
               {books.map((b) => (
                 <TableRow key={b.id} className={b.active ? undefined : "opacity-60"}>
                   <TableCell className="font-medium">{b.bankName}</TableCell>
-                  <TableCell dir="ltr">{b.accountNo ?? "—"}</TableCell>
-                  <TableCell className="text-end tabular-nums" dir="ltr">
-                    {b.startNo} – {b.endNo}
+                  <TableCell><span dir="ltr">{b.accountNo ?? "—"}</span></TableCell>
+                  <TableCell className="text-end tabular-nums">
+                    <span dir="ltr">
+                      {b.startNo} – {b.endNo}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums" dir="ltr">{b.nextNo}</TableCell>
+                  <TableCell className="text-end tabular-nums"><span dir="ltr">{b.nextNo}</span></TableCell>
                   <TableCell className="text-end">
                     <Badge variant={b.remaining > 5 ? "success" : b.remaining > 0 ? "warning" : "destructive"}>
                       {b.remaining}

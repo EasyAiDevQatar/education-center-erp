@@ -280,7 +280,7 @@ export function JournalClient({
                   className="cursor-pointer"
                   onClick={() => setOpenId(openId === e.id ? null : e.id)}
                 >
-                  <TableCell className="tabular-nums" dir="ltr">{e.date}</TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
                   <TableCell className="font-medium">
                     <span className="inline-flex items-center gap-1.5">
                       {openId === e.id ? (
@@ -296,8 +296,10 @@ export function JournalClient({
                       {te(`journalSource.${e.sourceType as "MANUAL"}`)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums" dir="ltr">
-                    {formatMoney(e.total)} {currency}
+                  <TableCell className="text-end tabular-nums">
+                    <span dir="ltr">
+                      {formatMoney(e.total)} {currency}
+                    </span>
                   </TableCell>
                   <TableCell className="text-end" onClick={(ev) => ev.stopPropagation()}>
                     {e.sourceType === "MANUAL" && (
@@ -313,11 +315,15 @@ export function JournalClient({
                           {e.lines.map((l) => (
                             <tr key={l.id} className="border-b border-border/40 last:border-0">
                               <td className="px-6 py-1.5">{l.account}</td>
-                              <td className="w-32 px-2 py-1.5 text-end tabular-nums" dir="ltr">
-                                {l.debit > 0 ? formatMoney(l.debit) : ""}
+                              <td className="w-32 px-2 py-1.5 text-end tabular-nums">
+                                <span dir="ltr">
+                                  {l.debit > 0 ? formatMoney(l.debit) : ""}
+                                </span>
                               </td>
-                              <td className="w-32 px-2 py-1.5 text-end tabular-nums" dir="ltr">
-                                {l.credit > 0 ? formatMoney(l.credit) : ""}
+                              <td className="w-32 px-2 py-1.5 text-end tabular-nums">
+                                <span dir="ltr">
+                                  {l.credit > 0 ? formatMoney(l.credit) : ""}
+                                </span>
                               </td>
                             </tr>
                           ))}

@@ -156,6 +156,9 @@ const docSchema = z.object({
   employeeId: z.string().min(1),
   type: z.enum(EMPLOYEE_DOC_TYPES),
   number: z.string().trim().max(40).optional().nullable(),
+  // A link to the scan in the centre's own storage. Validated as a URL so a
+  // typo doesn't become an unopenable "document" nobody notices until renewal.
+  fileUrl: z.string().trim().url().max(500).optional().nullable(),
   notes: z.string().trim().optional().nullable(),
 });
 
@@ -169,6 +172,7 @@ export async function saveDocument(
     employeeId: formData.get("employeeId"),
     type: formData.get("type"),
     number: orNull(formData.get("number")),
+    fileUrl: orNull(formData.get("fileUrl")),
     notes: orNull(formData.get("notes")),
   });
   if (!parsed.success) return { error: "invalid" };

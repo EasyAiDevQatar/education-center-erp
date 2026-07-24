@@ -218,8 +218,10 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
             <tr key={r.method} className="border-b border-border/60">
               <td className="p-2">{te(`method.${r.method as "CASH"}`)}</td>
               <td className="p-2 text-end tabular-nums">{r.count}</td>
-              <td className="p-2 text-end tabular-nums" dir="ltr">
-                {formatMoney(r.total)} {currency}
+              <td className="p-2 text-end tabular-nums">
+                <span dir="ltr">
+                  {formatMoney(r.total)} {currency}
+                </span>
               </td>
               <td className="p-2 text-end tabular-nums">
                 <Badge variant="default">{r.pct}%</Badge>
@@ -231,8 +233,10 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
           <tr className="border-t-2 border-border font-semibold">
             <td className="p-2">{tc("total")}</td>
             <td className="p-2 text-end tabular-nums">{totals.count}</td>
-            <td className="p-2 text-end tabular-nums" dir="ltr">
-              {formatMoney(totals.total)} {currency}
+            <td className="p-2 text-end tabular-nums">
+              <span dir="ltr">
+                {formatMoney(totals.total)} {currency}
+              </span>
             </td>
             <td className="p-2 text-end tabular-nums">100%</td>
           </tr>
@@ -408,7 +412,7 @@ function PackagesTable({ rows, currency }: { rows: PackageReportRow[]; currency:
                     {te(`packageStatus.${r.status}`)}
                   </Badge>
                 </td>
-                <td className="p-2 tabular-nums" dir="ltr">{r.expiresAt ?? "—"}</td>
+                <td className="p-2 tabular-nums"><span dir="ltr">{r.expiresAt ?? "—"}</span></td>
               </tr>
             ))}
           </tbody>
@@ -450,8 +454,10 @@ function PayoutsSummaryTable({ rows, currency }: { rows: PayoutSummaryRow[]; cur
                 <td className="p-2">
                   {r.payMode ? <Badge>{tm(r.payMode as "MONTH")}</Badge> : "—"}
                 </td>
-                <td className="p-2 tabular-nums" dir="ltr">
-                  {r.periodStart} → {r.periodEnd}
+                <td className="p-2 tabular-nums">
+                  <span dir="ltr">
+                    {r.periodStart} → {r.periodEnd}
+                  </span>
                 </td>
                 <td className="p-2 text-end tabular-nums">{formatMoney(r.grossCommission)}</td>
                 <td className="p-2 text-end tabular-nums">{formatMoney(r.fixedSalary)}</td>
@@ -502,7 +508,7 @@ function DebtorsTable({ rows, currency }: { rows: DebtorRow[]; currency: string 
               <tr key={r.id} className="border-b border-border/60">
                 <td className="p-2">{r.name}</td>
                 <td className="p-2">{r.guardianName ?? "—"}</td>
-                <td className="p-2 tabular-nums" dir="ltr">{r.phone ?? "—"}</td>
+                <td className="p-2 tabular-nums"><span dir="ltr">{r.phone ?? "—"}</span></td>
                 <td className="p-2 text-end tabular-nums">{formatMoney(r.charges)}</td>
                 <td className="p-2 text-end tabular-nums">{formatMoney(r.paid)}</td>
                 <td className="p-2 text-end font-semibold tabular-nums text-destructive">

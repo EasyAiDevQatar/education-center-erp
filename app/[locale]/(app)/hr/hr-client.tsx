@@ -2,8 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, FileText, UserX, AlertTriangle, Trash2, HandCoins } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  FileText,
+  UserX,
+  AlertTriangle,
+  Trash2,
+  HandCoins,
+  Eye,
+  ArrowRight,
+  ExternalLink,
+} from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { FormField } from "@/components/crud/form-field";
 import {
@@ -43,6 +55,7 @@ import { computeGratuity, computeSettlement, dailyBasic } from "@/lib/gratuity";
 
 export type DocRow = {
   id: string;
+  fileUrl: string | null;
   type: string;
   number: string | null;
   issuedOn: string | null;
@@ -78,6 +91,7 @@ export type EmployeeRow = {
 
 export type ExpiryRow = {
   id: string;
+  employeeId: string;
   employeeName: string;
   type: string;
   number: string | null;
@@ -283,7 +297,22 @@ function DocumentsDialog({
                     {d.number && (
                       <span className="text-muted-foreground tabular-nums" dir="ltr">{d.number}</span>
                     )}
+                    {d.issuedOn && (
+                      <span className="text-xs text-muted-foreground" dir="ltr">
+                        {d.issuedOn} →
+                      </span>
+                    )}
                     <span className="ms-auto flex shrink-0 items-center gap-2">
+                      {/* Openable when a scan link was recorded; otherwise the
+                          row says so rather than looking clickable and not being. */}
+                      {d.fileUrl && (
+                        <a href={d.fileUrl} target="_blank" rel="noreferrer noopener">
+                          <Button type="button" variant="outline" size="sm" className="h-7 gap-1">
+                            <ExternalLink className="size-3.5" />
+                            {t("openFile")}
+                          </Button>
+                        </a>
+                      )}
                       {d.expiresOn && (
                         <Badge
                           variant={days !== null && days <= 14 ? "destructive" : days !== null && days <= 60 ? "warning" : "default"}
@@ -334,6 +363,12 @@ function DocumentsDialog({
                 <Input id="d-expires" name="expiresOn" type="date" dir="ltr" />
               </FormField>
             </div>
+            {/* Scans live in the centre's own Drive, not in this database — a
+                passport image in every nightly dump is a liability. We keep the
+                link so the document can actually be opened. */}
+            <FormField label={t("fileUrl")} htmlFor="d-file">
+              <Input id="d-file" name="fileUrl" type="url" dir="ltr" placeholder="https://…" />
+            </FormField>
             {error && <p className="text-sm text-destructive">{tc("required")}</p>}
             <Button type="submit" size="sm" disabled={pending} className="gap-1">
               <Plus className="size-4" />
@@ -563,18 +598,32 @@ export function HrClient({
       {/* Expiry alerts — the reason the register earns its keep day to day. */}
       {alerts.length > 0 && (
         <div className="rounded-lg border border-warning/50 bg-warning/5 p-3">
-          <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          <p className="mb-2 flex flex-wrap items-center gap-2 text-sm font-semibold">
             <AlertTriangle className="size-4 text-warning" />
             {t("expiryAlerts", { n: alerts.length })}
+            {/* The chips used to be decoration. This is the way through to the
+                screen where the renewals are actually worked. */}
+            <Link href="/hr/documents" className="ms-auto">
+              <Button type="button" variant="outline" size="sm" className="gap-1">
+                {t("reviewAll")}
+                <ArrowRight className="size-3.5 rtl:rotate-180" />
+              </Button>
+            </Link>
           </p>
           <div className="flex flex-wrap gap-2">
             {alerts.map((a) => {
               const days = daysUntil(a.expiresOn);
               return (
-                <Badge key={a.id} variant={days <= 14 ? "destructive" : "warning"}>
-                  {a.employeeName} · {te(`docType.${a.type}`)} ·{" "}
-                  {days < 0 ? t("expiredAgo", { n: -days }) : t("expiresIn", { n: days })}
-                </Badge>
+                // Each chip goes straight to that employee's document tab.
+                <Link key={a.id} href={`/hr/${a.employeeId}?tab=documents`}>
+                  <Badge
+                    variant={days <= 14 ? "destructive" : "warning"}
+                    className="cursor-pointer transition-opacity hover:opacity-80"
+                  >
+                    {a.employeeName} · {te(`docType.${a.type}`)} ·{" "}
+                    {days < 0 ? t("expiredAgo", { n: -days }) : t("expiresIn", { n: days })}
+                  </Badge>
+                </Link>
               );
             })}
           </div>
@@ -637,7 +686,7 @@ export function HrClient({
                   </TableCell>
                   <TableCell>{e.jobTitle ?? "—"}</TableCell>
                   <TableCell>{e.department ? te(`department.${e.department}`) : "—"}</TableCell>
-                  <TableCell className="tabular-nums" dir="ltr">{e.hireDate ?? "—"}</TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{e.hireDate ?? "—"}</span></TableCell>
                   <TableCell className="text-end tabular-nums">
                     {formatMoney(e.basicSalary + e.allowances)}
                   </TableCell>
@@ -652,6 +701,16 @@ export function HrClient({
                   </TableCell>
                   <TableCell className="text-end">
                     <div className="flex justify-end gap-0.5">
+                      <Link href={`/hr/${e.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={tc("view")}
+                          title={tc("view")}
+                        >
+                          <Eye className="size-4" />
+                        </Button>
+                      </Link>
                       <Button
                         variant="ghost"
                         size="icon"

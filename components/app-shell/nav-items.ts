@@ -29,7 +29,7 @@ export type NavItem = {
   roles: Role[];
   /** section key under `nav.sections`. A section with no visible items renders
       nothing, so a flagged-off module costs zero pixels. */
-  section: "operations" | "people" | "finance" | "hr" | "transport" | "admin";
+  section: "operations" | "people" | "finance" | "hr" | "admin";
   /** Nested links, shown indented while the parent branch is active. */
   children?: { href: string; key: string }[];
   /** Optional-module gate: item renders only when this flag is on. The flag
@@ -99,7 +99,10 @@ export const NAV_ITEMS: NavItem[] = [
     key: "transport",
     icon: Truck,
     roles: STAFF,
-    section: "transport",
+    // Transport lives with the other daily-operations screens: the planner and
+    // the driver board are used on the same rhythm as the calendar, not as a
+    // back-office register.
+    section: "operations",
     flag: "transport",
     children: [
       { href: "/transport/planner", key: "transportPlanner" },
@@ -121,6 +124,7 @@ export const NAV_ITEMS: NavItem[] = [
     section: "hr",
     children: [
       { href: "/hr", key: "hrRegister" },
+      { href: "/hr/documents", key: "hrDocuments" },
       { href: "/hr/leave", key: "hrLeave" },
     ],
   },

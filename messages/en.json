@@ -117,7 +117,9 @@
     "nameAr": "Name (Arabic)",
     "nameEn": "Name (English)",
     "nameEnHint": "Optional — shown when the interface is in English.",
-    "apply": "Apply"
+    "apply": "Apply",
+    "view": "View",
+    "overview": "Overview"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -170,7 +172,8 @@
     "transportMap": "Live map",
     "driverPortal": "My trips",
     "transportCosts": "Fuel & maintenance",
-    "transportReports": "Fleet reports"
+    "transportReports": "Fleet reports",
+    "hrDocuments": "Documents & expiry"
   },
   "auth": {
     "login": "Log in",
@@ -1212,7 +1215,28 @@
     "terminateTitle": "End service — {name}",
     "terminateHint": "The record is not deleted — it becomes Terminated and leave accrual stops. Documents and payslips remain.",
     "terminateAction": "End service",
-    "lastWorkingDay": "Last working day"
+    "lastWorkingDay": "Last working day",
+    "fileUrl": "Link to scan",
+    "openFile": "Open",
+    "noFile": "No file linked",
+    "reviewAll": "Review all",
+    "identity": "Identity",
+    "contact": "Contact",
+    "email": "Email",
+    "superseded": "Superseded",
+    "driverRole": "Driver",
+    "leaveTab": "Leave",
+    "payslipsTab": "Payslips",
+    "leaveType": "Type",
+    "days": "Days",
+    "netPaid": "Net paid",
+    "documentsNeedingAttention": "Documents to chase",
+    "expiry": {
+      "expired": "Expired",
+      "soon": "Expiring",
+      "ok": "Valid",
+      "unknown": "No expiry recorded"
+    }
   },
   "leave": {
     "title": "Leave",
@@ -1774,5 +1798,26 @@
     "byVehicle": "By vehicle",
     "estimateNote": "Distances come from the planner's estimates, so every figure derived from them is approximate.",
     "onTimeBasis": "Punctuality is measured over {count, plural, =1 {# stop} other {# stops}} where the driver recorded an arrival."
+  },
+  "expiringDocs": {
+    "title": "Documents & expiry",
+    "subtitle": "Every employee and vehicle document that has lapsed, expires within {days} days, or has no expiry recorded.",
+    "owner": "Belongs to",
+    "docType": "Document",
+    "number": "Number",
+    "expiresOn": "Expires",
+    "days": "Days left",
+    "expired": "Expired",
+    "soon": "Expiring",
+    "noExpiry": "No date",
+    "fix": "Fix",
+    "allClear": "Nothing expiring. Every document on file is valid.",
+    "searchPlaceholder": "Search by name, plate or number…",
+    "level": {
+      "expired": "Expired",
+      "soon": "Expiring",
+      "unknown": "No expiry recorded",
+      "ok": "Valid"
+    }
   }
 }

@@ -91,23 +91,29 @@ export default async function AccountStatementPrintPage({
           <tbody>
             {rows.map((r, i) => (
               <tr key={i} className="border-b border-border/60">
-                <td className="p-2 tabular-nums" dir="ltr">{formatDate(r.date, locale)}</td>
+                <td className="p-2 tabular-nums"><span dir="ltr">{formatDate(r.date, locale)}</span></td>
                 <td className="p-2">{r.memo}</td>
-                <td className="p-2 text-end tabular-nums" dir="ltr">
-                  {r.debit > 0 ? formatMoney(r.debit) : ""}
+                <td className="p-2 text-end tabular-nums">
+                  <span dir="ltr">
+                    {r.debit > 0 ? formatMoney(r.debit) : ""}
+                  </span>
                 </td>
-                <td className="p-2 text-end tabular-nums" dir="ltr">
-                  {r.credit > 0 ? formatMoney(r.credit) : ""}
+                <td className="p-2 text-end tabular-nums">
+                  <span dir="ltr">
+                    {r.credit > 0 ? formatMoney(r.credit) : ""}
+                  </span>
                 </td>
-                <td className="p-2 text-end tabular-nums" dir="ltr">{formatMoney(r.balance)}</td>
+                <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.balance)}</span></td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
               <td className="p-2" colSpan={4}>{t("closingBalance")}</td>
-              <td className="p-2 text-end tabular-nums" dir="ltr">
-                {formatMoney(closing)} {currency}
+              <td className="p-2 text-end tabular-nums">
+                <span dir="ltr">
+                  {formatMoney(closing)} {currency}
+                </span>
               </td>
             </tr>
           </tfoot>
