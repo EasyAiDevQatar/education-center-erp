@@ -2122,6 +2122,19 @@
     "hasMap": "مخطط",
     "noFloors": "لا توجد طوابق بعد.",
     "floorCount": "{n} طوابق",
-    "none": "لا توجد مبانٍ بعد."
+    "none": "لا توجد مبانٍ بعد.",
+    "addRoom": "إضافة قاعة",
+    "editRoom": "تعديل القاعة",
+    "roomCode": "الرمز",
+    "roomKindLabel": "النوع",
+    "capacity": "السعة",
+    "seats": "{n} مقعد",
+    "roomCount": "{n} قاعات",
+    "roomKind": {
+      "CLASSROOM": "قاعة درس",
+      "LAB": "معمل",
+      "OFFICE": "مكتب",
+      "OTHER": "أخرى"
+    }
   }
 }

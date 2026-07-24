@@ -110,3 +110,52 @@ export async function deleteFloor(locale: string, id: string): Promise<ActionSta
   revalidatePath(`/${locale}/settings`);
   return { ok: true };
 }
+
+
+const roomSchema = z.object({
+  floorId: z.string().min(1),
+  name: z.string().min(1),
+  code: z.string().optional().nullable(),
+  kind: z.enum(["CLASSROOM", "LAB", "OFFICE", "OTHER"]).default("CLASSROOM"),
+  capacity: z.coerce.number().int().min(0).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  active: z.boolean().default(true),
+});
+
+export async function saveRoom(
+  locale: string,
+  id: string | null,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  if (!(await adminOnly())) return { error: "forbidden" };
+  const capRaw = formData.get("capacity")?.toString().trim();
+  const parsed = roomSchema.safeParse({
+    floorId: formData.get("floorId"),
+    name: formData.get("name"),
+    code: formData.get("code")?.toString().trim() || null,
+    kind: formData.get("kind") || "CLASSROOM",
+    capacity: capRaw ? Number(capRaw) : null,
+    notes: formData.get("notes")?.toString().trim() || null,
+    active: formData.get("active") === "on" || formData.get("active") === "true",
+  });
+  if (!parsed.success) return { error: "invalid" };
+  const data = parsed.data;
+  if (id) {
+    await db.room.update({ where: { id }, data });
+    await writeAudit("Room", id, "UPDATE", { after: { name: data.name } });
+  } else {
+    const r = await db.room.create({ data });
+    await writeAudit("Room", r.id, "CREATE", { after: { name: data.name } });
+  }
+  revalidatePath(`/${locale}/settings`);
+  return { ok: true };
+}
+
+export async function deleteRoom(locale: string, id: string): Promise<ActionState> {
+  if (!(await adminOnly())) return { error: "forbidden" };
+  await db.room.delete({ where: { id } });
+  await writeAudit("Room", id, "DELETE");
+  revalidatePath(`/${locale}/settings`);
+  return { ok: true };
+}

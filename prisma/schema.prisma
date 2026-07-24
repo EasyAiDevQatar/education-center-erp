@@ -1479,8 +1479,26 @@ model Floor {
   /// Floor-plan image, stored inline as a data URL (like the centre logo).
   mapUrl     String?
   notes      String?
+  rooms      Room[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([buildingId])
+}
+
+model Room {
+  id        String   @id @default(cuid())
+  floorId   String
+  floor     Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  name      String
+  code      String?
+  /// Room use — classroom, lab, office, other.
+  kind      String   @default("CLASSROOM")
+  capacity  Int?
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([floorId])
 }

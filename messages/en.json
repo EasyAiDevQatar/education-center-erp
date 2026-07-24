@@ -2122,6 +2122,19 @@
     "hasMap": "Map",
     "noFloors": "No floors yet.",
     "floorCount": "{n} floors",
-    "none": "No buildings yet."
+    "none": "No buildings yet.",
+    "addRoom": "Add room",
+    "editRoom": "Edit room",
+    "roomCode": "Code",
+    "roomKindLabel": "Type",
+    "capacity": "Capacity",
+    "seats": "{n} seats",
+    "roomCount": "{n} rooms",
+    "roomKind": {
+      "CLASSROOM": "Classroom",
+      "LAB": "Lab",
+      "OFFICE": "Office",
+      "OTHER": "Other"
+    }
   }
 }

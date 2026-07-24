@@ -2,15 +2,28 @@
 
 import { useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, Building2, Layers, ImageUp, Trash2, MapPin } from "lucide-react";
+import { Plus, Pencil, Building2, Layers, ImageUp, Trash2, MapPin, DoorOpen } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { saveBuilding, deleteBuilding, saveFloor, deleteFloor } from "./buildings-actions";
+import { saveBuilding, deleteBuilding, saveFloor, deleteFloor, saveRoom, deleteRoom } from "./buildings-actions";
 
+const ROOM_KINDS = ["CLASSROOM", "LAB", "OFFICE", "OTHER"] as const;
+
+export type RoomRow = {
+  id: string;
+  floorId: string;
+  name: string;
+  code: string | null;
+  kind: string;
+  capacity: number | null;
+  notes: string | null;
+  active: boolean;
+};
 export type FloorRow = {
   id: string;
   buildingId: string;
@@ -18,6 +31,7 @@ export type FloorRow = {
   level: number;
   mapUrl: string | null;
   notes: string | null;
+  rooms: RoomRow[];
 };
 export type BuildingRow = {
   id: string;
@@ -142,6 +156,42 @@ function FloorFields({ floor, buildingId }: { floor?: FloorRow; buildingId: stri
   );
 }
 
+function RoomFields({ room, floorId }: { room?: RoomRow; floorId: string }) {
+  const t = useTranslations("buildings");
+  const ts = useTranslations("settings");
+  const tc = useTranslations("common");
+  return (
+    <>
+      <input type="hidden" name="floorId" value={floorId} />
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label={ts("nameAr")} htmlFor="r-name">
+          <Input id="r-name" name="name" defaultValue={room?.name} required />
+        </FormField>
+        <FormField label={t("roomCode")} htmlFor="r-code">
+          <Input id="r-code" name="code" dir="ltr" defaultValue={room?.code ?? ""} />
+        </FormField>
+        <FormField label={t("roomKindLabel")} htmlFor="r-kind">
+          <Select id="r-kind" name="kind" defaultValue={room?.kind ?? "CLASSROOM"}>
+            {ROOM_KINDS.map((k) => (
+              <option key={k} value={k}>{t(`roomKind.${k}`)}</option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label={t("capacity")} htmlFor="r-cap">
+          <Input id="r-cap" name="capacity" type="number" min="0" dir="ltr" defaultValue={room?.capacity ?? ""} />
+        </FormField>
+      </div>
+      <FormField label={tc("notes")} htmlFor="r-notes">
+        <Input id="r-notes" name="notes" defaultValue={room?.notes ?? ""} />
+      </FormField>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="active" defaultChecked={room?.active ?? true} className="size-4 accent-primary" />
+        {tc("active")}
+      </label>
+    </>
+  );
+}
+
 export function BuildingsManager({ buildings }: { buildings: BuildingRow[] }) {
   const t = useTranslations("buildings");
   const tc = useTranslations("common");
@@ -190,27 +240,69 @@ export function BuildingsManager({ buildings }: { buildings: BuildingRow[] }) {
               <div className="space-y-2 p-3">
                 {b.floors.length === 0 && <p className="text-sm text-muted-foreground">{t("noFloors")}</p>}
                 {[...b.floors].sort((x, y) => x.level - y.level).map((f) => (
-                  <div key={f.id} className="flex items-center gap-3 rounded-md border border-border/60 p-2">
-                    {f.mapUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={f.mapUrl} alt="" className="size-12 shrink-0 rounded object-cover" />
-                    ) : (
-                      <div className="flex size-12 shrink-0 items-center justify-center rounded bg-muted/40">
-                        <MapPin className="size-4 text-muted-foreground" />
+                  <div key={f.id} className="rounded-md border border-border/60">
+                    <div className="flex items-center gap-3 p-2">
+                      {f.mapUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={f.mapUrl} alt="" className="size-12 shrink-0 rounded object-cover" />
+                      ) : (
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded bg-muted/40">
+                          <MapPin className="size-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{f.name}</p>
+                        {f.notes && <p className="truncate text-xs text-muted-foreground">{f.notes}</p>}
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{f.name}</p>
-                      {f.notes && <p className="truncate text-xs text-muted-foreground">{f.notes}</p>}
+                      <Badge variant="muted" className="gap-1">
+                        <DoorOpen className="size-3" />
+                        {t("roomCount", { n: f.rooms.length })}
+                      </Badge>
+                      {f.mapUrl && <Badge variant="success">{t("hasMap")}</Badge>}
+                      <EntityDialog
+                        title={t("editFloor")}
+                        action={saveFloor.bind(null, locale, f.id)}
+                        fields={<FloorFields floor={f} buildingId={b.id} />}
+                        trigger={<Button size="icon" variant="ghost" aria-label={tc("edit")}><Pencil className="size-4" /></Button>}
+                      />
+                      <DeleteButton action={deleteFloor.bind(null, locale, f.id)} />
                     </div>
-                    {f.mapUrl && <Badge variant="success">{t("hasMap")}</Badge>}
-                    <EntityDialog
-                      title={t("editFloor")}
-                      action={saveFloor.bind(null, locale, f.id)}
-                      fields={<FloorFields floor={f} buildingId={b.id} />}
-                      trigger={<Button size="icon" variant="ghost" aria-label={tc("edit")}><Pencil className="size-4" /></Button>}
-                    />
-                    <DeleteButton action={deleteFloor.bind(null, locale, f.id)} />
+
+                    {/* Rooms on this floor */}
+                    <div className="space-y-1.5 border-t border-border/60 p-2 ps-4">
+                      {[...f.rooms].sort((x, y) => x.name.localeCompare(y.name)).map((r) => (
+                        <div key={r.id} className="flex items-center gap-2 text-sm">
+                          <DoorOpen className="size-3.5 shrink-0 text-muted-foreground" />
+                          <span className="font-medium">{r.name}</span>
+                          {r.code && <span className="text-xs text-muted-foreground" dir="ltr">{r.code}</span>}
+                          <Badge variant="muted" className="text-[10px]">{t(`roomKind.${r.kind}`)}</Badge>
+                          {r.capacity != null && (
+                            <span className="text-xs text-muted-foreground" dir="ltr">{t("seats", { n: r.capacity })}</span>
+                          )}
+                          {!r.active && <Badge variant="muted">{tc("inactive")}</Badge>}
+                          <span className="ms-auto flex items-center">
+                            <EntityDialog
+                              title={t("editRoom")}
+                              action={saveRoom.bind(null, locale, r.id)}
+                              fields={<RoomFields room={r} floorId={f.id} />}
+                              trigger={<Button size="icon" variant="ghost" className="size-7" aria-label={tc("edit")}><Pencil className="size-3.5" /></Button>}
+                            />
+                            <DeleteButton action={deleteRoom.bind(null, locale, r.id)} />
+                          </span>
+                        </div>
+                      ))}
+                      <EntityDialog
+                        title={t("addRoom")}
+                        action={saveRoom.bind(null, locale, null)}
+                        fields={<RoomFields floorId={f.id} />}
+                        trigger={
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+                            <Plus className="size-3.5" />
+                            {t("addRoom")}
+                          </Button>
+                        }
+                      />
+                    </div>
                   </div>
                 ))}
                 <EntityDialog

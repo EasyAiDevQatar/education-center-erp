@@ -77,7 +77,7 @@ export default async function SettingsPage({
   ];
   const buildingRows = await db.building.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: { floors: { orderBy: { level: "asc" } } },
+    include: { floors: { orderBy: { level: "asc" }, include: { rooms: { orderBy: { name: "asc" } } } } },
   });
   const buildings: BuildingRow[] = buildingRows.map((b) => ({
     id: b.id,
@@ -93,6 +93,16 @@ export default async function SettingsPage({
       level: f.level,
       mapUrl: f.mapUrl,
       notes: f.notes,
+      rooms: f.rooms.map((r) => ({
+        id: r.id,
+        floorId: r.floorId,
+        name: r.name,
+        code: r.code,
+        kind: r.kind,
+        capacity: r.capacity,
+        notes: r.notes,
+        active: r.active,
+      })),
     })),
   }));
   const demoUsers = await db.user.findMany({

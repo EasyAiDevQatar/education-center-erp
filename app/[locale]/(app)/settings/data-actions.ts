@@ -113,6 +113,7 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.subjects = (await tx.subject.deleteMany()).count;
     summary.terms = (await tx.term.deleteMany()).count;
     summary.gradeLevels = (await tx.gradeLevel.deleteMany()).count;
+    summary.rooms = (await tx.room.deleteMany()).count;
     summary.floors = (await tx.floor.deleteMany()).count;
     summary.buildings = (await tx.building.deleteMany()).count;
   });
@@ -424,26 +425,46 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
       ],
     },
   ];
+  const roomKinds = ["CLASSROOM", "CLASSROOM", "LAB", "OFFICE"];
   let buildings = 0;
   let floors = 0;
+  let roomsN = 0;
   for (let i = 0; i < buildingSpec.length; i++) {
     const b = buildingSpec[i];
-    const created = await db.building.create({
+    await db.building.create({
       data: {
         name: b.name,
         nameEn: b.nameEn,
         address: b.address,
         sortOrder: i,
         active: true,
-        floors: { create: b.floors.map((f) => ({ name: f.name, level: f.level })) },
+        floors: {
+          create: b.floors.map((f) => {
+            // 3 rooms per floor: two classrooms plus a lab/office.
+            const count = 3;
+            roomsN += count;
+            return {
+              name: f.name,
+              level: f.level,
+              rooms: {
+                create: Array.from({ length: count }, (_, r) => ({
+                  name: `${f.name} - قاعة ${r + 1}`,
+                  code: `${b.nameEn?.[0] ?? "B"}${f.level}${r + 1}`,
+                  kind: roomKinds[r % roomKinds.length],
+                  capacity: [12, 16, 20, 8][r % 4],
+                })),
+              },
+            };
+          }),
+        },
       },
     });
     buildings++;
     floors += b.floors.length;
-    void created;
   }
   summary.buildings = buildings;
   summary.floors = floors;
+  summary.rooms = roomsN;
 
   // --- packages ---
   let packages = 0;
