@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { minToHHMM } from "@/lib/planner";
 import { DispatchMap, type MapTrip } from "@/components/dispatch-map";
 import { previewAssignAll, assignToDriver, unassignPassenger } from "./actions";
@@ -57,6 +58,7 @@ function TripBlock({
   row,
   rtl,
   onDragStart,
+  tooltip,
 }: {
   trip: LaneTrip;
   axis: { minMin: number; maxMin: number };
@@ -64,6 +66,7 @@ function TripBlock({
   row: number;
   rtl: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  tooltip?: string;
 }) {
   const range = Math.max(1, axis.maxMin - axis.minMin);
   const startPct = ((trip.plannedStartMin - axis.minMin) / range) * 100;
@@ -76,7 +79,7 @@ function TripBlock({
       onDragStart={onDragStart}
       className={`absolute flex items-center gap-1 overflow-hidden rounded-md border px-1.5 text-[10px] leading-none ${onDragStart ? "cursor-grab active:cursor-grabbing" : ""} ${tripColour(trip.validationStatus)}`}
       style={{ ...horiz, width: `${width}%`, top: `${row * ROW_H + 2}px`, height: `${ROW_H - 4}px` }}
-      title={`${kindLabel(trip.tripKind)} · ${minToHHMM(trip.plannedStartMin)}–${minToHHMM(trip.plannedEndMin)} · ${trip.passengerName ?? ""}`}
+      title={tooltip ?? `${kindLabel(trip.tripKind)} · ${minToHHMM(trip.plannedStartMin)}–${minToHHMM(trip.plannedEndMin)} · ${trip.passengerName ?? ""}`}
     >
       <span className="truncate font-medium">{kindLabel(trip.tripKind)}</span>
       <span className="shrink-0 tabular-nums opacity-80" dir="ltr">
@@ -90,6 +93,7 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
   const t = useTranslations("transportDispatch");
   const tp = useTranslations("transportPlanner");
   const te = useTranslations("enums");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -104,18 +108,26 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
     go(dt.toISOString().slice(0, 10));
   };
 
-  // --- drag-to-assign -----------------------------------------------------
+  // --- drag-to-assign + filters -------------------------------------------
   const [pending, start] = useTransition();
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [halo, setHalo] = useState<Map<string, string>>(new Map());
   const [note, setNote] = useState<string | null>(null);
+  const [lastAssign, setLastAssign] = useState<string | null>(null);
+  const [driverFilter, setDriverFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [exceptionsOnly, setExceptionsOnly] = useState(false);
 
+  const errMsg = (code?: string) =>
+    code ? (t.has(`err.${code}`) ? t(`err.${code}`) : t("assignFailed")) : null;
   const run = (fn: () => Promise<{ ok?: boolean; error?: string }>) =>
     start(async () => {
       const res = await fn();
-      setNote(res.error ? (t.has(`err.${res.error}`) ? t(`err.${res.error}`) : t("assignFailed")) : null);
+      setNote(errMsg(res.error));
       router.refresh();
     });
+  const reasonLabel = (code: string) =>
+    tc.has(`validationCode.${code}`) ? tc(`validationCode.${code}`) : code;
 
   /** Picking up a pool card: light up each lane by how well it would fit. */
   const onPoolDragStart = (e: React.DragEvent, passengerKey: string) => {
@@ -134,7 +146,19 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
     e.preventDefault();
     const key = e.dataTransfer.getData("application/x-assign");
     endDrag();
-    if (key) run(() => assignToDriver(locale, board.day, key, driverId));
+    if (!key) return;
+    start(async () => {
+      const res = await assignToDriver(locale, board.day, key, driverId);
+      setNote(errMsg(res.error));
+      if (res.ok) setLastAssign(key);
+      router.refresh();
+    });
+  };
+  const undoLast = () => {
+    if (!lastAssign) return;
+    const key = lastAssign;
+    setLastAssign(null);
+    run(() => unassignPassenger(locale, board.day, key));
   };
   const onPoolDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -185,6 +209,10 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
     [board.lanes, driverColour],
   );
 
+  const tripPasses = (tr: LaneTrip) =>
+    (statusFilter === "all" || tr.validationStatus === statusFilter) &&
+    (!exceptionsOnly || tr.validationStatus !== "VALID");
+
   return (
     <>
       {/* Day bar */}
@@ -193,6 +221,31 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
         <Input type="date" dir="ltr" value={board.day} onChange={(e) => e.target.value && go(e.target.value)} className="w-40" />
         <Button type="button" variant="outline" size="sm" onClick={() => shiftDay(1)}>›</Button>
         <Button type="button" variant="secondary" size="sm" onClick={() => shiftDay(0)}>{t("today")}</Button>
+        {lastAssign && (
+          <Button type="button" variant="outline" size="sm" className="ms-auto gap-1" disabled={pending} onClick={undoLast}>
+            {t("undo")}
+          </Button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+        <Select value={driverFilter} onChange={(e) => setDriverFilter(e.target.value)} className="h-8 w-44 text-xs">
+          <option value="all">{t("allDrivers")}</option>
+          {board.lanes.map((l) => (
+            <option key={l.driverId} value={l.driverId}>{l.driverName}</option>
+          ))}
+        </Select>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-8 w-40 text-xs">
+          <option value="all">{t("allStatuses")}</option>
+          <option value="INVALID">{tp("validation.INVALID")}</option>
+          <option value="WARNING">{tp("validation.WARNING")}</option>
+          <option value="VALID">{tp("validation.VALID")}</option>
+        </Select>
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs">
+          <input type="checkbox" checked={exceptionsOnly} onChange={(e) => setExceptionsOnly(e.target.checked)} />
+          {t("exceptionsOnly")}
+        </label>
       </div>
 
       {note && (
@@ -256,55 +309,65 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
             ))}
           </div>
           <div className="space-y-2">
-            {board.lanes.map((lane: DriverLane) => {
-              const { rows, count } = packRows(lane.trips);
-              const laneH = Math.max(44, count * ROW_H + 4);
-              return (
-                <div key={lane.driverId} className="flex items-stretch gap-2">
-                  <div className="w-28 shrink-0 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="size-2 shrink-0 rounded-full" style={{ background: driverColour.get(lane.driverId) }} />
-                      <span className="truncate font-medium">{lane.driverName}</span>
+            {board.lanes
+              .filter((l) => driverFilter === "all" || l.driverId === driverFilter)
+              .map((lane: DriverLane) => {
+                const trips = lane.trips.filter(tripPasses);
+                const { rows, count } = packRows(trips);
+                const laneH = Math.max(44, count * ROW_H + 4);
+                return (
+                  <div key={lane.driverId} className="flex items-stretch gap-2">
+                    <div className="w-28 shrink-0 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="size-2 shrink-0 rounded-full" style={{ background: driverColour.get(lane.driverId) }} />
+                        <span className="truncate font-medium">{lane.driverName}</span>
+                      </div>
+                      <div className="text-muted-foreground" dir="ltr">
+                        {lane.plate ?? "—"} · {lane.capacity}
+                      </div>
                     </div>
-                    <div className="text-muted-foreground" dir="ltr">
-                      {lane.plate ?? "—"} · {lane.capacity}
+                    <div
+                      className={`relative flex-1 rounded-md bg-muted/40 transition-shadow ${dragKey ? haloClass(halo.get(lane.driverId)) : ""}`}
+                      style={{ height: `${laneH}px` }}
+                      onDragOver={(e) => {
+                        if (e.dataTransfer.types.includes("application/x-assign")) e.preventDefault();
+                      }}
+                      onDrop={(e) => onLaneDrop(e, lane.driverId)}
+                    >
+                      {trips.length === 0 ? (
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
+                          {lane.trips.length === 0 ? t("noTrips") : t("noMatch")}
+                        </span>
+                      ) : (
+                        trips.map((trip, i) => {
+                          const tooltip = [
+                            `${kindLabel(trip.tripKind)} · ${minToHHMM(trip.plannedStartMin)}–${minToHHMM(trip.plannedEndMin)}${trip.passengerName ? " · " + trip.passengerName : ""}`,
+                            ...trip.validationMessages.map((m) => `• ${reasonLabel(m.code)}`),
+                          ].join("\n");
+                          return (
+                            <TripBlock
+                              key={trip.id}
+                              trip={trip}
+                              axis={board.axis}
+                              kindLabel={kindLabel}
+                              row={rows[i]}
+                              rtl={rtl}
+                              tooltip={tooltip}
+                              onDragStart={(e) => {
+                                const pkey = trip.linkGroup ? trip.linkGroup.replace(/^day:/, "") : null;
+                                if (pkey) {
+                                  e.dataTransfer.setData("application/x-unassign", pkey);
+                                  e.dataTransfer.effectAllowed = "move";
+                                }
+                              }}
+                            />
+                          );
+                        })
+                      )}
                     </div>
                   </div>
-                  <div
-                    className={`relative flex-1 rounded-md bg-muted/40 transition-shadow ${dragKey ? haloClass(halo.get(lane.driverId)) : ""}`}
-                    style={{ height: `${laneH}px` }}
-                    onDragOver={(e) => {
-                      if (e.dataTransfer.types.includes("application/x-assign")) e.preventDefault();
-                    }}
-                    onDrop={(e) => onLaneDrop(e, lane.driverId)}
-                  >
-                    {lane.trips.length === 0 ? (
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
-                        {t("noTrips")}
-                      </span>
-                    ) : (
-                      lane.trips.map((trip, i) => (
-                        <TripBlock
-                          key={trip.id}
-                          trip={trip}
-                          axis={board.axis}
-                          kindLabel={kindLabel}
-                          row={rows[i]}
-                          rtl={rtl}
-                          onDragStart={(e) => {
-                            const pkey = trip.linkGroup ? trip.linkGroup.replace(/^day:/, "") : null;
-                            if (pkey) {
-                              e.dataTransfer.setData("application/x-unassign", pkey);
-                              e.dataTransfer.effectAllowed = "move";
-                            }
-                          }}
-                        />
-                      ))
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
 

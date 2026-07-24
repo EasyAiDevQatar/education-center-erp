@@ -25,6 +25,8 @@ export type LaneTrip = {
   estimatedKm: number;
   fallbackUsed: boolean;
   routeGeometry: string | null;
+  /** Why this trip needs review / is blocked (for hover-explain). */
+  validationMessages: { code: string; level: string; text: string }[];
   stops: { seq: number; kind: string; label: string; plannedMin: number; lat: number; lng: number }[];
 };
 
@@ -128,6 +130,7 @@ export async function dispatchBoard(locale: string, day: string): Promise<Dispat
       estimatedKm: t.estimatedKm,
       fallbackUsed: t.fallbackUsed,
       routeGeometry: t.routeGeometry,
+      validationMessages: t.validationMessages.map((m) => ({ code: m.code, level: m.level, text: m.text })),
       stops: t.stops.map((s) => ({ seq: s.seq, kind: s.kind, label: s.label, plannedMin: s.plannedMin, lat: s.lat, lng: s.lng })),
     });
   }

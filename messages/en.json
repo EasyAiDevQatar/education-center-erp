@@ -2238,6 +2238,11 @@
       "noLegs": "This passenger has no ride to plan today.",
       "notfound": "Nothing to unassign.",
       "invalid": "Something went wrong."
-    }
+    },
+    "undo": "Undo last assign",
+    "allDrivers": "All drivers",
+    "allStatuses": "All statuses",
+    "exceptionsOnly": "Exceptions only",
+    "noMatch": "No trips match"
   }
 }
