@@ -95,8 +95,9 @@ export function AssistantChat({ ready, compact = false }: { ready: boolean; comp
         {turns.map((m, i) => (
           <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
             <div
+              dir="auto"
               className={cn(
-                "max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm",
+                "max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-start text-sm",
                 m.role === "user" ? "bg-primary text-primary-foreground" : "bg-accent",
               )}
             >

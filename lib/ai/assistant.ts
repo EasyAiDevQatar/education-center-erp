@@ -29,8 +29,11 @@ function systemPrompt(locale: string, todayIso: string): string {
     '- To call a tool: {"tool": "<name>", "args": {...}}\n' +
     '- To answer the user: {"answer": "<your answer>"}\n' +
     "Call tools until you have the facts, then answer. Never invent numbers — " +
-    "if a tool errors or data is missing, say so. Keep answers short and " +
-    `concrete, in ${lang}. Amounts are in the centre's currency (QAR).`
+    "if a tool errors or data is missing, say so. Keep answers short and concrete. " +
+    `Always write the final answer in ${lang}, whatever language the question was in. ` +
+    "Tool results use English codes; translate them in your answer " +
+    "(CENTER/HOME, COMPLETED/SCHEDULED/DRAFT/CHECKED_IN/NO_SHOW/CANCELLED, " +
+    "UNPAID/PARTIAL/PAID). Amounts are in the centre\u2019s currency (QAR)."
   );
 }
 

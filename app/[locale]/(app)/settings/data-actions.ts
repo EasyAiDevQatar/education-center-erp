@@ -473,14 +473,24 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   // --- today's roster: confirmed sessions around "now" in live check-in
   // states, so the attendance screens demo without anyone scanning a card ---
   let checkins = 0;
+  const todayIso = today.toISOString().slice(0, 10);
   for (let i = 0; i < n.checkins && students.length && teacherIds.length; i++) {
     const st = pick(students);
-    // Spread starts from 2h ago to 3h ahead of the actual current time.
-    const start = new Date(today.getTime() + (-120 + i * (300 / Math.max(1, n.checkins))) * 60_000);
+    // Wall-clock afternoon slots (14:00–20:00), NOT the server's real instant,
+    // so the roster is visible on the calendar/planner and its trips are sane.
+    const slot = i % 7; // 14:00,14:30,…17:00
+    const startH = 14 + Math.floor(slot / 2);
+    const startM = (slot % 2) * 30;
     const hours = pick([1, 1, 1.5]);
+    const start = new Date(
+      `${todayIso}T${String(startH).padStart(2, "0")}:${String(startM).padStart(2, "0")}:00.000Z`,
+    );
     const end = new Date(start.getTime() + hours * 3600_000);
-    const started = start.getTime() <= today.getTime();
-    const finished = end.getTime() <= today.getTime();
+    // Stable lifecycle spread so the check-in board has all states regardless of
+    // when the seed ran: first third done, middle in progress, rest upcoming.
+    const frac = i / Math.max(1, n.checkins - 1);
+    const started = frac < 0.7;
+    const finished = frac < 0.4;
     const price = priceOf(st.gradeLevelId, "CENTER");
     await db.session.create({
       data: {

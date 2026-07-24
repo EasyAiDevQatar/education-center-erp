@@ -137,9 +137,21 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
     }
   }
 
-  const { legs, skipped } = buildDayLegs([...days.values()], {
+  const built = buildDayLegs([...days.values()], {
     arriveEarlyMin: config.bufferMin,
   });
+  // Only home-visit legs are the centre's job: a leg counts when it delivers to
+  // or leaves a HOME lesson. Pure home↔centre commutes are dropped, so the board
+  // mirrors the home sessions on the schedule.
+  const homeSessionIds = new Set(
+    sessions.filter((x) => x.location === "HOME").map((x) => x.id),
+  );
+  const legs = built.legs.filter(
+    (l) =>
+      (l.toSessionId !== null && homeSessionIds.has(l.toSessionId)) ||
+      (l.fromSessionId !== null && homeSessionIds.has(l.fromSessionId)),
+  );
+  const skipped = built.skipped;
 
   // --- drivers ------------------------------------------------------------
   const today = new Date();
