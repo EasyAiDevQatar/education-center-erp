@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Route, Phone, MapPin, ExternalLink } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
+import { TimeRange } from "@/components/time-range";
 import "leaflet/dist/leaflet.css";
 
 /** The slice of a trip a session card needs to show. Built server-side by
@@ -217,9 +218,9 @@ function HoverCard({
             {d.trip ? (
               <span>
                 {te(`tripStatus.${d.trip.status as "PROPOSED"}`)}
-                <span className="tabular-nums" dir="ltr">
-                  {" "}
-                  · {minToHHMM(d.trip.startMin)}–{minToHHMM(d.trip.endMin)}
+                <span className="tabular-nums">
+                  {" · "}
+                  <TimeRange start={d.trip.startMin} end={d.trip.endMin} />
                 </span>
               </span>
             ) : (

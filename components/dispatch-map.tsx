@@ -147,11 +147,27 @@ export function DispatchMap({
     };
   }, [trips, centre, centreLabel]);
 
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const fullscreen = () => {
+    const el = wrapRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen?.();
+  };
+
   return (
-    <div
-      ref={ref}
-      style={{ height }}
-      className="w-full overflow-hidden rounded-lg border border-border"
-    />
+    <div ref={wrapRef} className="relative w-full overflow-hidden rounded-lg border border-border bg-card">
+      <button
+        type="button"
+        onClick={fullscreen}
+        aria-label="fullscreen"
+        className="absolute end-2 top-2 z-[500] flex size-8 items-center justify-center rounded-md border border-border bg-card/90 text-foreground shadow-sm hover:bg-accent"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+        </svg>
+      </button>
+      <div ref={ref} style={{ height }} className="w-full" />
+    </div>
   );
 }

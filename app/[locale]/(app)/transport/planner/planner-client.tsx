@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { minToHHMM } from "@/lib/planner";
+import { TimeRange } from "@/components/time-range";
 import { AddStopDialog } from "./add-stop-dialog";
 import { NewTripDialog } from "./new-trip-dialog";
 import { OverrideDialog } from "./override-dialog";
@@ -376,8 +377,8 @@ export function TransportPlannerClient({
                 <span className="text-muted-foreground">
                   {t("stopsCount", { n: trip.stops.length })}
                 </span>
-                <span className="ms-auto tabular-nums" dir="ltr">
-                  {minToHHMM(trip.plannedStartMin)}–{minToHHMM(trip.plannedEndMin)}
+                <span className="ms-auto">
+                  <TimeRange start={trip.plannedStartMin} end={trip.plannedEndMin} />
                 </span>
               </div>
 
@@ -489,7 +490,7 @@ export function TransportPlannerClient({
                         <div className="ms-6 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
                           {st.timing.dir === "TO_LESSON" ? (
                             <>
-                              <span>{t("tSession")}: <span dir="ltr">{minToHHMM(st.timing.sessionStartMin)}–{minToHHMM(st.timing.sessionEndMin)}</span></span>
+                              <span>{t("tSession")}: <TimeRange start={st.timing.sessionStartMin} end={st.timing.sessionEndMin} /></span>
                               <span>{t("tRequiredArrival")}: <span dir="ltr">{minToHHMM(st.timing.requiredArrivalMin)}</span></span>
                               <span>{t("tPlannedArrival")}: <span dir="ltr">{minToHHMM(st.timing.plannedArrivalMin)}</span></span>
                               {st.timing.delayMin > 0 ? (
