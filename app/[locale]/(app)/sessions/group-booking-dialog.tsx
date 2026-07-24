@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Users, X, Check, Repeat, AlertTriangle } from "lucide-react";
+import { Users, X, Check, Repeat, AlertTriangle, Wand2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import { formatMoney } from "@/lib/money";
 import { weeklyOccurrences } from "@/lib/recurrence";
 import { useConflictCheck } from "@/components/conflict-warnings";
 import { createGroupSessions } from "./actions";
+import { suggestFix, type FixSuggestion } from "./suggest-actions";
 import type { StudentOpt, Opt, PriceMatrix } from "./session-dialog";
 
 export function GroupBookingDialog({
@@ -75,6 +76,7 @@ export function GroupBookingDialog({
   const [gradeOverride, setGradeOverride] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("UNPAID");
   const [q, setQ] = useState("");
+  const [gradeFilter, setGradeFilter] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Weekly recurrence
@@ -88,8 +90,12 @@ export function GroupBookingDialog({
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return s ? students.filter((x) => x.name.toLowerCase().includes(s)) : students;
-  }, [students, q]);
+    return students.filter(
+      (x) =>
+        (!gradeFilter || x.gradeLevelId === gradeFilter) &&
+        (!s || x.name.toLowerCase().includes(s)),
+    );
+  }, [students, q, gradeFilter]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -156,6 +162,41 @@ export function GroupBookingDialog({
   );
   const conflictedStudents = conflictResults.filter((r) => r.conflicts.length > 0);
   const conflictByStudent = new Map(conflictResults.map((r) => [r.studentId, r.conflicts.length]));
+
+  // A proposed way out of the clash — recomputed server-side whenever the slot
+  // or the selection changes, only while there is a clash to fix.
+  const [fix, setFix] = useState<FixSuggestion | null>(null);
+  const [fixLoading, setFixLoading] = useState(false);
+  const hasConflict = conflictedStudents.length > 0;
+  const fixKey = [occurrences[0] ?? date, time, hours, teacherId, [...selected].sort().join(",")].join("|");
+  useEffect(() => {
+    if (!open || !hasConflict || !teacherId || selected.size === 0) {
+      setFix(null);
+      setFixLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setFixLoading(true);
+    const handle = setTimeout(async () => {
+      const r = await suggestFix({
+        date: occurrences[0] ?? date,
+        time,
+        hours: parseFloat(hours) || 1,
+        teacherId,
+        studentIds: [...selected],
+      });
+      if (!cancelled) {
+        setFix(r);
+        setFixLoading(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+    // fixKey collapses the inputs into one stable dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixKey, open, hasConflict]);
 
   function toggleWeekday(dn: number) {
     setWeekdays((prev) => {
@@ -288,9 +329,22 @@ export function GroupBookingDialog({
 
           {/* Student multi-select */}
           <div className="rounded-md border border-border">
-            <div className="flex items-center gap-2 border-b border-border p-2">
+            <div className="flex flex-wrap items-center gap-2 border-b border-border p-2">
               <Users className="size-4 text-muted-foreground" />
-              <Input placeholder={t("searchStudents")} value={q} onChange={(e) => setQ(e.target.value)} className="h-8 flex-1" />
+              <Input placeholder={t("searchStudents")} value={q} onChange={(e) => setQ(e.target.value)} className="h-8 min-w-32 flex-1" />
+              {/* Filter the list to one grade, so "get four in grade 10" is a
+                  single selection instead of hunting names one by one. */}
+              <Select
+                aria-label={t("filterByGrade")}
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="h-8 w-36"
+              >
+                <option value="">{t("allGrades")}</option>
+                {levels.map((l) => (
+                  <option key={l.id} value={l.id}>{l.label}</option>
+                ))}
+              </Select>
               <Button type="button" size="sm" variant="secondary" onClick={selectAllFiltered}>{t("selectAll")}</Button>
               {selected.size > 0 && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())} className="gap-1">
@@ -359,6 +413,46 @@ export function GroupBookingDialog({
                 ))}
               </ul>
               <p className="mt-1.5 text-xs text-muted-foreground">{tf("advisory")}</p>
+
+              {/* Suggest a fix, accept with one tap. Accepting sets the field,
+                  the conflict check re-runs, and the panel clears if it worked. */}
+              <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-warning/40 pt-2">
+                {fixLoading ? (
+                  <span className="text-xs text-muted-foreground">{tf("findingFix")}</span>
+                ) : fix && (fix.time || fix.teacherId) ? (
+                  <>
+                    <span className="text-xs font-medium">{tf("suggestFix")}</span>
+                    {fix.time && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 gap-1"
+                        onClick={() => setTime(fix.time!)}
+                      >
+                        <Wand2 className="size-3.5" />
+                        {tf("moveTo", { time: fix.time })}
+                      </Button>
+                    )}
+                    {fix.teacherId && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 gap-1"
+                        onClick={() => setTeacherId(fix.teacherId!)}
+                      >
+                        <Wand2 className="size-3.5" />
+                        {tf("assignTeacher", {
+                          name: teachers.find((tt) => tt.id === fix.teacherId)?.label ?? "",
+                        })}
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">{tf("noAutoFix")}</span>
+                )}
+              </div>
             </div>
           )}
 

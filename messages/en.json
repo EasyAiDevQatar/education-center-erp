@@ -265,7 +265,9 @@
     "weeks": "Weeks",
     "occurrences": "{n} dates",
     "totalSessions": "{n} sessions",
-    "tooMany": "Too many sessions in one batch — reduce students, weekdays, or weeks."
+    "tooMany": "Too many sessions in one batch — reduce students, weekdays, or weeks.",
+    "filterByGrade": "Filter by grade",
+    "allGrades": "All grades"
   },
   "calendar": {
     "title": "Schedule",
@@ -1013,7 +1015,12 @@
     "outsideAvailability": "Outside the teacher's working hours",
     "advisory": "Advisory only — you can still save.",
     "none": "No conflicts",
-    "countForStudents": "{n} student(s) have a conflict"
+    "countForStudents": "{n} student(s) have a conflict",
+    "findingFix": "Looking for a free slot…",
+    "suggestFix": "Fix:",
+    "moveTo": "Move to {time}",
+    "assignTeacher": "Give to {name}",
+    "noAutoFix": "No automatic fix — adjust the time or teacher by hand."
   },
   "reports": {
     "title": "Reports",
