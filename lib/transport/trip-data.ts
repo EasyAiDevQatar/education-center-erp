@@ -18,6 +18,7 @@ import {
   type ValidationMessage,
 } from "./validate";
 import { getMatrixWithFallback, getFallbackProvider, getRoutingProvider } from "./routing";
+import { segmentByCentre } from "./segment";
 import type { TripStatus } from "@/lib/enums";
 
 /**
@@ -274,17 +275,21 @@ export async function generateDayTrips(
   const plan = await buildDayPlan(locale, dayIso);
   const { start } = dayBounds(dayIso);
 
-  // Rebuild the generator's own proposals as ONE chained trip per passenger:
-  // their whole day — home → lesson → lesson → centre → … → home — as an
-  // ordered run of numbered stops. Trips a human has touched are left alone.
+  // Rebuild the generator's own proposals for each passenger as one or more
+  // direction-coherent trips (توصيل to the centre, عودة from it — see the
+  // segmentation below). Trips a human has touched are left alone.
   const priorTrips = await db.trip.findMany({
     where: { date: start },
     select: { id: true, status: true, legKey: true },
   });
+  // A passenger's day may now be several linked trips (legKey `day:pkey:idx`).
+  // If ANY of them is locked, the whole passenger is left alone so we never
+  // rebuild half a linked pair. Match on the shared base key.
+  const baseOf = (legKey: string | null) => (legKey ?? "").replace(/:\d+$/, "");
   const lockedKeys = new Set(
     priorTrips
       .filter((t) => !generatorMayReplace(t.status as TripStatus))
-      .map((t) => t.legKey),
+      .map((t) => baseOf(t.legKey)),
   );
   const removable = priorTrips.filter((t) => generatorMayReplace(t.status as TripStatus));
   if (removable.length) {
@@ -323,8 +328,8 @@ export async function generateDayTrips(
   const createdTrips: CreatedTrip[] = [];
 
   for (const [pkey, items] of byPassenger) {
-    const legKey = `day:${pkey}`;
-    if (lockedKeys.has(legKey)) {
+    const baseLegKey = `day:${pkey}`;
+    if (lockedKeys.has(baseLegKey)) {
       locked++;
       continue;
     }
@@ -334,7 +339,7 @@ export async function generateDayTrips(
     const assigned = items.filter((x) => x.a);
     if (assigned.length === 0) continue; // whole chain infeasible → stays in problems
 
-    const kind = items[0].leg.passengerKind;
+    const pkind = items[0].leg.passengerKind;
     const passengerId = items[0].leg.passengerId;
     const driverId = assigned[0].a!.driverId;
     const driver = plan.drivers.find((d) => d.id === driverId) ?? null;
@@ -349,12 +354,10 @@ export async function generateDayTrips(
       sessionId: string | null;
     };
     const wps: WP[] = [];
-    let totalKm = 0;
     let deadhead = 0;
     for (const { leg, a } of items) {
       wps.push({ pt: leg.from, kind: "PICKUP", label: leg.fromLabel, plannedMin: a?.pickupMin ?? leg.readyMin, sessionId: leg.fromSessionId });
       wps.push({ pt: leg.to, kind: "DROPOFF", label: leg.toLabel, plannedMin: a?.dropoffMin ?? leg.dueMin, sessionId: leg.toSessionId });
-      totalKm += distanceKm(leg.from, leg.to) + (a?.deadheadKm ?? 0);
       deadhead += a?.deadheadKm ?? 0;
     }
     wps.sort((x, y) => x.plannedMin - y.plannedMin);
@@ -368,144 +371,160 @@ export async function generateDayTrips(
       }
       merged.push({ ...wp });
     }
-    // Number distinct locations L1, L2, … in visit order; a place revisited
-    // (the centre, the teacher's own home) keeps its number.
-    const locNum = new Map<string, number>();
-    const stops = merged.map((wp, idx) => {
-      const ck = `${wp.pt.lat.toFixed(4)},${wp.pt.lng.toFixed(4)}`;
-      if (!locNum.has(ck)) locNum.set(ck, locNum.size + 1);
-      return {
-        seq: idx + 1,
-        kind: wp.kind,
-        lat: wp.pt.lat,
-        lng: wp.pt.lng,
-        label: `L${locNum.get(ck)} · ${wp.label}`,
-        plannedMin: wp.plannedMin,
-        passengerTeacherId: kind === "TEACHER" ? passengerId : null,
-        passengerStudentId: kind === "STUDENT" ? passengerId : null,
-        sessionId: wp.sessionId,
-      };
-    });
 
-    const plannedStartMin = Math.min(assigned[0].a!.departMin, stops[0].plannedMin);
-    const plannedEndMin = stops[stops.length - 1].plannedMin;
-
-    // --- road routing: one matrix over this chain's ordered stops ------------
-    // Real road duration/distance from the configured provider (OSRM when up,
-    // the straight-line estimator otherwise — and the result says which). A stop
-    // with an invalid pin would make OSRM "route" a (0,0), so any bad coordinate
-    // forces the estimator for the whole chain rather than a nonsense road time.
-    const points = stops.map((st) => ({ lat: st.lat, lng: st.lng }));
-    const allCoordsValid = points.every((p) => coordValid(p.lat, p.lng));
-    const matrix = allCoordsValid
-      ? await getMatrixWithFallback(points)
-      : await getFallbackProvider().getMatrix(points);
-
-    const op = plan.config.operational;
-    const serviceSecFor = (kind: string) =>
-      Math.round((kind === "PICKUP" ? op.boardingTimeMin : op.dropoffTimeMin) * 60);
-
-    // Operational-duration breakdown from the previous stop, kept as separate
-    // numbers (routing + service + delay), never merged into one (spec §13).
-    let realDistM = 0;
-    const breakdown = stops.map((st, i) => {
-      const service = serviceSecFor(st.kind);
-      if (i === 0) {
-        return { routingDurationS: null as number | null, serviceDurationS: service, delayAllowanceS: 0, operationalDurationS: null as number | null, distanceFromPrevM: null as number | null };
-      }
-      const rawDur = matrix.durationsSeconds[i - 1]?.[i] ?? null;
-      const rawDist = matrix.distancesMeters[i - 1]?.[i] ?? null;
-      const fixedDelay = Math.round(op.fixedDelayMin * 60);
-      const traffic = rawDur == null ? 0 : Math.round((rawDur * op.trafficBufferPercent) / 100);
-      const delayAllowanceS = fixedDelay + traffic;
-      const operationalDurationS = rawDur == null ? null : rawDur + delayAllowanceS + service;
-      if (rawDist != null) realDistM += rawDist;
-      return { routingDurationS: rawDur, serviceDurationS: service, delayAllowanceS, operationalDurationS, distanceFromPrevM: rawDist };
-    });
-
-    // Validate against every served session's window AND, now, the real road
-    // time between consecutive stops (spec §21, §17-18). When OSRM is live the
-    // stops are no longer flagged fallback, so a clean chain can be VALID; when
-    // it degrades, `matrix.fallbackUsed` keeps the trip at WARNING.
+    // Split the day at the centre (C4): a run of stops ending at the centre is a
+    // delivery (توصيل / PICKUP), one leaving it is a return (عودة / RETURN). Each
+    // segment becomes its own linked trip, validated on its own — so a return's
+    // loose end-of-day home deadline never flatters a delivery's tight one.
+    const segments = segmentByCentre(merged, (w) => w.pt, plan.config.centre);
     const win = plan.sessionWindows;
-    const vStops: StopForValidation[] = stops.map((st, i) => {
-      const w = st.sessionId ? win?.get(st.sessionId) : undefined;
-      return {
-        seq: st.seq,
-        kind: st.kind,
-        plannedMin: st.plannedMin,
-        sessionStartMin: w?.startMin ?? null,
-        sessionEndMin: w?.endMin ?? null,
-        servesSession: st.sessionId != null,
+    const rules = plan.config.rules;
+    const op = plan.config.operational;
+    const serviceSecFor = (k: string) =>
+      Math.round((k === "PICKUP" ? op.boardingTimeMin : op.dropoffTimeMin) * 60);
+
+    for (let segIdx = 0; segIdx < segments.length; segIdx++) {
+      const seg = segments[segIdx];
+      if (seg.items.length < 2) continue;
+
+      // Number distinct locations L1, L2, … within THIS trip.
+      const locNum = new Map<string, number>();
+      const stops = seg.items.map((wp, idx) => {
+        const ck = `${wp.pt.lat.toFixed(4)},${wp.pt.lng.toFixed(4)}`;
+        if (!locNum.has(ck)) locNum.set(ck, locNum.size + 1);
+        return {
+          seq: idx + 1,
+          kind: wp.kind,
+          lat: wp.pt.lat,
+          lng: wp.pt.lng,
+          label: `L${locNum.get(ck)} · ${wp.label}`,
+          plannedMin: wp.plannedMin,
+          passengerTeacherId: pkind === "TEACHER" ? passengerId : null,
+          passengerStudentId: pkind === "STUDENT" ? passengerId : null,
+          sessionId: wp.sessionId,
+        };
+      });
+
+      const plannedStartMin = stops[0].plannedMin;
+      const plannedEndMin = stops[stops.length - 1].plannedMin;
+
+      // Real road duration/distance for this trip's stops (OSRM when up, the
+      // marked estimator otherwise). A bad pin forces the estimator rather than
+      // a nonsense (0,0) road time.
+      const points = stops.map((st) => ({ lat: st.lat, lng: st.lng }));
+      const allCoordsValid = points.every((p) => coordValid(p.lat, p.lng));
+      const matrix = allCoordsValid
+        ? await getMatrixWithFallback(points)
+        : await getFallbackProvider().getMatrix(points);
+
+      let realDistM = 0;
+      const breakdown = stops.map((st, i) => {
+        const service = serviceSecFor(st.kind);
+        if (i === 0) {
+          return { routingDurationS: null as number | null, serviceDurationS: service, delayAllowanceS: 0, operationalDurationS: null as number | null, distanceFromPrevM: null as number | null };
+        }
+        const rawDur = matrix.durationsSeconds[i - 1]?.[i] ?? null;
+        const rawDist = matrix.distancesMeters[i - 1]?.[i] ?? null;
+        const fixedDelay = Math.round(op.fixedDelayMin * 60);
+        const traffic = rawDur == null ? 0 : Math.round((rawDur * op.trafficBufferPercent) / 100);
+        const delayAllowanceS = fixedDelay + traffic;
+        const operationalDurationS = rawDur == null ? null : rawDur + delayAllowanceS + service;
+        if (rawDist != null) realDistM += rawDist;
+        return { routingDurationS: rawDur, serviceDurationS: service, delayAllowanceS, operationalDurationS, distanceFromPrevM: rawDist };
+      });
+
+      const vStops: StopForValidation[] = stops.map((st, i) => {
+        const w = st.sessionId ? win?.get(st.sessionId) : undefined;
+        return {
+          seq: st.seq,
+          kind: st.kind,
+          plannedMin: st.plannedMin,
+          sessionStartMin: w?.startMin ?? null,
+          sessionEndMin: w?.endMin ?? null,
+          servesSession: st.sessionId != null,
+          fallbackUsed: matrix.fallbackUsed,
+          roadTravelFromPrevS: breakdown[i].routingDurationS,
+        };
+      });
+      const v = validateTrip(vStops, rules);
+
+      const stopsCreate = stops.map((st, i) => ({
+        ...st,
+        routingDurationS: breakdown[i].routingDurationS,
+        serviceDurationS: breakdown[i].serviceDurationS,
+        delayAllowanceS: breakdown[i].delayAllowanceS,
+        operationalDurationS: breakdown[i].operationalDurationS,
+        distanceFromPrevM: breakdown[i].distanceFromPrevM,
+        estimated: matrix.estimated,
         fallbackUsed: matrix.fallbackUsed,
-        roadTravelFromPrevS: breakdown[i].routingDurationS,
-      };
-    });
-    const v = validateTrip(vStops, plan.config.rules);
+      }));
 
-    const stopsCreate = stops.map((st, i) => ({
-      ...st,
-      routingDurationS: breakdown[i].routingDurationS,
-      serviceDurationS: breakdown[i].serviceDurationS,
-      delayAllowanceS: breakdown[i].delayAllowanceS,
-      operationalDurationS: breakdown[i].operationalDurationS,
-      distanceFromPrevM: breakdown[i].distanceFromPrevM,
-      estimated: matrix.estimated,
-      fallbackUsed: matrix.fallbackUsed,
-    }));
+      const km = realDistM > 0 ? realDistM / 1000 : 0;
 
-    // Road distance when the provider gave one (it always does — the estimator
-    // reports straight-line×detour), else the allocator's straight-line total.
-    const km = realDistM > 0 ? realDistM / 1000 : totalKm;
-
-    // Real road geometry (OSRM encoded polyline) so the board draws the actual
-    // path, not straight lines. Only when we have a live road matrix — on the
-    // estimator there is no geometry and the map falls back to dashed segments.
-    let routeGeometry: string | null = null;
-    if (!matrix.fallbackUsed && allCoordsValid && points.length > 1) {
-      try {
-        const rr = await getRoutingProvider().getRouteThroughStops(points);
-        routeGeometry = rr.geometry;
-      } catch {
-        routeGeometry = null;
+      // Tightest margin against THIS trip's own binding constraint (C3/C4):
+      // arrival latitude for a delivery, ready-to-leave slack for a return. A
+      // return's loose home deadline never inflates a delivery's margin.
+      let slackMin: number | null = null;
+      for (const st of stops) {
+        if (!st.sessionId) continue;
+        const w = win?.get(st.sessionId);
+        if (!w) continue;
+        const margin =
+          st.kind === "DROPOFF"
+            ? arrivalWindow(w.startMin, rules).latest - st.plannedMin
+            : st.plannedMin - departureFloor(w.endMin, rules);
+        slackMin = slackMin == null ? margin : Math.min(slackMin, margin);
       }
-    }
 
-    const trip = await db.trip.create({
-      data: {
-        date: start,
-        status: "PROPOSED",
-        legKey,
-        validationStatus: v.status,
-        validationMessages: JSON.stringify(v.messages),
+      // Real road geometry (OSRM polyline) for the board; null on the estimator.
+      let routeGeometry: string | null = null;
+      if (!matrix.fallbackUsed && allCoordsValid && points.length > 1) {
+        try {
+          routeGeometry = (await getRoutingProvider().getRouteThroughStops(points)).geometry;
+        } catch {
+          routeGeometry = null;
+        }
+      }
+
+      const trip = await db.trip.create({
+        data: {
+          date: start,
+          status: "PROPOSED",
+          legKey: `${baseLegKey}:${segIdx}`,
+          tripKind: seg.kind,
+          linkGroup: baseLegKey,
+          validationStatus: v.status,
+          validationMessages: JSON.stringify(v.messages),
+          driverId,
+          vehicleId: driver?.vehicleId ?? null,
+          plannedStartMin,
+          plannedEndMin,
+          estimatedKm: Math.round(km * 100) / 100,
+          estimatedMin: plannedEndMin - plannedStartMin,
+          autoAllocated: true,
+          allocationScore: assigned[0].a!.score,
+          // Empty km to reach the first pickup belongs to the delivery leg only.
+          deadheadKm: segIdx === 0 ? Math.round(deadhead * 100) / 100 : 0,
+          slackMin,
+          routeGeometry,
+          createdById: byUserId ?? null,
+          stops: { create: stopsCreate },
+        },
+        select: { id: true },
+      });
+      createdTrips.push({
+        id: trip.id,
         driverId,
         vehicleId: driver?.vehicleId ?? null,
         plannedStartMin,
         plannedEndMin,
-        estimatedKm: Math.round(km * 100) / 100,
-        estimatedMin: plannedEndMin - plannedStartMin,
-        autoAllocated: true,
-        allocationScore: assigned[0].a!.score,
-        deadheadKm: Math.round(deadhead * 100) / 100,
-        slackMin: Math.min(...assigned.map((x) => x.a!.slackMin)),
-        routeGeometry,
-        createdById: byUserId ?? null,
-        stops: { create: stopsCreate },
-      },
-      select: { id: true },
-    });
-    createdTrips.push({
-      id: trip.id,
-      driverId,
-      vehicleId: driver?.vehicleId ?? null,
-      plannedStartMin,
-      plannedEndMin,
-      firstPt: stops.length ? { lat: stops[0].lat, lng: stops[0].lng } : null,
-      lastPt: stops.length ? { lat: stops[stops.length - 1].lat, lng: stops[stops.length - 1].lng } : null,
-      validationStatus: v.status,
-      validationMessages: v.messages,
-    });
-    created++;
+        firstPt: { lat: stops[0].lat, lng: stops[0].lng },
+        lastPt: { lat: stops[stops.length - 1].lat, lng: stops[stops.length - 1].lng },
+        validationStatus: v.status,
+        validationMessages: v.messages,
+      });
+      created++;
+    }
   }
 
   // --- turnaround: can each driver/vehicle actually get from one of its trips
@@ -615,6 +634,10 @@ export type BoardTrip = {
   passengerName: string | null;
   /** Distinct passengers served (for the card header). */
   passengerCount: number;
+  /** Direction after the C4 split: PICKUP | RETURN | CHAIN | null. */
+  tripKind: string | null;
+  /** Shared key grouping a passenger's linked توصيل + عودة trips. */
+  linkGroup: string | null;
   fromLabel: string;
   toLabel: string;
   /** Phase-1/2 validation surfaced to the board. */
@@ -733,6 +756,8 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
       autoAllocated: t.autoAllocated,
       passengerName: passenger ? displayName(passenger, locale) : null,
       passengerCount: passengerIds.size,
+      tripKind: t.tripKind ?? null,
+      linkGroup: t.linkGroup ?? null,
       fromLabel: first?.label ?? "",
       toLabel: last?.label ?? "",
       validationStatus: t.validationStatus,

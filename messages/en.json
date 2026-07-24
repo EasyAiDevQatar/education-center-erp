@@ -1869,7 +1869,12 @@
     "tEarlyDepart": "Leaves early by",
     "min": "min",
     "passengers": "{n} passengers",
-    "durationHM": "{h}h {m}m"
+    "durationHM": "{h}h {m}m",
+    "tripKind": {
+      "PICKUP": "Pickup trip",
+      "RETURN": "Return trip",
+      "CHAIN": "Field trip"
+    }
   },
   "trips": {
     "title": "Trips",

@@ -1272,6 +1272,14 @@ model Trip {
   /// road path rather than straight segments. Null when built on the estimator.
   routeGeometry   String?
 
+  /// Trip direction after the pickup/return split (C4): PICKUP (توصيل, homes
+  /// → centre), RETURN (عودة, centre → homes), or CHAIN (a field round / an
+  /// un-split day). Null on legacy trips.
+  tripKind        String?
+  /// Shared key linking the trips a single passenger's day was split into,
+  /// so the board can group توصيل + عودة together.
+  linkGroup       String?
+
   notes       String?
   createdById String?
 

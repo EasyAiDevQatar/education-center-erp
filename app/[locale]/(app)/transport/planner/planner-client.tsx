@@ -353,6 +353,20 @@ export function TransportPlannerClient({
                   <ValidationIcon status={trip.validationStatus} />
                   {t(`validation.${trip.validationStatus}`)}
                 </Badge>
+                {/* Direction after the pickup/return split (C4). */}
+                {trip.tripKind && (
+                  <Badge
+                    variant={trip.tripKind === "PICKUP" ? "default" : trip.tripKind === "RETURN" ? "success" : "muted"}
+                    className="gap-1"
+                  >
+                    {trip.tripKind === "PICKUP" ? (
+                      <ArrowDownToLine className="size-3.5" />
+                    ) : trip.tripKind === "RETURN" ? (
+                      <ArrowUpFromLine className="size-3.5" />
+                    ) : null}
+                    {t(`tripKind.${trip.tripKind}`)}
+                  </Badge>
+                )}
                 {/* Estimated (straight-line) vs road-routed indicator (spec §28). */}
                 <Badge variant="muted" className="gap-1">
                   <Ruler className="size-3.5" />

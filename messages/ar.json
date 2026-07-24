@@ -1869,7 +1869,12 @@
     "tEarlyDepart": "يغادر مبكراً",
     "min": "دقيقة",
     "passengers": "{n} ركاب",
-    "durationHM": "{h} س {m} د"
+    "durationHM": "{h} س {m} د",
+    "tripKind": {
+      "PICKUP": "رحلة توصيل",
+      "RETURN": "رحلة عودة",
+      "CHAIN": "رحلة ميدانية"
+    }
   },
   "trips": {
     "title": "الرحلات",
