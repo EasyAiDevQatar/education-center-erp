@@ -30,7 +30,7 @@ export default async function SessionsPage({
     select: { id: true },
   });
 
-  const [sessions, students, teachers, levels, matrix, settingsRows, activePackages, subjectList, teacherSubjectRows] =
+  const [sessions, students, teachers, levels, matrix, settingsRows, activePackages, subjectList, teacherSubjectRows, groups] =
     await Promise.all([
       db.session.findMany({
         where: sessionWhere(filters),
@@ -57,6 +57,11 @@ export default async function SessionsPage({
         orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
       }),
       db.teacherSubject.findMany({ select: { teacherId: true, subjectId: true } }),
+      db.studentGroup.findMany({
+        where: { active: true },
+        orderBy: { name: "asc" },
+        include: { members: { select: { studentId: true, pricePerHour: true } } },
+      }),
     ]);
 
   const currency = settingsRows[0]?.value ?? "QAR";
@@ -91,7 +96,21 @@ export default async function SessionsPage({
     name: displayName(s, locale),
     teacherIds: s.teachers.map((x) => x.teacherId),
     gradeLevelId: s.gradeLevelId,
+    gradeYear: s.gradeYear,
     studyLocation: s.studyLocation as "CENTER" | "HOME",
+  }));
+
+  const groupOpts = groups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    teacherId: g.teacherId,
+    location: g.location as "CENTER" | "HOME",
+    gradeLevelId: g.gradeLevelId,
+    defaultPricePerHour: g.defaultPricePerHour === null ? null : toNumber(g.defaultPricePerHour),
+    members: g.members.map((m) => ({
+      studentId: m.studentId,
+      pricePerHour: m.pricePerHour === null ? null : toNumber(m.pricePerHour),
+    })),
   }));
   const packageOpts = activePackages.map((p) => ({
     id: p.id,
@@ -119,6 +138,7 @@ export default async function SessionsPage({
       <SessionsClient
         sessions={rows}
         students={studentOpts}
+        groups={groupOpts}
         teachers={teacherOpts}
         levels={levelOpts}
         matrix={matrixMap}

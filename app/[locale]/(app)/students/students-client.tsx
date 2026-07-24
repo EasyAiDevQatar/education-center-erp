@@ -40,6 +40,7 @@ export type StudentRow = {
   phone: string | null;
   gradeLevelId: string | null;
   gradeLevelLabel: string | null;
+  gradeYear: number | null;
   guardianId: string | null;
   guardianLabel: string | null;
   studyLocation: "CENTER" | "HOME";
@@ -105,6 +106,14 @@ function StudentFields({
             <option value="">—</option>
             {levels.map((l) => (
               <option key={l.id} value={l.id}>{l.label}</option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label={t("gradeYear")} htmlFor="gradeYear" hint={t("gradeYearHint")}>
+          <Select id="gradeYear" name="gradeYear" defaultValue={student?.gradeYear != null ? String(student.gradeYear) : ""}>
+            <option value="">—</option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>{t("gradeYearN", { n })}</option>
             ))}
           </Select>
         </FormField>

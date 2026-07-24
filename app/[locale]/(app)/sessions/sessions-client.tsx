@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Download, Users } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
-import { GroupBookingDialog } from "./group-booking-dialog";
+import { GroupBookingDialog, type GroupOpt } from "./group-booking-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,7 @@ export function SessionsClient({
   currency,
   packages = [],
   subjects = [],
+  groups = [],
   teacherSubjectIds = {},
   filters,
   exportHref,
@@ -76,6 +77,7 @@ export function SessionsClient({
   currency: string;
   packages?: PackageOpt[];
   subjects?: Opt[];
+  groups?: GroupOpt[];
   teacherSubjectIds?: Record<string, string[]>;
   filters: Filters;
   exportHref: string;
@@ -195,6 +197,7 @@ export function SessionsClient({
           students={students}
           teachers={teachers}
           levels={levels}
+          groups={groups}
           matrix={matrix}
           currency={currency}
           onSaved={() => router.refresh()}

@@ -78,6 +78,10 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     // Non-admin accounts go; remaining admins lose teacher/guardian links.
     summary.users = (await tx.user.deleteMany({ where: { role: { not: "ADMIN" } } })).count;
     await tx.user.updateMany({ data: { teacherId: null, guardianId: null } });
+    // Groups ("courses") reference students (Cascade) and teachers/subjects/
+    // grades (SetNull); clear members then the groups before students go.
+    summary.groupMembers = (await tx.groupMember.deleteMany()).count;
+    summary.studentGroups = (await tx.studentGroup.deleteMany()).count;
     summary.students = (await tx.student.deleteMany()).count;
     summary.guardians = (await tx.guardian.deleteMany()).count;
     // Transport, innermost first. Fleet cost logs point at vehicles, suppliers
@@ -349,7 +353,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   }
   summary.guardians = guardianIds.length;
 
-  const students: { id: string; gradeLevelId: string }[] = [];
+  const students: { id: string; gradeLevelId: string; gradeYear: number }[] = [];
   for (let i = 0; i < n.students; i++) {
     const level = pick(levels);
     const s = await db.student.create({
@@ -361,6 +365,8 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         // Roughly a quarter study at home so location-defaulted pricing and
         // the planner's HOME markers have data to show.
         studyLocation: i % 4 === 3 ? "HOME" : "CENTER",
+        // Actual school year (1-12), spread so same-grade grouping demos.
+        gradeYear: (i % 12) + 1,
         // Roughly one student in six is driven by the centre, so the transport
         // planner has student rides to chain as well as teacher ones. Opt-in
         // per student — most families drive their own child.
@@ -369,9 +375,34 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         ...geoPoint(),
       },
     });
-    students.push({ id: s.id, gradeLevelId: level.id });
+    students.push({ id: s.id, gradeLevelId: level.id, gradeYear: (i % 12) + 1 });
   }
   summary.students = students.length;
+
+  // --- one demo group ("course") so the Groups screen has data on first seed ---
+  if (teacherIds.length && students.length >= 2) {
+    const gy = students[0].gradeYear;
+    const sameGrade = students.filter((st) => st.gradeYear === gy).slice(0, 5);
+    const members = sameGrade.length >= 2 ? sameGrade : students.slice(0, Math.min(4, students.length));
+    await db.studentGroup.create({
+      data: {
+        name: locale === "ar" ? `مجموعة الصف ${gy}` : `Grade ${gy} group`,
+        teacherId: teacherIds[0],
+        subjectId: subjectIds[0] ?? null,
+        gradeLevelId: members[0].gradeLevelId,
+        location: "CENTER",
+        defaultPricePerHour: 120,
+        members: {
+          create: members.map((m, idx) => ({
+            studentId: m.id,
+            // First member on an individually agreed price; the rest inherit the default.
+            pricePerHour: idx === 0 ? 100 : null,
+          })),
+        },
+      },
+    });
+    summary.studentGroups = 1;
+  }
 
   // --- packages ---
   let packages = 0;

@@ -128,6 +128,11 @@ const groupSchema = z.object({
   gradeLevelId: z.string().optional().nullable(),
   paymentStatus: z.enum(PAYMENT_STATUSES).default("UNPAID"),
   studentIds: z.array(z.string().min(1)).min(1).max(200),
+  // Per-student agreed price (a saved group / "course"): overrides the matrix
+  // for that student. Absent entries fall back to the matrix as before.
+  prices: z
+    .array(z.object({ studentId: z.string().min(1), pricePerHour: z.coerce.number().nonnegative() }))
+    .optional(),
 });
 
 export type GroupResult = { ok?: boolean; error?: string; created?: number; skipped?: number };
@@ -148,6 +153,9 @@ export async function createGroupSessions(
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
   const dates = [...new Set(d.dates)].sort();
+  const priceOverride = new Map<string, number>(
+    (d.prices ?? []).map((x) => [x.studentId, x.pricePerHour]),
+  );
 
   const students = await db.student.findMany({
     where: { id: { in: d.studentIds } },
@@ -175,7 +183,8 @@ export async function createGroupSessions(
     for (const s of students) {
       const gradeLevelId = d.gradeLevelId || s.gradeLevelId;
       if (!gradeLevelId) { skippedStudents.add(s.id); continue; }
-      const pricePerHour = await priceFor(gradeLevelId, date);
+      const override = priceOverride.get(s.id);
+      const pricePerHour = override != null ? override : await priceFor(gradeLevelId, date);
       rows.push({
         date,
         studentId: s.id,

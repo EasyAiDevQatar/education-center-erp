@@ -24,6 +24,8 @@ export type StudentOpt = {
   id: string;
   name: string;
   gradeLevelId: string | null;
+  /** School year 1-12, for grouping in the group-booking dialog. */
+  gradeYear?: number | null;
   /** Teachers assigned to this student for the current year, if any. */
   teacherIds?: string[];
   /** The student's usual study place — new sessions default to it. */

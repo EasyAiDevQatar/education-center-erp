@@ -82,6 +82,7 @@ model Teacher {
   subjects     TeacherSubject[]
   employee     Employee?
   tripStops    TripStop[]
+  groups       StudentGroup[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -116,6 +117,7 @@ model GradeLevel {
   sessions   Session[]
   students   Student[]
   leads      Lead[]
+  groups     StudentGroup[]
 }
 
 /// Price-per-hour matrix: (grade level x location), versioned by effectiveFrom.
@@ -172,15 +174,20 @@ model Student {
   /// coordinates: most families drive their own child, and generating a car for
   /// every student with a saved home pin would flood the planner.
   needsTransport Boolean @default(false)
+  /// School year 1-12, distinct from gradeLevel (the pricing band). Lets the
+  /// office group students by their actual class — five grade-10 students
+  /// together — which the broad band (Secondary) cannot express.
+  gradeYear Int?
 
   sessions  Session[]
   payments  Payment[]
   packages  Package[]
   templates PlannerTemplate[]
   leads     Lead[]
-  teachers  StudentTeacher[]
-  cheques   Cheque[]
-  tripStops TripStop[]
+  teachers     StudentTeacher[]
+  cheques      Cheque[]
+  tripStops    TripStop[]
+  groupMembers GroupMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -373,6 +380,7 @@ model Subject {
 
   teachers TeacherSubject[]
   sessions Session[]
+  groups   StudentGroup[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1375,4 +1383,48 @@ model MaintenanceLog {
   createdAt DateTime @default(now())
 
   @@index([vehicleId, date])
+}
+
+
+/// A saved teaching group / course: a fixed roster taught together, each member
+/// billed at their own agreed price. Distinct from an ad-hoc group booking,
+/// which is a one-off selection priced from the matrix.
+model StudentGroup {
+  id           String      @id @default(cuid())
+  name         String
+  teacherId    String?
+  teacher      Teacher?    @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  subjectId    String?
+  subject      Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  gradeLevelId String?
+  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  location     String      @default("CENTER") // CENTER | HOME
+  /// Default hourly price. A member with no override inherits this; if this is
+  /// null too, booking falls back to the grade/location price matrix.
+  defaultPricePerHour Decimal?
+  active       Boolean     @default(true)
+  notes        String?
+
+  members GroupMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
+/// One student's place in a group, with their own agreed price.
+model GroupMember {
+  id        String       @id @default(cuid())
+  groupId   String
+  group     StudentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// Per-student hourly price. Null = the group default, then the matrix.
+  pricePerHour Decimal?
+
+  createdAt DateTime @default(now())
+
+  @@unique([groupId, studentId])
+  @@index([studentId])
 }

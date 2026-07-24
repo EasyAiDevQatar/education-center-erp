@@ -173,7 +173,8 @@
     "driverPortal": "My trips",
     "transportCosts": "Fuel & maintenance",
     "transportReports": "Fleet reports",
-    "hrDocuments": "Documents & expiry"
+    "hrDocuments": "Documents & expiry",
+    "groups": "Groups"
   },
   "auth": {
     "login": "Log in",
@@ -267,7 +268,10 @@
     "totalSessions": "{n} sessions",
     "tooMany": "Too many sessions in one batch — reduce students, weekdays, or weeks.",
     "filterByGrade": "Filter by grade",
-    "allGrades": "All grades"
+    "allGrades": "All grades",
+    "gradeYearN": "Grade {n}",
+    "loadGroup": "Load from group",
+    "loadGroupNone": "— none —"
   },
   "calendar": {
     "title": "Schedule",
@@ -397,7 +401,10 @@
     "assignedTeachersHint": "Teachers who teach this student this year — they appear first when booking.",
     "noTeachersAssigned": "No teachers assigned",
     "studyLocation": "Study location",
-    "studyLocationHint": "New sessions auto-price by grade and study location; each session can still override it."
+    "studyLocationHint": "New sessions auto-price by grade and study location; each session can still override it.",
+    "gradeYear": "School grade (year)",
+    "gradeYearN": "Grade {n}",
+    "gradeYearHint": "Actual school year (1–12), used to group same-grade students"
   },
   "map": {
     "title": "Pick location on map",
@@ -1856,5 +1863,29 @@
       "unknown": "No expiry recorded",
       "ok": "Valid"
     }
+  },
+  "groups": {
+    "title": "Groups",
+    "subtitle": "Saved rosters (courses) with a per-student agreed price",
+    "name": "Name",
+    "teacher": "Teacher",
+    "subject": "Subject",
+    "grade": "Grade level",
+    "gradeYearShort": "G",
+    "location": "Location",
+    "defaultPrice": "Default price/hour",
+    "defaultPriceHint": "Used for members with no individual price",
+    "add": "Add group",
+    "edit": "Edit group",
+    "manageMembers": "Manage members",
+    "members": "Members",
+    "membersFor": "Members — {name}",
+    "noMembers": "No members yet",
+    "roster": "Roster",
+    "price": "Price/hour",
+    "priceHelp": "Leave blank to use the group default or the price matrix",
+    "matrix": "matrix",
+    "searchPlaceholder": "Search groups…",
+    "searchStudents": "Search students to add…"
   }
 }

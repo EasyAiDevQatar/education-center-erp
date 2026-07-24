@@ -50,6 +50,7 @@ export default async function StudentsPage({
     nameEn: s.nameEn,
     phone: s.phone,
     gradeLevelId: s.gradeLevelId,
+    gradeYear: s.gradeYear,
     gradeLevelLabel: s.gradeLevel
       ? locale === "ar"
         ? s.gradeLevel.nameAr

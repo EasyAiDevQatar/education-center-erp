@@ -25,11 +25,22 @@ import { createGroupSessions } from "./actions";
 import { suggestFix, type FixSuggestion } from "./suggest-actions";
 import type { StudentOpt, Opt, PriceMatrix } from "./session-dialog";
 
+export type GroupOpt = {
+  id: string;
+  name: string;
+  teacherId: string | null;
+  location: "CENTER" | "HOME";
+  gradeLevelId: string | null;
+  defaultPricePerHour: number | null;
+  members: { studentId: string; pricePerHour: number | null }[];
+};
+
 export function GroupBookingDialog({
   trigger,
   students,
   teachers,
   levels,
+  groups = [],
   matrix,
   currency,
   defaultDate,
@@ -43,6 +54,7 @@ export function GroupBookingDialog({
   students: StudentOpt[];
   teachers: Opt[];
   levels: Opt[];
+  groups?: GroupOpt[];
   matrix: PriceMatrix;
   currency: string;
   defaultDate?: string;
@@ -77,6 +89,10 @@ export function GroupBookingDialog({
   const [paymentStatus, setPaymentStatus] = useState("UNPAID");
   const [q, setQ] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
+  // Per-student price when a saved group ("course") is loaded — overrides the
+  // matrix for its members. Keyed by studentId.
+  const [priceOverride, setPriceOverride] = useState<Record<string, number>>({});
+  const [loadedGroupId, setLoadedGroupId] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Weekly recurrence
@@ -92,7 +108,7 @@ export function GroupBookingDialog({
     const s = q.trim().toLowerCase();
     return students.filter(
       (x) =>
-        (!gradeFilter || x.gradeLevelId === gradeFilter) &&
+        (!gradeFilter || String(x.gradeYear ?? "") === gradeFilter) &&
         (!s || x.name.toLowerCase().includes(s)),
     );
   }, [students, q, gradeFilter]);
@@ -113,10 +129,31 @@ export function GroupBookingDialog({
   }
 
   const priceForStudent = (s: StudentOpt) => {
+    if (priceOverride[s.id] != null) return priceOverride[s.id];
     const grade = gradeOverride || s.gradeLevelId || "";
     const row = grade ? matrix[grade] : undefined;
     return row ? (row[location] ?? 0) : 0;
   };
+
+  // Load a saved group: its teacher, place, grade, members and their prices.
+  function loadGroup(gid: string) {
+    setLoadedGroupId(gid);
+    const g = groups.find((x) => x.id === gid);
+    if (!g) {
+      setPriceOverride({});
+      return;
+    }
+    if (g.teacherId) setTeacherId(g.teacherId);
+    setLocation(g.location);
+    if (g.gradeLevelId) setGradeOverride(g.gradeLevelId);
+    setSelected(new Set(g.members.map((m) => m.studentId)));
+    const po: Record<string, number> = {};
+    for (const m of g.members) {
+      const price = m.pricePerHour ?? g.defaultPricePerHour;
+      if (price != null) po[m.studentId] = price;
+    }
+    setPriceOverride(po);
+  }
 
   // Gulf-ordered weekdays (Sat → Fri) with localized short labels.
   const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5];
@@ -221,6 +258,9 @@ export function GroupBookingDialog({
         gradeLevelId: gradeOverride || null,
         paymentStatus: paymentStatus as "UNPAID" | "PARTIAL" | "PAID",
         studentIds: [...selected],
+        prices: Object.entries(priceOverride)
+          .filter(([id]) => selected.has(id))
+          .map(([studentId, pricePerHour]) => ({ studentId, pricePerHour })),
       });
       if (res.ok) {
         setResult({ created: res.created ?? 0, skipped: res.skipped ?? 0 });
@@ -249,6 +289,21 @@ export function GroupBookingDialog({
               ))}
             </Select>
           </FormField>
+
+          {groups.length > 0 && (
+            <FormField label={t("loadGroup")} htmlFor="g-load">
+              <Select
+                id="g-load"
+                value={loadedGroupId}
+                onChange={(e) => loadGroup(e.target.value)}
+              >
+                <option value="">{t("loadGroupNone")}</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </Select>
+            </FormField>
+          )}
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <FormField label={tc("date")} htmlFor="g-date">
@@ -341,8 +396,8 @@ export function GroupBookingDialog({
                 className="h-8 w-36"
               >
                 <option value="">{t("allGrades")}</option>
-                {levels.map((l) => (
-                  <option key={l.id} value={l.id}>{l.label}</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{t("gradeYearN", { n })}</option>
                 ))}
               </Select>
               <Button type="button" size="sm" variant="secondary" onClick={selectAllFiltered}>{t("selectAll")}</Button>
