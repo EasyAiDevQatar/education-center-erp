@@ -210,10 +210,25 @@ export async function dispatchBoard(locale: string, day: string): Promise<Dispat
       if (s.plannedMin > maxMin) maxMin = s.plannedMin;
     }
   }
-  if (!Number.isFinite(minMin)) {
-    minMin = 8 * 60;
-    maxMin = 20 * 60;
-  }
+  // The axis is a fixed working window, not the extent of whatever happens to
+  // be booked. Deriving it from the trips alone made a single trip stretch
+  // across the whole board, so two lanes an hour apart looked like a full day
+  // and the same trip changed width every time another was added.
+  //
+  // So: always show the working window, and grow past it only when something is
+  // actually scheduled out there — never beyond the hours the centre can run.
+  const DAY_OPEN_MIN = 7 * 60; // 07:00 — earliest the centre ever operates
+  const DAY_CLOSE_MIN = 26 * 60; // 02:00 next day — latest
+  const WINDOW_FROM_MIN = 14 * 60; // 14:00 — shown even when empty
+  const WINDOW_TO_MIN = 22 * 60; // 22:00
+
+  const earliestHour = Number.isFinite(minMin)
+    ? Math.floor(minMin / 60) * 60
+    : WINDOW_FROM_MIN;
+  const latestHour = Number.isFinite(maxMin) ? Math.ceil(maxMin / 60) * 60 : WINDOW_TO_MIN;
+
+  minMin = Math.max(DAY_OPEN_MIN, Math.min(WINDOW_FROM_MIN, earliestHour));
+  maxMin = Math.min(DAY_CLOSE_MIN, Math.max(WINDOW_TO_MIN, latestHour));
 
   return {
     day,
