@@ -80,6 +80,18 @@ export type ChainOptions = {
    */
   arriveEarlyMin?: number;
   /**
+   * Minutes after a lesson ends before the passenger is actually ready to be
+   * collected — packing up, seeing the student out. The leg's `readyMin` is
+   * pushed back by this.
+   *
+   * Without it the leg claims the passenger is collectable the instant the
+   * lesson ends, the allocator books a driver for that minute, and validation
+   * then rejects the very trip it just planned for leaving before the
+   * passenger is ready. The rule has to apply where the ride is defined, not
+   * only where it is judged.
+   */
+  departBufferMin?: number;
+  /**
    * How long before their first lesson a passenger may be collected.
    *
    * The first pickup is the one leg with no natural ready time — nothing
@@ -115,6 +127,7 @@ export function legsForPassenger(
     includeFirstPickup = true,
     includeLastDropoff = true,
     arriveEarlyMin = 0,
+    departBufferMin = 0,
     maxAdvancePickupMin = 60,
   } = opts;
 
@@ -189,7 +202,7 @@ export function legsForPassenger(
       prev.label,
       next.at,
       next.label,
-      prev.endMin,
+      prev.endMin + departBufferMin,
       next.startMin,
       prev.sessionId,
       next.sessionId,
@@ -204,7 +217,7 @@ export function legsForPassenger(
       last.label,
       day.home,
       day.homeLabel,
-      last.endMin,
+      last.endMin + departBufferMin,
       // No hard deadline going home; the end of the working day stands in.
       24 * 60,
       last.sessionId,

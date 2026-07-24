@@ -1761,7 +1761,42 @@
     "demoHome": "Arrives home",
     "demoLesson": "Lesson",
     "demoIdle": "Driver idle {n} min during the lesson",
-    "demoFree": "Driver free {n} min for other tasks"
+    "demoFree": "Driver free {n} min for other tasks",
+    "logic": {
+      "logicTitle": "Current logic — what the planner will actually do",
+      "logicHint": "Generated from the settings stored right now, in the order the planner applies them.",
+      "logicFixTitle": "These settings will produce bad trips",
+      "logicRestore": "Restore recommended values",
+      "logicRestoreHint": "Sets speed, buffers, boarding and turnaround back to sane values for a city centre. Nothing else is touched.",
+      "who": "Transports: {list}.",
+      "whoNobody": "Transports nobody — no passenger type is switched on, so no trip can ever be generated.",
+      "modelDropAndReturn": "A driver drops the passenger and is immediately free; the ride back is a separate trip and may use another driver.",
+      "modelStay": "One driver stays with the passenger for their whole day, waiting through every lesson.",
+      "advance": "A passenger may be collected at most {n} min before their lesson.",
+      "travel": "Travel time is estimated at {speed} km/h ({rush} km/h in rush hours) x {detour} detour factor, then replaced by real road time when routing is available.",
+      "arrive": "Aims to arrive {preferred} min before the lesson; arriving less than {latest} min before is treated as too tight.",
+      "early": "Arriving more than {n} min early is flagged as wasteful.",
+      "dismissal": "Waits {n} min after a lesson ends before the return ride departs.",
+      "service": "Allows {board} min to board and {drop} min to drop off at each stop.",
+      "turnaround": "Between two trips a driver needs {driver} min and a vehicle {vehicle} min.",
+      "limits": "Caps: journey {journey} min, waiting at the centre {wait} min, empty driving {deadhead} km (0 = no limit).",
+      "approveStrict": "A trip that cannot physically work can never be approved.",
+      "approveOverride": "An admin may force-approve an impossible trip with a written reason.",
+      "warnNobody": "No passenger type is enabled, so the planner will never create a trip.",
+      "warnNoStudents": "Students are excluded — only teachers get rides, whichever students need transport.",
+      "warnSpeed": "{n} km/h is motorway speed. Door-to-door city driving averages 30-45, so every pickup is planned too late and drivers arrive after the lesson has started.",
+      "warnNoArrivalBuffer": "Target arrival is 0 min before the lesson — the plan aims to arrive exactly as it starts, leaving no margin for traffic.",
+      "warnNoEarlyAllowance": "Max early arrival is 0, so every normal early arrival is reported as a problem.",
+      "warnNoService": "Boarding and drop-off take 0 min, so the plan assumes passengers teleport in and out of the car.",
+      "warnNoTurnaround": "Turnaround is 0 min, so a driver may be planned to finish one trip and start the next in the same minute.",
+      "warnNoJourneyCap": "No maximum journey length, so a passenger may be planned into an arbitrarily long ride.",
+      "warnOverrideOn": "Force-approval is on: impossible trips can be approved anyway.",
+      "whoParts": {
+        "teacher": "teachers to home visits",
+        "studentIn": "students home to centre",
+        "studentOut": "students centre to home"
+      }
+    }
   },
   "subjects": {
     "title": "Subjects",

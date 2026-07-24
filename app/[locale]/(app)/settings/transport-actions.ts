@@ -6,8 +6,52 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
 import { TRACKING_VISIBILITY, TRANSPORT_PASSENGERS } from "@/lib/enums";
+import { RECOMMENDED } from "@/lib/transport/describe";
 
 export type TransportSettingsState = { ok?: boolean; error?: string };
+
+/** Setting key for each recommended tunable. */
+const RECOMMENDED_KEYS: Record<keyof typeof RECOMMENDED, string> = {
+  avgSpeedKmh: "transportAvgSpeedKmh",
+  rushSpeedKmh: "transportRushSpeedKmh",
+  detourFactor: "transportDetourFactor",
+  preferredArrivalBufferMin: "transportPreferredArrivalBufferMin",
+  minArrivalBufferMin: "transportMinArrivalBufferMin",
+  maxEarlyArrivalMin: "transportMaxEarlyArrivalMin",
+  dismissalBufferMin: "transportDismissalBufferMin",
+  boardingTimeMin: "transportBoardingTimeMin",
+  dropoffTimeMin: "transportDropoffTimeMin",
+  maxStudentWaitMin: "transportMaxStudentWaitMin",
+  maxJourneyMin: "transportMaxJourneyMin",
+  minDriverTurnaroundMin: "transportMinDriverTurnaroundMin",
+  minVehicleTurnaroundMin: "transportMinVehicleTurnaroundMin",
+  maxAdvancePickupMin: "transportMaxAdvancePickupMin",
+};
+
+/**
+ * Put the timing tunables back to values that behave sensibly for a city.
+ *
+ * Deliberately narrow: it restores speeds, buffers, service and turnaround
+ * only. Who is transported, the centre pin and the approval policy are the
+ * centre's decisions, so they are never overwritten.
+ */
+export async function restoreTransportDefaults(
+  locale: string,
+): Promise<TransportSettingsState> {
+  const s = await getSession();
+  if (!s || s.role !== "ADMIN") return { error: "forbidden" };
+
+  for (const [field, key] of Object.entries(RECOMMENDED_KEYS)) {
+    const value = String(RECOMMENDED[field as keyof typeof RECOMMENDED]);
+    await db.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+  }
+
+  await writeAudit("Setting", "transport", "UPDATE", {
+    after: { restoredDefaults: Object.keys(RECOMMENDED_KEYS).length },
+  });
+  revalidatePath(`/${locale}/settings`);
+  return { ok: true };
+}
 
 const schema = z.object({
   enabled: z.boolean(),

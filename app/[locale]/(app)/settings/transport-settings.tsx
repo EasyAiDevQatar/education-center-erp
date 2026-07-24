@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Bus, Map as MapIcon } from "lucide-react";
+import { Bus, Map as MapIcon, AlertTriangle, ListChecks } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,8 @@ import { Select } from "@/components/ui/select";
 import { FormField } from "@/components/crud/form-field";
 import { MapPicker } from "@/components/map-picker";
 import { TRACKING_VISIBILITY, TRANSPORT_PASSENGERS } from "@/lib/enums";
-import { saveTransportSettings } from "./transport-actions";
+import { saveTransportSettings, restoreTransportDefaults } from "./transport-actions";
+import { describeLogic, logicWarnings, type LogicInput } from "@/lib/transport/describe";
 
 export type TransportValues = {
   enabled: boolean;
@@ -56,6 +57,88 @@ const hhmm = (m: number) =>
  *  current rules so an admin sees the effect of each knob — and, crucially, the
  *  difference between a driver waiting through the lesson (STAY) and being freed
  *  (DROP_AND_RETURN). Pure client-side; mirrors the generator's timing math. */
+/**
+ * The rules currently in force, spelled out — plus the values that will produce
+ * bad trips. Reads the live knob values, so editing a field immediately rewrites
+ * the sentence it affects instead of leaving the admin to guess.
+ */
+function LogicPanel({ cfg }: { cfg: LogicInput }) {
+  const t = useTranslations("transport");
+  const locale = useLocale();
+  const router = useRouter();
+  const [restoring, startRestore] = useTransition();
+
+  const lines = describeLogic(cfg);
+  const warnings = logicWarnings(cfg);
+
+  // The "who" sentence interpolates a list built from its own sub-keys.
+  const render = (key: string, params?: Record<string, string | number>) => {
+    if (key === "who" && params) {
+      const list = String(params.list)
+        .split(",")
+        .map((k) => t(`logic.whoParts.${k}`))
+        .join("، ");
+      return t("logic.who", { list });
+    }
+    return t(`logic.${key}`, params ?? {});
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-border p-3">
+        <div className="mb-2 flex items-center gap-2">
+          <ListChecks className="size-4 text-primary" />
+          <span className="text-sm font-semibold">{t("logic.logicTitle")}</span>
+        </div>
+        <p className="mb-2 text-xs text-muted-foreground">{t("logic.logicHint")}</p>
+        <ol className="space-y-1.5 text-xs leading-relaxed">
+          {lines.map((l, i) => (
+            <li key={l.key} className="flex gap-2">
+              <span className="shrink-0 text-muted-foreground">{i + 1}.</span>
+              <span>{render(l.key, l.params)}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {warnings.length > 0 && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <AlertTriangle className="size-4 text-destructive" />
+            <span className="text-sm font-semibold text-destructive">
+              {t("logic.logicFixTitle")}
+            </span>
+          </div>
+          <ul className="space-y-1.5 text-xs leading-relaxed">
+            {warnings.map((w) => (
+              <li key={w.key} className="flex gap-2">
+                <span className="shrink-0 text-destructive">•</span>
+                <span>{render(w.key, w.params)}</span>
+              </li>
+            ))}
+          </ul>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            disabled={restoring}
+            onClick={() =>
+              startRestore(async () => {
+                await restoreTransportDefaults(locale);
+                router.refresh();
+              })
+            }
+          >
+            {t("logic.logicRestore")}
+          </Button>
+          <p className="mt-1 text-[11px] text-muted-foreground">{t("logic.logicRestoreHint")}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DemoPanel({
   driverModel, speed, detour, prefBuf, minBuf, dismissBuf, boarding, advance,
 }: {
@@ -361,7 +444,31 @@ export function TransportSettings({ values }: { values: TransportValues }) {
         {pending ? tc("saving") : tc("save")}
       </Button>
     </form>
-    <div className="lg:sticky lg:top-4 lg:self-start">
+    <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
+      <LogicPanel
+        cfg={{
+          driverModel: driverModel === "STAY" ? "STAY" : "DROP_AND_RETURN",
+          maxAdvancePickupMin: n(advance, 60),
+          includeTeacher: values.includeTeacher,
+          includeStudentToCenter: values.includeStudentToCenter,
+          includeStudentToHome: values.includeStudentToHome,
+          avgSpeedKmh: n(speed, 40),
+          rushSpeedKmh: n(values.rushSpeedKmh, 25),
+          detourFactor: n(detour, 1.35),
+          preferredArrivalBufferMin: n(prefBuf, 15),
+          minArrivalBufferMin: n(minBuf, 5),
+          maxEarlyArrivalMin: n(values.maxEarlyArrivalMin, 30),
+          dismissalBufferMin: n(dismissBuf, 10),
+          boardingTimeMin: n(boarding, 2),
+          dropoffTimeMin: n(values.dropoffTimeMin, 2),
+          maxStudentWaitMin: n(values.maxStudentWaitMin, 20),
+          maxJourneyMin: n(values.maxJourneyMin, 60),
+          minDriverTurnaroundMin: n(values.minDriverTurnaroundMin, 10),
+          minVehicleTurnaroundMin: n(values.minVehicleTurnaroundMin, 10),
+          maxDeadheadKm: n(values.maxDeadheadKm, 25),
+          allowInvalidOverride: values.allowInvalidOverride,
+        }}
+      />
       <DemoPanel
         driverModel={driverModel}
         speed={n(speed, 40)}

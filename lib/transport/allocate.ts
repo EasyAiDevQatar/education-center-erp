@@ -83,6 +83,16 @@ export type AllocOptions = {
   maxDeadheadKm?: number;
   /** Score weights. */
   weights?: { emptyKm?: number; loadMin?: number };
+  /**
+   * Real road minutes between two points, when a routing service is available.
+   *
+   * Without this the allocator plans on straight-line km ÷ configured speed
+   * while the trip is later built and validated against actual road times — so
+   * the two disagree, in both directions. Too optimistic a speed and every trip
+   * is born late; too pessimistic and rides the road does comfortably are
+   * rejected as impossible. Returning null falls back to the estimate.
+   */
+  travelMin?: (a: LatLng, b: LatLng, departMin: number) => number | null;
 };
 
 type DriverRuntime = AllocDriver & {
@@ -112,8 +122,13 @@ export function allocate(
     graceMin = 0,
     maxDeadheadKm = Number.POSITIVE_INFINITY,
     weights,
+    travelMin,
   } = opts;
   const w = { ...DEFAULT_WEIGHTS, ...(weights ?? {}) };
+
+  /** Road minutes when routing knows the answer, else the speed estimate. */
+  const hopMinutes = (a: LatLng, b: LatLng, km: number, departMin: number) =>
+    travelMin?.(a, b, departMin) ?? travelMinutes(km, departMin, profile);
 
   const runtime: DriverRuntime[] = drivers.map((d) => ({
     ...d,
@@ -155,7 +170,7 @@ export function allocate(
         continue;
       }
 
-      const deadheadMin = travelMinutes(deadheadKm, d.freeAt, profile);
+      const deadheadMin = hopMinutes(d.at, leg.from, deadheadKm, d.freeAt);
       // Leave just in time, not the instant the driver is free. Without this a
       // driver idle since shift start looks expensive purely for being idle,
       // which inverts the fairness term and hands the whole day to whoever was
@@ -164,7 +179,7 @@ export function allocate(
       const arriveAtPickup = departMin + deadheadMin;
       const pickupMin = Math.max(leg.readyMin, arriveAtPickup);
       const rideKm = distanceKm(leg.from, leg.to);
-      const rideMin = travelMinutes(rideKm, pickupMin, profile);
+      const rideMin = hopMinutes(leg.from, leg.to, rideKm, pickupMin);
       const dropoffMin = pickupMin + rideMin;
 
       if (dropoffMin > leg.dueMin + graceMin) {

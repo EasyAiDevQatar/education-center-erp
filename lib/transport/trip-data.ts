@@ -5,7 +5,7 @@ import { toNumber } from "@/lib/money";
 import { loadTransportConfig, distanceKm, type TransportConfig } from "./settings";
 import { travelMinutes } from "./eta";
 import { buildDayLegs, type Leg, type PassengerDay, type PassengerKind, type SkippedLeg } from "./chain";
-import { allocate, type AllocDriver, type Assignment, type Unassigned } from "./allocate";
+import { allocate, type AllocDriver, type Assignment, type LatLng, type Unassigned } from "./allocate";
 import { driverIsDispatchable } from "./fleet";
 import { generatorMayReplace, legKeyFor } from "./trips";
 import {
@@ -180,6 +180,9 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
   );
   const built = buildDayLegs(chainDays, {
     arriveEarlyMin: config.bufferMin,
+    // Same buffer the validator's departure floor uses, so a ride is never
+    // planned for a minute the validator will then call too early.
+    departBufferMin: config.rules.dismissalBufferMin,
     maxAdvancePickupMin: config.maxAdvancePickupMin,
   });
   // Student direction toggles: a leg arriving at the centre is a to-center
@@ -226,6 +229,47 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
     shiftEndMin: d.shiftEndMin,
   }));
 
+  // Give the allocator the SAME travel times the trips will be built and
+  // validated against. Planning on straight-line km ÷ configured speed while
+  // building on real road time makes the two disagree in both directions: an
+  // optimistic speed schedules pickups too late (every trip born INVALID), a
+  // realistic one over-estimates and throws away rides the road handles
+  // easily. One matrix over every point in the day settles it; a missing cell
+  // (or no routing service) falls back to the estimate inside the allocator.
+  const allocPoints: LatLng[] = [];
+  const pointIndex = new Map<string, number>();
+  const ptKey = (p: LatLng) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`;
+  const addPoint = (p: LatLng) => {
+    const k = ptKey(p);
+    if (!pointIndex.has(k)) {
+      pointIndex.set(k, allocPoints.length);
+      allocPoints.push(p);
+    }
+  };
+  for (const l of legs) {
+    addPoint(l.from);
+    addPoint(l.to);
+  }
+  for (const d of allocDrivers) addPoint(d.startAt);
+
+  let roadMatrix: { durationsSeconds: (number | null)[][] } | null = null;
+  if (centre && allocPoints.length >= 2 && allocPoints.every((p) => coordValid(p.lat, p.lng))) {
+    try {
+      roadMatrix = await getMatrixWithFallback(allocPoints);
+    } catch {
+      roadMatrix = null; // routing down → the estimator still plans the day
+    }
+  }
+  const travelMin = roadMatrix
+    ? (a: LatLng, b: LatLng) => {
+        const i = pointIndex.get(ptKey(a));
+        const j = pointIndex.get(ptKey(b));
+        if (i == null || j == null) return null;
+        const s = roadMatrix!.durationsSeconds[i]?.[j];
+        return s == null ? null : Math.max(1, Math.ceil(s / 60));
+      }
+    : undefined;
+
   const { assignments, unassigned } = allocate(
     legs.map((l) => ({
       id: l.id,
@@ -239,7 +283,7 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
     // a plan around (0,0) — the board tells the admin to set the pin instead.
     centre ? allocDrivers : [],
     config.profile,
-    { distanceKm, maxDeadheadKm: config.maxDeadheadKm },
+    { distanceKm, maxDeadheadKm: config.maxDeadheadKm, travelMin },
   );
 
   return {
