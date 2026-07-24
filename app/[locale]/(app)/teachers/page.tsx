@@ -39,6 +39,9 @@ export default async function TeachersPage({
     earningsMode: teacher.earningsMode,
     active: teacher.active,
     notes: teacher.notes,
+    address: teacher.address,
+    homeLat: teacher.homeLat,
+    homeLng: teacher.homeLng,
     subjectIds: teacher.subjects.map((ts) => ts.subjectId),
     subjectLabels: teacher.subjects.map((ts) => label(ts.subject.nameAr, ts.subject.nameEn)),
   }));

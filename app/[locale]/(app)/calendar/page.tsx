@@ -57,6 +57,7 @@ export default async function CalendarPage({
 
   const teacherFilter = get("teacher");
   const studentFilter = get("student");
+  const locationFilter = ["CENTER", "HOME"].includes(get("location")) ? get("location") : "";
 
   // Build the visible day columns.
   let days: string[];
@@ -78,6 +79,7 @@ export default async function CalendarPage({
           date: { gte: rangeStart, lt: rangeEnd },
           ...(teacherFilter ? { teacherId: teacherFilter } : {}),
           ...(studentFilter ? { studentId: studentFilter } : {}),
+          ...(locationFilter ? { location: locationFilter } : {}),
         },
         include: { student: true, teacher: true, gradeLevel: true, subject: true },
         orderBy: { date: "asc" },
@@ -160,6 +162,7 @@ export default async function CalendarPage({
         groups={groups}
         teacherFilter={teacherFilter}
         studentFilter={studentFilter}
+        locationFilter={locationFilter}
         centerName={settingsMap.centerName ?? ""}
       />
     </div>

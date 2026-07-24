@@ -23,6 +23,11 @@ const schema = z.object({
   paymentMode: z.enum(TEACHER_PAYMENT_MODES).optional().nullable(),
   active: z.coerce.boolean().default(true),
   notes: z.string().trim().optional().nullable(),
+  // Home pickup point. Having coordinates is what opts the teacher into
+  // transport planning (see lib/transport/trip-data.ts).
+  address: z.string().trim().optional().nullable(),
+  homeLat: z.coerce.number().min(-90).max(90).optional().nullable(),
+  homeLng: z.coerce.number().min(-180).max(180).optional().nullable(),
 });
 
 /** Empty strings from the form become null, so an unset name is absent rather
@@ -61,6 +66,9 @@ export async function saveTeacher(
     paymentMode: formData.get("paymentMode") || null,
     active: formData.get("active") === "on" || formData.get("active") === "true",
     notes: formData.get("notes") || null,
+    address: orNull(formData.get("address")),
+    homeLat: orNull(formData.get("homeLat")),
+    homeLng: orNull(formData.get("homeLng")),
   });
   if (!parsed.success) return { error: "invalid" };
 

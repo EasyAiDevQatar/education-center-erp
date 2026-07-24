@@ -176,3 +176,44 @@ describe("first-pickup ready window", () => {
     expect(legs[1].readyMin).toBe(660);
   });
 });
+
+
+describe("a real teaching day chains house to house", () => {
+  // The user's exact story: three lessons at three different homes, then one
+  // at the centre, then another home — starting and ending at the teacher's
+  // own house. Nothing here originates at the centre unless a lesson is there.
+  const HOUSE_C = { lat: 25.2, lng: 51.6 };
+  const HOUSE_D = { lat: 25.33, lng: 51.45 };
+
+  it("emits six legs in order with correct windows", () => {
+    const { legs, skipped } = legsForPassenger(
+      teacherDay({
+        points: [
+          { sessionId: "h1", at: HOUSE_A, label: "بيت 1", startMin: 540, endMin: 600 },
+          { sessionId: "h2", at: HOUSE_B, label: "بيت 2", startMin: 630, endMin: 690 },
+          { sessionId: "h3", at: HOUSE_C, label: "بيت 3", startMin: 720, endMin: 780 },
+          { sessionId: "c1", at: CENTRE, label: "المركز", startMin: 840, endMin: 900 },
+          { sessionId: "h4", at: HOUSE_D, label: "بيت 4", startMin: 960, endMin: 1020 },
+        ],
+      }),
+    );
+    expect(skipped).toHaveLength(0);
+    expect(legs.map((l) => [l.fromLabel, l.toLabel])).toEqual([
+      ["منزل المعلمة", "بيت 1"],
+      ["بيت 1", "بيت 2"],
+      ["بيت 2", "بيت 3"],
+      ["بيت 3", "المركز"],
+      ["المركز", "بيت 4"],
+      ["بيت 4", "منزل المعلمة"],
+    ]);
+    // Every mid-day window is [previous lesson end, next lesson start].
+    expect(legs[1].readyMin).toBe(600);
+    expect(legs[1].dueMin).toBe(630);
+    expect(legs[3].readyMin).toBe(780);
+    expect(legs[3].dueMin).toBe(840);
+    expect(legs[4].readyMin).toBe(900);
+    expect(legs[4].dueMin).toBe(960);
+    // The ride home has no deadline beyond the end of the day.
+    expect(legs[5].readyMin).toBe(1020);
+  });
+});

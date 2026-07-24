@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, CircleUserRound } from "lucide-react";
+import { Plus, Pencil, CircleUserRound, Map } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { MapPicker } from "@/components/map-picker";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -46,6 +47,9 @@ export type TeacherRow = {
   earningsMode: string | null;
   active: boolean;
   notes: string | null;
+  address: string | null;
+  homeLat: number | null;
+  homeLng: number | null;
   /** Subject ids the teacher teaches (for the edit form). */
   subjectIds: string[];
   /** Localised subject names, for the table badges. */
@@ -59,6 +63,9 @@ function TeacherFields({ teacher, subjects }: { teacher?: TeacherRow; subjects: 
   const tc = useTranslations("common");
   const tm = useTranslations("paymentModes");
   const tem = useTranslations("earningsModes");
+  const [address, setAddress] = useState(teacher?.address ?? "");
+  const [lat, setLat] = useState(teacher?.homeLat != null ? String(teacher.homeLat) : "");
+  const [lng, setLng] = useState(teacher?.homeLng != null ? String(teacher.homeLng) : "");
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -128,6 +135,41 @@ function TeacherFields({ teacher, subjects }: { teacher?: TeacherRow; subjects: 
             <option value="TERM">{tm("TERM")}</option>
           </Select>
         </FormField>
+      </div>
+      {/* Home pickup point — a pin here is what opts the teacher into transport
+          planning: house-to-house legs start and end at this address. */}
+      <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-muted-foreground">{t("homeLocation")}</p>
+          <MapPicker
+            value={
+              lat && lng && !Number.isNaN(parseFloat(lat)) && !Number.isNaN(parseFloat(lng))
+                ? { lat: parseFloat(lat), lng: parseFloat(lng) }
+                : null
+            }
+            onPick={(v, addr) => {
+              setLat(v.lat.toFixed(6));
+              setLng(v.lng.toFixed(6));
+              if (addr && !address.trim()) setAddress(addr);
+            }}
+            trigger={
+              <Button type="button" variant="secondary" size="sm" className="gap-1">
+                <Map className="size-3.5" />
+                {t("locateOnMap")}
+              </Button>
+            }
+          />
+        </div>
+        <FormField label={t("address")} htmlFor="t-address" hint={t("homeHint")}>
+          <Input id="t-address" name="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+        </FormField>
+        <input type="hidden" name="homeLat" value={lat} />
+        <input type="hidden" name="homeLng" value={lng} />
+        {lat && lng && (
+          <p className="text-xs tabular-nums text-muted-foreground" dir="ltr">
+            {lat}, {lng}
+          </p>
+        )}
       </div>
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" defaultValue={teacher?.notes ?? ""} />

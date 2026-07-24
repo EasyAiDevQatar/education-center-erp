@@ -142,6 +142,7 @@ export function CalendarClient({
   groups = [],
   teacherFilter,
   studentFilter,
+  locationFilter,
   centerName,
 }: {
   view: CalendarView;
@@ -158,6 +159,7 @@ export function CalendarClient({
   groups?: GroupOpt[];
   teacherFilter: string;
   studentFilter: string;
+  locationFilter: string;
   centerName: string;
 }) {
   const t = useTranslations("calendar");
@@ -291,6 +293,7 @@ export function CalendarClient({
     for (const [key, current] of [
       ["teacher", teacherFilter],
       ["student", studentFilter],
+      ["location", locationFilter],
     ] as const) {
       const next = params[key] ?? current;
       if (next) sp.set(key, next);
@@ -363,6 +366,16 @@ export function CalendarClient({
           value={studentFilter}
           onChange={(v) => go({ student: v })}
         />
+        <Select
+          aria-label={t("filterLocation")}
+          className="h-9 w-28"
+          value={locationFilter}
+          onChange={(e) => go({ location: e.target.value })}
+        >
+          <option value="">{t("allLocations")}</option>
+          <option value="CENTER">{te("location.CENTER")}</option>
+          <option value="HOME">{te("location.HOME")}</option>
+        </Select>
 
         <div className="ms-auto flex items-center gap-1 rounded-md border border-border p-0.5">
           {(["week", "day", "compact", "list"] as const).map((v) => (

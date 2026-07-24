@@ -136,7 +136,7 @@ function addDaysStr(s: string, n: number) {
 
 export function PlannerClient({
   day,
-  sessions,
+  sessions: allSessions,
   teachers,
   students,
   levels,
@@ -172,6 +172,12 @@ export function PlannerClient({
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  // CENTER/HOME narrows the whole board — rows, totals, conflicts, print.
+  const [locFilter, setLocFilter] = useState("");
+  const sessions = useMemo(
+    () => (locFilter ? allSessions.filter((x) => x.location === locFilter) : allSessions),
+    [allSessions, locFilter],
+  );
 
   const [pending, start] = useTransition();
   const [addFor, setAddFor] = useState<string | null>(null); // teacherId
@@ -380,6 +386,16 @@ export function PlannerClient({
           onChange={(e) => e.target.value && go(e.target.value)}
           className="w-40"
         />
+        <Select
+          aria-label={t("filterLocation")}
+          className="h-8 w-28"
+          value={locFilter}
+          onChange={(e) => setLocFilter(e.target.value)}
+        >
+          <option value="">{t("allLocations")}</option>
+          <option value="CENTER">{te("location.CENTER")}</option>
+          <option value="HOME">{te("location.HOME")}</option>
+        </Select>
 
         <div className="ms-auto flex flex-wrap items-center gap-2">
           <Button
