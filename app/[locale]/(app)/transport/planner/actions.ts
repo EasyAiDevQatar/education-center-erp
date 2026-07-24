@@ -7,7 +7,9 @@ import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { transportEnabled } from "@/lib/transport/settings";
-import { generateDayTrips } from "@/lib/transport/trip-data";
+import { generateDayTrips, buildDayPlan } from "@/lib/transport/trip-data";
+import { aiChat } from "@/lib/ai/client";
+import { loadAiConfig, aiReady } from "@/lib/ai/config";
 import { canTransition } from "@/lib/transport/trips";
 import { TRIP_STATUSES, type TripStatus } from "@/lib/enums";
 
@@ -147,4 +149,69 @@ export async function clearProposals(locale: string, day: string): Promise<Actio
   await writeAudit("Trip", `clear-${day}`, "DELETE", { after: { deleted: res.count } });
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true, message: String(res.count) };
+}
+
+
+/**
+ * AI briefing of the day's plan — advisory text only; allocation itself stays
+ * deterministic. Feeds the computed plan (assignments, unassigned legs with
+ * reasons, passengers skipped for missing pins) to the configured model and
+ * returns a short narrative in the user's language.
+ */
+export async function aiBriefing(locale: string, day: string): Promise<ActionState> {
+  const s = await guard();
+  if (!s) return { error: "forbidden" };
+  if (!daySchema.safeParse(day).success) return { error: "invalid" };
+  const cfg = await loadAiConfig();
+  if (!aiReady(cfg)) {
+    console.error("[aiBriefing] not configured", { enabled: cfg.enabled, hasKey: !!cfg.apiKey, model: cfg.model });
+    return { error: "notConfigured" };
+  }
+
+  const plan = await buildDayPlan(locale, day);
+  const legById = new Map(plan.legs.map((l) => [l.id, l]));
+  const summary = {
+    date: day,
+    drivers: plan.drivers.map((d) => ({ name: d.name, plate: d.plate })),
+    assignments: plan.assignments.map((a) => {
+      const leg = legById.get(a.legId);
+      return {
+        passenger: leg?.passengerName,
+        from: leg?.fromLabel,
+        to: leg?.toLabel,
+        driver: plan.drivers.find((d) => d.id === a.driverId)?.name,
+        pickupMin: a.pickupMin,
+        slackMin: a.slackMin,
+        deadheadKm: a.deadheadKm,
+      };
+    }),
+    unassigned: plan.unassigned.map((u) => {
+      const leg = legById.get(u.legId);
+      return { passenger: leg?.passengerName, from: leg?.fromLabel, to: leg?.toLabel, reason: u.reason };
+    }),
+    skippedNoCoordinates: plan.skipped.map((x) => x.passengerName),
+    centreSet: plan.centreSet,
+  };
+
+  const lang = locale === "ar" ? "Arabic" : "English";
+  const r = await aiChat(
+    [
+      {
+        role: "system",
+        content:
+          "You brief the manager of a tutoring centre on the day's transport plan. " +
+          "Times are minutes from midnight. Be short and actionable: what is tight " +
+          "(low slackMin), who is unassigned and why, and what to fix (e.g. add a home " +
+          "pin for skipped passengers, shift a lesson, add a driver). Plain text, a few " +
+          `sentences or short bullet lines, in ${lang}.`,
+      },
+      { role: "user", content: JSON.stringify(summary) },
+    ],
+    { maxTokens: 3000, timeoutMs: 60_000 },
+  );
+  if (!r.ok) {
+    console.error("[aiBriefing] chat failed:", r.error, r.detail?.slice(0, 300));
+    return { error: r.error };
+  }
+  return { ok: true, message: r.text.trim() };
 }

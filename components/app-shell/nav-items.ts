@@ -18,6 +18,7 @@ import {
   Landmark,
   Truck,
   Settings,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/lib/enums";
@@ -61,6 +62,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { href: "/sessions", key: "sessions", icon: CalendarDays, roles: STAFF, section: "operations" },
+  { href: "/assistant", key: "assistant", icon: Sparkles, roles: STAFF, section: "operations", flag: "ai" },
   { href: "/students", key: "students", icon: Users, roles: STAFF, section: "people" },
   { href: "/teachers", key: "teachers", icon: GraduationCap, roles: STAFF, section: "people" },
   { href: "/guardians", key: "guardians", icon: UserRound, roles: STAFF, section: "people" },

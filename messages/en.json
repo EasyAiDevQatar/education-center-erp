@@ -174,7 +174,8 @@
     "transportCosts": "Fuel & maintenance",
     "transportReports": "Fleet reports",
     "hrDocuments": "Documents & expiry",
-    "groups": "Groups"
+    "groups": "Groups",
+    "assistant": "AI Assistant"
   },
   "auth": {
     "login": "Log in",
@@ -1761,7 +1762,10 @@
     "statEmptyKm": "Empty km",
     "problems": "{count, plural, =1 {# ride needs attention} other {# rides need attention}}",
     "empty": "Nothing on the board for this day. Generate proposals to plan it.",
-    "noCentre": "Set the centre location on the map first (Settings → Transport module) — every trip to or from the centre depends on it."
+    "noCentre": "Set the centre location on the map first (Settings → Transport module) — every trip to or from the centre depends on it.",
+    "aiBriefing": "AI briefing",
+    "aiBriefingBusy": "Briefing…",
+    "aiBriefingFailed": "Could not produce a briefing — is the AI module configured?"
   },
   "trips": {
     "title": "Trips",
@@ -1959,5 +1963,21 @@
     "translating": "Translating…",
     "translateDone": "Translated {n}; {remaining} left",
     "translateFailed": "Translation failed — check the AI settings"
+  },
+  "assistant": {
+    "title": "AI Assistant",
+    "subtitle": "Ask anything about the centre — revenue, balances, schedules, transport",
+    "empty": "Ask a question about the centre's data. Answers come from live records via read-only queries.",
+    "starter1": "How much revenue this month?",
+    "starter2": "Who owes the most?",
+    "starter3": "What is today's schedule?",
+    "starter4": "Summarize this month's expenses",
+    "placeholder": "Ask about revenue, a student's balance, today's sessions…",
+    "ask": "Ask",
+    "clear": "Clear conversation",
+    "thinking": "Consulting centre data…",
+    "failed": "The assistant could not answer — try again.",
+    "notConfigured": "The AI module is not configured yet — add a provider key in Settings.",
+    "disclaimer": "Answers are generated from centre data by an AI model and can be imperfect — verify important figures on the reports pages. Questions are recorded in the audit log."
   }
 }

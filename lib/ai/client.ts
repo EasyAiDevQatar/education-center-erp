@@ -82,10 +82,18 @@ export async function aiChat(
       return { ok: false, error: "http", detail: `${res.status} ${(await res.text()).slice(0, 300)}` };
     }
     const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
+      choices?: { message?: { content?: string; reasoning_content?: string }; finish_reason?: string }[];
     };
-    const text = data.choices?.[0]?.message?.content ?? "";
-    return text ? { ok: true, text } : { ok: false, error: "empty" };
+    const msg = data.choices?.[0]?.message;
+    const text = msg?.content ?? "";
+    if (text) return { ok: true, text };
+    // Reasoning models can burn the whole budget thinking and return an empty
+    // content field — surface that so callers can raise maxTokens.
+    return {
+      ok: false,
+      error: "empty",
+      detail: msg?.reasoning_content ? "reasoningOnly (raise maxTokens)" : data.choices?.[0]?.finish_reason,
+    };
   } catch (e) {
     return { ok: false, error: "network", detail: e instanceof Error ? e.message : String(e) };
   } finally {

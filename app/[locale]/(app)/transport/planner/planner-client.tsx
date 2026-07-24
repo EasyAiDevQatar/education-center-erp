@@ -12,6 +12,7 @@ import {
   Car,
   Clock,
   Route,
+  Sparkles,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import type { BoardTrip, PlannedDriver } from "@/lib/transport/trip-data";
 import {
   generateTrips,
   approveAll,
+  aiBriefing,
   setTripStatus,
   reassignTrip,
   clearProposals,
@@ -76,6 +78,8 @@ export function TransportPlannerClient({
   const pathname = usePathname();
   const [pending, start] = useTransition();
   const [note, setNote] = useState<string | null>(null);
+  const [briefing, setBriefing] = useState<string | null>(null);
+  const [briefBusy, setBriefBusy] = useState(false);
 
   const proposed = useMemo(() => trips.filter((x) => x.status === "PROPOSED"), [trips]);
   const totalKm = useMemo(
@@ -132,6 +136,23 @@ export function TransportPlannerClient({
             <Wand2 className="size-4" />
             {t("generate")}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            disabled={briefBusy}
+            onClick={() => {
+              setBriefBusy(true);
+              setBriefing(null);
+              aiBriefing(locale, day)
+                .then((r) => setBriefing(r.ok && r.message ? r.message : t("aiBriefingFailed")))
+                .finally(() => setBriefBusy(false));
+            }}
+          >
+            <Sparkles className="size-4" />
+            {briefBusy ? t("aiBriefingBusy") : t("aiBriefing")}
+          </Button>
           {proposed.length > 0 && (
             <>
               <Button
@@ -157,6 +178,11 @@ export function TransportPlannerClient({
             </>
           )}
         </div>
+        {briefing && (
+          <div className="mt-2 w-full whitespace-pre-wrap rounded-md border border-border bg-accent/50 p-3 text-sm">
+            {briefing}
+          </div>
+        )}
       </div>
 
       {!centreSet && (
