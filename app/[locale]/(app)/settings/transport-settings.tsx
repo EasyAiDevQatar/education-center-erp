@@ -27,6 +27,20 @@ export type TransportValues = {
   pingDays: string;
   trackingVisibility: string;
   passengers: string;
+  includeTeacher: boolean;
+  includeStudentToCenter: boolean;
+  includeStudentToHome: boolean;
+  preferredArrivalBufferMin: string;
+  minArrivalBufferMin: string;
+  maxEarlyArrivalMin: string;
+  dismissalBufferMin: string;
+  boardingTimeMin: string;
+  dropoffTimeMin: string;
+  maxStudentWaitMin: string;
+  maxJourneyMin: string;
+  minDriverTurnaroundMin: string;
+  minVehicleTurnaroundMin: string;
+  allowInvalidOverride: boolean;
 };
 
 export function TransportSettings({ values }: { values: TransportValues }) {
@@ -173,6 +187,63 @@ export function TransportSettings({ values }: { values: TransportValues }) {
             ))}
           </Select>
         </FormField>
+      </div>
+
+      <div className="space-y-2 rounded-md border border-border p-3">
+        <p className="text-sm font-medium">{t("inclusion")}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="transportIncludeTeacher" defaultChecked={values.includeTeacher} className="size-4 accent-primary" />
+          {t("includeTeacher")}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="transportIncludeStudentToCenter" defaultChecked={values.includeStudentToCenter} className="size-4 accent-primary" />
+          {t("includeStudentToCenter")}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="transportIncludeStudentToHome" defaultChecked={values.includeStudentToHome} className="size-4 accent-primary" />
+          {t("includeStudentToHome")}
+        </label>
+      </div>
+
+      <div className="space-y-2 rounded-md border border-border p-3">
+        <p className="text-sm font-medium">{t("validationTiming")}</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <FormField label={t("preferredArrivalBuffer")} htmlFor="paB">
+            <Input id="paB" name="transportPreferredArrivalBufferMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.preferredArrivalBufferMin} />
+          </FormField>
+          <FormField label={t("minArrivalBuffer")} htmlFor="miB">
+            <Input id="miB" name="transportMinArrivalBufferMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.minArrivalBufferMin} />
+          </FormField>
+          <FormField label={t("maxEarlyArrival")} htmlFor="meA">
+            <Input id="meA" name="transportMaxEarlyArrivalMin" type="number" min="0" max="240" dir="ltr" defaultValue={values.maxEarlyArrivalMin} />
+          </FormField>
+          <FormField label={t("dismissalBuffer")} htmlFor="diB">
+            <Input id="diB" name="transportDismissalBufferMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.dismissalBufferMin} />
+          </FormField>
+          <FormField label={t("boardingTime")} htmlFor="boT">
+            <Input id="boT" name="transportBoardingTimeMin" type="number" min="0" max="30" dir="ltr" defaultValue={values.boardingTimeMin} />
+          </FormField>
+          <FormField label={t("dropoffTime")} htmlFor="drT">
+            <Input id="drT" name="transportDropoffTimeMin" type="number" min="0" max="30" dir="ltr" defaultValue={values.dropoffTimeMin} />
+          </FormField>
+          <FormField label={t("maxStudentWait")} htmlFor="mSW">
+            <Input id="mSW" name="transportMaxStudentWaitMin" type="number" min="0" max="240" dir="ltr" defaultValue={values.maxStudentWaitMin} />
+          </FormField>
+          <FormField label={t("maxJourney")} htmlFor="mJ">
+            <Input id="mJ" name="transportMaxJourneyMin" type="number" min="0" max="600" dir="ltr" defaultValue={values.maxJourneyMin} />
+          </FormField>
+          <FormField label={t("driverTurnaround")} htmlFor="dTa">
+            <Input id="dTa" name="transportMinDriverTurnaroundMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.minDriverTurnaroundMin} />
+          </FormField>
+          <FormField label={t("vehicleTurnaround")} htmlFor="vTa">
+            <Input id="vTa" name="transportMinVehicleTurnaroundMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.minVehicleTurnaroundMin} />
+          </FormField>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="transportAllowInvalidOverride" defaultChecked={values.allowInvalidOverride} className="size-4 accent-primary" />
+          {t("allowInvalidOverride")}
+        </label>
+        <p className="text-xs text-muted-foreground">{t("allowInvalidOverrideHint")}</p>
       </div>
 
       {msg && <p className="text-sm text-[var(--success)]">{msg}</p>}

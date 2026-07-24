@@ -23,6 +23,20 @@ const schema = z.object({
   pingDays: z.coerce.number().int().min(1).max(365),
   trackingVisibility: z.enum(TRACKING_VISIBILITY),
   passengers: z.enum(TRANSPORT_PASSENGERS),
+  includeTeacher: z.boolean(),
+  includeStudentToCenter: z.boolean(),
+  includeStudentToHome: z.boolean(),
+  preferredArrivalBufferMin: z.coerce.number().int().min(0).max(120),
+  minArrivalBufferMin: z.coerce.number().int().min(0).max(120),
+  maxEarlyArrivalMin: z.coerce.number().int().min(0).max(240),
+  dismissalBufferMin: z.coerce.number().int().min(0).max(120),
+  boardingTimeMin: z.coerce.number().int().min(0).max(30),
+  dropoffTimeMin: z.coerce.number().int().min(0).max(30),
+  maxStudentWaitMin: z.coerce.number().int().min(0).max(240),
+  maxJourneyMin: z.coerce.number().int().min(0).max(600),
+  minDriverTurnaroundMin: z.coerce.number().int().min(0).max(120),
+  minVehicleTurnaroundMin: z.coerce.number().int().min(0).max(120),
+  allowInvalidOverride: z.boolean(),
 });
 
 /**
@@ -57,6 +71,20 @@ export async function saveTransportSettings(
     pingDays: formData.get("transportPingDays") || 14,
     trackingVisibility: formData.get("transportTrackingVisibility") || "ADMIN_ONLY",
     passengers: formData.get("transportPassengers") || "BOTH",
+    includeTeacher: formData.get("transportIncludeTeacher") === "on",
+    includeStudentToCenter: formData.get("transportIncludeStudentToCenter") === "on",
+    includeStudentToHome: formData.get("transportIncludeStudentToHome") === "on",
+    preferredArrivalBufferMin: formData.get("transportPreferredArrivalBufferMin") || 15,
+    minArrivalBufferMin: formData.get("transportMinArrivalBufferMin") || 5,
+    maxEarlyArrivalMin: formData.get("transportMaxEarlyArrivalMin") || 30,
+    dismissalBufferMin: formData.get("transportDismissalBufferMin") || 10,
+    boardingTimeMin: formData.get("transportBoardingTimeMin") || 2,
+    dropoffTimeMin: formData.get("transportDropoffTimeMin") || 2,
+    maxStudentWaitMin: formData.get("transportMaxStudentWaitMin") || 20,
+    maxJourneyMin: formData.get("transportMaxJourneyMin") || 60,
+    minDriverTurnaroundMin: formData.get("transportMinDriverTurnaroundMin") || 10,
+    minVehicleTurnaroundMin: formData.get("transportMinVehicleTurnaroundMin") || 10,
+    allowInvalidOverride: formData.get("transportAllowInvalidOverride") === "on",
   });
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
@@ -73,6 +101,20 @@ export async function saveTransportSettings(
     ["transportPingDays", String(d.pingDays)],
     ["transportTrackingVisibility", d.trackingVisibility],
     ["transportPassengers", d.passengers],
+    ["transportIncludeTeacher", d.includeTeacher ? "1" : "0"],
+    ["transportIncludeStudentToCenter", d.includeStudentToCenter ? "1" : "0"],
+    ["transportIncludeStudentToHome", d.includeStudentToHome ? "1" : "0"],
+    ["transportPreferredArrivalBufferMin", String(d.preferredArrivalBufferMin)],
+    ["transportMinArrivalBufferMin", String(d.minArrivalBufferMin)],
+    ["transportMaxEarlyArrivalMin", String(d.maxEarlyArrivalMin)],
+    ["transportDismissalBufferMin", String(d.dismissalBufferMin)],
+    ["transportBoardingTimeMin", String(d.boardingTimeMin)],
+    ["transportDropoffTimeMin", String(d.dropoffTimeMin)],
+    ["transportMaxStudentWaitMin", String(d.maxStudentWaitMin)],
+    ["transportMaxJourneyMin", String(d.maxJourneyMin)],
+    ["transportMinDriverTurnaroundMin", String(d.minDriverTurnaroundMin)],
+    ["transportMinVehicleTurnaroundMin", String(d.minVehicleTurnaroundMin)],
+    ["transportAllowInvalidOverride", d.allowInvalidOverride ? "1" : "0"],
   ];
   // Centre coordinates are cleared rather than stored as an empty string, so
   // "not set yet" stays distinguishable from "set to 0,0" (a real place).

@@ -1247,6 +1247,24 @@ model Trip {
   /// explain *why* this driver was chosen rather than asking for blind trust.
   autoAllocated   Boolean  @default(false)
   allocationScore Decimal?
+
+  /// Phase-1 validation: VALID | WARNING | INVALID. Approval is gated on this.
+  validationStatus  String  @default("WARNING")
+  /// Human-readable reasons a route needs review, JSON array of {code,text}.
+  validationMessages String?
+  needsReviewReason String?
+
+  /// Revision / audit provenance (a session change proposes a new revision
+  /// rather than mutating an approved trip).
+  revisionNumber   Int     @default(1)
+  supersedesTripId String?
+  manualEdit       Boolean @default(false)
+
+  overrideReason  String?
+  overriddenById  String?
+  overriddenAt    DateTime?
+  approvedById    String?
+  approvedAt      DateTime?
   deadheadKm      Decimal?
   slackMin        Int?
 
@@ -1279,6 +1297,20 @@ model TripStop {
   label      String
   plannedMin Int
   arrivedAt  DateTime?
+
+  /// Operational-duration breakdown from the previous stop (all seconds). The
+  /// raw routing time and each allowance are kept separately, never merged
+  /// into one unexplained number.
+  routingDurationS     Int?
+  delayAllowanceS      Int?
+  operationalDurationS Int?
+  serviceDurationS     Int?
+  distanceFromPrevM    Int?
+  /// True while travel time is the straight-line estimate rather than a road
+  /// network result (Phase 2 sets these to false once OSRM is live).
+  estimated        Boolean @default(true)
+  fallbackUsed     Boolean @default(true)
+  validationStatus String?
 
   /// Exactly one passenger link is set. Two nullable columns beat a polymorphic
   /// id because the FK still protects them.

@@ -786,7 +786,8 @@
       "ASSIGNED": "معتمدة",
       "STARTED": "جارية",
       "COMPLETED": "مكتملة",
-      "CANCELLED": "ملغاة"
+      "CANCELLED": "ملغاة",
+      "NEEDS_REVIEW": "بحاجة لمراجعة"
     },
     "tripStopKind": {
       "PICKUP": "استلام",
@@ -1702,7 +1703,24 @@
     "trackingVisibility": "من يرى مواقع السائقين",
     "trackingVisibilityHint": "بيانات موقع الموظفين — شاركها بأضيق نطاق ممكن.",
     "passengers": "من يشمله النقل",
-    "passengersHint": "الركاب الذين يخطط لهم النظام. يُدرج المعلم عند تحديد موقع منزله، ويُدرج الطالب عند تفعيل خيار النقل في سجله."
+    "passengersHint": "الركاب الذين يخطط لهم النظام. يُدرج المعلم عند تحديد موقع منزله، ويُدرج الطالب عند تفعيل خيار النقل في سجله.",
+    "inclusion": "لمن نخطّط",
+    "includeTeacher": "المعلمون (زيارات منزلية)",
+    "includeStudentToCenter": "الطلاب - المنزل إلى المركز (اصطحاب)",
+    "includeStudentToHome": "الطلاب - المركز إلى المنزل (عودة)",
+    "validationTiming": "التحقق من توقيت الحصص (دقائق)",
+    "preferredArrivalBuffer": "هامش الوصول المفضّل",
+    "minArrivalBuffer": "أدنى هامش وصول",
+    "maxEarlyArrival": "أقصى وصول مبكر",
+    "dismissalBuffer": "هامش الانصراف",
+    "boardingTime": "زمن الصعود/الاصطحاب",
+    "dropoffTime": "زمن الإنزال",
+    "maxStudentWait": "أقصى انتظار بالمركز",
+    "maxJourney": "أقصى مدة رحلة (تحذير)",
+    "driverTurnaround": "مهلة السائق",
+    "vehicleTurnaround": "مهلة المركبة",
+    "allowInvalidOverride": "السماح باعتماد الرحلات غير الصالحة (بسبب)",
+    "allowInvalidOverrideHint": "إيقاف = لا يمكن اعتماد رحلة غير ممكنة أبداً. تشغيل = يمكن للمدير التجاوز بسبب إلزامي."
   },
   "subjects": {
     "title": "المواد",

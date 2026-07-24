@@ -136,6 +136,7 @@ export type TrackingVisibility = (typeof TRACKING_VISIBILITY)[number];
 export const TRIP_STATUSES = [
   "PLANNED",
   "PROPOSED",
+  "NEEDS_REVIEW",
   "ASSIGNED",
   "STARTED",
   "COMPLETED",

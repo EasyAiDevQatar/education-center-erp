@@ -61,13 +61,25 @@ export async function setTripStatus(
   if (!s) return { error: "forbidden" };
   if (!TRIP_STATUSES.includes(to)) return { error: "invalid" };
 
-  const trip = await db.trip.findUnique({ where: { id }, select: { id: true, status: true } });
+  const trip = await db.trip.findUnique({
+    where: { id },
+    select: { id: true, status: true, validationStatus: true },
+  });
   if (!trip) return { error: "notfound" };
   const from = trip.status as TripStatus;
   if (!canTransition(from, to)) return { error: "badTransition" };
 
+  // Approval gate: an INVALID route can only be approved through the explicit
+  // override path (below), never the normal approve button.
+  const isApproval = to === "ASSIGNED";
+  if (isApproval && trip.validationStatus === "INVALID") {
+    return { error: "invalidRoute" };
+  }
+  const approvalStamp =
+    isApproval ? { approvedById: s.userId ?? null, approvedAt: new Date() } : {};
+
   await db.$transaction([
-    db.trip.update({ where: { id }, data: { status: to } }),
+    db.trip.update({ where: { id }, data: { status: to, ...approvalStamp } }),
     db.tripEvent.create({
       data: { tripId: id, fromStatus: from, toStatus: to, note: note ?? null, byUserId: s.userId ?? null },
     }),
@@ -85,18 +97,28 @@ export async function approveAll(locale: string, day: string): Promise<ActionSta
   if (!daySchema.safeParse(day).success) return { error: "invalid" };
 
   const start = new Date(`${day}T00:00:00.000Z`);
+  const cfg = await loadTransportConfig();
   const proposed = await db.trip.findMany({
     where: { date: start, status: "PROPOSED" },
-    select: { id: true },
+    select: { id: true, validationStatus: true },
   });
 
   // One at a time on purpose: a single rejected row must not abort the whole
-  // approval (the pattern staff-flow got right and we kept).
+  // approval (the pattern staff-flow got right and we kept). INVALID routes are
+  // skipped — they must go through the explicit override, never a bulk approve.
   let approved = 0;
+  let blocked = 0;
   for (const t of proposed) {
+    if (t.validationStatus === "INVALID" && !cfg.allowInvalidOverride) {
+      blocked++;
+      continue;
+    }
     try {
       await db.$transaction([
-        db.trip.update({ where: { id: t.id }, data: { status: "ASSIGNED" } }),
+        db.trip.update({
+          where: { id: t.id },
+          data: { status: "ASSIGNED", approvedById: s.userId ?? null, approvedAt: new Date() },
+        }),
         db.tripEvent.create({
           data: { tripId: t.id, fromStatus: "PROPOSED", toStatus: "ASSIGNED", byUserId: s.userId ?? null },
         }),
@@ -106,7 +128,7 @@ export async function approveAll(locale: string, day: string): Promise<ActionSta
       // Skip and keep going; the board will still show whatever failed.
     }
   }
-  await writeAudit("Trip", `approve-all-${day}`, "UPDATE", { after: { approved } });
+  await writeAudit("Trip", `approve-all-${day}`, "UPDATE", { after: { approved, blocked } });
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true, message: String(approved) };
 }
@@ -468,6 +490,52 @@ export async function createManualTrip(
     },
   });
   await writeAudit("Trip", `manual-${d.day}`, "CREATE", { after: { driverId: d.driverId } });
+  revalidatePath(`/${locale}/transport/planner`);
+  return { ok: true };
+}
+
+/**
+ * Approve an INVALID route through an explicit, audited override. Admin-only,
+ * a reason is mandatory, and the validation messages are kept — the override
+ * records that a human accepted the risk, it does not erase it (spec §22).
+ */
+export async function overrideApprove(
+  locale: string,
+  id: string,
+  reason: string,
+): Promise<ActionState> {
+  const s = await guard();
+  if (!s) return { error: "forbidden" };
+  if (s.role !== "ADMIN") return { error: "forbidden" };
+  if (!reason || reason.trim().length < 3) return { error: "reasonRequired" };
+
+  const trip = await db.trip.findUnique({ where: { id }, select: { status: true } });
+  if (!trip) return { error: "notfound" };
+  if (!canTransition(trip.status as TripStatus, "ASSIGNED")) return { error: "badTransition" };
+
+  await db.$transaction([
+    db.trip.update({
+      where: { id },
+      data: {
+        status: "ASSIGNED",
+        overrideReason: reason.trim(),
+        overriddenById: s.userId ?? null,
+        overriddenAt: new Date(),
+        approvedById: s.userId ?? null,
+        approvedAt: new Date(),
+      },
+    }),
+    db.tripEvent.create({
+      data: {
+        tripId: id,
+        fromStatus: trip.status,
+        toStatus: "ASSIGNED",
+        note: `OVERRIDE: ${reason.trim()}`,
+        byUserId: s.userId ?? null,
+      },
+    }),
+  ]);
+  await writeAudit("Trip", id, "UPDATE", { after: { override: true, reason: reason.trim() } });
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true };
 }

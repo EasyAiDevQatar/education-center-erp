@@ -8,6 +8,7 @@ import { buildDayLegs, type Leg, type PassengerDay, type SkippedLeg } from "./ch
 import { allocate, type AllocDriver, type Assignment, type Unassigned } from "./allocate";
 import { driverIsDispatchable } from "./fleet";
 import { generatorMayReplace, legKeyFor } from "./trips";
+import { validateTrip, type StopForValidation } from "./validate";
 import type { TripStatus } from "@/lib/enums";
 
 /**
@@ -31,6 +32,8 @@ export type PlannedDriver = {
 };
 
 export type DayPlan = {
+  /** sessionId → {startMin,endMin}, for validation of the persisted trips. */
+  sessionWindows?: Map<string, { startMin: number; endMin: number }>;
   date: string;
   legs: Leg[];
   skipped: SkippedLeg[];
@@ -77,8 +80,8 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
 
   // Centre-wide scope: a centre that only ferries teachers should not have the
   // board fill with student legs it will never action.
-  const wantTeachers = config.passengers !== "STUDENTS";
-  const wantStudents = config.passengers !== "TEACHERS";
+  const wantTeachers = config.include.teacher;
+  const wantStudents = config.include.studentToCenter || config.include.studentToHome;
 
   /** Where a lesson physically happens. */
   const placeOf = (s: (typeof sessions)[number]) =>
@@ -89,6 +92,15 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       : { at: centre, label: centreLabel };
 
   const minutesOf = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
+
+  // Session time windows the validator checks arrivals/departures against.
+  const sessionWindows = new Map<string, { startMin: number; endMin: number }>();
+  for (const x of sessions) {
+    sessionWindows.set(x.id, {
+      startMin: minutesOf(x.date),
+      endMin: minutesOf(x.date) + Math.round(toNumber(x.hours) * 60),
+    });
+  }
 
   // --- passenger days -----------------------------------------------------
   const days = new Map<string, PassengerDay>();
@@ -153,9 +165,22 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       ? teacherHasHome.has(`TEACHER:${d.passengerId}`)
       : studentHasCenter.has(`STUDENT:${d.passengerId}`),
   );
-  const { legs, skipped } = buildDayLegs(chainDays, {
+  const built = buildDayLegs(chainDays, {
     arriveEarlyMin: config.bufferMin,
   });
+  // Student direction toggles: a leg arriving at the centre is a to-center
+  // pickup; a leg leaving the centre is a to-home return. Teacher legs are
+  // unaffected. ~50 m tolerance around the centre pin.
+  const nearCentre = (p: { lat: number; lng: number } | null) =>
+    p != null && centre != null &&
+    Math.abs(p.lat - centre.lat) < 0.0005 && Math.abs(p.lng - centre.lng) < 0.0005;
+  const legs = built.legs.filter((l) => {
+    if (l.passengerKind !== "STUDENT") return true;
+    if (nearCentre(l.to)) return config.include.studentToCenter;
+    if (nearCentre(l.from)) return config.include.studentToHome;
+    return true;
+  });
+  const skipped = built.skipped;
 
   // --- drivers ------------------------------------------------------------
   const today = new Date();
@@ -212,6 +237,7 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
     drivers,
     centreSet: centre !== null,
     config,
+    sessionWindows,
   };
 }
 
@@ -340,11 +366,32 @@ export async function generateDayTrips(
 
     const plannedStartMin = Math.min(assigned[0].a!.departMin, stops[0].plannedMin);
     const plannedEndMin = stops[stops.length - 1].plannedMin;
+
+    // Validate the route against every served session's window (spec §21).
+    // Phase 1: travel is still the straight-line estimate, so every stop is
+    // fallback/estimated and the trip is at best WARNING.
+    const win = plan.sessionWindows;
+    const vStops: StopForValidation[] = stops.map((st) => {
+      const w = st.sessionId ? win?.get(st.sessionId) : undefined;
+      return {
+        seq: st.seq,
+        kind: st.kind,
+        plannedMin: st.plannedMin,
+        sessionStartMin: w?.startMin ?? null,
+        sessionEndMin: w?.endMin ?? null,
+        servesSession: st.sessionId != null,
+        fallbackUsed: true,
+      };
+    });
+    const v = validateTrip(vStops, plan.config.rules);
+
     await db.trip.create({
       data: {
         date: start,
         status: "PROPOSED",
         legKey,
+        validationStatus: v.status,
+        validationMessages: JSON.stringify(v.messages),
         driverId,
         vehicleId: driver?.vehicleId ?? null,
         plannedStartMin,
@@ -459,4 +506,40 @@ export function estimateMinutes(
   departMin: number,
 ): number {
   return travelMinutes(distanceKm(a, b), departMin, config.profile);
+}
+
+/**
+ * A session's timing/location changed (or it was cancelled). Flag its still-open
+ * trips for review rather than silently mutating an approved plan (spec §23).
+ * COMPLETED/CANCELLED/STARTED trips are left alone — they are history or already
+ * on the road.
+ */
+export async function flagTripsForSession(sessionId: string, reason: string): Promise<number> {
+  const stops = await db.tripStop.findMany({
+    where: { sessionId },
+    select: { tripId: true },
+  });
+  const tripIds = [...new Set(stops.map((s) => s.tripId))];
+  if (tripIds.length === 0) return 0;
+
+  const affected = await db.trip.findMany({
+    where: { id: { in: tripIds }, status: { in: ["PROPOSED", "ASSIGNED", "PLANNED"] } },
+    select: { id: true, status: true },
+  });
+  for (const t of affected) {
+    await db.trip.update({
+      where: { id: t.id },
+      data: {
+        status: "NEEDS_REVIEW",
+        needsReviewReason: reason,
+        // Dropping approval — the override, if any, no longer applies.
+        approvedById: null,
+        approvedAt: null,
+      },
+    });
+    await db.tripEvent.create({
+      data: { tripId: t.id, fromStatus: t.status, toStatus: "NEEDS_REVIEW", note: reason },
+    });
+  }
+  return affected.length;
 }

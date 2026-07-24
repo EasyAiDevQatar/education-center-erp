@@ -786,7 +786,8 @@
       "ASSIGNED": "Assigned",
       "STARTED": "On the road",
       "COMPLETED": "Completed",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "NEEDS_REVIEW": "Needs review"
     },
     "tripStopKind": {
       "PICKUP": "Pickup",
@@ -1702,7 +1703,24 @@
     "trackingVisibility": "Who sees driver locations",
     "trackingVisibilityHint": "This is staff location data — share it as narrowly as possible.",
     "passengers": "Who gets a ride",
-    "passengersHint": "Which passengers the planner arranges transport for. Teachers opt in by having a home pin; students by the transport switch on their record."
+    "passengersHint": "Which passengers the planner arranges transport for. Teachers opt in by having a home pin; students by the transport switch on their record.",
+    "inclusion": "Who to plan for",
+    "includeTeacher": "Teachers (home visits)",
+    "includeStudentToCenter": "Students - home to centre (pickup)",
+    "includeStudentToHome": "Students - centre to home (return)",
+    "validationTiming": "Session-timing validation (minutes)",
+    "preferredArrivalBuffer": "Preferred arrival buffer",
+    "minArrivalBuffer": "Minimum arrival buffer",
+    "maxEarlyArrival": "Max early arrival",
+    "dismissalBuffer": "Dismissal buffer",
+    "boardingTime": "Boarding time / pickup",
+    "dropoffTime": "Drop-off time",
+    "maxStudentWait": "Max wait at centre",
+    "maxJourney": "Max journey (warn)",
+    "driverTurnaround": "Driver turnaround",
+    "vehicleTurnaround": "Vehicle turnaround",
+    "allowInvalidOverride": "Allow approving invalid routes (with reason)",
+    "allowInvalidOverrideHint": "Off = an infeasible route can never be approved. On = an admin may override with a mandatory reason."
   },
   "subjects": {
     "title": "Subjects",

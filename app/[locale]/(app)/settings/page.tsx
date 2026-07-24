@@ -314,6 +314,20 @@ export default async function SettingsPage({
               pingDays: settings.transportPingDays ?? "14",
               trackingVisibility: settings.transportTrackingVisibility ?? "ADMIN_ONLY",
               passengers: settings.transportPassengers ?? "BOTH",
+              includeTeacher: (settings.transportIncludeTeacher ?? "1") !== "0",
+              includeStudentToCenter: (settings.transportIncludeStudentToCenter ?? "1") !== "0",
+              includeStudentToHome: (settings.transportIncludeStudentToHome ?? "1") !== "0",
+              preferredArrivalBufferMin: settings.transportPreferredArrivalBufferMin ?? "15",
+              minArrivalBufferMin: settings.transportMinArrivalBufferMin ?? "5",
+              maxEarlyArrivalMin: settings.transportMaxEarlyArrivalMin ?? "30",
+              dismissalBufferMin: settings.transportDismissalBufferMin ?? "10",
+              boardingTimeMin: settings.transportBoardingTimeMin ?? "2",
+              dropoffTimeMin: settings.transportDropoffTimeMin ?? "2",
+              maxStudentWaitMin: settings.transportMaxStudentWaitMin ?? "20",
+              maxJourneyMin: settings.transportMaxJourneyMin ?? "60",
+              minDriverTurnaroundMin: settings.transportMinDriverTurnaroundMin ?? "10",
+              minVehicleTurnaroundMin: settings.transportMinVehicleTurnaroundMin ?? "10",
+              allowInvalidOverride: settings.transportAllowInvalidOverride === "1",
             }}
           />
         </CollapsibleCard>

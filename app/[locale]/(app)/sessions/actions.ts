@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { flagTripsForSession } from "@/lib/transport/trip-data";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -90,6 +91,8 @@ export async function saveSession(
 
   if (id) {
     await db.session.update({ where: { id }, data });
+    // A session edit can move its timing/location — flag any linked trips.
+    await flagTripsForSession(id, "SESSION_CHANGED");
     await writeAudit("Session", id, "UPDATE", { after: data });
     await notifySession("SESSION_RESCHEDULED", id);
   } else {

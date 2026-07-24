@@ -8,6 +8,7 @@ import {
 } from "./eta";
 import type { LatLng } from "./allocate";
 import { TRANSPORT_PASSENGERS, type TransportPassengers } from "@/lib/enums";
+import type { TransportRules } from "./validate";
 
 /** Every Setting key the transport module reads. */
 export const TRANSPORT_SETTING_KEYS = [
@@ -24,6 +25,29 @@ export const TRANSPORT_SETTING_KEYS = [
   "transportPingDays",
   "transportTrackingVisibility",
   "transportPassengers",
+  // Phase-1 validation & timing tunables.
+  "transportPreferredArrivalBufferMin",
+  "transportMinArrivalBufferMin",
+  "transportMaxEarlyArrivalMin",
+  "transportDismissalBufferMin",
+  "transportBoardingTimeMin",
+  "transportDropoffTimeMin",
+  "transportFixedDelayMin",
+  "transportTrafficBufferPercent",
+  "transportMaxStudentWaitMin",
+  "transportMaxJourneyMin",
+  "transportHardMaxJourneyMin",
+  "transportMinDriverTurnaroundMin",
+  "transportMinVehicleTurnaroundMin",
+  "transportPreTripInspectionMin",
+  "transportPostTripCloseoutMin",
+  "transportAllowInvalidOverride",
+  "transportAllowFallbackApproval",
+  "transportSolverTimeoutSeconds",
+  // Passenger/direction inclusion toggles.
+  "transportIncludeTeacher",
+  "transportIncludeStudentToCenter",
+  "transportIncludeStudentToHome",
 ] as const;
 
 export type TransportConfig = {
@@ -35,14 +59,31 @@ export type TransportConfig = {
   maxDeadheadKm: number;
   pingRetentionDays: number;
   trackingVisibility: "ADMIN_ONLY" | "ADMIN_STAFF";
-  /** Which passenger kinds the planner generates legs for. */
+  /** Which passenger kinds the planner generates legs for (legacy coarse). */
   passengers: TransportPassengers;
+  /** Fine-grained inclusion — supersedes `passengers` when set. */
+  include: { teacher: boolean; studentToCenter: boolean; studentToHome: boolean };
+  /** Validation & operational-timing rules (fed to lib/transport/validate). */
+  rules: TransportRules;
+  allowInvalidOverride: boolean;
+  allowFallbackApproval: boolean;
+  solverTimeoutSeconds: number;
 };
 
 const num = (v: string | undefined, fallback: number): number => {
   const n = parseFloat(String(v ?? ""));
   return Number.isFinite(n) && n > 0 ? n : fallback;
 };
+
+/** Like num() but 0 is a valid value (no-limit / no-allowance settings). */
+const numZ = (v: string | undefined, fallback: number): number => {
+  const n = parseFloat(String(v ?? ""));
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
+
+/** A boolean setting: "0" is off; anything else (incl. absent) uses fallback. */
+const bool = (v: string | undefined, fallback: boolean): boolean =>
+  v === undefined ? fallback : v === "1";
 
 /**
  * The module's on switch. Read per request — never cached at module level, so
@@ -86,6 +127,45 @@ export async function loadTransportConfig(): Promise<TransportConfig> {
     passengers: TRANSPORT_PASSENGERS.includes(s.transportPassengers as TransportPassengers)
       ? (s.transportPassengers as TransportPassengers)
       : "BOTH",
+    // Fine-grained inclusion. Unset falls back to the legacy `passengers` value
+    // so an upgrade keeps planning for whoever it planned for before.
+    include: {
+      teacher: bool(s.transportIncludeTeacher, s.transportPassengers !== "STUDENTS"),
+      studentToCenter: bool(s.transportIncludeStudentToCenter, s.transportPassengers !== "TEACHERS"),
+      studentToHome: bool(s.transportIncludeStudentToHome, s.transportPassengers !== "TEACHERS"),
+    },
+    rules: {
+      preferredArrivalBufferMin: numZ(s.transportPreferredArrivalBufferMin, 15),
+      minArrivalBufferMin: numZ(s.transportMinArrivalBufferMin, 5),
+      maxEarlyArrivalMin: numZ(s.transportMaxEarlyArrivalMin, 30),
+      dismissalBufferMin: numZ(s.transportDismissalBufferMin, 10),
+      maxStudentWaitMin: numZ(s.transportMaxStudentWaitMin, 20),
+      maxJourneyMin: numZ(s.transportMaxJourneyMin, 60),
+      hardMaxJourneyMin: numZ(s.transportHardMaxJourneyMin, 120),
+      minDriverTurnaroundMin: numZ(s.transportMinDriverTurnaroundMin, 10),
+      minVehicleTurnaroundMin: numZ(s.transportMinVehicleTurnaroundMin, 10),
+      preTripInspectionMin: numZ(s.transportPreTripInspectionMin, 5),
+      postTripCloseoutMin: numZ(s.transportPostTripCloseoutMin, 5),
+    },
+    allowInvalidOverride: bool(s.transportAllowInvalidOverride, false),
+    allowFallbackApproval: bool(s.transportAllowFallbackApproval, false),
+    solverTimeoutSeconds: numZ(s.transportSolverTimeoutSeconds, 20),
+  };
+}
+
+/** Extra operational-timing tunables not needed by the validator directly. */
+export type OperationalTunables = {
+  boardingTimeMin: number;
+  dropoffTimeMin: number;
+  fixedDelayMin: number;
+  trafficBufferPercent: number;
+};
+export function operationalTunables(rows: Record<string, string>): OperationalTunables {
+  return {
+    boardingTimeMin: numZ(rows.transportBoardingTimeMin, 2),
+    dropoffTimeMin: numZ(rows.transportDropoffTimeMin, 2),
+    fixedDelayMin: numZ(rows.transportFixedDelayMin, 0),
+    trafficBufferPercent: numZ(rows.transportTrafficBufferPercent, 0),
   };
 }
 

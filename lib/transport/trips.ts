@@ -35,10 +35,13 @@ export function legKeyFor(leg: {
  */
 const TRANSITIONS: Record<TripStatus, TripStatus[]> = {
   // A proposal is the generator's suggestion: approve it or throw it away.
-  PROPOSED: ["ASSIGNED", "CANCELLED"],
+  PROPOSED: ["ASSIGNED", "NEEDS_REVIEW", "CANCELLED"],
   // A manually created trip still needs a driver before it can start.
-  PLANNED: ["ASSIGNED", "CANCELLED"],
-  ASSIGNED: ["STARTED", "CANCELLED"],
+  PLANNED: ["ASSIGNED", "NEEDS_REVIEW", "CANCELLED"],
+  // Flagged by a session change: re-approve or throw away after review.
+  NEEDS_REVIEW: ["PROPOSED", "ASSIGNED", "CANCELLED"],
+  // Approval is dropped back to review when its session changes underneath it.
+  ASSIGNED: ["STARTED", "NEEDS_REVIEW", "CANCELLED"],
   STARTED: ["COMPLETED", "CANCELLED"],
   // Terminal: a completed trip is a record of something that happened.
   COMPLETED: [],
