@@ -1772,7 +1772,7 @@
     "statEmptyKm": "Empty km",
     "problems": "{count, plural, =1 {# ride needs attention} other {# rides need attention}}",
     "empty": "Nothing on the board for this day. Generate proposals to plan it.",
-    "noCentre": "Set the centre location on the map first (Settings → Transport module) — every trip to or from the centre depends on it.",
+    "noCentre": "Set the centre location first (Settings → centre).",
     "aiBriefing": "AI briefing",
     "aiBriefingBusy": "Briefing…",
     "aiBriefingFailed": "Could not produce a briefing — is the AI module configured?",
@@ -1789,7 +1789,13 @@
     "atStart": "At the start",
     "afterStop": "After stop {n}",
     "routeMap": "Route map",
-    "hideMap": "Hide map"
+    "hideMap": "Hide map",
+    "newTrip": "New trip",
+    "newTripHint": "Starts at the centre. Build the route with “Add stop” on the trip card.",
+    "pickDriver": "Choose a driver",
+    "startTime": "Start time",
+    "create": "Create",
+    "driver": "Driver"
   },
   "trips": {
     "title": "Trips",

@@ -387,7 +387,7 @@ export type BoardTrip = {
   passengerName: string | null;
   fromLabel: string;
   toLabel: string;
-  stops: { id: string; seq: number; kind: string; label: string; plannedMin: number; lat: number; lng: number }[];
+  stops: { id: string; seq: number; kind: string; label: string; plannedMin: number; lat: number; lng: number; sessionStartMin: number | null; sessionEndMin: number | null }[];
 };
 
 /** Read the day's trips for the board / register. */
@@ -400,7 +400,11 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
       vehicle: true,
       stops: {
         orderBy: { seq: "asc" },
-        include: { passengerTeacher: true, passengerStudent: true },
+        include: {
+          passengerTeacher: true,
+          passengerStudent: true,
+          session: { select: { date: true, hours: true } },
+        },
       },
     },
     orderBy: [{ plannedStartMin: "asc" }, { id: "asc" }],
@@ -428,7 +432,10 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
       passengerName: passenger ? displayName(passenger, locale) : null,
       fromLabel: first?.label ?? "",
       toLabel: last?.label ?? "",
-      stops: t.stops.map((s) => ({
+      stops: t.stops.map((s) => {
+        const sess = s.session;
+        const sMin = sess ? sess.date.getUTCHours() * 60 + sess.date.getUTCMinutes() : null;
+        return {
         id: s.id,
         seq: s.seq,
         kind: s.kind,
@@ -436,7 +443,10 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
         plannedMin: s.plannedMin,
         lat: s.lat,
         lng: s.lng,
-      })),
+        sessionStartMin: sMin,
+        sessionEndMin: sMin != null && sess ? sMin + Math.round(toNumber(sess.hours) * 60) : null,
+      };
+      }),
     };
   });
 }

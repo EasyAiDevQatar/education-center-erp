@@ -405,3 +405,69 @@ export async function tripPoolingOptions(locale: string, tripId: string): Promis
     options,
   };
 }
+
+
+/* -------- Manual trip creation (build from scratch) --------------------- */
+
+const newTripSchema = z.object({
+  day: daySchema,
+  driverId: z.string().min(1),
+  startMin: z.coerce.number().int().min(0).max(1439),
+});
+
+/**
+ * Create an empty manual trip for a driver, seeded with the centre as its first
+ * stop. The coordinator then builds the route with "Add stop". Status PLANNED
+ * (a human-made trip awaiting a driver's dispatch), so the generator never
+ * touches it.
+ */
+export async function createManualTrip(
+  locale: string,
+  input: z.infer<typeof newTripSchema>,
+): Promise<ActionState> {
+  const sess = await guard();
+  if (!sess) return { error: "forbidden" };
+  const parsed = newTripSchema.safeParse(input);
+  if (!parsed.success) return { error: "invalid" };
+  const d = parsed.data;
+
+  const config = await loadTransportConfig();
+  if (!config.centre) return { error: "noCentre" };
+
+  const driver = await db.driver.findUnique({
+    where: { id: d.driverId },
+    select: { defaultVehicleId: true },
+  });
+  const centreLabel = locale === "ar" ? "المركز" : "Centre";
+  const start = new Date(`${d.day}T00:00:00.000Z`);
+
+  await db.trip.create({
+    data: {
+      date: start,
+      status: "PLANNED",
+      driverId: d.driverId,
+      vehicleId: driver?.defaultVehicleId ?? null,
+      plannedStartMin: d.startMin,
+      plannedEndMin: d.startMin,
+      estimatedKm: 0,
+      estimatedMin: 0,
+      autoAllocated: false,
+      createdById: sess.userId ?? null,
+      stops: {
+        create: [
+          {
+            seq: 1,
+            kind: "PICKUP",
+            lat: config.centre.lat,
+            lng: config.centre.lng,
+            label: `L1 · ${centreLabel}`,
+            plannedMin: d.startMin,
+          },
+        ],
+      },
+    },
+  });
+  await writeAudit("Trip", `manual-${d.day}`, "CREATE", { after: { driverId: d.driverId } });
+  revalidatePath(`/${locale}/transport/planner`);
+  return { ok: true };
+}

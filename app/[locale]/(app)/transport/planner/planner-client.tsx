@@ -22,6 +22,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { minToHHMM } from "@/lib/planner";
 import { AddStopDialog } from "./add-stop-dialog";
+import { NewTripDialog } from "./new-trip-dialog";
 import { TripMiniMap } from "@/components/trip-mini-map";
 import type { BoardTrip, PlannedDriver } from "@/lib/transport/trip-data";
 import {
@@ -137,6 +138,7 @@ export function TransportPlannerClient({
         </Button>
 
         <div className="ms-auto flex flex-wrap gap-2">
+          <NewTripDialog day={day} drivers={drivers} onCreated={() => router.refresh()} />
           <Button
             type="button"
             className="gap-2"
@@ -295,6 +297,20 @@ export function TransportPlannerClient({
                         {minToHHMM(st.plannedMin)}
                       </span>
                       <span className="font-medium">{st.label}</span>
+                      {/* The lesson's own start (green) and end (red) — what the
+                          driver must hit — as small raised buttons. */}
+                      {st.sessionStartMin != null && (
+                        <span className="ms-auto flex shrink-0 items-center gap-1" dir="ltr">
+                          <span className="rounded-md border-b-2 border-green-800 bg-green-600 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white shadow-sm">
+                            {minToHHMM(st.sessionStartMin)}
+                          </span>
+                          {st.sessionEndMin != null && (
+                            <span className="rounded-md border-b-2 border-red-800 bg-red-600 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white shadow-sm">
+                              {minToHHMM(st.sessionEndMin)}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ol>
@@ -340,11 +356,11 @@ export function TransportPlannerClient({
 
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {/* Add / pool a teacher onto a trip that has not left. */}
-                {(trip.status === "PROPOSED" || trip.status === "ASSIGNED") && (
+                {(trip.status === "PROPOSED" || trip.status === "PLANNED" || trip.status === "ASSIGNED") && (
                   <AddStopDialog tripId={trip.id} onChanged={() => router.refresh()} />
                 )}
                 {/* Reassign is available while the trip has not left. */}
-                {(trip.status === "PROPOSED" || trip.status === "ASSIGNED") && (
+                {(trip.status === "PROPOSED" || trip.status === "PLANNED" || trip.status === "ASSIGNED") && (
                   <Select
                     aria-label={t("reassign")}
                     value={trip.driverId ?? ""}
@@ -363,7 +379,7 @@ export function TransportPlannerClient({
                     ))}
                   </Select>
                 )}
-                {trip.status === "PROPOSED" && (
+                {(trip.status === "PROPOSED" || trip.status === "PLANNED") && (
                   <>
                     <Button
                       type="button"
