@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users, Printer, Route } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -29,6 +29,7 @@ import {
 } from "../sessions/session-dialog";
 import { saveSession } from "../sessions/actions";
 import { GroupBookingDialog, type GroupOpt } from "../sessions/group-booking-dialog";
+import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
 import { rescheduleSession, resizeSession } from "./actions";
 
 export type CalEvent = {
@@ -48,6 +49,10 @@ export type CalEvent = {
   status: string;
   paymentStatus: string;
   total: number;
+  guardianPhone: string | null;
+  addressLabel: string | null;
+  home: { lat: number; lng: number } | null;
+  trip: SessionTripLite | null;
 };
 
 const START_HOUR = 7;
@@ -143,6 +148,7 @@ export function CalendarClient({
   teacherFilter,
   studentFilter,
   locationFilter,
+  centre = null,
   centerName,
 }: {
   view: CalendarView;
@@ -160,6 +166,7 @@ export function CalendarClient({
   teacherFilter: string;
   studentFilter: string;
   locationFilter: string;
+  centre?: { lat: number; lng: number } | null;
   centerName: string;
 }) {
   const t = useTranslations("calendar");
@@ -170,6 +177,7 @@ export function CalendarClient({
   const router = useRouter();
   const pathname = usePathname();
 
+  const hover = useSessionHover(currency);
   const [events, setEvents] = useState<CalEvent[]>(eventsProp);
   useEffect(() => setEvents(eventsProp), [eventsProp]);
 
@@ -376,6 +384,7 @@ export function CalendarClient({
           <option value="CENTER">{te("location.CENTER")}</option>
           <option value="HOME">{te("location.HOME")}</option>
         </Select>
+        {hover.portal}
 
         <div className="ms-auto flex items-center gap-1 rounded-md border border-border p-0.5">
           {(["week", "day", "compact", "list"] as const).map((v) => (
@@ -523,7 +532,24 @@ export function CalendarClient({
                       return (
                         <div
                           key={ev.id + (isGhost ? "-g" : "")}
-                          onPointerDown={(e) => onPointerDownEvent(e, ev, "move")}
+                          {...hover.bind({
+                            studentName: ev.studentName,
+                            teacherName: ev.teacherName || null,
+                            subjectLabel: ev.subjectLabel,
+                            levelLabel: ev.levelLabel,
+                            timeLabel: `${fmtTime(ev.startMinutes)}\u2013${fmtTime(ev.startMinutes + Math.round(ev.hours * 60))} \u00b7 ${ev.hours}h`,
+                            total: ev.total,
+                            status: ev.status,
+                            paymentStatus: ev.paymentStatus,
+                            location: ev.location,
+                            addressLabel: ev.addressLabel,
+                            guardianPhone: ev.guardianPhone,
+                            home: ev.home,
+                            centre,
+                            trip: ev.trip,
+                            mapDate: ev.day,
+                          })}
+                          onPointerDown={(e) => { hover.hide(); onPointerDownEvent(e, ev, "move"); }}
                           onClick={(e) => e.stopPropagation()}
                           className={cn(
                             "absolute z-10 cursor-grab touch-none overflow-hidden rounded-md border-s-4 px-1.5 py-1 text-[11px] shadow-sm active:cursor-grabbing",
@@ -539,7 +565,14 @@ export function CalendarClient({
                         >
                           <div className="flex items-center justify-between gap-1">
                             <span className="truncate font-semibold">{ev.studentName}</span>
-                            {ev.location === "HOME" ? <Home className="size-3 shrink-0" /> : <Building2 className="size-3 shrink-0 opacity-60" />}
+                            {ev.location === "HOME" ? (
+                              <span className="flex shrink-0 items-center gap-0.5">
+                                <Route className={cn("size-3 shrink-0", tripTint(ev.trip))} />
+                                <Home className="size-3 shrink-0" />
+                              </span>
+                            ) : (
+                              <Building2 className="size-3 shrink-0 opacity-60" />
+                            )}
                           </div>
                           {!compact && (
                             <>

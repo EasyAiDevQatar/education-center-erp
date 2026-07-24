@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadGroupOpts } from "@/lib/groups";
+import { tripsBySession } from "@/lib/session-trips";
 import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
@@ -81,7 +82,7 @@ export default async function CalendarPage({
           ...(studentFilter ? { studentId: studentFilter } : {}),
           ...(locationFilter ? { location: locationFilter } : {}),
         },
-        include: { student: true, teacher: true, gradeLevel: true, subject: true },
+        include: { student: { include: { guardian: true } }, teacher: true, gradeLevel: true, subject: true },
         orderBy: { date: "asc" },
       }),
       db.student.findMany({
@@ -92,7 +93,7 @@ export default async function CalendarPage({
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
-      db.setting.findMany({ where: { key: { in: ["currency", "centerName"] } } }),
+      db.setting.findMany({ where: { key: { in: ["currency", "centerName", "centerLat", "centerLng"] } } }),
       db.subject.findMany({
         where: { active: true },
         orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
@@ -103,6 +104,13 @@ export default async function CalendarPage({
 
   const settingsMap = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
   const currency = settingsMap.currency ?? "QAR";
+  const tripMap = await tripsBySession(sessions.map((s) => s.id), locale);
+  const centreLat = parseFloat(settingsMap.centerLat ?? "");
+  const centreLng = parseFloat(settingsMap.centerLng ?? "");
+  const centre =
+    Number.isFinite(centreLat) && Number.isFinite(centreLng)
+      ? { lat: centreLat, lng: centreLng }
+      : null;
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
   const events: CalEvent[] = sessions.map((s) => {
@@ -122,6 +130,13 @@ export default async function CalendarPage({
       status: s.status,
       paymentStatus: s.paymentStatus,
       total: toNumber(s.total),
+      guardianPhone: s.student.guardian?.phone ?? null,
+      addressLabel: s.student.homeCode ?? s.student.address ?? null,
+      home:
+        s.student.homeLat != null && s.student.homeLng != null
+          ? { lat: s.student.homeLat, lng: s.student.homeLng }
+          : null,
+      trip: tripMap[s.id] ?? null,
       subjectId: s.subjectId,
       subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
     };
@@ -163,6 +178,7 @@ export default async function CalendarPage({
         teacherFilter={teacherFilter}
         studentFilter={studentFilter}
         locationFilter={locationFilter}
+        centre={centre}
         centerName={settingsMap.centerName ?? ""}
       />
     </div>

@@ -1903,5 +1903,19 @@
     "groupSessions": "Sessions booked from this group",
     "noSessionsYet": "No sessions booked from this group yet — load it in group booking to book one.",
     "inherited": "inherited"
+  },
+  "hoverCard": {
+    "teacher": "Teacher",
+    "subject": "Subject",
+    "grade": "Grade",
+    "time": "Time",
+    "total": "Total",
+    "payment": "Payment",
+    "location": "Location",
+    "guardian": "Guardian",
+    "driver": "Driver",
+    "noTripYet": "No trip planned yet",
+    "openMap": "Open transport map",
+    "noPin": "No home pin set — add it in the student profile"
   }
 }

@@ -22,6 +22,7 @@ import {
   Printer,
   MapPin,
   CalendarRange,
+  Route,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
@@ -47,6 +48,7 @@ import { localNowTime, localToday } from "@/lib/session-time";
 import { ConflictWarnings } from "@/components/conflict-warnings";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { deleteSession } from "../sessions/actions";
+import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
 import {
   createDraftSession,
   updateDraft,
@@ -91,6 +93,11 @@ export type PlannerSession = {
   subjectLabel: string | null;
   /** Free trial lesson booked from the leads board. */
   isTrial: boolean;
+  paymentStatus: string;
+  guardianPhone: string | null;
+  addressLabel: string | null;
+  home: { lat: number; lng: number } | null;
+  trip: SessionTripLite | null;
 };
 
 export type PlannerTemplateRow = {
@@ -146,6 +153,7 @@ export function PlannerClient({
   homeGapMin,
   availability,
   templates,
+  centre = null,
   centerName,
   centerLogo,
   printedBy,
@@ -161,6 +169,7 @@ export function PlannerClient({
   homeGapMin: number;
   availability: AvailabilityRow[];
   templates: PlannerTemplateRow[];
+  centre?: { lat: number; lng: number } | null;
   centerName: string;
   centerLogo: string;
   printedBy: string;
@@ -178,6 +187,7 @@ export function PlannerClient({
     () => (locFilter ? allSessions.filter((x) => x.location === locFilter) : allSessions),
     [allSessions, locFilter],
   );
+  const hover = useSessionHover(currency);
 
   const [pending, start] = useTransition();
   const [addFor, setAddFor] = useState<string | null>(null); // teacherId
@@ -396,6 +406,7 @@ export function PlannerClient({
           <option value="CENTER">{te("location.CENTER")}</option>
           <option value="HOME">{te("location.HOME")}</option>
         </Select>
+        {hover.portal}
 
         <div className="ms-auto flex flex-wrap items-center gap-2">
           <Button
@@ -588,6 +599,23 @@ export function PlannerClient({
                     return (
                       <td key={s.id} className="border-s border-border/60 p-1.5">
                         <div
+                          {...hover.bind({
+                            studentName: s.studentName,
+                            teacherName: null,
+                            subjectLabel: s.subjectLabel,
+                            levelLabel: s.levelLabel,
+                            timeLabel: `${minToHHMM(s.startMin)}\u2013${minToHHMM(end)} \u00b7 ${s.hours}h`,
+                            total: s.total,
+                            status: s.status,
+                            paymentStatus: s.paymentStatus,
+                            location: s.location,
+                            addressLabel: s.addressLabel,
+                            guardianPhone: s.guardianPhone,
+                            home: s.home,
+                            centre,
+                            trip: s.trip,
+                            mapDate: day,
+                          })}
                           draggable={s.status === "DRAFT"}
                           onDragStart={(e) => {
                             e.dataTransfer.effectAllowed = "move";
@@ -617,7 +645,10 @@ export function PlannerClient({
                                 />
                               )}
                               {s.location === "HOME" ? (
-                                <Home className="size-3.5" />
+                                <>
+                                  <Route className={cn("size-3.5", tripTint(s.trip))} />
+                                  <Home className="size-3.5" />
+                                </>
                               ) : (
                                 <Building2 className="size-3.5 opacity-50" />
                               )}

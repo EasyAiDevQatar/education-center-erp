@@ -12,6 +12,7 @@ import {
 } from "./planner-client";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { displayName } from "@/lib/names";
+import { tripsBySession } from "@/lib/session-trips";
 
 export default async function PlannerPage({
   params,
@@ -40,7 +41,7 @@ export default async function PlannerPage({
     await Promise.all([
       db.session.findMany({
         where: { date: { gte: start, lt: end } },
-        include: { student: true, gradeLevel: true, subject: true },
+        include: { student: { include: { guardian: true } }, gradeLevel: true, subject: true },
         orderBy: { date: "asc" },
       }),
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -49,7 +50,7 @@ export default async function PlannerPage({
       currentPriceMatrix(),
       db.setting.findMany({
         where: {
-          key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin", "centerName", "centerLogo"] },
+          key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin", "centerName", "centerLogo", "centerLat", "centerLng"] },
         },
       }),
       db.teacherAvailability.findMany({
@@ -62,6 +63,13 @@ export default async function PlannerPage({
     ]);
 
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
+  const tripMap = await tripsBySession(sessions.map((s) => s.id), locale);
+  const centreLat = parseFloat(settings.centerLat ?? "");
+  const centreLng = parseFloat(settings.centerLng ?? "");
+  const centre =
+    Number.isFinite(centreLat) && Number.isFinite(centreLng)
+      ? { lat: centreLat, lng: centreLng }
+      : null;
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
   const rows: PlannerSession[] = sessions
@@ -82,6 +90,14 @@ export default async function PlannerPage({
     homeCode: s.student.homeCode,
     subjectLabel: s.subject ? (locale === "ar" ? s.subject.nameAr : s.subject.nameEn) : null,
     isTrial: s.isTrial,
+    paymentStatus: s.paymentStatus,
+    guardianPhone: s.student.guardian?.phone ?? null,
+    addressLabel: s.student.homeCode ?? s.student.address ?? null,
+    home:
+      s.student.homeLat != null && s.student.homeLng != null
+        ? { lat: s.student.homeLat, lng: s.student.homeLng }
+        : null,
+    trip: tripMap[s.id] ?? null,
   }));
 
   const templateRows: PlannerTemplateRow[] = templates.map((x) => ({
@@ -118,6 +134,7 @@ export default async function PlannerPage({
         homeGapMin={parseInt(settings.plannerHomeGapMin ?? "30", 10) || 0}
         availability={availability}
         templates={templateRows}
+        centre={centre}
         centerName={settings.centerName ?? ""}
         centerLogo={settings.centerLogo ?? ""}
         printedBy={auth.name}
