@@ -435,6 +435,7 @@ export default async function SettingsPage({
                 allowInvalidOverride: settings.transportAllowInvalidOverride === "1",
                 maxAdvancePickupMin: settings.transportMaxAdvancePickupMin ?? "60",
                 driverModel: settings.transportDriverModel ?? "DROP_AND_RETURN",
+                logicNote: settings.transportLogicNote ?? "",
               }}
             />
           ),

@@ -1795,7 +1795,10 @@
         "teacher": "teachers to home visits",
         "studentIn": "students home to centre",
         "studentOut": "students centre to home"
-      }
+      },
+      "logicEditHint": "Edit the wording however you like. Saving replaces the generated description with your own; the warnings below stay generated from the settings.",
+      "logicCustomHint": "Hand-written description. It does not update when settings change — regenerate to go back to the live one.",
+      "logicRegenerate": "Regenerate from settings"
     }
   },
   "subjects": {

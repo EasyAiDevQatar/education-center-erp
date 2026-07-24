@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Bus, Map as MapIcon, AlertTriangle, ListChecks } from "lucide-react";
+import { Bus, Map as MapIcon, AlertTriangle, ListChecks, Pencil, RotateCcw } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,11 @@ import { Select } from "@/components/ui/select";
 import { FormField } from "@/components/crud/form-field";
 import { MapPicker } from "@/components/map-picker";
 import { TRACKING_VISIBILITY, TRANSPORT_PASSENGERS } from "@/lib/enums";
-import { saveTransportSettings, restoreTransportDefaults } from "./transport-actions";
+import {
+  saveTransportSettings,
+  restoreTransportDefaults,
+  saveTransportLogicNote,
+} from "./transport-actions";
 import { describeLogic, logicWarnings, type LogicInput } from "@/lib/transport/describe";
 
 export type TransportValues = {
@@ -44,6 +48,8 @@ export type TransportValues = {
   allowInvalidOverride: boolean;
   maxAdvancePickupMin: string;
   driverModel: string;
+  /** Admin's own wording of the logic; empty means show the generated one. */
+  logicNote: string;
 };
 
 const n = (s: string, d: number) => {
@@ -62,11 +68,15 @@ const hhmm = (m: number) =>
  * bad trips. Reads the live knob values, so editing a field immediately rewrites
  * the sentence it affects instead of leaving the admin to guess.
  */
-function LogicPanel({ cfg }: { cfg: LogicInput }) {
+function LogicPanel({ cfg, note }: { cfg: LogicInput; note: string }) {
   const t = useTranslations("transport");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const [restoring, startRestore] = useTransition();
+  const [saving, startSave] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
 
   const lines = describeLogic(cfg);
   const warnings = logicWarnings(cfg);
@@ -83,22 +93,107 @@ function LogicPanel({ cfg }: { cfg: LogicInput }) {
     return t(`logic.${key}`, params ?? {});
   };
 
+  /** The generated description as plain numbered text — the editor's starting point. */
+  const asText = () => lines.map((l, i) => `${i + 1}. ${render(l.key, l.params)}`).join("\n");
+
+  const commit = (text: string) =>
+    startSave(async () => {
+      await saveTransportLogicNote(locale, text);
+      setEditing(false);
+      router.refresh();
+    });
+
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-border p-3">
-        <div className="mb-2 flex items-center gap-2">
-          <ListChecks className="size-4 text-primary" />
-          <span className="text-sm font-semibold">{t("logic.logicTitle")}</span>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ListChecks className="size-4 text-primary" />
+            <span className="text-sm font-semibold">{t("logic.logicTitle")}</span>
+          </div>
+          {!editing && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              onClick={() => {
+                setDraft(note || asText());
+                setEditing(true);
+              }}
+            >
+              <Pencil className="size-3.5" />
+              {tc("edit")}
+            </Button>
+          )}
         </div>
-        <p className="mb-2 text-xs text-muted-foreground">{t("logic.logicHint")}</p>
-        <ol className="space-y-1.5 text-xs leading-relaxed">
-          {lines.map((l, i) => (
-            <li key={l.key} className="flex gap-2">
-              <span className="shrink-0 text-muted-foreground">{i + 1}.</span>
-              <span>{render(l.key, l.params)}</span>
-            </li>
-          ))}
-        </ol>
+
+        {editing ? (
+          <>
+            <p className="mb-2 text-xs text-muted-foreground">{t("logic.logicEditHint")}</p>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={14}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs leading-relaxed"
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" disabled={saving} onClick={() => commit(draft)}>
+                {saving ? tc("saving") : tc("save")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => setEditing(false)}
+              >
+                {tc("cancel")}
+              </Button>
+              {/* Puts the generated wording back in the box without saving, so a
+                  half-finished edit can always be started over. */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1"
+                disabled={saving}
+                onClick={() => setDraft(asText())}
+              >
+                <RotateCcw className="size-3.5" />
+                {t("logic.logicRegenerate")}
+              </Button>
+            </div>
+          </>
+        ) : note ? (
+          <>
+            <p className="mb-2 text-xs text-muted-foreground">{t("logic.logicCustomHint")}</p>
+            <p className="whitespace-pre-wrap text-xs leading-relaxed">{note}</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mt-2 gap-1 px-2 text-xs"
+              disabled={saving}
+              onClick={() => commit("")}
+            >
+              <RotateCcw className="size-3.5" />
+              {t("logic.logicRegenerate")}
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="mb-2 text-xs text-muted-foreground">{t("logic.logicHint")}</p>
+            <ol className="space-y-1.5 text-xs leading-relaxed">
+              {lines.map((l, i) => (
+                <li key={l.key} className="flex gap-2">
+                  <span className="shrink-0 text-muted-foreground">{i + 1}.</span>
+                  <span>{render(l.key, l.params)}</span>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </div>
 
       {warnings.length > 0 && (
@@ -446,6 +541,7 @@ export function TransportSettings({ values }: { values: TransportValues }) {
     </form>
     <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
       <LogicPanel
+        note={values.logicNote}
         cfg={{
           driverModel: driverModel === "STAY" ? "STAY" : "DROP_AND_RETURN",
           maxAdvancePickupMin: n(advance, 60),

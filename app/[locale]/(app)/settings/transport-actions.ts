@@ -53,6 +53,42 @@ export async function restoreTransportDefaults(
   return { ok: true };
 }
 
+/**
+ * Save an admin's own wording of the transport logic, or clear it.
+ *
+ * The generated description is the honest one — it is derived from the settings
+ * themselves and cannot drift. A saved note replaces it for readers who want
+ * the centre's own phrasing (an operating policy, a handover note), so it is
+ * marked as hand-written and can be regenerated at any time. The warnings below
+ * it stay generated whatever the note says: they are a safety signal, not prose.
+ */
+export async function saveTransportLogicNote(
+  locale: string,
+  text: string,
+): Promise<TransportSettingsState> {
+  const s = await getSession();
+  if (!s || s.role !== "ADMIN") return { error: "forbidden" };
+
+  // Roomy on purpose: this is where a centre writes its full transport policy,
+  // which runs to pages. A tight cap silently cuts the document mid-sentence.
+  const value = String(text ?? "").trim().slice(0, 40000);
+  if (value) {
+    await db.setting.upsert({
+      where: { key: "transportLogicNote" },
+      create: { key: "transportLogicNote", value },
+      update: { value },
+    });
+  } else {
+    await db.setting.deleteMany({ where: { key: "transportLogicNote" } });
+  }
+
+  await writeAudit("Setting", "transport", "UPDATE", {
+    after: { logicNote: value ? "custom" : "generated" },
+  });
+  revalidatePath(`/${locale}/settings`);
+  return { ok: true };
+}
+
 const schema = z.object({
   enabled: z.boolean(),
   centerLat: z.coerce.number().min(-90).max(90).optional().nullable(),
