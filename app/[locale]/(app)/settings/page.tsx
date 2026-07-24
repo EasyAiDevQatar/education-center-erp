@@ -328,6 +328,8 @@ export default async function SettingsPage({
               minDriverTurnaroundMin: settings.transportMinDriverTurnaroundMin ?? "10",
               minVehicleTurnaroundMin: settings.transportMinVehicleTurnaroundMin ?? "10",
               allowInvalidOverride: settings.transportAllowInvalidOverride === "1",
+              maxAdvancePickupMin: settings.transportMaxAdvancePickupMin ?? "60",
+              driverModel: settings.transportDriverModel ?? "DROP_AND_RETURN",
             }}
           />
         </CollapsibleCard>

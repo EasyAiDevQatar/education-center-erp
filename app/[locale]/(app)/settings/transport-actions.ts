@@ -37,6 +37,8 @@ const schema = z.object({
   minDriverTurnaroundMin: z.coerce.number().int().min(0).max(120),
   minVehicleTurnaroundMin: z.coerce.number().int().min(0).max(120),
   allowInvalidOverride: z.boolean(),
+  maxAdvancePickupMin: z.coerce.number().int().min(0).max(240),
+  driverModel: z.enum(["DROP_AND_RETURN", "STAY"]),
 });
 
 /**
@@ -85,6 +87,8 @@ export async function saveTransportSettings(
     minDriverTurnaroundMin: formData.get("transportMinDriverTurnaroundMin") || 10,
     minVehicleTurnaroundMin: formData.get("transportMinVehicleTurnaroundMin") || 10,
     allowInvalidOverride: formData.get("transportAllowInvalidOverride") === "on",
+    maxAdvancePickupMin: formData.get("transportMaxAdvancePickupMin") || 60,
+    driverModel: formData.get("transportDriverModel") || "DROP_AND_RETURN",
   });
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
@@ -115,6 +119,8 @@ export async function saveTransportSettings(
     ["transportMinDriverTurnaroundMin", String(d.minDriverTurnaroundMin)],
     ["transportMinVehicleTurnaroundMin", String(d.minVehicleTurnaroundMin)],
     ["transportAllowInvalidOverride", d.allowInvalidOverride ? "1" : "0"],
+    ["transportMaxAdvancePickupMin", String(d.maxAdvancePickupMin)],
+    ["transportDriverModel", d.driverModel],
   ];
   // Centre coordinates are cleared rather than stored as an empty string, so
   // "not set yet" stays distinguishable from "set to 0,0" (a real place).

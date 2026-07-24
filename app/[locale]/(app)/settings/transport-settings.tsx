@@ -41,7 +41,88 @@ export type TransportValues = {
   minDriverTurnaroundMin: string;
   minVehicleTurnaroundMin: string;
   allowInvalidOverride: boolean;
+  maxAdvancePickupMin: string;
+  driverModel: string;
 };
+
+const n = (s: string, d: number) => {
+  const v = parseFloat(s);
+  return Number.isFinite(v) ? v : d;
+};
+const hhmm = (m: number) =>
+  `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(Math.round(m) % 60).padStart(2, "0")}`;
+
+/** Live sandbox: a sample home lesson (09:00–10:30, ~6 km away) run through the
+ *  current rules so an admin sees the effect of each knob — and, crucially, the
+ *  difference between a driver waiting through the lesson (STAY) and being freed
+ *  (DROP_AND_RETURN). Pure client-side; mirrors the generator's timing math. */
+function DemoPanel({
+  driverModel, speed, detour, prefBuf, minBuf, dismissBuf, boarding, advance,
+}: {
+  driverModel: string; speed: number; detour: number; prefBuf: number;
+  minBuf: number; dismissBuf: number; boarding: number; advance: number;
+}) {
+  const t = useTranslations("transport");
+  const DIST = 6, START = 9 * 60, END = 10 * 60 + 30;
+  const travel = Math.max(5, Math.ceil((DIST * detour) / Math.max(5, speed) * 60));
+  const target = START - prefBuf;
+  const latest = START - minBuf;
+  const departPickup = Math.max(START - advance, target - travel - boarding);
+  const arriveLesson = departPickup + boarding + travel;
+  const late = arriveLesson > latest;
+  const readyReturn = END + dismissBuf;
+  const arriveHome = readyReturn + travel;
+
+  const AX0 = 8 * 60, AX1 = 11 * 60, RANGE = AX1 - AX0;
+  const pos = (m: number) => ((m - AX0) / RANGE) * 100;
+  const seg = (a: number, b: number) => ({ insetInlineStart: `${pos(a)}%`, width: `${(pos(b) - pos(a))}%` });
+  const drop = driverModel !== "STAY";
+  const idle = readyReturn - arriveLesson;
+
+  const Line = ({ label, val, tone }: { label: string; val: string; tone?: string }) => (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`tabular-nums font-medium ${tone ?? ""}`} dir="ltr">{val}</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-card p-3 text-xs">
+      <p className="text-sm font-medium">{t("demoTitle")}</p>
+      <p className="text-muted-foreground">{t("demoHint")}</p>
+
+      {/* timeline */}
+      <div className="relative h-14 rounded-md bg-muted/40">
+        <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+        {[8, 9, 10, 11].map((h) => (
+          <span key={h} className="absolute top-0 -translate-x-1/2 text-[9px] text-muted-foreground" style={{ insetInlineStart: `${pos(h * 60)}%` }} dir="ltr">{h}:00</span>
+        ))}
+        {/* lesson band */}
+        <div className="absolute top-1/2 h-4 -translate-y-1/2 rounded bg-primary/10 ring-1 ring-primary/30" style={seg(START, END)} title={t("demoLesson")} />
+        {drop ? (
+          <>
+            <div className={`absolute top-1/2 h-3 -translate-y-1/2 rounded ${late ? "bg-destructive" : "bg-green-500"}`} style={seg(departPickup, arriveLesson)} />
+            <div className="absolute top-1/2 h-3 -translate-y-1/2 rounded bg-green-500" style={seg(readyReturn, arriveHome)} />
+          </>
+        ) : (
+          <div className="absolute top-1/2 h-3 -translate-y-1/2 rounded bg-amber-500" style={seg(departPickup, arriveHome)} />
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <Line label={t("demoPickup")} val={hhmm(departPickup)} />
+        <Line label={t("demoArrive")} val={`${hhmm(arriveLesson)}${late ? " ✕" : " ✓"}`} tone={late ? "text-destructive" : "text-green-600"} />
+        <Line label={t("demoReturn")} val={hhmm(readyReturn)} />
+        <Line label={t("demoHome")} val={hhmm(arriveHome)} />
+        <div className="mt-1 rounded-md bg-muted/50 p-2">
+          {drop
+            ? <span className="text-green-700 dark:text-green-400">{t("demoFree", { n: Math.round(idle) })}</span>
+            : <span className="text-amber-700 dark:text-amber-400">{t("demoIdle", { n: Math.round(idle) })}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function TransportSettings({ values }: { values: TransportValues }) {
   const t = useTranslations("transport");
@@ -55,6 +136,16 @@ export function TransportSettings({ values }: { values: TransportValues }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
+
+  // Knobs the live demo reads — controlled so the sandbox updates as you type.
+  const [driverModel, setDriverModel] = useState(values.driverModel);
+  const [advance, setAdvance] = useState(values.maxAdvancePickupMin);
+  const [speed, setSpeed] = useState(values.avgSpeedKmh);
+  const [detour, setDetour] = useState(values.detourFactor);
+  const [prefBuf, setPrefBuf] = useState(values.preferredArrivalBufferMin);
+  const [minBuf, setMinBuf] = useState(values.minArrivalBufferMin);
+  const [dismissBuf, setDismissBuf] = useState(values.dismissalBufferMin);
+  const [boarding, setBoarding] = useState(values.boardingTimeMin);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,6 +164,7 @@ export function TransportSettings({ values }: { values: TransportValues }) {
   const hasCentre = !!lat && !!lng;
 
   return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
     <form onSubmit={onSubmit} className="space-y-3">
       <div className="flex items-center gap-2">
         <Bus className="size-5 text-primary" />
@@ -91,6 +183,23 @@ export function TransportSettings({ values }: { values: TransportValues }) {
         {t("enableLabel")}
       </label>
       <p className="text-xs text-muted-foreground">{t("enableHint")}</p>
+
+      {/* Driver model — the biggest logic lever. See the live demo on the side. */}
+      <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+        <p className="text-sm font-medium">{t("driverModelTitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("driverModelHint")}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label={t("driverModelLabel")} htmlFor="driverModel">
+            <Select id="driverModel" name="transportDriverModel" value={driverModel} onChange={(e) => setDriverModel(e.target.value)}>
+              <option value="DROP_AND_RETURN">{t("driverModelDropAndReturn")}</option>
+              <option value="STAY">{t("driverModelStay")}</option>
+            </Select>
+          </FormField>
+          <FormField label={t("maxAdvancePickup")} htmlFor="advance" hint={t("maxAdvancePickupHint")}>
+            <Input id="advance" name="transportMaxAdvancePickupMin" type="number" min="0" max="240" dir="ltr" value={advance} onChange={(e) => setAdvance(e.target.value)} />
+          </FormField>
+        </div>
+      </div>
 
       {/* Centre location — the most common trip endpoint, so it is asked for
           first and picked on a map rather than typed. */}
@@ -145,13 +254,13 @@ export function TransportSettings({ values }: { values: TransportValues }) {
         <p className="text-xs text-muted-foreground">{t("etaHint")}</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <FormField label={t("avgSpeed")} htmlFor="avgSpeed">
-            <Input id="avgSpeed" name="transportAvgSpeedKmh" type="number" min="5" max="140" dir="ltr" defaultValue={values.avgSpeedKmh} />
+            <Input id="avgSpeed" name="transportAvgSpeedKmh" type="number" min="5" max="140" dir="ltr" value={speed} onChange={(e) => setSpeed(e.target.value)} />
           </FormField>
           <FormField label={t("rushSpeed")} htmlFor="rushSpeed">
             <Input id="rushSpeed" name="transportRushSpeedKmh" type="number" min="5" max="140" dir="ltr" defaultValue={values.rushSpeedKmh} />
           </FormField>
           <FormField label={t("detourFactor")} htmlFor="detour">
-            <Input id="detour" name="transportDetourFactor" type="number" step="0.05" min="1" max="3" dir="ltr" defaultValue={values.detourFactor} />
+            <Input id="detour" name="transportDetourFactor" type="number" step="0.05" min="1" max="3" dir="ltr" value={detour} onChange={(e) => setDetour(e.target.value)} />
           </FormField>
           <FormField label={t("minTripMin")} htmlFor="minTrip">
             <Input id="minTrip" name="transportMinTripMin" type="number" min="0" max="60" dir="ltr" defaultValue={values.minTripMin} />
@@ -209,19 +318,19 @@ export function TransportSettings({ values }: { values: TransportValues }) {
         <p className="text-sm font-medium">{t("validationTiming")}</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <FormField label={t("preferredArrivalBuffer")} htmlFor="paB">
-            <Input id="paB" name="transportPreferredArrivalBufferMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.preferredArrivalBufferMin} />
+            <Input id="paB" name="transportPreferredArrivalBufferMin" type="number" min="0" max="120" dir="ltr" value={prefBuf} onChange={(e) => setPrefBuf(e.target.value)} />
           </FormField>
           <FormField label={t("minArrivalBuffer")} htmlFor="miB">
-            <Input id="miB" name="transportMinArrivalBufferMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.minArrivalBufferMin} />
+            <Input id="miB" name="transportMinArrivalBufferMin" type="number" min="0" max="120" dir="ltr" value={minBuf} onChange={(e) => setMinBuf(e.target.value)} />
           </FormField>
           <FormField label={t("maxEarlyArrival")} htmlFor="meA">
             <Input id="meA" name="transportMaxEarlyArrivalMin" type="number" min="0" max="240" dir="ltr" defaultValue={values.maxEarlyArrivalMin} />
           </FormField>
           <FormField label={t("dismissalBuffer")} htmlFor="diB">
-            <Input id="diB" name="transportDismissalBufferMin" type="number" min="0" max="120" dir="ltr" defaultValue={values.dismissalBufferMin} />
+            <Input id="diB" name="transportDismissalBufferMin" type="number" min="0" max="120" dir="ltr" value={dismissBuf} onChange={(e) => setDismissBuf(e.target.value)} />
           </FormField>
           <FormField label={t("boardingTime")} htmlFor="boT">
-            <Input id="boT" name="transportBoardingTimeMin" type="number" min="0" max="30" dir="ltr" defaultValue={values.boardingTimeMin} />
+            <Input id="boT" name="transportBoardingTimeMin" type="number" min="0" max="30" dir="ltr" value={boarding} onChange={(e) => setBoarding(e.target.value)} />
           </FormField>
           <FormField label={t("dropoffTime")} htmlFor="drT">
             <Input id="drT" name="transportDropoffTimeMin" type="number" min="0" max="30" dir="ltr" defaultValue={values.dropoffTimeMin} />
@@ -252,5 +361,18 @@ export function TransportSettings({ values }: { values: TransportValues }) {
         {pending ? tc("saving") : tc("save")}
       </Button>
     </form>
+    <div className="lg:sticky lg:top-4 lg:self-start">
+      <DemoPanel
+        driverModel={driverModel}
+        speed={n(speed, 40)}
+        detour={n(detour, 1.35)}
+        prefBuf={n(prefBuf, 15)}
+        minBuf={n(minBuf, 5)}
+        dismissBuf={n(dismissBuf, 10)}
+        boarding={n(boarding, 2)}
+        advance={n(advance, 60)}
+      />
+    </div>
+    </div>
   );
 }
