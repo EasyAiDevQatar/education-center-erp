@@ -2243,6 +2243,32 @@
     "allDrivers": "All drivers",
     "allStatuses": "All statuses",
     "exceptionsOnly": "Exceptions only",
-    "noMatch": "No trips match"
+    "noMatch": "No trips match",
+    "export": "Export",
+    "refresh": "Refresh",
+    "mapAndTable": "Map + table",
+    "mapOnly": "Map only",
+    "allDirections": "All directions",
+    "statusSummary": "Status summary",
+    "stopsSummary": "Stops summary",
+    "stopDepartCentre": "From centre",
+    "stopArriveCentre": "To centre",
+    "stopHomes": "Home stops",
+    "stopTotal": "Total stops",
+    "centre": "Education centre",
+    "scheduleTitle": "Trip timeline",
+    "colStatus": "Trip status",
+    "colDriver": "Driver / vehicle",
+    "legendHome": "Student home",
+    "legendArrive": "Arrive at centre",
+    "legendDepart": "Leave centre",
+    "legendToCentre": "Trip to centre",
+    "legendFromCentre": "Trip from centre",
+    "laneStatus": {
+      "unassigned": "Unassigned",
+      "late": "Late",
+      "remaining": "Remaining",
+      "completed": "Completed"
+    }
   }
 }

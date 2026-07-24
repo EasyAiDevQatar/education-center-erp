@@ -2243,6 +2243,32 @@
     "allDrivers": "كل السائقين",
     "allStatuses": "كل الحالات",
     "exceptionsOnly": "الاستثناءات فقط",
-    "noMatch": "لا رحلات مطابقة"
+    "noMatch": "لا رحلات مطابقة",
+    "export": "تصدير",
+    "refresh": "تحديث",
+    "mapAndTable": "خريطة + جدول",
+    "mapOnly": "خريطة فقط",
+    "allDirections": "كل الاتجاهات",
+    "statusSummary": "ملخص الحالات",
+    "stopsSummary": "ملخص التوقفات",
+    "stopDepartCentre": "مغادرة المركز",
+    "stopArriveCentre": "وصول للمركز",
+    "stopHomes": "توقفات المنازل",
+    "stopTotal": "إجمالي التوقفات",
+    "centre": "المركز التعليمي",
+    "scheduleTitle": "الجدول الزمني للرحلات",
+    "colStatus": "حالة الرحلة",
+    "colDriver": "السائق / المركبة",
+    "legendHome": "منزل الطالب",
+    "legendArrive": "وصول للمركز",
+    "legendDepart": "مغادرة المركز",
+    "legendToCentre": "رحلة للمركز",
+    "legendFromCentre": "رحلة من المركز",
+    "laneStatus": {
+      "unassigned": "غير مسندة",
+      "late": "متأخرة",
+      "remaining": "متبقية",
+      "completed": "مكتملة"
+    }
   }
 }

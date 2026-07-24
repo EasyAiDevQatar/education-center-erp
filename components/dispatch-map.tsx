@@ -52,10 +52,12 @@ function decodePolyline(encoded: string): [number, number][] {
 export function DispatchMap({
   trips,
   centre,
+  centreLabel,
   height = 340,
 }: {
   trips: MapTrip[];
   centre: { lat: number; lng: number } | null;
+  centreLabel?: string;
   height?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -112,12 +114,19 @@ export function DispatchMap({
 
       if (centre) {
         allPts.push([centre.lat, centre.lng]);
+        const label = (centreLabel ?? "").replace(/</g, "&lt;");
         L.marker([centre.lat, centre.lng], {
+          zIndexOffset: 1000,
           icon: L.divIcon({
             className: "",
-            html: `<div style="background:#111827;color:#fff;border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)">◆</div>`,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
+            html:
+              `<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-6px)">` +
+              `<div style="background:#1d4ed8;color:#fff;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.5)">` +
+              `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M6 21V7l6-4 6 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01"/></svg></div>` +
+              (label ? `<div style="margin-top:2px;background:#fff;color:#1d4ed8;font-size:11px;font-weight:600;padding:1px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.3);white-space:nowrap">${label}</div>` : "") +
+              `</div>`,
+            iconSize: [30, 46],
+            iconAnchor: [15, 34],
           }),
         }).addTo(map!);
       }
@@ -136,7 +145,7 @@ export function DispatchMap({
       cancelled = true;
       map?.remove();
     };
-  }, [trips, centre]);
+  }, [trips, centre, centreLabel]);
 
   return (
     <div
