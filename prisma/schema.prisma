@@ -1268,6 +1268,10 @@ model Trip {
   deadheadKm      Decimal?
   slackMin        Int?
 
+  /// OSRM encoded polyline for the whole route, so the board draws the real
+  /// road path rather than straight segments. Null when built on the estimator.
+  routeGeometry   String?
+
   notes       String?
   createdById String?
 

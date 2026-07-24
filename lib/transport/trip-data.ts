@@ -15,7 +15,7 @@ import {
   type StopForValidation,
   type ValidationMessage,
 } from "./validate";
-import { getMatrixWithFallback, getFallbackProvider } from "./routing";
+import { getMatrixWithFallback, getFallbackProvider, getRoutingProvider } from "./routing";
 import type { TripStatus } from "@/lib/enums";
 
 /**
@@ -456,6 +456,19 @@ export async function generateDayTrips(
     // reports straight-line×detour), else the allocator's straight-line total.
     const km = realDistM > 0 ? realDistM / 1000 : totalKm;
 
+    // Real road geometry (OSRM encoded polyline) so the board draws the actual
+    // path, not straight lines. Only when we have a live road matrix — on the
+    // estimator there is no geometry and the map falls back to dashed segments.
+    let routeGeometry: string | null = null;
+    if (!matrix.fallbackUsed && allCoordsValid && points.length > 1) {
+      try {
+        const rr = await getRoutingProvider().getRouteThroughStops(points);
+        routeGeometry = rr.geometry;
+      } catch {
+        routeGeometry = null;
+      }
+    }
+
     const trip = await db.trip.create({
       data: {
         date: start,
@@ -473,6 +486,7 @@ export async function generateDayTrips(
         allocationScore: assigned[0].a!.score,
         deadheadKm: Math.round(deadhead * 100) / 100,
         slackMin: Math.min(...assigned.map((x) => x.a!.slackMin)),
+        routeGeometry,
         createdById: byUserId ?? null,
         stops: { create: stopsCreate },
       },
@@ -568,7 +582,28 @@ export type BoardTrip = {
   passengerName: string | null;
   fromLabel: string;
   toLabel: string;
-  stops: { id: string; seq: number; kind: string; label: string; plannedMin: number; lat: number; lng: number; sessionStartMin: number | null; sessionEndMin: number | null }[];
+  /** Phase-1/2 validation surfaced to the board. */
+  validationStatus: string;
+  validationMessages: { code: string; level: string; stopSeq?: number; text: string }[];
+  /** True when any leg fell back to the straight-line estimate (spec §14, §28). */
+  fallbackUsed: boolean;
+  /** OSRM encoded polyline for the whole route, or null (draw straight lines). */
+  routeGeometry: string | null;
+  stops: {
+    id: string;
+    seq: number;
+    kind: string;
+    label: string;
+    plannedMin: number;
+    lat: number;
+    lng: number;
+    sessionStartMin: number | null;
+    sessionEndMin: number | null;
+    estimated: boolean;
+    fallbackUsed: boolean;
+    routingDurationS: number | null;
+    operationalDurationS: number | null;
+  }[];
 };
 
 /** Read the day's trips for the board / register. */
@@ -613,6 +648,18 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
       passengerName: passenger ? displayName(passenger, locale) : null,
       fromLabel: first?.label ?? "",
       toLabel: last?.label ?? "",
+      validationStatus: t.validationStatus,
+      validationMessages: t.validationMessages
+        ? (() => {
+            try {
+              return JSON.parse(t.validationMessages) as BoardTrip["validationMessages"];
+            } catch {
+              return [];
+            }
+          })()
+        : [],
+      fallbackUsed: t.stops.some((s) => s.fallbackUsed),
+      routeGeometry: t.routeGeometry ?? null,
       stops: t.stops.map((s) => {
         const sess = s.session;
         const sMin = sess ? sess.date.getUTCHours() * 60 + sess.date.getUTCMinutes() : null;
@@ -626,6 +673,10 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
         lng: s.lng,
         sessionStartMin: sMin,
         sessionEndMin: sMin != null && sess ? sMin + Math.round(toNumber(sess.hours) * 60) : null,
+        estimated: s.estimated,
+        fallbackUsed: s.fallbackUsed,
+        routingDurationS: s.routingDurationS,
+        operationalDurationS: s.operationalDurationS,
       };
       }),
     };

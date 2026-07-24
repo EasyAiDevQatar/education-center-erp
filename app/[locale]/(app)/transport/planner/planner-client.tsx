@@ -14,6 +14,12 @@ import {
   Route,
   Sparkles,
   Map as MapIcon,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  Ruler,
+  ArrowDownToLine,
+  ArrowUpFromLine,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -59,6 +65,21 @@ function slackVariant(slack: number | null) {
   return "success" as const;
 }
 
+/** Validation status → badge variant + icon (spec §29). */
+function validationVariant(status: string) {
+  if (status === "INVALID") return "destructive" as const;
+  if (status === "WARNING") return "warning" as const;
+  return "success" as const;
+}
+const ValidationIcon = ({ status }: { status: string }) =>
+  status === "INVALID" ? (
+    <ShieldX className="size-3.5" />
+  ) : status === "WARNING" ? (
+    <ShieldAlert className="size-3.5" />
+  ) : (
+    <ShieldCheck className="size-3.5" />
+  );
+
 export function TransportPlannerClient({
   day,
   trips,
@@ -88,6 +109,13 @@ export function TransportPlannerClient({
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  const [reasonsOpen, setReasonsOpen] = useState<Set<string>>(new Set());
+  const toggleReasons = (id: string) =>
+    setReasonsOpen((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   const [note, setNote] = useState<string | null>(null);
   const [briefing, setBriefing] = useState<string | null>(null);
   const [briefBusy, setBriefBusy] = useState(false);
@@ -101,6 +129,17 @@ export function TransportPlannerClient({
     () => trips.reduce((a, x) => a + (x.deadheadKm ?? 0), 0),
     [trips],
   );
+  const vCounts = useMemo(() => {
+    let invalid = 0;
+    let warning = 0;
+    let fallback = 0;
+    for (const x of trips) {
+      if (x.validationStatus === "INVALID") invalid++;
+      else if (x.validationStatus === "WARNING") warning++;
+      if (x.fallbackUsed) fallback++;
+    }
+    return { invalid, warning, fallback };
+  }, [trips]);
 
   const go = (d: string) => router.push(`${pathname}?date=${d}`);
   const shiftDay = (delta: number) => {
@@ -229,6 +268,31 @@ export function TransportPlannerClient({
         ))}
       </div>
 
+      {/* Validation roll-up (spec §30): how many trips are blocked, need a
+          look, or ran on the straight-line estimate. Only shown when relevant. */}
+      {(vCounts.invalid > 0 || vCounts.warning > 0 || vCounts.fallback > 0) && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {vCounts.invalid > 0 && (
+            <Badge variant="destructive" className="gap-1">
+              <ShieldX className="size-3.5" />
+              {t("statInvalid", { n: vCounts.invalid })}
+            </Badge>
+          )}
+          {vCounts.warning > 0 && (
+            <Badge variant="warning" className="gap-1">
+              <ShieldAlert className="size-3.5" />
+              {t("statWarning", { n: vCounts.warning })}
+            </Badge>
+          )}
+          {vCounts.fallback > 0 && (
+            <Badge variant="muted" className="gap-1">
+              <Ruler className="size-3.5" />
+              {t("statFallback", { n: vCounts.fallback })}
+            </Badge>
+          )}
+        </div>
+      )}
+
       {/* Problems — a ride nobody can make is never silently dropped. */}
       {problems.length > 0 && (
         <div className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
@@ -272,6 +336,17 @@ export function TransportPlannerClient({
                 <Badge variant={statusVariant(trip.status)}>
                   {te(`tripStatus.${trip.status}`)}
                 </Badge>
+                {/* Validation verdict (spec §29) — always shown, colour is
+                    secondary to the icon + label so it reads without colour. */}
+                <Badge variant={validationVariant(trip.validationStatus)} className="gap-1">
+                  <ValidationIcon status={trip.validationStatus} />
+                  {t(`validation.${trip.validationStatus}`)}
+                </Badge>
+                {/* Estimated (straight-line) vs road-routed indicator (spec §28). */}
+                <Badge variant="muted" className="gap-1">
+                  <Ruler className="size-3.5" />
+                  {trip.fallbackUsed ? t("estimated") : t("roadRouted")}
+                </Badge>
                 <span className="font-medium">{trip.passengerName ?? "—"}</span>
                 <span className="text-muted-foreground">
                   {t("stopsCount", { n: trip.stops.length })}
@@ -280,6 +355,53 @@ export function TransportPlannerClient({
                   {minToHHMM(trip.plannedStartMin)}–{minToHHMM(trip.plannedEndMin)}
                 </span>
               </div>
+
+              {/* Why a trip needs review or is blocked — the backend's own
+                  validation messages, never re-derived on the client (spec §27). */}
+              {trip.validationMessages.length > 0 && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleReasons(trip.id)}
+                    className={`inline-flex items-center gap-1 text-xs hover:underline ${
+                      trip.validationStatus === "INVALID"
+                        ? "text-destructive"
+                        : "text-amber-600 dark:text-amber-500"
+                    }`}
+                  >
+                    <TriangleAlert className="size-3.5" />
+                    {reasonsOpen.has(trip.id)
+                      ? t("hideReasons")
+                      : t("showReasons", { n: trip.validationMessages.length })}
+                  </button>
+                  {reasonsOpen.has(trip.id) && (
+                    <ul className="mt-1 space-y-1 ps-1 text-xs">
+                      {trip.validationMessages.map((m, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <Badge
+                            variant={m.level === "INVALID" ? "destructive" : "warning"}
+                            className="mt-0.5 shrink-0"
+                          >
+                            {t(`validation.${m.level}`)}
+                          </Badge>
+                          <span>
+                            <span className="font-medium">
+                              {tc.has(`validationCode.${m.code}`)
+                                ? tc(`validationCode.${m.code}`)
+                                : m.code}
+                            </span>
+                            {m.text && (
+                              <span className="ms-1 text-muted-foreground" dir="ltr">
+                                — {m.text}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               {/* The chained route: numbered stops with their times, so the
                   coordinator reads the whole journey (home → lesson → centre →
@@ -295,6 +417,21 @@ export function TransportPlannerClient({
                       </span>
                       <span className="tabular-nums text-muted-foreground" dir="ltr">
                         {minToHHMM(st.plannedMin)}
+                      </span>
+                      {/* Pickup vs drop-off, labelled not just coloured (spec §29). */}
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${
+                          st.kind === "PICKUP"
+                            ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
+                            : "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
+                        }`}
+                      >
+                        {st.kind === "PICKUP" ? (
+                          <ArrowUpFromLine className="size-2.5" />
+                        ) : (
+                          <ArrowDownToLine className="size-2.5" />
+                        )}
+                        {st.kind === "PICKUP" ? t("pickup") : t("dropoff")}
                       </span>
                       <span className="font-medium">{st.label}</span>
                       {/* The lesson's own start (green) and end (red) — what the
@@ -330,7 +467,7 @@ export function TransportPlannerClient({
                   </button>
                   {mapOpen.has(trip.id) && (
                     <div className="mt-2 max-w-xl">
-                      <TripMiniMap stops={trip.stops} height={180} />
+                      <TripMiniMap stops={trip.stops} height={180} geometry={trip.routeGeometry} />
                     </div>
                   )}
                 </div>

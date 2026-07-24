@@ -119,7 +119,23 @@
     "nameEnHint": "اختياري — يُعرض عند اختيار اللغة الإنجليزية.",
     "apply": "تطبيق",
     "view": "عرض",
-    "overview": "نظرة عامة"
+    "overview": "نظرة عامة",
+    "validationCode": {
+      "ARRIVAL_AFTER_SESSION_START": "يصل بعد بدء الحصة",
+      "ARRIVAL_AFTER_LATEST": "يصل متأخراً عن المسموح",
+      "EXCESSIVE_EARLY_ARRIVAL": "يصل مبكراً أكثر من اللازم",
+      "SMALL_ARRIVAL_BUFFER": "هامش وصول ضيق جداً",
+      "DEPART_BEFORE_READY": "يغادر قبل أن يكون الراكب جاهزاً",
+      "EXCESSIVE_WAIT": "انتظار طويل بعد الحصة",
+      "JOURNEY_TOO_LONG": "رحلة طويلة بشكل غير معتاد",
+      "JOURNEY_EXCEEDS_HARD_MAX": "الرحلة تتجاوز الحد الأقصى",
+      "TRAVEL_TIME_FALLBACK_USED": "زمن السفر تقديري وليس عبر شبكة الطرق",
+      "TURNAROUND_TIME_INSUFFICIENT": "وقت غير كافٍ بين الرحلات",
+      "INSUFFICIENT_TRAVEL_TIME": "زمن الطريق لا يناسب الجدول",
+      "MISSING_LOCATION": "الموقع غير محدد",
+      "INVALID_COORDINATES": "إحداثيات غير صالحة",
+      "MISSING_SESSION_WINDOW": "نافذة وقت الحصة غير محددة"
+    }
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -1807,8 +1823,8 @@
     "add": "إضافة",
     "addManual": "إضافة يدوية",
     "pickTeacher": "اختر معلماً",
-    "pickup": "اصطحاب",
-    "dropoff": "إنزال",
+    "pickup": "استلام",
+    "dropoff": "توصيل",
     "bestPosition": "أفضل موضع (تلقائي)",
     "atStart": "في البداية",
     "afterStop": "بعد المحطة {n}",
@@ -1819,7 +1835,19 @@
     "pickDriver": "اختر سائقاً",
     "startTime": "وقت البدء",
     "create": "إنشاء",
-    "driver": "السائق"
+    "driver": "السائق",
+    "validation": {
+      "VALID": "سليمة",
+      "WARNING": "تحتاج مراجعة",
+      "INVALID": "محظورة"
+    },
+    "estimated": "تقديري",
+    "roadRouted": "مسار طرق فعلي",
+    "statInvalid": "{n} محظورة",
+    "statWarning": "{n} للمراجعة",
+    "statFallback": "{n} تقديرية",
+    "showReasons": "لماذا؟ ({n})",
+    "hideReasons": "إخفاء الأسباب"
   },
   "trips": {
     "title": "الرحلات",
