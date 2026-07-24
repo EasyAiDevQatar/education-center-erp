@@ -387,7 +387,12 @@ export function TransportPlannerClient({
                   </button>
                   {reasonsOpen.has(trip.id) && (
                     <ul className="mt-1 space-y-1 ps-1 text-xs">
-                      {trip.validationMessages.map((m, i) => (
+                      {trip.validationMessages.map((m, i) => {
+                        const who =
+                          m.stopSeq != null
+                            ? trip.stops.find((s) => s.seq === m.stopSeq)?.passengerName ?? null
+                            : null;
+                        return (
                         <li key={i} className="flex items-start gap-1.5">
                           <Badge
                             variant={m.level === "INVALID" ? "destructive" : "warning"}
@@ -396,6 +401,7 @@ export function TransportPlannerClient({
                             {t(`validation.${m.level}`)}
                           </Badge>
                           <span>
+                            {who && <span className="font-medium">{who}: </span>}
                             <span className="font-medium">
                               {tc.has(`validationCode.${m.code}`)
                                 ? tc(`validationCode.${m.code}`)
@@ -408,7 +414,8 @@ export function TransportPlannerClient({
                             )}
                           </span>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
@@ -420,7 +427,8 @@ export function TransportPlannerClient({
               {trip.stops.length > 0 && (
                 <ol className="mt-2 space-y-1 border-s-2 border-primary/30 ps-3 text-xs">
                   {trip.stops.map((st) => (
-                    <li key={st.seq} className="flex items-baseline gap-2">
+                    <li key={st.seq} className="flex flex-col gap-0.5">
+                      <div className="flex items-baseline gap-2">
                       <span
                         className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold tabular-nums text-primary"
                       >
@@ -459,6 +467,37 @@ export function TransportPlannerClient({
                           )}
                         </span>
                       )}
+                      </div>
+                      {/* Labelled per-passenger timing (spec §27-28): the
+                          dispatcher reads the meaning, never infers it from the
+                          coloured chips alone. */}
+                      {st.timing && (
+                        <div className="ms-6 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+                          {st.timing.dir === "TO_LESSON" ? (
+                            <>
+                              <span>{t("tSession")}: <span dir="ltr">{minToHHMM(st.timing.sessionStartMin)}–{minToHHMM(st.timing.sessionEndMin)}</span></span>
+                              <span>{t("tRequiredArrival")}: <span dir="ltr">{minToHHMM(st.timing.requiredArrivalMin)}</span></span>
+                              <span>{t("tPlannedArrival")}: <span dir="ltr">{minToHHMM(st.timing.plannedArrivalMin)}</span></span>
+                              {st.timing.delayMin > 0 ? (
+                                <span className="font-medium text-destructive">{t("tDelay")}: {st.timing.delayMin} {t("min")}</span>
+                              ) : (
+                                <span className="text-green-700 dark:text-green-400">{t("tArrivalMargin")}: {st.timing.marginMin} {t("min")}</span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span>{t("tSessionEnd")}: <span dir="ltr">{minToHHMM(st.timing.sessionEndMin)}</span></span>
+                              <span>{t("tReadyFrom")}: <span dir="ltr">{minToHHMM(st.timing.readyFromMin)}</span></span>
+                              <span>{t("tPlannedDepart")}: <span dir="ltr">{minToHHMM(st.timing.plannedDepartMin)}</span></span>
+                              {st.timing.earlyDepartMin > 0 ? (
+                                <span className="font-medium text-destructive">{t("tEarlyDepart")}: {st.timing.earlyDepartMin} {t("min")}</span>
+                              ) : (
+                                <span>{t("tWait")}: {st.timing.waitMin} {t("min")}</span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ol>
@@ -490,7 +529,16 @@ export function TransportPlannerClient({
                   {trip.driverName ?? t("noDriver")}
                   {trip.plate && <span dir="ltr">· {trip.plate}</span>}
                 </span>
+                {trip.passengerCount > 0 && (
+                  <span>{t("passengers", { n: trip.passengerCount })}</span>
+                )}
                 <span dir="ltr">{t("km", { km: trip.estimatedKm.toFixed(1) })}</span>
+                <span dir="ltr">
+                  {t("durationHM", {
+                    h: Math.floor(trip.estimatedMin / 60),
+                    m: trip.estimatedMin % 60,
+                  })}
+                </span>
                 {trip.deadheadKm != null && (
                   <span dir="ltr">{t("emptyKm", { km: trip.deadheadKm.toFixed(1) })}</span>
                 )}

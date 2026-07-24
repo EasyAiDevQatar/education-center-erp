@@ -1856,7 +1856,20 @@
     "overrideReasonRequired": "A reason of at least 3 characters is required.",
     "overrideConfirm": "Approve anyway",
     "tightestMargin": "{min} min tightest margin",
-    "tightestMarginHint": "The smallest gap between a planned arrival and its deadline across this trip's legs."
+    "tightestMarginHint": "The smallest gap between a planned arrival and its deadline across this trip's legs.",
+    "tSession": "Session",
+    "tRequiredArrival": "Required arrival",
+    "tPlannedArrival": "Planned arrival",
+    "tDelay": "Late by",
+    "tArrivalMargin": "Arrival margin",
+    "tSessionEnd": "Session ends",
+    "tReadyFrom": "Ready to leave",
+    "tPlannedDepart": "Planned departure",
+    "tWait": "Wait",
+    "tEarlyDepart": "Leaves early by",
+    "min": "min",
+    "passengers": "{n} passengers",
+    "durationHM": "{h}h {m}m"
   },
   "trips": {
     "title": "Trips",

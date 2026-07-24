@@ -1856,7 +1856,20 @@
     "overrideReasonRequired": "يلزم سبب لا يقل عن ٣ أحرف.",
     "overrideConfirm": "اعتماد رغم ذلك",
     "tightestMargin": "أدنى هامش {min} د",
-    "tightestMarginHint": "أصغر فرق بين وصول مخطط وموعده النهائي عبر مراحل هذه الرحلة."
+    "tightestMarginHint": "أصغر فرق بين وصول مخطط وموعده النهائي عبر مراحل هذه الرحلة.",
+    "tSession": "الجلسة",
+    "tRequiredArrival": "الوصول المطلوب",
+    "tPlannedArrival": "الوصول المخطط",
+    "tDelay": "التأخير",
+    "tArrivalMargin": "هامش الوصول",
+    "tSessionEnd": "نهاية الجلسة",
+    "tReadyFrom": "جاهز للمغادرة",
+    "tPlannedDepart": "المغادرة المخططة",
+    "tWait": "الانتظار",
+    "tEarlyDepart": "يغادر مبكراً",
+    "min": "دقيقة",
+    "passengers": "{n} ركاب",
+    "durationHM": "{h} س {m} د"
   },
   "trips": {
     "title": "الرحلات",

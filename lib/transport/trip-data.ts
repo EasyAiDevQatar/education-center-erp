@@ -12,6 +12,8 @@ import {
   validateTrip,
   turnaroundFeasible,
   coordValid,
+  arrivalWindow,
+  departureFloor,
   type StopForValidation,
   type ValidationMessage,
 } from "./validate";
@@ -565,6 +567,37 @@ export async function generateDayTrips(
   };
 }
 
+/** Labelled per-passenger timing for a stop that serves a lesson (spec §27-28).
+ *  Direction decides which set of fields is meaningful: a delivery to the lesson
+ *  is judged on arrival, a collection after the lesson on departure. */
+export type StopTiming =
+  | {
+      dir: "TO_LESSON";
+      sessionStartMin: number;
+      sessionEndMin: number;
+      /** Preferred arrival = lesson start − preferred buffer. */
+      requiredArrivalMin: number;
+      /** Latest allowed = lesson start − min buffer. */
+      latestArrivalMin: number;
+      plannedArrivalMin: number;
+      /** Minutes past the required arrival (>0 = late); else 0. */
+      delayMin: number;
+      /** Minutes of comfort before required arrival (>0 = early); else 0. */
+      marginMin: number;
+    }
+  | {
+      dir: "FROM_LESSON";
+      sessionStartMin: number;
+      sessionEndMin: number;
+      /** Ready to leave = lesson end + dismissal buffer. */
+      readyFromMin: number;
+      plannedDepartMin: number;
+      /** Minutes waiting after ready (>0); else 0. */
+      waitMin: number;
+      /** Minutes it leaves before the passenger is ready (>0 = invalid); else 0. */
+      earlyDepartMin: number;
+    };
+
 export type BoardTrip = {
   id: string;
   status: TripStatus;
@@ -580,6 +613,8 @@ export type BoardTrip = {
   slackMin: number | null;
   autoAllocated: boolean;
   passengerName: string | null;
+  /** Distinct passengers served (for the card header). */
+  passengerCount: number;
   fromLabel: string;
   toLabel: string;
   /** Phase-1/2 validation surfaced to the board. */
@@ -603,12 +638,58 @@ export type BoardTrip = {
     fallbackUsed: boolean;
     routingDurationS: number | null;
     operationalDurationS: number | null;
+    /** Passenger this stop serves (for per-passenger reasons/labels). */
+    passengerName: string | null;
+    /** Labelled timing when this stop serves a lesson; null otherwise. */
+    timing: StopTiming | null;
   }[];
 };
 
 /** Read the day's trips for the board / register. */
 export async function loadDayTrips(locale: string, dayIso: string): Promise<BoardTrip[]> {
   const { start } = dayBounds(dayIso);
+  // Timing labels are derived against the same rules the validator used, so the
+  // card and the verdict never disagree.
+  const config = await loadTransportConfig();
+  const r = config.rules;
+
+  /** Build the labelled timing for a session-serving stop (spec §27-28). */
+  const stopTiming = (
+    kind: string,
+    plannedMin: number,
+    sessionStartMin: number | null,
+    sessionEndMin: number | null,
+  ): StopTiming | null => {
+    if (kind === "DROPOFF" && sessionStartMin != null) {
+      const w = arrivalWindow(sessionStartMin, r);
+      const diff = plannedMin - w.preferred;
+      return {
+        dir: "TO_LESSON",
+        sessionStartMin,
+        sessionEndMin: sessionEndMin ?? sessionStartMin,
+        requiredArrivalMin: w.preferred,
+        latestArrivalMin: w.latest,
+        plannedArrivalMin: plannedMin,
+        delayMin: Math.max(0, diff),
+        marginMin: Math.max(0, -diff),
+      };
+    }
+    if (kind === "PICKUP" && sessionEndMin != null) {
+      const readyFrom = departureFloor(sessionEndMin, r);
+      const diff = plannedMin - readyFrom;
+      return {
+        dir: "FROM_LESSON",
+        sessionStartMin: sessionStartMin ?? sessionEndMin,
+        sessionEndMin,
+        readyFromMin: readyFrom,
+        plannedDepartMin: plannedMin,
+        waitMin: Math.max(0, diff),
+        earlyDepartMin: Math.max(0, -diff),
+      };
+    }
+    return null;
+  };
+
   const trips = await db.trip.findMany({
     where: { date: start },
     include: {
@@ -631,6 +712,11 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
     const last = t.stops[t.stops.length - 1];
     const passenger =
       first?.passengerTeacher ?? first?.passengerStudent ?? null;
+    const passengerIds = new Set(
+      t.stops
+        .map((s) => s.passengerTeacherId ?? s.passengerStudentId)
+        .filter((x): x is string => x != null),
+    );
     return {
       id: t.id,
       status: t.status as TripStatus,
@@ -646,6 +732,7 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
       slackMin: t.slackMin,
       autoAllocated: t.autoAllocated,
       passengerName: passenger ? displayName(passenger, locale) : null,
+      passengerCount: passengerIds.size,
       fromLabel: first?.label ?? "",
       toLabel: last?.label ?? "",
       validationStatus: t.validationStatus,
@@ -677,6 +764,15 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
         fallbackUsed: s.fallbackUsed,
         routingDurationS: s.routingDurationS,
         operationalDurationS: s.operationalDurationS,
+        passengerName: (s.passengerTeacher ?? s.passengerStudent)
+          ? displayName((s.passengerTeacher ?? s.passengerStudent)!, locale)
+          : null,
+        timing: stopTiming(
+          s.kind,
+          s.plannedMin,
+          sMin,
+          sMin != null && sess ? sMin + Math.round(toNumber(sess.hours) * 60) : null,
+        ),
       };
       }),
     };
