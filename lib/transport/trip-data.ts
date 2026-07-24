@@ -387,7 +387,7 @@ export type BoardTrip = {
   passengerName: string | null;
   fromLabel: string;
   toLabel: string;
-  stops: { seq: number; kind: string; label: string; plannedMin: number; lat: number; lng: number }[];
+  stops: { id: string; seq: number; kind: string; label: string; plannedMin: number; lat: number; lng: number }[];
 };
 
 /** Read the day's trips for the board / register. */
@@ -429,6 +429,7 @@ export async function loadDayTrips(locale: string, dayIso: string): Promise<Boar
       fromLabel: first?.label ?? "",
       toLabel: last?.label ?? "",
       stops: t.stops.map((s) => ({
+        id: s.id,
         seq: s.seq,
         kind: s.kind,
         label: s.label,

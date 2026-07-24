@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { minToHHMM } from "@/lib/planner";
+import { AddStopDialog } from "./add-stop-dialog";
 import type { BoardTrip, PlannedDriver } from "@/lib/transport/trip-data";
 import {
   generateTrips,
@@ -309,6 +310,10 @@ export function TransportPlannerClient({
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-2">
+                {/* Add / pool a teacher onto a trip that has not left. */}
+                {(trip.status === "PROPOSED" || trip.status === "ASSIGNED") && (
+                  <AddStopDialog tripId={trip.id} onChanged={() => router.refresh()} />
+                )}
                 {/* Reassign is available while the trip has not left. */}
                 {(trip.status === "PROPOSED" || trip.status === "ASSIGNED") && (
                   <Select

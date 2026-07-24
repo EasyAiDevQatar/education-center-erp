@@ -8,6 +8,9 @@ import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { transportEnabled } from "@/lib/transport/settings";
 import { generateDayTrips, buildDayPlan } from "@/lib/transport/trip-data";
+import { loadTransportConfig, distanceKm } from "@/lib/transport/settings";
+import { poolCandidates } from "@/lib/transport/pooling";
+import { displayName } from "@/lib/names";
 import { aiChat } from "@/lib/ai/client";
 import { loadAiConfig, aiReady } from "@/lib/ai/config";
 import { canTransition } from "@/lib/transport/trips";
@@ -214,4 +217,191 @@ export async function aiBriefing(locale: string, day: string): Promise<ActionSta
     return { error: r.error };
   }
   return { ok: true, message: r.text.trim() };
+}
+
+
+/* -------- Manual add-stop + smart ride-pooling --------------------------- */
+
+/** Recompute a trip's distance and time window from its (ordered) stops. */
+async function recomputeTrip(tripId: string) {
+  const stops = await db.tripStop.findMany({
+    where: { tripId },
+    orderBy: { seq: "asc" },
+    select: { lat: true, lng: true, plannedMin: true },
+  });
+  if (stops.length === 0) return;
+  let km = 0;
+  for (let i = 0; i < stops.length - 1; i++) {
+    km += distanceKm(
+      { lat: stops[i].lat, lng: stops[i].lng },
+      { lat: stops[i + 1].lat, lng: stops[i + 1].lng },
+    );
+  }
+  const mins = stops.map((x) => x.plannedMin);
+  await db.trip.update({
+    where: { id: tripId },
+    data: {
+      estimatedKm: Math.round(km * 100) / 100,
+      plannedStartMin: Math.min(...mins),
+      plannedEndMin: Math.max(...mins),
+      estimatedMin: Math.max(...mins) - Math.min(...mins),
+    },
+  });
+}
+
+const addStopSchema = z.object({
+  tripId: z.string().min(1),
+  afterSeq: z.coerce.number().int().min(0),
+  kind: z.enum(["PICKUP", "DROPOFF"]),
+  lat: z.coerce.number(),
+  lng: z.coerce.number(),
+  label: z.string().min(1),
+  teacherId: z.string().optional().nullable(),
+  studentId: z.string().optional().nullable(),
+  sessionId: z.string().optional().nullable(),
+});
+
+/** Insert a stop into a trip at a position, shifting later stops down. */
+export async function addTripStop(
+  locale: string,
+  input: z.infer<typeof addStopSchema>,
+): Promise<ActionState> {
+  const s = await guard();
+  if (!s) return { error: "forbidden" };
+  const parsed = addStopSchema.safeParse(input);
+  if (!parsed.success) return { error: "invalid" };
+  const d = parsed.data;
+
+  const stops = await db.tripStop.findMany({
+    where: { tripId: d.tripId },
+    orderBy: { seq: "asc" },
+    select: { id: true, seq: true, plannedMin: true },
+  });
+  if (stops.length === 0) return { error: "invalid" };
+
+  // Time the new stop between its neighbours (or just outside the ends).
+  const before = stops.filter((x) => x.seq <= d.afterSeq).at(-1) ?? null;
+  const after = stops.filter((x) => x.seq > d.afterSeq)[0] ?? null;
+  const plannedMin = before && after
+    ? Math.round((before.plannedMin + after.plannedMin) / 2)
+    : before
+      ? before.plannedMin + 15
+      : (after?.plannedMin ?? 0) - 15;
+
+  await db.$transaction([
+    // Open a gap: everything after the insertion point moves down one seq.
+    ...stops
+      .filter((x) => x.seq > d.afterSeq)
+      .sort((a, b) => b.seq - a.seq) // highest first, no unique-collision
+      .map((x) => db.tripStop.update({ where: { id: x.id }, data: { seq: x.seq + 1 } })),
+    db.tripStop.create({
+      data: {
+        tripId: d.tripId,
+        seq: d.afterSeq + 1,
+        kind: d.kind,
+        lat: d.lat,
+        lng: d.lng,
+        label: d.label,
+        plannedMin: Math.max(0, plannedMin),
+        passengerTeacherId: d.teacherId || null,
+        passengerStudentId: d.studentId || null,
+        sessionId: d.sessionId || null,
+      },
+    }),
+  ]);
+  await recomputeTrip(d.tripId);
+  await writeAudit("Trip", d.tripId, "UPDATE", { after: { addedStop: d.label } });
+  revalidatePath(`/${locale}/transport/planner`);
+  return { ok: true };
+}
+
+/** Remove a stop and re-number the rest 1..n. */
+export async function removeTripStop(locale: string, stopId: string): Promise<ActionState> {
+  const s = await guard();
+  if (!s) return { error: "forbidden" };
+  const stop = await db.tripStop.findUnique({ where: { id: stopId }, select: { tripId: true, label: true } });
+  if (!stop) return { error: "invalid" };
+  await db.tripStop.delete({ where: { id: stopId } });
+  const rest = await db.tripStop.findMany({ where: { tripId: stop.tripId }, orderBy: { seq: "asc" }, select: { id: true } });
+  await db.$transaction(rest.map((x, i) => db.tripStop.update({ where: { id: x.id }, data: { seq: i + 1 } })));
+  await recomputeTrip(stop.tripId);
+  await writeAudit("Trip", stop.tripId, "UPDATE", { after: { removedStop: stop.label } });
+  revalidatePath(`/${locale}/transport/planner`);
+  return { ok: true };
+}
+
+export type PoolOption = {
+  teacherId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  label: string;
+  detourKm: number;
+  afterSeq: number;
+  onTheWay: boolean;
+};
+export type TripStopRow = { id: string; seq: number; kind: string; label: string; plannedMin: number };
+export type PoolingResult = {
+  stops: TripStopRow[];
+  options: PoolOption[];
+};
+
+/**
+ * Who could this trip pick up on the way: teachers with a home pin who teach
+ * that day and are not already on the trip, ranked by the detour their home
+ * adds to the route. Everyone is returned (for a manual add); `onTheWay` flags
+ * those inside the centre's detour budget.
+ */
+export async function tripPoolingOptions(locale: string, tripId: string): Promise<PoolingResult | { error: string }> {
+  const sess = await guard();
+  if (!sess) return { error: "forbidden" };
+
+  const trip = await db.trip.findUnique({
+    where: { id: tripId },
+    include: { stops: { orderBy: { seq: "asc" } } },
+  });
+  if (!trip) return { error: "invalid" };
+
+  const config = await loadTransportConfig();
+  const maxDetour = config.maxDeadheadKm; // reuse the empty-km budget as the pool budget
+  const route = trip.stops.map((x) => ({ lat: x.lat, lng: x.lng }));
+  const already = new Set(trip.stops.map((x) => x.passengerTeacherId).filter(Boolean) as string[]);
+
+  const dayStart = new Date(trip.date);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  const teachers = await db.teacher.findMany({
+    where: {
+      active: true,
+      homeLat: { not: null },
+      homeLng: { not: null },
+      id: { notIn: [...already] },
+      sessions: { some: { date: { gte: dayStart, lt: dayEnd } } },
+    },
+    select: { id: true, name: true, nameEn: true, homeLat: true, homeLng: true, address: true },
+  });
+
+  const cands = poolCandidates(
+    route,
+    teachers.map((tt) => ({ item: tt, point: { lat: tt.homeLat!, lng: tt.homeLng! } })),
+    distanceKm,
+    Number.POSITIVE_INFINITY, // rank all; flag the near ones
+  );
+
+  const options: PoolOption[] = cands.map((c) => ({
+    teacherId: c.item.id,
+    name: displayName(c.item, locale),
+    lat: c.item.homeLat!,
+    lng: c.item.homeLng!,
+    label: c.item.address ?? displayName(c.item, locale),
+    detourKm: c.detourKm,
+    afterSeq: c.afterSeq,
+    onTheWay: c.detourKm <= maxDetour,
+  }));
+
+  return {
+    stops: trip.stops.map((x) => ({ id: x.id, seq: x.seq, kind: x.kind, label: x.label, plannedMin: x.plannedMin })),
+    options,
+  };
 }

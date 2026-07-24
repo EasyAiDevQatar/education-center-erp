@@ -1766,7 +1766,18 @@
     "aiBriefing": "AI briefing",
     "aiBriefingBusy": "Briefing…",
     "aiBriefingFailed": "Could not produce a briefing — is the AI module configured?",
-    "stopsCount": "{n} stops"
+    "stopsCount": "{n} stops",
+    "addStop": "Add stop",
+    "route": "Route",
+    "onTheWay": "On the way — pick up a teacher",
+    "add": "Add",
+    "addManual": "Add manually",
+    "pickTeacher": "Choose a teacher",
+    "pickup": "Pick up",
+    "dropoff": "Drop off",
+    "bestPosition": "Best position (auto)",
+    "atStart": "At the start",
+    "afterStop": "After stop {n}"
   },
   "trips": {
     "title": "Trips",

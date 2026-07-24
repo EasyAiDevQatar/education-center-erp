@@ -1766,7 +1766,18 @@
     "aiBriefing": "ملخص ذكي",
     "aiBriefingBusy": "جارٍ التلخيص…",
     "aiBriefingFailed": "تعذّر إنتاج الملخص — هل وحدة الذكاء الاصطناعي مهيأة؟",
-    "stopsCount": "{n} محطات"
+    "stopsCount": "{n} محطات",
+    "addStop": "إضافة محطة",
+    "route": "المسار",
+    "onTheWay": "في الطريق — اصطحب معلماً",
+    "add": "إضافة",
+    "addManual": "إضافة يدوية",
+    "pickTeacher": "اختر معلماً",
+    "pickup": "اصطحاب",
+    "dropoff": "إنزال",
+    "bestPosition": "أفضل موضع (تلقائي)",
+    "atStart": "في البداية",
+    "afterStop": "بعد المحطة {n}"
   },
   "trips": {
     "title": "الرحلات",
