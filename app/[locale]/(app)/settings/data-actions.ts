@@ -677,6 +677,28 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   }
   summary.portalUsers = portalUsers;
 
+  // --- staff demo accounts: one login per staff role, password demo1234, so
+  //     every role can be tried. Driver is linked to a seeded driver so the
+  //     driver app has trips to show (guarding the unique employee link). ---
+  const staffHash = await hashPassword("demo1234");
+  const firstDriver = await db.driver.findFirst({ select: { employeeId: true } });
+  const drvEmp = firstDriver?.employeeId ?? null;
+  const empTaken = drvEmp
+    ? await db.user.findFirst({ where: { employeeId: drvEmp, email: { not: "driver@demo.qa" } } })
+    : null;
+  const staffDemo = [
+    { email: "accountant@demo.qa", role: "ACCOUNTANT", name: locale === "ar" ? "محاسب تجريبي" : "Demo Accountant", employeeId: null as string | null },
+    { email: "reception@demo.qa", role: "RECEPTIONIST", name: locale === "ar" ? "موظف استقبال تجريبي" : "Demo Receptionist", employeeId: null as string | null },
+    { email: "driver@demo.qa", role: "DRIVER", name: locale === "ar" ? "سائق تجريبي" : "Demo Driver", employeeId: empTaken ? null : drvEmp },
+  ];
+  let staffUsers = 0;
+  for (const u of staffDemo) {
+    const data = { name: u.name, role: u.role, active: true, passwordHash: staffHash, employeeId: u.employeeId };
+    await db.user.upsert({ where: { email: u.email }, create: { email: u.email, ...data }, update: data });
+    staffUsers++;
+  }
+  summary.staffUsers = staffUsers;
+
   // --- payments ---
   const existingMax = await db.payment.findMany({ select: { receiptNo: true } });
   let receipt = Math.max(1000, ...existingMax.map((p) => parseInt(p.receiptNo, 10) || 0)) + 1;

@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireAuth } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { AppShell } from "@/components/app-shell/app-shell";
+import { loadRolePermissions, permsForRole } from "@/lib/permissions";
 import { AiChatWidget } from "@/components/ai-chat-widget";
 import { loadAiConfig, aiReady } from "@/lib/ai/config";
 import { logoutAction } from "./actions";
@@ -27,6 +28,7 @@ export default async function AppLayout({
     where: { key: { in: ["accountingEnabled", "transportEnabled", "aiEnabled"] } },
   });
   const flagOn = (key: string) => flagRows.some((r) => r.key === key && r.value === "1");
+  const rolePerms = await loadRolePermissions();
 
   // Floating assistant: same access rule the /assistant page enforces, decided
   // server-side so the bubble never renders for a role that can't use it.
@@ -44,6 +46,7 @@ export default async function AppLayout({
       roleLabel={tr(session.role)}
       onLogout={logoutAction.bind(null, locale)}
       flags={{ accounting: flagOn("accountingEnabled"), transport: flagOn("transportEnabled"), ai: flagOn("aiEnabled") }}
+      perms={permsForRole(rolePerms, session.role)}
     >
       {children}
       {showAiChat && <AiChatWidget />}

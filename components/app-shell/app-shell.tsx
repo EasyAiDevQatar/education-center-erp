@@ -23,6 +23,7 @@ export function AppShell({
   roleLabel,
   onLogout,
   flags,
+  perms,
   children,
 }: {
   role: Role;
@@ -31,6 +32,8 @@ export function AppShell({
   onLogout: () => void;
   /** Optional-module switches, read from Settings by the server layout. */
   flags?: { accounting?: boolean; transport?: boolean; ai?: boolean };
+  /** Per-role menu narrowing (navKey → allowed). Only `false` entries hide. */
+  perms?: Record<string, boolean>;
   children: React.ReactNode;
 }) {
   const t = useTranslations("nav");
@@ -65,7 +68,10 @@ export function AppShell({
     });
 
   const items = NAV_ITEMS.filter(
-    (i) => i.roles.includes(role) && (!i.flag || flags?.[i.flag]),
+    (i) =>
+      i.roles.includes(role) &&
+      (!i.flag || flags?.[i.flag]) &&
+      (role === "ADMIN" || perms?.[i.key] !== false),
   );
 
   const isActive = (href: string) =>

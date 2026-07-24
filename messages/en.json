@@ -195,7 +195,8 @@
     "ACCOUNTANT": "Accountant",
     "RECEPTIONIST": "Receptionist",
     "TEACHER": "Teacher",
-    "PARENT": "Parent"
+    "PARENT": "Parent",
+    "DRIVER": "Driver"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -598,7 +599,9 @@
     "accountingSettings": "Accounting module",
     "transportSettings": "Transport module",
     "subjects": "Subjects",
-    "aiSettings": "AI (assistant & translation)"
+    "aiSettings": "AI (assistant & translation)",
+    "rolePermissions": "Roles & permissions",
+    "demoUsers": "Demo users"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -2079,5 +2082,19 @@
     "transport": "Transport",
     "noTrip": "No trip serves this lesson.",
     "noDriver": "No driver"
+  },
+  "rolePerms": {
+    "intro": "Tick the modules each staff role sees in the menu. Admin always has everything; unticking only hides a module from that role.",
+    "module": "Module",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved"
+  },
+  "demoUsers": {
+    "passwordNote": "All demo accounts share the password:",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "none": "No demo accounts yet — run the seeder to create them."
   }
 }

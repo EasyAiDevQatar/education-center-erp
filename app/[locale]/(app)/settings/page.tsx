@@ -29,6 +29,10 @@ import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
 import { AuditLogTable, type AuditRow } from "./audit-log-table";
 import { DataManager, DangerZone } from "./data-manager";
+import { NAV_ITEMS } from "@/components/app-shell/nav-items";
+import { EDITABLE_ROLES, loadRolePermissions } from "@/lib/permissions";
+import { RolePermissionsSettings } from "./role-permissions-settings";
+import { DemoUsersSettings } from "./demo-users-settings";
 
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -53,6 +57,20 @@ export default async function SettingsPage({
   const tdata = await getTranslations("data");
   const tatt = await getTranslations("attendanceSettings");
   const tyear = await getTranslations("years");
+
+  // Roles & permissions: the staff modules an admin can narrow per role.
+  const rolePerms = await loadRolePermissions();
+  const staffModules = NAV_ITEMS.filter(
+    (i) =>
+      !["dashboard", "teacherPortal", "parentPortal"].includes(i.key) &&
+      EDITABLE_ROLES.some((r) => (i.roles as readonly string[]).includes(r)),
+  ).map((i) => ({ key: i.key, roles: i.roles as unknown as string[] }));
+  const permMatrixRoles = ["ADMIN", ...EDITABLE_ROLES];
+  const demoUsers = await db.user.findMany({
+    where: { email: { endsWith: "@demo.qa" } },
+    select: { name: true, email: true, role: true },
+    orderBy: { role: "asc" },
+  });
 
   const [settingsRows, years, matrix, categories, subjects, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
@@ -358,6 +376,18 @@ export default async function SettingsPage({
 
         <CollapsibleCard title={t("users")} className="lg:col-span-2">
             <UsersManager users={users} teachers={teacherOpts} guardians={guardianOpts} />
+          </CollapsibleCard>
+
+        <CollapsibleCard title={t("rolePermissions")} className="lg:col-span-2">
+            <RolePermissionsSettings
+              modules={staffModules}
+              roles={permMatrixRoles}
+              initial={rolePerms}
+            />
+          </CollapsibleCard>
+
+        <CollapsibleCard title={t("demoUsers")} className="lg:col-span-2">
+            <DemoUsersSettings users={demoUsers} password="demo1234" />
           </CollapsibleCard>
 
         <CollapsibleCard title={t("integrations")} className="lg:col-span-2">
