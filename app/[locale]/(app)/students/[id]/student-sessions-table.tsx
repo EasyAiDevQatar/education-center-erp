@@ -139,11 +139,11 @@ export function StudentSessionsTable({
               <TableHead>{tc("date")}</TableHead>
               <TableHead>{t("teacher")}</TableHead>
               <TableHead>{t("gradeLevel")}</TableHead>
-              <TableHead className="text-end">{tc("hours")}</TableHead>
-              <TableHead className="text-end">{tc("total")}</TableHead>
+              <TableHead>{tc("hours")}</TableHead>
+              <TableHead>{tc("total")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
               <TableHead>{t("paymentStatus")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
+              <TableHead>{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -173,8 +173,8 @@ export function StudentSessionsTable({
                 </TableCell>
                 <TableCell>{r.teacherName}</TableCell>
                 <TableCell>{r.levelLabel}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatHours(r.hours)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(r.total)}</TableCell>
+                <TableCell className="tabular-nums">{formatHours(r.hours)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(r.total)}</TableCell>
                 <TableCell>
                   <Badge variant={SESSION_STATUS_VARIANT[r.status] ?? "muted"}>
                     {te(`sessionStatus.${r.status}`)}
@@ -185,7 +185,7 @@ export function StudentSessionsTable({
                     {te(`paymentStatus.${r.paymentStatus}`)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-end">
+                <TableCell>
                   {payable(r) && (
                     <QuickPayDialog
                       studentId={studentId}

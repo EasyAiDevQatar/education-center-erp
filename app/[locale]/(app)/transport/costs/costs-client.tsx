@@ -187,12 +187,12 @@ export function CostsClient({
     () => [
       { key: "date", label: tc("date"), type: "date", value: (x) => x.date },
       { key: "plate", label: t("vehicle"), value: (x) => x.plate, filterable: true },
-      { key: "litres", label: t("litres"), type: "number", value: (x) => x.litres, className: "text-end" },
-      { key: "cost", label: t("cost"), type: "number", value: (x) => x.cost, className: "text-end" },
-      { key: "odo", label: t("odometerKm"), type: "number", value: (x) => x.odometerKm, className: "text-end" },
+      { key: "litres", label: t("litres"), type: "number", value: (x) => x.litres },
+      { key: "cost", label: t("cost"), type: "number", value: (x) => x.cost },
+      { key: "odo", label: t("odometerKm"), type: "number", value: (x) => x.odometerKm },
       { key: "supplier", label: t("supplier"), value: (x) => x.supplierName, filterable: true },
       { key: "expense", label: t("expense") },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc],
   );
@@ -210,10 +210,10 @@ export function CostsClient({
         optionLabel: (v) => te(`maintenanceKind.${v}`),
       },
       { key: "description", label: t("description"), value: (x) => x.description },
-      { key: "cost", label: t("cost"), type: "number", value: (x) => x.cost, className: "text-end" },
+      { key: "cost", label: t("cost"), type: "number", value: (x) => x.cost },
       { key: "next", label: t("nextDue") },
       { key: "expense", label: t("expense") },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -317,16 +317,16 @@ export function CostsClient({
                   <TableCell>
                     <span dir="ltr">{x.plate}</span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">{x.litres.toFixed(2)}</TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">{x.litres.toFixed(2)}</TableCell>
+                  <TableCell className="tabular-nums">
                     <span dir="ltr">
                       {formatMoney(x.cost)} {currency}
                     </span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">{x.odometerKm ?? "—"}</TableCell>
+                  <TableCell className="tabular-nums">{x.odometerKm ?? "—"}</TableCell>
                   <TableCell>{x.supplierName ?? "—"}</TableCell>
                   <TableCell>{expenseBadge(x.expenseStatus)}</TableCell>
-                  <TableCell className="text-end">
+                  <TableCell>
                     <DeleteButton action={deleteFuelLog.bind(null, locale, x.id)} />
                   </TableCell>
                 </TableRow>
@@ -361,7 +361,7 @@ export function CostsClient({
                     <Badge variant="default">{te(`maintenanceKind.${x.kind}`)}</Badge>
                   </TableCell>
                   <TableCell>{x.description}</TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     <span dir="ltr">
                       {formatMoney(x.cost)} {currency}
                     </span>
@@ -374,7 +374,7 @@ export function CostsClient({
                     {!x.nextDueOn && x.nextDueKm == null && "—"}
                   </TableCell>
                   <TableCell>{expenseBadge(x.expenseStatus)}</TableCell>
-                  <TableCell className="text-end">
+                  <TableCell>
                     <DeleteButton action={deleteMaintenanceLog.bind(null, locale, x.id)} />
                   </TableCell>
                 </TableRow>

@@ -281,13 +281,13 @@ export function TimetableSheet({
               <table className="w-full border-collapse">
                 <thead>
                   <tr>
-                    <th className="w-[18%] text-start">{tc("date")}</th>
-                    <th className="w-[18%] text-start">{t("time")}</th>
-                    <th className="text-start">
+                    <th className="w-[18%]">{tc("date")}</th>
+                    <th className="w-[18%]">{t("time")}</th>
+                    <th>
                       {req.kind === "student" ? t("teacher") : t("student")}
                     </th>
-                    <th className="w-[16%] text-start">{t("level")}</th>
-                    <th className="w-[20%] text-start">{t("location")}</th>
+                    <th className="w-[16%]">{t("level")}</th>
+                    <th className="w-[20%]">{t("location")}</th>
                   </tr>
                 </thead>
                 <tbody>

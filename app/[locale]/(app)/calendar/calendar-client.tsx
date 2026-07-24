@@ -638,7 +638,7 @@ function ListView({
             <TableHead>{ts("student")}</TableHead>
             <TableHead>{ts("teacher")}</TableHead>
             <TableHead>{ts("location")}</TableHead>
-            <TableHead className="text-end">{tc("hours")}</TableHead>
+            <TableHead>{tc("hours")}</TableHead>
             <TableHead>{tc("status")}</TableHead>
           </TableRow>
         </TableHeader>
@@ -666,7 +666,7 @@ function ListView({
                 )}
               </TableCell>
               <TableCell>{te(`location.${ev.location}`)}</TableCell>
-              <TableCell className="text-end tabular-nums">{ev.hours}</TableCell>
+              <TableCell className="tabular-nums">{ev.hours}</TableCell>
               <TableCell>
                 <Badge variant={ev.status === "COMPLETED" ? "success" : ev.status === "CANCELLED" ? "muted" : "default"}>
                   {te(`sessionStatus.${ev.status}`)}

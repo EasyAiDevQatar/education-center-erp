@@ -185,9 +185,9 @@ function Empty() {
   return <p className="p-6 text-center text-sm text-muted-foreground">{tc("noData")}</p>;
 }
 
-function Th({ children, end }: { children: React.ReactNode; end?: boolean }) {
+function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className={`p-2 ${end ? "text-end" : "text-start"} font-medium`}>{children}</th>
+    <th className="p-2 text-center font-medium">{children}</th>
   );
 }
 
@@ -208,22 +208,22 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
         <thead>
           <tr className="border-b border-border bg-muted/40">
             <Th>{t("method")}</Th>
-            <Th end>{t("paymentsCount")}</Th>
-            <Th end>{tc("amount")}</Th>
-            <Th end>{t("share")}</Th>
+            <Th>{t("paymentsCount")}</Th>
+            <Th>{tc("amount")}</Th>
+            <Th>{t("share")}</Th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.method} className="border-b border-border/60">
-              <td className="p-2">{te(`method.${r.method as "CASH"}`)}</td>
-              <td className="p-2 text-end tabular-nums">{r.count}</td>
-              <td className="p-2 text-end tabular-nums">
+              <td className="p-2 text-center">{te(`method.${r.method as "CASH"}`)}</td>
+              <td className="p-2 text-center tabular-nums">{r.count}</td>
+              <td className="p-2 text-center tabular-nums">
                 <span dir="ltr">
                   {formatMoney(r.total)} {currency}
                 </span>
               </td>
-              <td className="p-2 text-end tabular-nums">
+              <td className="p-2 text-center tabular-nums">
                 <Badge variant="default">{r.pct}%</Badge>
               </td>
             </tr>
@@ -231,14 +231,14 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-border font-semibold">
-            <td className="p-2">{tc("total")}</td>
-            <td className="p-2 text-end tabular-nums">{totals.count}</td>
-            <td className="p-2 text-end tabular-nums">
+            <td className="p-2 text-center">{tc("total")}</td>
+            <td className="p-2 text-center tabular-nums">{totals.count}</td>
+            <td className="p-2 text-center tabular-nums">
               <span dir="ltr">
                 {formatMoney(totals.total)} {currency}
               </span>
             </td>
-            <td className="p-2 text-end tabular-nums">100%</td>
+            <td className="p-2 text-center tabular-nums">100%</td>
           </tr>
         </tfoot>
       </table>
@@ -270,24 +270,24 @@ function AttendanceTable({ rows }: { rows: AttendanceRow[] }) {
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <Th>{tc("name")}</Th>
-              <Th end>{t("sessionsCount")}</Th>
-              <Th end>{t("completed")}</Th>
-              <Th end>{t("noShow")}</Th>
-              <Th end>{t("cancelled")}</Th>
-              <Th end>{tc("hours")}</Th>
-              <Th end>{t("attendanceRate")}</Th>
+              <Th>{t("sessionsCount")}</Th>
+              <Th>{t("completed")}</Th>
+              <Th>{t("noShow")}</Th>
+              <Th>{t("cancelled")}</Th>
+              <Th>{tc("hours")}</Th>
+              <Th>{t("attendanceRate")}</Th>
             </tr>
           </thead>
           <tbody>
             {p.pageItems.map((r) => (
               <tr key={r.id} className="border-b border-border/60">
-                <td className="p-2">{r.name}</td>
-                <td className="p-2 text-end tabular-nums">{r.total}</td>
-                <td className="p-2 text-end tabular-nums">{r.completed}</td>
-                <td className="p-2 text-end tabular-nums">{r.noShow}</td>
-                <td className="p-2 text-end tabular-nums">{r.cancelled}</td>
-                <td className="p-2 text-end tabular-nums">{formatHours(r.hours)}</td>
-                <td className="p-2 text-end tabular-nums">
+                <td className="p-2 text-center">{r.name}</td>
+                <td className="p-2 text-center tabular-nums">{r.total}</td>
+                <td className="p-2 text-center tabular-nums">{r.completed}</td>
+                <td className="p-2 text-center tabular-nums">{r.noShow}</td>
+                <td className="p-2 text-center tabular-nums">{r.cancelled}</td>
+                <td className="p-2 text-center tabular-nums">{formatHours(r.hours)}</td>
+                <td className="p-2 text-center tabular-nums">
                   <Badge variant={r.attendanceRate >= 90 ? "success" : r.attendanceRate >= 75 ? "warning" : "destructive"}>
                     {r.attendanceRate}%
                   </Badge>
@@ -297,12 +297,12 @@ function AttendanceTable({ rows }: { rows: AttendanceRow[] }) {
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
-              <td className="p-2">{tc("total")}</td>
-              <td className="p-2 text-end tabular-nums">{totals.total}</td>
-              <td className="p-2 text-end tabular-nums">{totals.completed}</td>
-              <td className="p-2 text-end tabular-nums">{totals.noShow}</td>
-              <td className="p-2 text-end tabular-nums">{totals.cancelled}</td>
-              <td className="p-2 text-end tabular-nums">{formatHours(totals.hours)}</td>
+              <td className="p-2 text-center">{tc("total")}</td>
+              <td className="p-2 text-center tabular-nums">{totals.total}</td>
+              <td className="p-2 text-center tabular-nums">{totals.completed}</td>
+              <td className="p-2 text-center tabular-nums">{totals.noShow}</td>
+              <td className="p-2 text-center tabular-nums">{totals.cancelled}</td>
+              <td className="p-2 text-center tabular-nums">{formatHours(totals.hours)}</td>
               <td />
             </tr>
           </tfoot>
@@ -340,20 +340,20 @@ function RevenueTable({
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <Th>{tc("name")}</Th>
-              <Th end>{t("sessionsCount")}</Th>
-              <Th end>{tc("hours")}</Th>
-              <Th end>{t("expectedRevenue")}</Th>
-              <Th end>{t("share")}</Th>
+              <Th>{t("sessionsCount")}</Th>
+              <Th>{tc("hours")}</Th>
+              <Th>{t("expectedRevenue")}</Th>
+              <Th>{t("share")}</Th>
             </tr>
           </thead>
           <tbody>
             {p.pageItems.map((r) => (
               <tr key={r.key} className="border-b border-border/60">
-                <td className="p-2">{label(r)}</td>
-                <td className="p-2 text-end tabular-nums">{r.sessions}</td>
-                <td className="p-2 text-end tabular-nums">{formatHours(r.hours)}</td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(r.expected)} {currency}</td>
-                <td className="p-2 text-end tabular-nums">
+                <td className="p-2 text-center">{label(r)}</td>
+                <td className="p-2 text-center tabular-nums">{r.sessions}</td>
+                <td className="p-2 text-center tabular-nums">{formatHours(r.hours)}</td>
+                <td className="p-2 text-center tabular-nums">{formatMoney(r.expected)} {currency}</td>
+                <td className="p-2 text-center tabular-nums">
                   {total > 0 ? Math.round((r.expected / total) * 100) : 0}%
                 </td>
               </tr>
@@ -361,12 +361,12 @@ function RevenueTable({
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
-              <td className="p-2">{tc("total")}</td>
-              <td className="p-2 text-end tabular-nums">
+              <td className="p-2 text-center">{tc("total")}</td>
+              <td className="p-2 text-center tabular-nums">
                 {rows.reduce((a, r) => a + r.sessions, 0)}
               </td>
-              <td className="p-2 text-end tabular-nums">{formatHours(hours)}</td>
-              <td className="p-2 text-end tabular-nums">{formatMoney(total)} {currency}</td>
+              <td className="p-2 text-center tabular-nums">{formatHours(hours)}</td>
+              <td className="p-2 text-center tabular-nums">{formatMoney(total)} {currency}</td>
               <td />
             </tr>
           </tfoot>
@@ -391,10 +391,10 @@ function PackagesTable({ rows, currency }: { rows: PackageReportRow[]; currency:
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <Th>{tc("name")}</Th>
-              <Th end>{t("totalHours")}</Th>
-              <Th end>{t("hoursUsed")}</Th>
-              <Th end>{t("remaining")}</Th>
-              <Th end>{tc("price")}</Th>
+              <Th>{t("totalHours")}</Th>
+              <Th>{t("hoursUsed")}</Th>
+              <Th>{t("remaining")}</Th>
+              <Th>{tc("price")}</Th>
               <Th>{tc("status")}</Th>
               <Th>{t("expiresAt")}</Th>
             </tr>
@@ -402,17 +402,17 @@ function PackagesTable({ rows, currency }: { rows: PackageReportRow[]; currency:
           <tbody>
             {p.pageItems.map((r) => (
               <tr key={r.id} className="border-b border-border/60">
-                <td className="p-2">{r.studentName}</td>
-                <td className="p-2 text-end tabular-nums">{formatHours(r.totalHours)}</td>
-                <td className="p-2 text-end tabular-nums">{formatHours(r.hoursUsed)}</td>
-                <td className="p-2 text-end tabular-nums">{formatHours(r.remaining)}</td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(r.price)} {currency}</td>
-                <td className="p-2">
+                <td className="p-2 text-center">{r.studentName}</td>
+                <td className="p-2 text-center tabular-nums">{formatHours(r.totalHours)}</td>
+                <td className="p-2 text-center tabular-nums">{formatHours(r.hoursUsed)}</td>
+                <td className="p-2 text-center tabular-nums">{formatHours(r.remaining)}</td>
+                <td className="p-2 text-center tabular-nums">{formatMoney(r.price)} {currency}</td>
+                <td className="p-2 text-center">
                   <Badge variant={r.status === "ACTIVE" ? "success" : "default"}>
                     {te(`packageStatus.${r.status}`)}
                   </Badge>
                 </td>
-                <td className="p-2 tabular-nums"><span dir="ltr">{r.expiresAt ?? "—"}</span></td>
+                <td className="p-2 text-center tabular-nums"><span dir="ltr">{r.expiresAt ?? "—"}</span></td>
               </tr>
             ))}
           </tbody>
@@ -441,28 +441,28 @@ function PayoutsSummaryTable({ rows, currency }: { rows: PayoutSummaryRow[]; cur
               <Th>{tc("name")}</Th>
               <Th>{t("payMode")}</Th>
               <Th>{t("period")}</Th>
-              <Th end>{t("commission")}</Th>
-              <Th end>{t("fixedSalary")}</Th>
-              <Th end>{t("deductions")}</Th>
-              <Th end>{t("netPaid")}</Th>
+              <Th>{t("commission")}</Th>
+              <Th>{t("fixedSalary")}</Th>
+              <Th>{t("deductions")}</Th>
+              <Th>{t("netPaid")}</Th>
             </tr>
           </thead>
           <tbody>
             {p.pageItems.map((r) => (
               <tr key={r.id} className="border-b border-border/60">
-                <td className="p-2">{r.teacherName}</td>
-                <td className="p-2">
+                <td className="p-2 text-center">{r.teacherName}</td>
+                <td className="p-2 text-center">
                   {r.payMode ? <Badge>{tm(r.payMode as "MONTH")}</Badge> : "—"}
                 </td>
-                <td className="p-2 tabular-nums">
+                <td className="p-2 text-center tabular-nums">
                   <span dir="ltr">
                     {r.periodStart} → {r.periodEnd}
                   </span>
                 </td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(r.grossCommission)}</td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(r.fixedSalary)}</td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(r.deductions + r.advances)}</td>
-                <td className="p-2 text-end font-semibold tabular-nums">
+                <td className="p-2 text-center tabular-nums">{formatMoney(r.grossCommission)}</td>
+                <td className="p-2 text-center tabular-nums">{formatMoney(r.fixedSalary)}</td>
+                <td className="p-2 text-center tabular-nums">{formatMoney(r.deductions + r.advances)}</td>
+                <td className="p-2 text-center font-semibold tabular-nums">
                   {formatMoney(r.netPaid)} {currency}
                 </td>
               </tr>
@@ -470,8 +470,8 @@ function PayoutsSummaryTable({ rows, currency }: { rows: PayoutSummaryRow[]; cur
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
-              <td className="p-2" colSpan={6}>{tc("total")}</td>
-              <td className="p-2 text-end tabular-nums">{formatMoney(net)} {currency}</td>
+              <td className="p-2 text-center" colSpan={6}>{tc("total")}</td>
+              <td className="p-2 text-center tabular-nums">{formatMoney(net)} {currency}</td>
             </tr>
           </tfoot>
         </table>
@@ -498,20 +498,20 @@ function DebtorsTable({ rows, currency }: { rows: DebtorRow[]; currency: string 
               <Th>{tc("name")}</Th>
               <Th>{t("guardian")}</Th>
               <Th>{tc("phone")}</Th>
-              <Th end>{t("charges")}</Th>
-              <Th end>{t("paid")}</Th>
-              <Th end>{t("balance")}</Th>
+              <Th>{t("charges")}</Th>
+              <Th>{t("paid")}</Th>
+              <Th>{t("balance")}</Th>
             </tr>
           </thead>
           <tbody>
             {p.pageItems.map((r) => (
               <tr key={r.id} className="border-b border-border/60">
-                <td className="p-2">{r.name}</td>
-                <td className="p-2">{r.guardianName ?? "—"}</td>
-                <td className="p-2 tabular-nums"><span dir="ltr">{r.phone ?? "—"}</span></td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(r.charges)}</td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(r.paid)}</td>
-                <td className="p-2 text-end font-semibold tabular-nums text-destructive">
+                <td className="p-2 text-center">{r.name}</td>
+                <td className="p-2 text-center">{r.guardianName ?? "—"}</td>
+                <td className="p-2 text-center tabular-nums"><span dir="ltr">{r.phone ?? "—"}</span></td>
+                <td className="p-2 text-center tabular-nums">{formatMoney(r.charges)}</td>
+                <td className="p-2 text-center tabular-nums">{formatMoney(r.paid)}</td>
+                <td className="p-2 text-center font-semibold tabular-nums text-destructive">
                   {formatMoney(r.balance)} {currency}
                 </td>
               </tr>
@@ -519,8 +519,8 @@ function DebtorsTable({ rows, currency }: { rows: DebtorRow[]; currency: string 
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
-              <td className="p-2" colSpan={5}>{tc("total")}</td>
-              <td className="p-2 text-end tabular-nums">{formatMoney(total)} {currency}</td>
+              <td className="p-2 text-center" colSpan={5}>{tc("total")}</td>
+              <td className="p-2 text-center tabular-nums">{formatMoney(total)} {currency}</td>
             </tr>
           </tfoot>
         </table>

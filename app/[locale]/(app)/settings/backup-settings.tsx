@@ -83,9 +83,9 @@ export function BackupSettings({
               <TableRow>
                 <TableHead>{t("file")}</TableHead>
                 <TableHead>{t("tier")}</TableHead>
-                <TableHead className="text-end">{t("size")}</TableHead>
+                <TableHead>{t("size")}</TableHead>
                 <TableHead>{tc("date")}</TableHead>
-                <TableHead className="text-end">{tc("actions")}</TableHead>
+                <TableHead>{tc("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -106,7 +106,7 @@ export function BackupSettings({
                   <TableCell>
                     <Badge variant={tierVariant(b.tier)}>{te(`backupTier.${b.tier}`)}</Badge>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     <span dir="ltr">
                       {fmtSize(b.sizeBytes)}
                     </span>
@@ -116,7 +116,7 @@ export function BackupSettings({
                       {b.modifiedAt.slice(0, 16).replace("T", " ")}
                     </span>
                   </TableCell>
-                  <TableCell className="text-end">
+                  <TableCell>
                     <a href={`/api/backups/${b.name}`} download>
                       <Button variant="ghost" size="icon" aria-label={t("download")}>
                         <Download className="size-4" />

@@ -34,9 +34,9 @@ export function LedgerTable({ ledger }: { ledger: LedgerEntry[] }) {
           <TableRow>
             <TableHead>{tc("date")}</TableHead>
             <TableHead>{tc("actions")}</TableHead>
-            <TableHead className="text-end">{t("totalCharges")}</TableHead>
-            <TableHead className="text-end">{t("totalPaid")}</TableHead>
-            <TableHead className="text-end">{t("balance")}</TableHead>
+            <TableHead>{t("totalCharges")}</TableHead>
+            <TableHead>{t("totalPaid")}</TableHead>
+            <TableHead>{t("balance")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -49,19 +49,19 @@ export function LedgerTable({ ledger }: { ledger: LedgerEntry[] }) {
           )}
           {pg.pageItems.map((e, i) => (
             <TableRow key={pg.start + i}>
-              <TableCell className="text-start tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
               <TableCell>
                 <Badge variant={e.type === "PAYMENT" ? "success" : "muted"}>
                   {e.description}
                 </Badge>
               </TableCell>
-              <TableCell className="text-end tabular-nums">
+              <TableCell className="tabular-nums">
                 {e.debit ? formatMoney(e.debit) : "—"}
               </TableCell>
-              <TableCell className="text-end tabular-nums text-[var(--success)]">
+              <TableCell className="tabular-nums text-[var(--success)]">
                 {e.credit ? formatMoney(e.credit) : "—"}
               </TableCell>
-              <TableCell className="text-end tabular-nums font-medium">
+              <TableCell className="tabular-nums font-medium">
                 {formatMoney(e.balance)}
               </TableCell>
             </TableRow>

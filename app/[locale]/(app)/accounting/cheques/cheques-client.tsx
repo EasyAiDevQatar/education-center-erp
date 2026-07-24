@@ -263,7 +263,7 @@ export function ChequesClient({
         optionLabel: (v) => te(`chequeDirection.${v}`),
       },
       { key: "party", label: t("party"), value: (c) => c.party },
-      { key: "amount", label: tc("amount"), type: "number", value: (c) => c.amount, className: "text-end" },
+      { key: "amount", label: tc("amount"), type: "number", value: (c) => c.amount },
       { key: "due", label: t("dueDate"), type: "date", value: (c) => c.dueDate },
       {
         key: "status",
@@ -274,7 +274,7 @@ export function ChequesClient({
         options: [...CHEQUE_STATUSES],
         optionLabel: (v) => te(`chequeStatus.${v}`),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -401,7 +401,7 @@ export function ChequesClient({
                         <span className="ms-1 text-xs text-muted-foreground" dir="ltr">#{c.receiptNo}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-end tabular-nums">
+                    <TableCell className="tabular-nums">
                       <span dir="ltr">
                         {formatMoney(c.amount)} {currency}
                       </span>
@@ -415,7 +415,7 @@ export function ChequesClient({
                     <TableCell>
                       <Badge variant={STATUS_BADGE[c.status]}>{te(`chequeStatus.${c.status}`)}</Badge>
                     </TableCell>
-                    <TableCell className="text-end">
+                    <TableCell>
                       <span className="inline-flex items-center gap-1">
                         {c.printable && (
                           <Link href={`/statement/cheque/${c.id}`}>
@@ -443,10 +443,10 @@ export function ChequesClient({
               <TableRow>
                 <TableCell className="font-medium">{t("bankName")}</TableCell>
                 <TableCell className="font-medium">{t("accountNo")}</TableCell>
-                <TableCell className="font-medium text-end">{t("range")}</TableCell>
-                <TableCell className="font-medium text-end">{t("nextLeaf")}</TableCell>
-                <TableCell className="font-medium text-end">{t("remaining")}</TableCell>
-                <TableCell className="font-medium text-end">{tc("actions")}</TableCell>
+                <TableCell className="font-medium">{t("range")}</TableCell>
+                <TableCell className="font-medium">{t("nextLeaf")}</TableCell>
+                <TableCell className="font-medium">{t("remaining")}</TableCell>
+                <TableCell className="font-medium">{tc("actions")}</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -461,18 +461,18 @@ export function ChequesClient({
                 <TableRow key={b.id} className={b.active ? undefined : "opacity-60"}>
                   <TableCell className="font-medium">{b.bankName}</TableCell>
                   <TableCell><span dir="ltr">{b.accountNo ?? "—"}</span></TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     <span dir="ltr">
                       {b.startNo} – {b.endNo}
                     </span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums"><span dir="ltr">{b.nextNo}</span></TableCell>
-                  <TableCell className="text-end">
+                  <TableCell className="tabular-nums"><span dir="ltr">{b.nextNo}</span></TableCell>
+                  <TableCell>
                     <Badge variant={b.remaining > 5 ? "success" : b.remaining > 0 ? "warning" : "destructive"}>
                       {b.remaining}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-end">
+                  <TableCell>
                     <EntityDialog
                       title={t("editBook")}
                       action={saveChequeBook.bind(null, locale, b.id)}

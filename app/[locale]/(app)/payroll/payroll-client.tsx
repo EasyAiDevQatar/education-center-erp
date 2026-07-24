@@ -332,15 +332,15 @@ export function PayrollClient({
           <TableHeader>
             <TableRow>
               <TableHead>{tc("name")}</TableHead>
-              <TableHead className="text-end">{tt("hoursTaught")}</TableHead>
-              <TableHead className="text-end">{tt("expectedIncome")}</TableHead>
-              <TableHead className="text-end">{tt("collectedIncome")}</TableHead>
-              <TableHead className="text-end">{tt("commissionPct")}</TableHead>
-              <TableHead className="text-end">{tt("commissionExpected")}</TableHead>
-              <TableHead className="text-end">{tt("commissionDue")}</TableHead>
-              {showSalary && <TableHead className="text-end">{tt("fixedSalary")}</TableHead>}
-              <TableHead className="text-end">{tt("netPayable")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
+              <TableHead>{tt("hoursTaught")}</TableHead>
+              <TableHead>{tt("expectedIncome")}</TableHead>
+              <TableHead>{tt("collectedIncome")}</TableHead>
+              <TableHead>{tt("commissionPct")}</TableHead>
+              <TableHead>{tt("commissionExpected")}</TableHead>
+              <TableHead>{tt("commissionDue")}</TableHead>
+              {showSalary && <TableHead>{tt("fixedSalary")}</TableHead>}
+              <TableHead>{tt("netPayable")}</TableHead>
+              <TableHead>{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -352,17 +352,17 @@ export function PayrollClient({
                     · {tem(e.earningsMode)}
                   </span>
                 </TableCell>
-                <TableCell className="text-end tabular-nums">{formatHours(e.hours)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(e.expected)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(e.collected)}</TableCell>
-                <TableCell className="text-end tabular-nums">{e.commissionPct}%</TableCell>
-                <TableCell className="text-end tabular-nums text-muted-foreground">{formatMoney(e.expectedCommission)}</TableCell>
-                <TableCell className="text-end tabular-nums font-medium">{formatMoney(e.dueCommission)} {currency}</TableCell>
+                <TableCell className="tabular-nums">{formatHours(e.hours)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(e.expected)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(e.collected)}</TableCell>
+                <TableCell className="tabular-nums">{e.commissionPct}%</TableCell>
+                <TableCell className="tabular-nums text-muted-foreground">{formatMoney(e.expectedCommission)}</TableCell>
+                <TableCell className="tabular-nums font-medium">{formatMoney(e.dueCommission)} {currency}</TableCell>
                 {showSalary && (
-                  <TableCell className="text-end tabular-nums">{formatMoney(e.fixedSalary)}</TableCell>
+                  <TableCell className="tabular-nums">{formatMoney(e.fixedSalary)}</TableCell>
                 )}
-                <TableCell className="text-end tabular-nums font-semibold">{formatMoney(e.netPayable)} {currency}</TableCell>
-                <TableCell className="text-end">
+                <TableCell className="tabular-nums font-semibold">{formatMoney(e.netPayable)} {currency}</TableCell>
+                <TableCell>
                   <EntityDialog
                     title={t("createPayslip")}
                     action={createPayout.bind(null, locale)}
@@ -405,11 +405,11 @@ export function PayrollClient({
               <TableHead>{tc("name")}</TableHead>
               <TableHead>{t("payMode")}</TableHead>
               <TableHead>{t("period")}</TableHead>
-              <TableHead className="text-end">{t("grossCommission")}</TableHead>
-              <TableHead className="text-end">{t("advances")}</TableHead>
-              <TableHead className="text-end">{t("netPaid")}</TableHead>
+              <TableHead>{t("grossCommission")}</TableHead>
+              <TableHead>{t("advances")}</TableHead>
+              <TableHead>{t("netPaid")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
+              <TableHead>{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -430,19 +430,19 @@ export function PayrollClient({
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="text-start text-xs tabular-nums"><span dir="ltr">
+                <TableCell className="text-xs tabular-nums"><span dir="ltr">
                   {p.periodStart} → {p.periodEnd}
                 </span></TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(p.grossCommission)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(p.advances)}</TableCell>
-                <TableCell className="text-end tabular-nums font-medium">{formatMoney(p.netPaid)} {currency}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(p.grossCommission)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(p.advances)}</TableCell>
+                <TableCell className="tabular-nums font-medium">{formatMoney(p.netPaid)} {currency}</TableCell>
                 <TableCell>
                   <Badge variant={p.status === "PAID" ? "success" : "warning"}>
                     {te(`payoutStatus.${p.status}`)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <div className="flex justify-center gap-1">
                     <a href={`/${localeProp}/payslip/${p.id}`} target="_blank" rel="noopener">
                       <Button variant="ghost" size="icon" aria-label={t("payslip")}>
                         <Printer className="size-4" />

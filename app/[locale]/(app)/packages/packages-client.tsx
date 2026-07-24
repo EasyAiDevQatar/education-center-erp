@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
+import { RowActions, ViewDialog } from "@/components/crud/row-actions";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,10 +112,10 @@ export function PackagesClient({
   const columns = useMemo<ColumnDef<PackageRow>[]>(
     () => [
       { key: "name", label: tc("name"), value: (p) => p.studentName },
-      { key: "totalHours", label: t("totalHours"), type: "number", value: (p) => p.totalHours, className: "text-end" },
-      { key: "hoursUsed", label: t("hoursUsed"), type: "number", value: (p) => p.hoursUsed, className: "text-end" },
-      { key: "remaining", label: t("hoursRemaining"), type: "number", value: (p) => p.totalHours - p.hoursUsed, className: "text-end" },
-      { key: "price", label: t("price"), type: "number", value: (p) => p.price, className: "text-end" },
+      { key: "totalHours", label: t("totalHours"), type: "number", value: (p) => p.totalHours },
+      { key: "hoursUsed", label: t("hoursUsed"), type: "number", value: (p) => p.hoursUsed },
+      { key: "remaining", label: t("hoursRemaining"), type: "number", value: (p) => p.totalHours - p.hoursUsed },
+      { key: "price", label: t("price"), type: "number", value: (p) => p.price },
       {
         key: "status",
         label: tc("status"),
@@ -124,7 +125,7 @@ export function PackagesClient({
         options: ["ACTIVE", "COMPLETED", "EXPIRED"],
         optionLabel: (v) => te(`packageStatus.${v}`),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -168,13 +169,27 @@ export function PackagesClient({
             {pg.pageItems.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.studentName}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatHours(p.totalHours)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatHours(p.hoursUsed)}</TableCell>
-                <TableCell className="text-end tabular-nums font-medium">{formatHours(p.totalHours - p.hoursUsed)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(p.price)} {currency}</TableCell>
+                <TableCell className="tabular-nums">{formatHours(p.totalHours)}</TableCell>
+                <TableCell className="tabular-nums">{formatHours(p.hoursUsed)}</TableCell>
+                <TableCell className="tabular-nums font-medium">{formatHours(p.totalHours - p.hoursUsed)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(p.price)} {currency}</TableCell>
                 <TableCell><Badge variant={statusVariant(p.status)}>{te(`packageStatus.${p.status}`)}</Badge></TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <RowActions>
+                    <ViewDialog
+                      title={p.studentName}
+                      subtitle={te(`packageStatus.${p.status}`)}
+                      fields={[
+                        { label: t("student"), value: p.studentName },
+                        { label: t("totalHours"), value: p.totalHours, ltr: true },
+                        { label: t("hoursUsed"), value: p.hoursUsed, ltr: true },
+                        { label: t("price"), value: `${formatMoney(p.price)} ${currency}`, ltr: true },
+                        { label: t("purchasedAt"), value: p.purchasedAt, ltr: true },
+                        { label: t("expiresAt"), value: p.expiresAt, ltr: true },
+                        { label: tc("status"), value: te(`packageStatus.${p.status}`) },
+                        { label: tc("notes"), value: p.notes, wide: true },
+                      ]}
+                    />
                     <EntityDialog
                       title={t("edit")}
                       action={savePackage.bind(null, locale, p.id)}
@@ -186,7 +201,7 @@ export function PackagesClient({
                       }
                     />
                     <DeleteButton action={deletePackage.bind(null, locale, p.id)} />
-                  </div>
+                  </RowActions>
                 </TableCell>
               </TableRow>
             ))}

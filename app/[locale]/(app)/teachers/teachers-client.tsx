@@ -184,7 +184,7 @@ export function TeachersClient({ teachers, subjects }: { teachers: TeacherRow[];
         options: ["active", "inactive"],
         optionLabel: (v) => tc(v as "active"),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc],
   );
@@ -229,7 +229,7 @@ export function TeachersClient({ teachers, subjects }: { teachers: TeacherRow[];
             {pg.pageItems.map((teacher) => (
               <TableRow key={teacher.id}>
                 <TableCell className="font-medium">{displayName(teacher, locale)}</TableCell>
-                <TableCell className="text-start"><span dir="ltr">{teacher.phone ?? "—"}</span></TableCell>
+                <TableCell><span dir="ltr">{teacher.phone ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{teacher.commissionPct}%</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -249,8 +249,8 @@ export function TeachersClient({ teachers, subjects }: { teachers: TeacherRow[];
                     <Badge variant="muted">{tc("inactive")}</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <div className="flex justify-center gap-1">
                     <Link href={`/teachers/${teacher.id}`}>
                       <Button variant="ghost" size="icon" aria-label={tp("view360")}>
                         <CircleUserRound className="size-4" />

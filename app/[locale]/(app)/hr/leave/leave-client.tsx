@@ -253,12 +253,12 @@ export function LeaveClient({
             <TableHeader>
               <TableRow>
                 <TableHead>{tc("name")}</TableHead>
-                <TableHead className="text-end">{t("accrued")}</TableHead>
-                <TableHead className="text-end">{t("adjustments")}</TableHead>
-                <TableHead className="text-end">{t("taken")}</TableHead>
-                <TableHead className="text-end">{t("pendingCol")}</TableHead>
-                <TableHead className="text-end">{t("remaining")}</TableHead>
-                <TableHead className="text-end">{t("sick")}</TableHead>
+                <TableHead>{t("accrued")}</TableHead>
+                <TableHead>{t("adjustments")}</TableHead>
+                <TableHead>{t("taken")}</TableHead>
+                <TableHead>{t("pendingCol")}</TableHead>
+                <TableHead>{t("remaining")}</TableHead>
+                <TableHead>{t("sick")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -277,20 +277,19 @@ export function LeaveClient({
                       <span className="ms-1 text-xs text-warning">{t("noHireDate")}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">{b.annualEntitled}</TableCell>
-                  <TableCell className="text-end tabular-nums">{b.annualAdjust || "—"}</TableCell>
-                  <TableCell className="text-end tabular-nums">{b.annualTaken || "—"}</TableCell>
-                  <TableCell className="text-end tabular-nums">{b.annualPending || "—"}</TableCell>
-                  <TableCell
+                  <TableCell className="tabular-nums">{b.annualEntitled}</TableCell>
+                  <TableCell className="tabular-nums">{b.annualAdjust || "—"}</TableCell>
+                  <TableCell className="tabular-nums">{b.annualTaken || "—"}</TableCell>
+                  <TableCell className="tabular-nums">{b.annualPending || "—"}</TableCell>
+                  <TableCell 
                     className={
                       b.annualRemaining < 0
                         ? "text-end font-semibold tabular-nums text-destructive"
                         : "text-end font-semibold tabular-nums"
-                    }
-                  >
+                    }>
                     {b.annualRemaining}
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     {b.sickTaken}/{b.sickCap}
                   </TableCell>
                 </TableRow>
@@ -311,7 +310,7 @@ export function LeaveClient({
                 <TableHead>{tc("name")}</TableHead>
                 <TableHead>{t("type")}</TableHead>
                 <TableHead>{t("period")}</TableHead>
-                <TableHead className="text-end">{t("days")}</TableHead>
+                <TableHead>{t("days")}</TableHead>
                 <TableHead>{tc("status")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -332,7 +331,7 @@ export function LeaveClient({
                       {r.startDate} → {r.endDate}
                     </span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">{r.days}</TableCell>
+                  <TableCell className="tabular-nums">{r.days}</TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(r.status)}>{t(`statuses.${r.status}`)}</Badge>
                   </TableCell>

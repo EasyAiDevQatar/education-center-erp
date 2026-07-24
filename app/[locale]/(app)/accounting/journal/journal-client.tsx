@@ -240,8 +240,8 @@ export function JournalClient({
         options: [...JOURNAL_SOURCES],
         optionLabel: (v) => te(`journalSource.${v}`),
       },
-      { key: "total", label: tc("amount"), type: "number", value: (e) => e.total, className: "text-end" },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "total", label: tc("amount"), type: "number", value: (e) => e.total },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -296,12 +296,12 @@ export function JournalClient({
                       {te(`journalSource.${e.sourceType as "MANUAL"}`)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     <span dir="ltr">
                       {formatMoney(e.total)} {currency}
                     </span>
                   </TableCell>
-                  <TableCell className="text-end" onClick={(ev) => ev.stopPropagation()}>
+                  <TableCell onClick={(ev) => ev.stopPropagation()}>
                     {e.sourceType === "MANUAL" && (
                       <DeleteButton action={deleteManualEntry.bind(null, locale, e.id)} />
                     )}
@@ -315,12 +315,12 @@ export function JournalClient({
                           {e.lines.map((l) => (
                             <tr key={l.id} className="border-b border-border/40 last:border-0">
                               <td className="px-6 py-1.5">{l.account}</td>
-                              <td className="w-32 px-2 py-1.5 text-end tabular-nums">
+                              <td className="w-32 px-2 py-1.5 tabular-nums">
                                 <span dir="ltr">
                                   {l.debit > 0 ? formatMoney(l.debit) : ""}
                                 </span>
                               </td>
-                              <td className="w-32 px-2 py-1.5 text-end tabular-nums">
+                              <td className="w-32 px-2 py-1.5 tabular-nums">
                                 <span dir="ltr">
                                   {l.credit > 0 ? formatMoney(l.credit) : ""}
                                 </span>

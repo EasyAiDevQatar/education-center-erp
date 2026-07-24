@@ -76,7 +76,7 @@ export function TripsClient({
       { key: "route", label: t("route") },
       { key: "driver", label: t("driver"), value: (x) => x.driverName, filterable: true },
       { key: "vehicle", label: t("vehicle"), value: (x) => x.plate, filterable: true },
-      { key: "km", label: t("km"), type: "number", value: (x) => x.estimatedKm, className: "text-end" },
+      { key: "km", label: t("km"), type: "number", value: (x) => x.estimatedKm },
       {
         key: "status",
         label: tc("status"),
@@ -175,7 +175,7 @@ export function TripsClient({
                 <TableCell>
                   <span dir="ltr">{x.plate ?? "—"}</span>
                 </TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">
                   {x.estimatedKm.toFixed(1)}
                 </TableCell>
                 <TableCell>

@@ -6,6 +6,7 @@ import { Plus, Pencil, FileText, Trash2, TriangleAlert } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
+import { RowActions, ViewDialog } from "@/components/crud/row-actions";
 import { FormField } from "@/components/crud/form-field";
 import {
   Dialog,
@@ -292,9 +293,9 @@ export function VehiclesClient({
     () => [
       { key: "plate", label: t("plate"), value: (v) => v.plate },
       { key: "vehicle", label: t("makeModel"), value: (v) => [v.make, v.model].filter(Boolean).join(" ") },
-      { key: "year", label: t("year"), type: "number", value: (v) => v.year, className: "text-end" },
-      { key: "capacity", label: t("capacity"), type: "number", value: (v) => v.capacity, className: "text-end" },
-      { key: "odometerKm", label: t("odometerKm"), type: "number", value: (v) => v.odometerKm, className: "text-end" },
+      { key: "year", label: t("year"), type: "number", value: (v) => v.year },
+      { key: "capacity", label: t("capacity"), type: "number", value: (v) => v.capacity },
+      { key: "odometerKm", label: t("odometerKm"), type: "number", value: (v) => v.odometerKm },
       { key: "papers", label: t("papers") },
       {
         key: "status",
@@ -305,7 +306,7 @@ export function VehiclesClient({
         options: ["active", "inactive"],
         optionLabel: (x) => tc(x as "active"),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc],
   );
@@ -379,9 +380,9 @@ export function VehiclesClient({
                     <span dir="ltr">{v.plate}</span>
                   </TableCell>
                   <TableCell>{[v.make, v.model].filter(Boolean).join(" ") || "—"}</TableCell>
-                  <TableCell className="text-end tabular-nums">{v.year ?? "—"}</TableCell>
-                  <TableCell className="text-end tabular-nums">{v.capacity}</TableCell>
-                  <TableCell className="text-end tabular-nums">{v.odometerKm}</TableCell>
+                  <TableCell className="tabular-nums">{v.year ?? "—"}</TableCell>
+                  <TableCell className="tabular-nums">{v.capacity}</TableCell>
+                  <TableCell className="tabular-nums">{v.odometerKm}</TableCell>
                   <TableCell>
                     {v.documents.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
@@ -398,8 +399,31 @@ export function VehiclesClient({
                       <Badge variant="muted">{tc("inactive")}</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-end">
-                    <div className="flex justify-end gap-1">
+                  <TableCell>
+                    <RowActions>
+                      <ViewDialog
+                        title={v.plate}
+                        subtitle={[v.make, v.model, v.year].filter(Boolean).join(" ")}
+                        fields={[
+                          { label: t("plate"), value: v.plate, ltr: true },
+                          { label: t("make"), value: v.make },
+                          { label: t("model"), value: v.model },
+                          { label: t("year"), value: v.year, ltr: true },
+                          { label: t("capacity"), value: v.capacity, ltr: true },
+                          { label: t("odometerKm"), value: v.odometerKm, ltr: true },
+                          { label: t("papers"), value: v.documents.length, ltr: true },
+                          { label: t("drivers"), value: v.driverCount, ltr: true },
+                          {
+                            label: tc("status"),
+                            value: (
+                              <Badge variant={v.active ? "success" : "muted"}>
+                                {v.active ? tc("active") : tc("inactive")}
+                              </Badge>
+                            ),
+                          },
+                          { label: tc("notes"), value: v.notes, wide: true },
+                        ]}
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
@@ -421,7 +445,7 @@ export function VehiclesClient({
                       {v.driverCount === 0 && (
                         <DeleteButton action={deleteVehicle.bind(null, locale, v.id)} />
                       )}
-                    </div>
+                    </RowActions>
                   </TableCell>
                 </TableRow>
               );

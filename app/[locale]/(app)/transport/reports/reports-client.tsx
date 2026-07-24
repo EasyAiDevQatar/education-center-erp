@@ -136,10 +136,10 @@ export function ReportsClient({
           <TableHeader>
             <TableRow>
               <TableHead>{tc("name")}</TableHead>
-              <TableHead className="text-end">{t("trips")}</TableHead>
-              <TableHead className="text-end">{t("hours")}</TableHead>
-              <TableHead className="text-end">{t("km")}</TableHead>
-              <TableHead className="text-end">{t("utilisation")}</TableHead>
+              <TableHead>{t("trips")}</TableHead>
+              <TableHead>{t("hours")}</TableHead>
+              <TableHead>{t("km")}</TableHead>
+              <TableHead>{t("utilisation")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -153,12 +153,12 @@ export function ReportsClient({
             {drivers.map((d) => (
               <TableRow key={d.driverId}>
                 <TableCell className="font-medium">{d.name}</TableCell>
-                <TableCell className="text-end tabular-nums">{d.trips}</TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">{d.trips}</TableCell>
+                <TableCell className="tabular-nums">
                   {(d.busyMin / 60).toFixed(1)}
                 </TableCell>
-                <TableCell className="text-end tabular-nums">{d.km.toFixed(1)}</TableCell>
-                <TableCell className="text-end">
+                <TableCell className="tabular-nums">{d.km.toFixed(1)}</TableCell>
+                <TableCell>
                   {d.utilisation == null ? (
                     <span className="text-muted-foreground">{dash}</span>
                   ) : (
@@ -183,14 +183,14 @@ export function ReportsClient({
           <TableHeader>
             <TableRow>
               <TableHead>{t("vehicle")}</TableHead>
-              <TableHead className="text-end">{t("odometerKm")}</TableHead>
-              <TableHead className="text-end">{t("trips")}</TableHead>
-              <TableHead className="text-end">{t("km")}</TableHead>
-              <TableHead className="text-end">{t("litres")}</TableHead>
-              <TableHead className="text-end">{t("kmPerLitre")}</TableHead>
-              <TableHead className="text-end">{t("fuelCost")}</TableHead>
-              <TableHead className="text-end">{t("maintCost")}</TableHead>
-              <TableHead className="text-end">{t("costPerKm")}</TableHead>
+              <TableHead>{t("odometerKm")}</TableHead>
+              <TableHead>{t("trips")}</TableHead>
+              <TableHead>{t("km")}</TableHead>
+              <TableHead>{t("litres")}</TableHead>
+              <TableHead>{t("kmPerLitre")}</TableHead>
+              <TableHead>{t("fuelCost")}</TableHead>
+              <TableHead>{t("maintCost")}</TableHead>
+              <TableHead>{t("costPerKm")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -206,20 +206,20 @@ export function ReportsClient({
                 <TableCell className="font-medium">
                   <span dir="ltr">{v.plate}</span>
                 </TableCell>
-                <TableCell className="text-end tabular-nums">{v.odometerKm}</TableCell>
-                <TableCell className="text-end tabular-nums">{v.trips}</TableCell>
-                <TableCell className="text-end tabular-nums">{v.km.toFixed(1)}</TableCell>
-                <TableCell className="text-end tabular-nums">{v.litres.toFixed(1)}</TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">{v.odometerKm}</TableCell>
+                <TableCell className="tabular-nums">{v.trips}</TableCell>
+                <TableCell className="tabular-nums">{v.km.toFixed(1)}</TableCell>
+                <TableCell className="tabular-nums">{v.litres.toFixed(1)}</TableCell>
+                <TableCell className="tabular-nums">
                   {v.kmPerLitre == null ? (
                     <span className="text-muted-foreground">{dash}</span>
                   ) : (
                     v.kmPerLitre.toFixed(2)
                   )}
                 </TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(v.fuelCost)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(v.maintCost)}</TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">{formatMoney(v.fuelCost)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(v.maintCost)}</TableCell>
+                <TableCell className="tabular-nums">
                   {v.costPerKm == null ? (
                     <span className="text-muted-foreground">{dash}</span>
                   ) : (

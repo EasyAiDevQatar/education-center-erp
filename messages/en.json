@@ -462,7 +462,9 @@
     "paySelected": "Pay selected",
     "chequeNo": "Cheque no.",
     "chequeBank": "Cheque bank",
-    "chequeDueDate": "Due date"
+    "chequeDueDate": "Due date",
+    "teacher": "Teacher",
+    "amount": "Amount"
   },
   "packages": {
     "title": "Packages",
@@ -474,7 +476,8 @@
     "price": "Price",
     "purchasedAt": "Purchased at",
     "expiresAt": "Expires at",
-    "searchPlaceholder": "Search by student name…"
+    "searchPlaceholder": "Search by student name…",
+    "student": "Student"
   },
   "expenses": {
     "title": "Expenses",
@@ -487,7 +490,8 @@
     "searchPlaceholder": "Search by description or category…",
     "supplier": "Supplier",
     "supplierHint": "Optional — the register appears in the accounting module when enabled.",
-    "approve": "Approve & post"
+    "approve": "Approve & post",
+    "amount": "Amount"
   },
   "payroll": {
     "title": "Teacher dues",
@@ -1669,7 +1673,8 @@
     "expiresOn": "Expires on",
     "addDocument": "Add document",
     "expiryAlert": "{count, plural, =1 {# vehicle document} other {# vehicle documents}} expired or expiring within {days} days",
-    "searchPlaceholder": "Search by plate, make or model…"
+    "searchPlaceholder": "Search by plate, make or model…",
+    "drivers": "Assigned drivers"
   },
   "drivers": {
     "title": "Drivers",

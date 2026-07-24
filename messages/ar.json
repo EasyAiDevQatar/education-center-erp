@@ -462,7 +462,9 @@
     "paySelected": "دفع المحدد",
     "chequeNo": "رقم الشيك",
     "chequeBank": "بنك الشيك",
-    "chequeDueDate": "تاريخ الاستحقاق"
+    "chequeDueDate": "تاريخ الاستحقاق",
+    "teacher": "المعلم",
+    "amount": "المبلغ"
   },
   "packages": {
     "title": "الباقات",
@@ -474,7 +476,8 @@
     "price": "السعر",
     "purchasedAt": "تاريخ الشراء",
     "expiresAt": "تاريخ الانتهاء",
-    "searchPlaceholder": "ابحث باسم الطالب…"
+    "searchPlaceholder": "ابحث باسم الطالب…",
+    "student": "الطالب"
   },
   "expenses": {
     "title": "المصروفات",
@@ -487,7 +490,8 @@
     "searchPlaceholder": "ابحث بالوصف أو النوع…",
     "supplier": "المورد",
     "supplierHint": "اختياري — يظهر السجل في وحدة الحسابات عند التفعيل.",
-    "approve": "اعتماد وترحيل"
+    "approve": "اعتماد وترحيل",
+    "amount": "المبلغ"
   },
   "payroll": {
     "title": "مستحقات المعلمين",
@@ -1669,7 +1673,8 @@
     "expiresOn": "تاريخ الانتهاء",
     "addDocument": "إضافة مستند",
     "expiryAlert": "{count, plural, =1 {مستند مركبة واحد} =2 {مستندا مركبات} other {# مستندات مركبات}} منتهية أو تنتهي خلال {days} يوماً",
-    "searchPlaceholder": "ابحث برقم اللوحة أو الصانع أو الطراز…"
+    "searchPlaceholder": "ابحث برقم اللوحة أو الصانع أو الطراز…",
+    "drivers": "السائقون المسندون"
   },
   "drivers": {
     "title": "السائقون",

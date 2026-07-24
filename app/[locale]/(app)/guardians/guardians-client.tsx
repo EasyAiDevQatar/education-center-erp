@@ -75,7 +75,7 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
       { key: "phone", label: tc("phone"), value: (g) => g.phone },
       { key: "email", label: tc("email"), value: (g) => g.email },
       { key: "students", label: t("students"), type: "number", value: (g) => g.studentCount },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc],
   );
@@ -119,11 +119,11 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
             {pg.pageItems.map((g) => (
               <TableRow key={g.id}>
                 <TableCell className="font-medium">{displayName(g, locale)}</TableCell>
-                <TableCell className="text-start"><span dir="ltr">{g.phone ?? "—"}</span></TableCell>
-                <TableCell className="text-start"><span dir="ltr">{g.email ?? "—"}</span></TableCell>
+                <TableCell><span dir="ltr">{g.phone ?? "—"}</span></TableCell>
+                <TableCell><span dir="ltr">{g.email ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{g.studentCount}</TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <div className="flex justify-center gap-1">
                     <Link href={`/guardians/${g.id}`}>
                       <Button variant="ghost" size="icon" aria-label={tp("view360")}>
                         <CircleUserRound className="size-4" />

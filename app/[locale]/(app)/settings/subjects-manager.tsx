@@ -81,9 +81,9 @@ export function SubjectsManager({ subjects }: { subjects: SubjectRow[] }) {
         <TableHeader>
           <TableRow>
             <TableHead>{t("name")}</TableHead>
-            <TableHead className="text-end">{t("teachers")}</TableHead>
+            <TableHead>{t("teachers")}</TableHead>
             <TableHead />
-            <TableHead className="text-end">{tc("actions")}</TableHead>
+            <TableHead>{tc("actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -99,12 +99,12 @@ export function SubjectsManager({ subjects }: { subjects: SubjectRow[] }) {
               <TableCell className="font-medium">
                 {locale === "ar" ? sbj.nameAr : sbj.nameEn}
               </TableCell>
-              <TableCell className="text-end tabular-nums">{sbj.teacherCount}</TableCell>
+              <TableCell className="tabular-nums">{sbj.teacherCount}</TableCell>
               <TableCell>
                 {!sbj.active && <Badge variant="muted">{tc("inactive")}</Badge>}
               </TableCell>
-              <TableCell className="text-end">
-                <div className="flex justify-end gap-1">
+              <TableCell>
+                <div className="flex justify-center gap-1">
                   <EntityDialog
                     title={t("edit")}
                     action={saveSubject.bind(null, locale, sbj.id)}

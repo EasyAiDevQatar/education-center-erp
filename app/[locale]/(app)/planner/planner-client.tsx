@@ -482,7 +482,7 @@ export function PlannerClient({
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              <th className="sticky start-0 z-10 w-44 bg-muted p-2 text-start">{t("teacher")}</th>
+              <th className="sticky start-0 z-10 w-44 bg-muted p-2">{t("teacher")}</th>
               {Array.from({ length: slotCount }, (_, i) => (
                 <th key={i} className="min-w-40 border-s border-border p-2 text-center tabular-nums">
                   {i + 1}

@@ -175,7 +175,7 @@ export function TermsManager({
                 <TableHead>{t("startDate")}</TableHead>
                 <TableHead>{t("endDate")}</TableHead>
                 <TableHead>{tc("status")}</TableHead>
-                <TableHead className="text-end">{tc("actions")}</TableHead>
+                <TableHead>{tc("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -194,15 +194,15 @@ export function TermsManager({
                       <Badge variant="success" className="ms-2">{t("current")}</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-start tabular-nums"><span dir="ltr">{term.startDate}</span></TableCell>
-                  <TableCell className="text-start tabular-nums"><span dir="ltr">{term.endDate}</span></TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{term.startDate}</span></TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{term.endDate}</span></TableCell>
                   <TableCell>
                     <Badge variant={term.active ? "success" : "muted"}>
                       {term.active ? tc("active") : tc("inactive")}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-end">
-                    <div className="flex justify-end gap-1">
+                  <TableCell>
+                    <div className="flex justify-center gap-1">
                       <EntityDialog
                         title={t("edit")}
                         action={saveTerm.bind(null, locale, term.id)}

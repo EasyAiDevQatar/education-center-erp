@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
+import { RowActions, ViewDialog } from "@/components/crud/row-actions";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,8 +103,8 @@ export function SuppliersClient({
     () => [
       { key: "name", label: tc("name"), value: (s) => displayName(s, locale) },
       { key: "phone", label: tc("phone"), value: (s) => s.phone },
-      { key: "expenses", label: t("expensesCount"), type: "number", value: (s) => s.expenseCount, className: "text-end" },
-      { key: "total", label: t("expensesTotal"), type: "number", value: (s) => s.expenseTotal, className: "text-end" },
+      { key: "expenses", label: t("expensesCount"), type: "number", value: (s) => s.expenseCount },
+      { key: "total", label: t("expensesTotal"), type: "number", value: (s) => s.expenseTotal },
       {
         key: "status",
         label: tc("status"),
@@ -113,7 +114,7 @@ export function SuppliersClient({
         options: ["active", "inactive"],
         optionLabel: (v) => tc(v as "active"),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, locale],
   );
@@ -157,9 +158,9 @@ export function SuppliersClient({
             {pg.pageItems.map((s) => (
               <TableRow key={s.id} className={s.active ? undefined : "opacity-60"}>
                 <TableCell className="font-medium">{displayName(s, locale)}</TableCell>
-                <TableCell className="text-start"><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
-                <TableCell className="text-end tabular-nums">{s.expenseCount}</TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
+                <TableCell className="tabular-nums">{s.expenseCount}</TableCell>
+                <TableCell className="tabular-nums">
                   <span dir="ltr">
                     {formatMoney(s.expenseTotal)} {currency}
                   </span>
@@ -171,8 +172,27 @@ export function SuppliersClient({
                     <Badge variant="muted">{tc("inactive")}</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <RowActions>
+                    <ViewDialog
+                      title={displayName(s, locale)}
+                      subtitle={s.active ? tc("active") : tc("inactive")}
+                      fields={[
+                        { label: tc("nameAr"), value: s.name },
+                        { label: tc("nameEn"), value: s.nameEn, ltr: true },
+                        { label: tc("phone"), value: s.phone, ltr: true },
+                        { label: t("email"), value: s.email, ltr: true },
+                        { label: t("taxNo"), value: s.taxNo, ltr: true },
+                        { label: t("address"), value: s.address },
+                        { label: t("expensesCount"), value: s.expenseCount, ltr: true },
+                        {
+                          label: t("expensesTotal"),
+                          value: `${formatMoney(s.expenseTotal)} ${currency}`,
+                          ltr: true,
+                        },
+                        { label: tc("notes"), value: s.notes, wide: true },
+                      ]}
+                    />
                     <EntityDialog
                       title={t("edit")}
                       action={saveSupplier.bind(null, locale, s.id)}
@@ -186,7 +206,7 @@ export function SuppliersClient({
                     {s.expenseCount === 0 && (
                       <DeleteButton action={deleteSupplier.bind(null, locale, s.id)} />
                     )}
-                  </div>
+                  </RowActions>
                 </TableCell>
               </TableRow>
             ))}

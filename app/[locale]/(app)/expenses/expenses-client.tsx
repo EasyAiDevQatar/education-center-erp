@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, CheckCircle2 } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
+import { RowActions, ViewDialog } from "@/components/crud/row-actions";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -155,7 +156,7 @@ export function ExpensesClient({
       { key: "description", label: t("description"), value: (e) => e.description },
       { key: "category", label: t("category"), value: (e) => e.categoryLabel, filterable: true },
       { key: "paidTo", label: t("paidTo"), value: (e) => e.supplierLabel ?? e.paidTo },
-      { key: "amount", label: tc("amount"), type: "number", value: (e) => e.amount, className: "text-end" },
+      { key: "amount", label: tc("amount"), type: "number", value: (e) => e.amount },
       ...(accounting
         ? [
             {
@@ -169,7 +170,7 @@ export function ExpensesClient({
             } as ColumnDef<ExpenseRow>,
           ]
         : []),
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te, accounting],
   );
@@ -213,11 +214,11 @@ export function ExpensesClient({
             )}
             {pg.pageItems.map((e) => (
               <TableRow key={e.id}>
-                <TableCell className="text-start tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
+                <TableCell className="tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
                 <TableCell className="font-medium">{e.description}</TableCell>
                 <TableCell>{e.categoryLabel}</TableCell>
                 <TableCell>{e.supplierLabel ?? e.paidTo ?? "—"}</TableCell>
-                <TableCell className="text-end tabular-nums font-medium">{formatMoney(e.amount)} {currency}</TableCell>
+                <TableCell className="tabular-nums font-medium">{formatMoney(e.amount)} {currency}</TableCell>
                 {accounting && (
                   <TableCell>
                     <Badge variant={STATUS_BADGE[e.status] ?? "default"}>
@@ -225,8 +226,22 @@ export function ExpensesClient({
                     </Badge>
                   </TableCell>
                 )}
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <RowActions>
+                    <ViewDialog
+                      title={e.description}
+                      subtitle={e.categoryLabel}
+                      fields={[
+                        { label: tc("date"), value: e.date, ltr: true },
+                        { label: t("description"), value: e.description },
+                        { label: t("category"), value: e.categoryLabel },
+                        { label: t("amount"), value: `${formatMoney(e.amount)} ${currency}`, ltr: true },
+                        { label: t("paidTo"), value: e.paidTo },
+                        { label: t("supplier"), value: e.supplierLabel },
+                        { label: t("receiptNo"), value: e.receiptNo, ltr: true },
+                        { label: tc("status"), value: te(`expenseStatus.${e.status}`) },
+                      ]}
+                    />
                     {accounting && e.status === "DRAFT" && <ApproveButton id={e.id} />}
                     <EntityDialog
                       title={t("edit")}
@@ -239,7 +254,7 @@ export function ExpensesClient({
                       }
                     />
                     <DeleteButton action={deleteExpense.bind(null, locale, e.id)} />
-                  </div>
+                  </RowActions>
                 </TableCell>
               </TableRow>
             ))}

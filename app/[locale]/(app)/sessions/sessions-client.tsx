@@ -111,8 +111,8 @@ export function SessionsClient({
         options: ["CENTER", "HOME"],
         optionLabel: (v) => te(`location.${v}`),
       },
-      { key: "hours", label: t("hours"), type: "number", value: (s) => s.hours, className: "text-end" },
-      { key: "total", label: t("total"), type: "number", value: (s) => s.total, className: "text-end" },
+      { key: "hours", label: t("hours"), type: "number", value: (s) => s.hours },
+      { key: "total", label: t("total"), type: "number", value: (s) => s.total },
       {
         key: "paymentStatus",
         label: t("paymentStatus"),
@@ -122,7 +122,7 @@ export function SessionsClient({
         options: ["PAID", "PARTIAL", "UNPAID"],
         optionLabel: (v) => te(`paymentStatus.${v}`),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -240,7 +240,7 @@ export function SessionsClient({
             )}
             {pg.pageItems.map((s) => (
               <TableRow key={s.id}>
-                <TableCell className="text-start tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
+                <TableCell className="tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
                 <TableCell className="font-medium">{s.studentName}</TableCell>
                 <TableCell>{s.teacherName}</TableCell>
                 <TableCell>{s.levelLabel}</TableCell>
@@ -252,15 +252,15 @@ export function SessionsClient({
                   )}
                 </TableCell>
                 <TableCell>{te(`location.${s.location}`)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatHours(s.hours)}</TableCell>
-                <TableCell className="text-end tabular-nums">{formatMoney(s.total)} {currency}</TableCell>
+                <TableCell className="tabular-nums">{formatHours(s.hours)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(s.total)} {currency}</TableCell>
                 <TableCell>
                   <Badge variant={statusBadge(s.paymentStatus)}>
                     {te(`paymentStatus.${s.paymentStatus}`)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <div className="flex justify-center gap-1">
                     {s.paymentStatus !== "PAID" && (
                       <QuickPayDialog
                         studentId={s.studentId}

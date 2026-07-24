@@ -146,7 +146,7 @@ export function UsersManager({
               <TableHead>{t("role")}</TableHead>
               <TableHead>{t("linkedTo")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
+              <TableHead>{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -160,7 +160,7 @@ export function UsersManager({
             {pg.pageItems.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.name}</TableCell>
-                <TableCell className="text-start"><span dir="ltr">{u.email}</span></TableCell>
+                <TableCell><span dir="ltr">{u.email}</span></TableCell>
                 <TableCell>
                   <Badge variant={u.role === "ADMIN" ? "default" : "muted"}>{tr(u.role as "ADMIN")}</Badge>
                 </TableCell>
@@ -170,7 +170,7 @@ export function UsersManager({
                     {u.active ? tc("active") : tc("inactive")}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-end">
+                <TableCell>
                   <EntityDialog
                     title={t("edit")}
                     action={saveUser.bind(null, locale, u.id)}

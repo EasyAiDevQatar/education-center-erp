@@ -55,10 +55,10 @@ export function NotificationLogTable({ rows }: { rows: LogRow[] }) {
           )}
           {pg.pageItems.map((r) => (
             <TableRow key={r.id}>
-              <TableCell className="text-start tabular-nums"><span dir="ltr">{r.at}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{r.at}</span></TableCell>
               <TableCell className="text-xs">{r.event}</TableCell>
               <TableCell className="text-xs">{r.audience}</TableCell>
-              <TableCell className="text-start tabular-nums"><span dir="ltr">{r.recipient || "—"}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{r.recipient || "—"}</span></TableCell>
               <TableCell>
                 <Badge variant={STATUS_VARIANT[r.status] ?? "muted"}>{r.status}</Badge>
                 {r.error && (

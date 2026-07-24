@@ -153,7 +153,7 @@ export function AccountsClient({ accounts }: { accounts: AccountRow[] }) {
         optionLabel: (v) => te(`accountType.${v}`),
       },
       { key: "parent", label: t("parent"), value: (a) => a.parentLabel },
-      { key: "entries", label: t("entriesCount"), type: "number", value: (a) => a.lineCount, className: "text-end" },
+      { key: "entries", label: t("entriesCount"), type: "number", value: (a) => a.lineCount },
       {
         key: "status",
         label: tc("status"),
@@ -163,7 +163,7 @@ export function AccountsClient({ accounts }: { accounts: AccountRow[] }) {
         options: ["active", "inactive"],
         optionLabel: (v) => tc(v as "active"),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -217,7 +217,7 @@ export function AccountsClient({ accounts }: { accounts: AccountRow[] }) {
                   <Badge variant={TYPE_BADGE[a.type]}>{te(`accountType.${a.type}`)}</Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{a.parentLabel ?? "—"}</TableCell>
-                <TableCell className="text-end tabular-nums">{a.lineCount}</TableCell>
+                <TableCell className="tabular-nums">{a.lineCount}</TableCell>
                 <TableCell>
                   {a.active ? (
                     <Badge variant="success">{tc("active")}</Badge>
@@ -225,8 +225,8 @@ export function AccountsClient({ accounts }: { accounts: AccountRow[] }) {
                     <Badge variant="muted">{tc("inactive")}</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <div className="flex justify-center gap-1">
                     <EntityDialog
                       title={t("editAccount")}
                       action={saveAccount.bind(null, locale, a.id)}

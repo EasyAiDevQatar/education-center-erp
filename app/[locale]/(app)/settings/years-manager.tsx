@@ -76,9 +76,9 @@ export function YearsManager({ years }: { years: AcademicYearRow[] }) {
             <TableRow>
               <TableHead>{tc("name")}</TableHead>
               <TableHead>{tc("period")}</TableHead>
-              <TableHead className="text-end">{t("records")}</TableHead>
+              <TableHead>{t("records")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
+              <TableHead>{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -102,7 +102,7 @@ export function YearsManager({ years }: { years: AcademicYearRow[] }) {
                       {y.startDate} → {y.endDate}
                     </span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     <span title={t("recordsBreakdown", { ...y.counts })}>{total}</span>
                   </TableCell>
                   <TableCell>
@@ -114,8 +114,8 @@ export function YearsManager({ years }: { years: AcademicYearRow[] }) {
                       )}
                     </span>
                   </TableCell>
-                  <TableCell className="text-end">
-                    <div className="flex justify-end gap-1">
+                  <TableCell>
+                    <div className="flex justify-center gap-1">
                       {!y.archived && !y.isCurrent && (
                         <Button
                           variant="ghost"

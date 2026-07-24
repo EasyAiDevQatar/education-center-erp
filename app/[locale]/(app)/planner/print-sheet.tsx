@@ -302,7 +302,7 @@ export function PlannerPrintSheet({
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="w-[14%] text-start">{t("teacher")}</th>
+            <th className="w-[14%]">{t("teacher")}</th>
             {Array.from({ length: slotCount }, (_, i) => (
               <th key={i} className="text-center tabular-nums">
                 {i + 1}

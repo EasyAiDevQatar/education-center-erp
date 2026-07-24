@@ -242,7 +242,7 @@ export function StudentsClient({
         options: ["active", "inactive"],
         optionLabel: (v) => tc(v as "active"),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -288,7 +288,7 @@ export function StudentsClient({
                 <TableCell className="font-medium">{displayName(s, locale)}</TableCell>
                 <TableCell>{s.gradeLevelLabel ?? "—"}</TableCell>
                 <TableCell>{s.guardianLabel ?? "—"}</TableCell>
-                <TableCell className="text-start"><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
+                <TableCell><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
                 <TableCell>
                   <Badge variant={s.studyLocation === "HOME" ? "warning" : "default"}>
                     {te(`location.${s.studyLocation}`)}
@@ -301,8 +301,8 @@ export function StudentsClient({
                     <Badge variant="muted">{tc("inactive")}</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <div className="flex justify-center gap-1">
                     <Link href={`/students/${s.id}`}>
                       <Button variant="ghost" size="icon" aria-label={tp("view360")}>
                         <CircleUserRound className="size-4" />

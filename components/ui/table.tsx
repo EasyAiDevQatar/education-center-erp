@@ -33,7 +33,11 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       className={cn(
-        "h-11 px-3 text-start align-middle font-semibold text-muted-foreground",
+        // Centred, and every data cell below is centred too, so a value always
+        // sits directly under its own heading. Mixing start-aligned headings
+        // with end-aligned numbers made columns look staggered — especially in
+        // RTL, where "end" is the left edge.
+        "h-11 px-3 text-center align-middle font-semibold text-muted-foreground",
         className,
       )}
       {...props}
@@ -42,7 +46,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 }
 
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  return <td className={cn("p-3 align-middle", className)} {...props} />;
+  return <td className={cn("p-3 text-center align-middle", className)} {...props} />;
 }
 
 export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell };

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, Printer } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
+import { RowActions, ViewDialog } from "@/components/crud/row-actions";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -249,7 +250,7 @@ export function PaymentsClient({
       { key: "date", label: tc("date"), type: "date", value: (p) => p.date },
       { key: "receipt", label: t("receiptNo"), value: (p) => p.receiptNo },
       { key: "student", label: t("student"), value: (p) => p.studentName },
-      { key: "amount", label: tc("amount"), type: "number", value: (p) => p.amount, className: "text-end" },
+      { key: "amount", label: tc("amount"), type: "number", value: (p) => p.amount },
       {
         key: "method",
         label: t("method"),
@@ -262,7 +263,7 @@ export function PaymentsClient({
       },
       { key: "teacher", label: t("allocateTeacher"), value: (p) => p.teacherName, filterable: true },
       // No `value` ⇒ inert header: no button, no cursor, no aria-sort.
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc, te],
   );
@@ -338,14 +339,27 @@ export function PaymentsClient({
             )}
             {pg.pageItems.map((p) => (
               <TableRow key={p.id}>
-                <TableCell className="text-start tabular-nums"><span dir="ltr">{p.date}</span></TableCell>
-                <TableCell className="text-start tabular-nums"><span dir="ltr">{p.receiptNo}</span></TableCell>
+                <TableCell className="tabular-nums"><span dir="ltr">{p.date}</span></TableCell>
+                <TableCell className="tabular-nums"><span dir="ltr">{p.receiptNo}</span></TableCell>
                 <TableCell className="font-medium">{p.studentName}</TableCell>
-                <TableCell className="text-end tabular-nums font-medium">{formatMoney(p.amount)} {currency}</TableCell>
+                <TableCell className="tabular-nums font-medium">{formatMoney(p.amount)} {currency}</TableCell>
                 <TableCell><Badge variant="default">{te(`method.${p.method}`)}</Badge></TableCell>
                 <TableCell>{p.teacherName}</TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <RowActions>
+                    <ViewDialog
+                      title={`${t("receiptNo")} ${p.receiptNo}`}
+                      subtitle={p.studentName}
+                      fields={[
+                        { label: tc("date"), value: p.date, ltr: true },
+                        { label: t("receiptNo"), value: p.receiptNo, ltr: true },
+                        { label: t("student"), value: p.studentName },
+                        { label: t("teacher"), value: p.teacherName },
+                        { label: t("amount"), value: `${formatMoney(p.amount)} ${currency}`, ltr: true },
+                        { label: t("method"), value: te(`method.${p.method}`) },
+                        { label: tc("notes"), value: p.notes, wide: true },
+                      ]}
+                    />
                     <a href={`/${localeProp}/receipt/${p.id}`} target="_blank" rel="noopener">
                       <Button variant="ghost" size="icon" aria-label={t("printReceipt")}>
                         <Printer className="size-4" />
@@ -362,7 +376,7 @@ export function PaymentsClient({
                       }
                     />
                     <DeleteButton action={deletePayment.bind(null, locale, p.id)} />
-                  </div>
+                  </RowActions>
                 </TableCell>
               </TableRow>
             ))}

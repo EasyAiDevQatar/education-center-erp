@@ -98,11 +98,11 @@ export default async function AccountingReportsPage({
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  <th className="p-2 text-start font-medium">{t("code")}</th>
-                  <th className="p-2 text-start font-medium">{t("account")}</th>
-                  <th className="p-2 text-end font-medium">{t("debit")}</th>
-                  <th className="p-2 text-end font-medium">{t("credit")}</th>
-                  <th className="p-2 text-end font-medium">{t("balance")}</th>
+                  <th className="p-2 font-medium">{t("code")}</th>
+                  <th className="p-2 font-medium">{t("account")}</th>
+                  <th className="p-2 font-medium">{t("debit")}</th>
+                  <th className="p-2 font-medium">{t("credit")}</th>
+                  <th className="p-2 font-medium">{t("balance")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,18 +124,18 @@ export default async function AccountingReportsPage({
                         {r.name}
                       </Link>
                     </td>
-                    <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.debit)}</span></td>
-                    <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.credit)}</span></td>
-                    <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.balance)}</span></td>
+                    <td className="p-2 tabular-nums"><span dir="ltr">{formatMoney(r.debit)}</span></td>
+                    <td className="p-2 tabular-nums"><span dir="ltr">{formatMoney(r.credit)}</span></td>
+                    <td className="p-2 tabular-nums"><span dir="ltr">{formatMoney(r.balance)}</span></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-border font-semibold">
                   <td className="p-2" colSpan={2}>{tc("total")}</td>
-                  <td className="p-2 text-end tabular-nums"><span dir="ltr">{money(tb.totalDebit)}</span></td>
-                  <td className="p-2 text-end tabular-nums"><span dir="ltr">{money(tb.totalCredit)}</span></td>
-                  <td className="p-2 text-end">
+                  <td className="p-2 tabular-nums"><span dir="ltr">{money(tb.totalDebit)}</span></td>
+                  <td className="p-2 tabular-nums"><span dir="ltr">{money(tb.totalCredit)}</span></td>
+                  <td className="p-2">
                     {Math.abs(tb.totalDebit - tb.totalCredit) < 0.005 ? (
                       <Badge variant="success">{t("balanced")}</Badge>
                     ) : (

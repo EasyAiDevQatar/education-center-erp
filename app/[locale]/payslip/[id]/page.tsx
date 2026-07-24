@@ -110,11 +110,11 @@ export default async function PayslipPage({
           <table className="mt-5 w-full border-collapse text-xs">
             <thead>
               <tr className="border-y border-border bg-muted/40">
-                <th className="p-2 text-start">{tc("date")}</th>
-                <th className="p-2 text-start">{t("student")}</th>
-                <th className="p-2 text-end">{tc("hours")}</th>
-                <th className="p-2 text-end">{tc("total")}</th>
-                <th className="p-2 text-end">{tt("commissionDue")}</th>
+                <th className="p-2">{tc("date")}</th>
+                <th className="p-2">{t("student")}</th>
+                <th className="p-2">{tc("hours")}</th>
+                <th className="p-2">{tc("total")}</th>
+                <th className="p-2">{tt("commissionDue")}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,9 +122,9 @@ export default async function PayslipPage({
                 <tr key={s.id} className="border-b border-border/60">
                   <td className="p-2 tabular-nums"><span dir="ltr">{s.date.toISOString().slice(0, 10)}</span></td>
                   <td className="p-2">{displayName(s.student, locale)}</td>
-                  <td className="p-2 text-end tabular-nums">{formatHours(s.hours)}</td>
-                  <td className="p-2 text-end tabular-nums">{formatMoney(s.total)}</td>
-                  <td className="p-2 text-end tabular-nums">
+                  <td className="p-2 tabular-nums">{formatHours(s.hours)}</td>
+                  <td className="p-2 tabular-nums">{formatMoney(s.total)}</td>
+                  <td className="p-2 tabular-nums">
                     {formatMoney((toNumber(s.total) * pct) / 100)}
                   </td>
                 </tr>

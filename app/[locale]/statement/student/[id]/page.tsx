@@ -100,11 +100,11 @@ export default async function StudentStatementPage({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-y border-border bg-muted/40">
-              <th className="p-2 text-start">{tc("date")}</th>
-              <th className="p-2 text-start">{tc("actions")}</th>
-              <th className="p-2 text-end">{t("totalCharges")}</th>
-              <th className="p-2 text-end">{t("totalPaid")}</th>
-              <th className="p-2 text-end">{t("balance")}</th>
+              <th className="p-2">{tc("date")}</th>
+              <th className="p-2">{tc("actions")}</th>
+              <th className="p-2">{t("totalCharges")}</th>
+              <th className="p-2">{t("totalPaid")}</th>
+              <th className="p-2">{t("balance")}</th>
             </tr>
           </thead>
           <tbody>
@@ -119,9 +119,9 @@ export default async function StudentStatementPage({
               <tr key={i} className="border-b border-border/60">
                 <td className="p-2 tabular-nums"><span dir="ltr">{e.date}</span></td>
                 <td className="p-2">{e.description}</td>
-                <td className="p-2 text-end tabular-nums">{e.debit ? formatMoney(e.debit) : "—"}</td>
-                <td className="p-2 text-end tabular-nums">{e.credit ? formatMoney(e.credit) : "—"}</td>
-                <td className="p-2 text-end tabular-nums font-medium">{formatMoney(e.balance)}</td>
+                <td className="p-2 tabular-nums">{e.debit ? formatMoney(e.debit) : "—"}</td>
+                <td className="p-2 tabular-nums">{e.credit ? formatMoney(e.credit) : "—"}</td>
+                <td className="p-2 tabular-nums font-medium">{formatMoney(e.balance)}</td>
               </tr>
             ))}
           </tbody>

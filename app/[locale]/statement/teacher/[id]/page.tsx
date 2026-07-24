@@ -106,12 +106,12 @@ export default async function TeacherStatementPage({
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-y border-border bg-muted/40">
-              <th className="p-2 text-start">{tc("date")}</th>
-              <th className="p-2 text-start">{ts("student")}</th>
-              <th className="p-2 text-start">{tc("status")}</th>
-              <th className="p-2 text-end">{tc("hours")}</th>
-              <th className="p-2 text-end">{tc("total")}</th>
-              <th className="p-2 text-end">{t("commissionDue")}</th>
+              <th className="p-2">{tc("date")}</th>
+              <th className="p-2">{ts("student")}</th>
+              <th className="p-2">{tc("status")}</th>
+              <th className="p-2">{tc("hours")}</th>
+              <th className="p-2">{tc("total")}</th>
+              <th className="p-2">{t("commissionDue")}</th>
             </tr>
           </thead>
           <tbody>
@@ -127,9 +127,9 @@ export default async function TeacherStatementPage({
                 <td className="p-2 tabular-nums"><span dir="ltr">{s.date.toISOString().slice(0, 10)}</span></td>
                 <td className="p-2">{displayName(s.student, locale)}</td>
                 <td className="p-2">{te(`sessionStatus.${s.status}`)}</td>
-                <td className="p-2 text-end tabular-nums">{formatHours(s.hours)}</td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(s.total)}</td>
-                <td className="p-2 text-end tabular-nums">
+                <td className="p-2 tabular-nums">{formatHours(s.hours)}</td>
+                <td className="p-2 tabular-nums">{formatMoney(s.total)}</td>
+                <td className="p-2 tabular-nums">
                   {formatMoney((toNumber(s.total) * pct) / 100)}
                 </td>
               </tr>
@@ -142,10 +142,10 @@ export default async function TeacherStatementPage({
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-y border-border bg-muted/40">
-              <th className="p-2 text-start">{tc("date")}</th>
-              <th className="p-2 text-start">{tc("period")}</th>
-              <th className="p-2 text-start">{tc("status")}</th>
-              <th className="p-2 text-end">{tc("amount")}</th>
+              <th className="p-2">{tc("date")}</th>
+              <th className="p-2">{tc("period")}</th>
+              <th className="p-2">{tc("status")}</th>
+              <th className="p-2">{tc("amount")}</th>
             </tr>
           </thead>
           <tbody>
@@ -165,7 +165,7 @@ export default async function TeacherStatementPage({
                   </span>
                 </td>
                 <td className="p-2">{te(`payoutStatus.${p.status}`)}</td>
-                <td className="p-2 text-end tabular-nums">{formatMoney(p.netPaid)}</td>
+                <td className="p-2 tabular-nums">{formatMoney(p.netPaid)}</td>
               </tr>
             ))}
           </tbody>

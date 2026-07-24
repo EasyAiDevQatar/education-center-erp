@@ -216,11 +216,11 @@ export function RunsClient({ runs, employees }: { runs: RunRow[]; employees: Emp
           <TableHeader>
             <TableRow>
               <TableHead>{t("month")}</TableHead>
-              <TableHead className="text-end">{t("payslips")}</TableHead>
-              <TableHead className="text-end">{tc("total")}</TableHead>
+              <TableHead>{t("payslips")}</TableHead>
+              <TableHead>{tc("total")}</TableHead>
               <TableHead>{t("method")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
+              <TableHead>{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -238,8 +238,8 @@ export function RunsClient({ runs, employees }: { runs: RunRow[]; employees: Emp
                     {r.month}
                   </span>
                 </TableCell>
-                <TableCell className="text-end tabular-nums">{r.itemCount}</TableCell>
-                <TableCell className="text-end tabular-nums font-medium">
+                <TableCell className="tabular-nums">{r.itemCount}</TableCell>
+                <TableCell className="tabular-nums font-medium">
                   {formatMoney(r.total)}
                 </TableCell>
                 <TableCell>
@@ -250,8 +250,8 @@ export function RunsClient({ runs, employees }: { runs: RunRow[]; employees: Emp
                     {te(`runStatus.${r.status}`)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-0.5">
+                <TableCell>
+                  <div className="flex justify-center gap-0.5">
                     <Link href={`/payroll/runs/${r.id}`}>
                       <Button variant="ghost" size="icon" aria-label={t("openRun")}>
                         <ArrowUpRight className="size-4" />

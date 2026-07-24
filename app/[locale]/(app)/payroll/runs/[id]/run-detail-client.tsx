@@ -100,54 +100,54 @@ function RunPrintSheet({
               {p.basicSalary > 0 && (
                 <tr>
                   <td className="w-1/2">{t("printBasic")}</td>
-                  <td className="text-end tabular-nums">{money(p.basicSalary)}</td>
+                  <td className="tabular-nums">{money(p.basicSalary)}</td>
                 </tr>
               )}
               {p.allowances > 0 && (
                 <tr>
                   <td>{t("printAllowances")}</td>
-                  <td className="text-end tabular-nums">{money(p.allowances)}</td>
+                  <td className="tabular-nums">{money(p.allowances)}</td>
                 </tr>
               )}
               {p.commission > 0 && (
                 <tr>
                   <td>{tp("grossCommission")}</td>
-                  <td className="text-end tabular-nums">{money(p.commission)}</td>
+                  <td className="tabular-nums">{money(p.commission)}</td>
                 </tr>
               )}
               {p.deductions > 0 && (
                 <tr>
                   <td>{tp("deductions")}</td>
-                  <td className="text-end tabular-nums">− {money(p.deductions)}</td>
+                  <td className="tabular-nums">− {money(p.deductions)}</td>
                 </tr>
               )}
               {p.advances > 0 && (
                 <tr>
                   <td>{tp("advances")}</td>
-                  <td className="text-end tabular-nums">− {money(p.advances)}</td>
+                  <td className="tabular-nums">− {money(p.advances)}</td>
                 </tr>
               )}
               {p.unpaidLeaveDays > 0 && (
                 <tr>
                   <td>{t("printUnpaidDays")}</td>
-                  <td className="text-end tabular-nums">{p.unpaidLeaveDays}</td>
+                  <td className="tabular-nums">{p.unpaidLeaveDays}</td>
                 </tr>
               )}
               {p.workingDays !== null && (
                 <tr>
                   <td>{t("printWorkingDays")}</td>
-                  <td className="text-end tabular-nums">{p.workingDays}</td>
+                  <td className="tabular-nums">{p.workingDays}</td>
                 </tr>
               )}
               {p.paymentMethod && (
                 <tr>
                   <td>{t("method")}</td>
-                  <td className="text-end">{te(`payslipMethod.${p.paymentMethod}`)}</td>
+                  <td>{te(`payslipMethod.${p.paymentMethod}`)}</td>
                 </tr>
               )}
               <tr className="border-t-2 border-black">
                 <td className="pt-1 text-sm font-bold">{tp("netPaid")}</td>
-                <td className="pt-1 text-end text-sm font-bold tabular-nums">
+                <td className="pt-1 text-sm font-bold tabular-nums">
                   {money(p.netPaid)}
                 </td>
               </tr>
@@ -310,12 +310,12 @@ export function RunDetailClient({
           <TableHeader>
             <TableRow>
               <TableHead>{tc("name")}</TableHead>
-              <TableHead className="text-end">{t("printBasic")}</TableHead>
-              <TableHead className="text-end">{t("printAllowances")}</TableHead>
-              <TableHead className="text-end">{t("commission")}</TableHead>
-              <TableHead className="text-end">{t("deductionsCol")}</TableHead>
-              <TableHead className="text-end">{t("net")}</TableHead>
-              <TableHead className="text-end">{t("printWorkingDays")}</TableHead>
+              <TableHead>{t("printBasic")}</TableHead>
+              <TableHead>{t("printAllowances")}</TableHead>
+              <TableHead>{t("commission")}</TableHead>
+              <TableHead>{t("deductionsCol")}</TableHead>
+              <TableHead>{t("net")}</TableHead>
+              <TableHead>{t("printWorkingDays")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -328,22 +328,22 @@ export function RunDetailClient({
                     <span className="ms-1 text-xs text-muted-foreground">· {p.jobTitle}</span>
                   )}
                 </TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">
                   {p.basicSalary ? formatMoney(p.basicSalary) : "—"}
                 </TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">
                   {p.allowances ? formatMoney(p.allowances) : "—"}
                 </TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">
                   {p.commission ? formatMoney(p.commission) : "—"}
                 </TableCell>
-                <TableCell className="text-end tabular-nums">
+                <TableCell className="tabular-nums">
                   {p.deductions ? formatMoney(p.deductions) : "—"}
                 </TableCell>
-                <TableCell className="text-end tabular-nums font-semibold">
+                <TableCell className="tabular-nums font-semibold">
                   {formatMoney(p.netPaid)}
                 </TableCell>
-                <TableCell className="text-end tabular-nums">{p.workingDays ?? "—"}</TableCell>
+                <TableCell className="tabular-nums">{p.workingDays ?? "—"}</TableCell>
                 <TableCell>
                   <Badge variant={p.status === "PAID" ? "success" : "warning"}>
                     {te(`payoutStatus.${p.status}`)}

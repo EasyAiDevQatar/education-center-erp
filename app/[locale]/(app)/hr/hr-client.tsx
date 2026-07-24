@@ -657,9 +657,9 @@ export function HrClient({
               <TableHead>{t("jobTitle")}</TableHead>
               <TableHead>{t("department")}</TableHead>
               <TableHead>{t("hireDate")}</TableHead>
-              <TableHead className="text-end">{t("basicSalary")}</TableHead>
+              <TableHead>{t("basicSalary")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
-              <TableHead className="text-end">{tc("actions")}</TableHead>
+              <TableHead>{tc("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -687,7 +687,7 @@ export function HrClient({
                   <TableCell>{e.jobTitle ?? "—"}</TableCell>
                   <TableCell>{e.department ? te(`department.${e.department}`) : "—"}</TableCell>
                   <TableCell className="tabular-nums"><span dir="ltr">{e.hireDate ?? "—"}</span></TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     {formatMoney(e.basicSalary + e.allowances)}
                   </TableCell>
                   <TableCell>
@@ -699,8 +699,8 @@ export function HrClient({
                       {te(`employeeStatus.${e.status}`)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-end">
-                    <div className="flex justify-end gap-0.5">
+                  <TableCell>
+                    <div className="flex justify-center gap-0.5">
                       <Link href={`/hr/${e.id}`}>
                         <Button
                           variant="ghost"

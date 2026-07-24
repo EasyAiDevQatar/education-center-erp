@@ -68,11 +68,11 @@ export default async function AccountStatementPage({
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="p-2 text-start font-medium">{tc("date")}</th>
-                <th className="p-2 text-start font-medium">{t("memo")}</th>
-                <th className="p-2 text-end font-medium">{t("debit")}</th>
-                <th className="p-2 text-end font-medium">{t("credit")}</th>
-                <th className="p-2 text-end font-medium">{t("balance")}</th>
+                <th className="p-2 font-medium">{tc("date")}</th>
+                <th className="p-2 font-medium">{t("memo")}</th>
+                <th className="p-2 font-medium">{t("debit")}</th>
+                <th className="p-2 font-medium">{t("credit")}</th>
+                <th className="p-2 font-medium">{t("balance")}</th>
               </tr>
             </thead>
             <tbody>
@@ -87,24 +87,24 @@ export default async function AccountStatementPage({
                 <tr key={i} className="border-b border-border/60">
                   <td className="p-2 tabular-nums"><span dir="ltr">{formatDate(r.date, locale)}</span></td>
                   <td className="p-2">{r.memo}</td>
-                  <td className="p-2 text-end tabular-nums">
+                  <td className="p-2 tabular-nums">
                     <span dir="ltr">
                       {r.debit > 0 ? formatMoney(r.debit) : ""}
                     </span>
                   </td>
-                  <td className="p-2 text-end tabular-nums">
+                  <td className="p-2 tabular-nums">
                     <span dir="ltr">
                       {r.credit > 0 ? formatMoney(r.credit) : ""}
                     </span>
                   </td>
-                  <td className="p-2 text-end tabular-nums"><span dir="ltr">{formatMoney(r.balance)}</span></td>
+                  <td className="p-2 tabular-nums"><span dir="ltr">{formatMoney(r.balance)}</span></td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border font-semibold">
                 <td className="p-2" colSpan={4}>{t("closingBalance")}</td>
-                <td className="p-2 text-end tabular-nums">
+                <td className="p-2 tabular-nums">
                   <span dir="ltr">
                     <Badge variant={closing >= 0 ? "success" : "destructive"}>
                       {formatMoney(closing)} {currency}

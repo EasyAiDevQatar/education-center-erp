@@ -84,10 +84,10 @@ export function AuditLogTable({ rows }: { rows: AuditRow[] }) {
           )}
           {pg.pageItems.map((r) => (
             <TableRow key={r.id}>
-              <TableCell className="text-start tabular-nums"><span dir="ltr">{r.at}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{r.at}</span></TableCell>
               <TableCell>{r.userName ?? "—"}</TableCell>
               <TableCell>{r.entity}</TableCell>
-              <TableCell className="max-w-40 truncate text-start text-xs text-muted-foreground"><span dir="ltr">
+              <TableCell className="max-w-40 truncate text-xs text-muted-foreground"><span dir="ltr">
                 {r.entityId}
               </span></TableCell>
               <TableCell>

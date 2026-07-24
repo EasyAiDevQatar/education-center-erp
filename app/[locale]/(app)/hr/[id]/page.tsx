@@ -187,7 +187,7 @@ export default async function EmployeeProfilePage({
                 <TableHead>{t("issuedOn")}</TableHead>
                 <TableHead>{t("expiresOn")}</TableHead>
                 <TableHead>{tc("status")}</TableHead>
-                <TableHead className="text-end">{tc("actions")}</TableHead>
+                <TableHead>{tc("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -222,7 +222,7 @@ export default async function EmployeeProfilePage({
                         <Badge variant={levelVariant(level)}>{t(`expiry.${level}`)}</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-end">
+                    <TableCell>
                       <DocumentLink fileUrl={d.fileUrl} />
                     </TableCell>
                   </TableRow>
@@ -241,7 +241,7 @@ export default async function EmployeeProfilePage({
                 <TableHead>{t("leaveType")}</TableHead>
                 <TableHead>{tc("from")}</TableHead>
                 <TableHead>{tc("to")}</TableHead>
-                <TableHead className="text-end">{t("days")}</TableHead>
+                <TableHead>{t("days")}</TableHead>
                 <TableHead>{tc("status")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -262,7 +262,7 @@ export default async function EmployeeProfilePage({
                   <TableCell className="tabular-nums">
                     <span dir="ltr">{ymd(l.endDate)}</span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">{toNumber(l.days)}</TableCell>
+                  <TableCell className="tabular-nums">{toNumber(l.days)}</TableCell>
                   <TableCell>
                     <Badge
                       variant={
@@ -290,7 +290,7 @@ export default async function EmployeeProfilePage({
               <TableRow>
                 <TableHead>{tc("from")}</TableHead>
                 <TableHead>{tc("to")}</TableHead>
-                <TableHead className="text-end">{t("netPaid")}</TableHead>
+                <TableHead>{t("netPaid")}</TableHead>
                 <TableHead>{tc("status")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -310,7 +310,7 @@ export default async function EmployeeProfilePage({
                   <TableCell className="tabular-nums">
                     <span dir="ltr">{ymd(p.periodEnd)}</span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     {formatMoney(toNumber(p.netPaid))}
                   </TableCell>
                   <TableCell>

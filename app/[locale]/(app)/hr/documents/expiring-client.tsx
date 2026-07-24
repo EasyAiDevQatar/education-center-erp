@@ -122,9 +122,9 @@ export function ExpiringDocsClient({ rows }: { rows: ExpiringRow[] }) {
                 <TableHead>{t("docType")}</TableHead>
                 <TableHead>{t("number")}</TableHead>
                 <TableHead>{t("expiresOn")}</TableHead>
-                <TableHead className="text-end">{t("days")}</TableHead>
+                <TableHead>{t("days")}</TableHead>
                 <TableHead>{tc("status")}</TableHead>
-                <TableHead className="text-end">{tc("actions")}</TableHead>
+                <TableHead>{tc("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -165,13 +165,13 @@ export function ExpiringDocsClient({ rows }: { rows: ExpiringRow[] }) {
                   <TableCell className="tabular-nums">
                     <span dir="ltr">{r.expiresOn ?? "—"}</span>
                   </TableCell>
-                  <TableCell className="text-end tabular-nums">
+                  <TableCell className="tabular-nums">
                     {r.days == null ? "—" : r.days}
                   </TableCell>
                   <TableCell>
                     <Badge variant={levelVariant(r.level)}>{t(`level.${r.level}`)}</Badge>
                   </TableCell>
-                  <TableCell className="text-end">
+                  <TableCell>
                     <Link href={fixHref(r)}>
                       <Button type="button" variant="outline" size="sm" className="gap-1">
                         {t("fix")}

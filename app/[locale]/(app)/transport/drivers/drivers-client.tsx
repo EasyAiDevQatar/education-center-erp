@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plus, Pencil, TriangleAlert } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
+import { RowActions, ViewDialog } from "@/components/crud/row-actions";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,7 +188,7 @@ export function DriversClient({
         options: ["active", "inactive"],
         optionLabel: (x) => tc(x as "active"),
       },
-      { key: "actions", label: tc("actions"), className: "text-end" },
+      { key: "actions", label: tc("actions") },
     ],
     [t, tc],
   );
@@ -251,7 +252,7 @@ export function DriversClient({
             {pg.pageItems.map((d) => (
               <TableRow key={d.id} className={d.active ? undefined : "opacity-60"}>
                 <TableCell className="font-medium">{d.name}</TableCell>
-                <TableCell className="text-start">
+                <TableCell>
                   <span dir="ltr">{d.phone ?? "—"}</span>
                 </TableCell>
                 <TableCell>
@@ -285,8 +286,43 @@ export function DriversClient({
                     <Badge variant="muted">{tc("inactive")}</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-end">
-                  <div className="flex justify-end gap-1">
+                <TableCell>
+                  <RowActions>
+                    <ViewDialog
+                      title={d.name}
+                      subtitle={d.jobTitle}
+                      fields={[
+                        { label: tc("name"), value: d.name },
+                        { label: tc("phone"), value: d.phone, ltr: true },
+                        { label: t("licenceNo"), value: d.licenceNo, ltr: true },
+                        {
+                          label: t("licenceExpiry"),
+                          value: d.licenceExpiry ? (
+                            <Badge variant={levelVariant(d.licenceLevel)}>
+                              <span dir="ltr">{d.licenceExpiry}</span>
+                            </Badge>
+                          ) : null,
+                        },
+                        { label: t("defaultVehicle"), value: d.defaultVehiclePlate, ltr: true },
+                        {
+                          label: t("shift"),
+                          value:
+                            d.shiftStartMin != null && d.shiftEndMin != null
+                              ? `${minToHHMM(d.shiftStartMin)}–${minToHHMM(d.shiftEndMin)}`
+                              : t("noShift"),
+                          ltr: d.shiftStartMin != null,
+                        },
+                        {
+                          label: tc("status"),
+                          value: (
+                            <Badge variant={d.active ? "success" : "muted"}>
+                              {d.active ? tc("active") : tc("inactive")}
+                            </Badge>
+                          ),
+                        },
+                        { label: tc("notes"), value: d.notes, wide: true },
+                      ]}
+                    />
                     <EntityDialog
                       title={t("edit")}
                       action={saveDriver.bind(null, locale, d.id)}
@@ -298,7 +334,7 @@ export function DriversClient({
                       }
                     />
                     <DeleteButton action={deleteDriver.bind(null, locale, d.id)} />
-                  </div>
+                  </RowActions>
                 </TableCell>
               </TableRow>
             ))}

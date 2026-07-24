@@ -69,15 +69,15 @@ export function CategoriesManager({ categories }: { categories: CategoryRow[] })
         <TableHeader>
           <TableRow>
             <TableHead>{t("category")}</TableHead>
-            <TableHead className="text-end">{tc("actions")}</TableHead>
+            <TableHead>{tc("actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {pg.pageItems.map((c) => (
             <TableRow key={c.id}>
               <TableCell>{locale === "ar" ? c.nameAr : c.nameEn}</TableCell>
-              <TableCell className="text-end">
-                <div className="flex justify-end gap-1">
+              <TableCell>
+                <div className="flex justify-center gap-1">
                   <EntityDialog
                     title={t("edit")}
                     action={saveExpenseCategory.bind(null, locale, c.id)}
