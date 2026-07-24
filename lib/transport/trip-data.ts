@@ -285,17 +285,30 @@ export async function generateDayTrips(
   // segmentation below). Trips a human has touched are left alone.
   const priorTrips = await db.trip.findMany({
     where: { date: start },
-    select: { id: true, status: true, legKey: true, linkGroup: true },
+    select: {
+      id: true,
+      status: true,
+      legKey: true,
+      linkGroup: true,
+      stops: { orderBy: { seq: "asc" }, select: { sessionId: true } },
+    },
   });
-  // A passenger's day is several linked trips sharing a linkGroup (`day:pkey`).
-  // If ANY of them is locked, the whole passenger is left alone so we never
-  // rebuild half a linked set. Match on that shared group.
-  const baseOf = (t: { legKey: string | null; linkGroup: string | null }) =>
-    t.linkGroup ?? (t.legKey ?? "").replace(/:.*$/, "");
-  const lockedKeys = new Set(
+  // A locked trip protects ONLY the ride it already covers — never the rest of
+  // the passenger's day. Locking the whole passenger (the old behaviour) meant
+  // one approved pickup froze every other leg forever: regeneration reported
+  // "locked" and created nothing, so the return ride and any later lesson never
+  // got a trip at all. Identify a ride by the lesson it delivers to (stable
+  // across runs, unlike a positional index); a ride ending at home has no
+  // destination session, so it keys on "home".
+  const destKeyOfTrip = (t: { linkGroup: string | null; legKey: string | null; stops: { sessionId: string | null }[] }) => {
+    const base = t.linkGroup ?? (t.legKey ?? "").replace(/:L\d+.*$/, "");
+    const dest = [...t.stops].reverse().find((s) => s.sessionId)?.sessionId ?? "home";
+    return `${base}|${dest}`;
+  };
+  const lockedLegKeys = new Set(
     priorTrips
       .filter((t) => !generatorMayReplace(t.status as TripStatus))
-      .map(baseOf),
+      .map(destKeyOfTrip),
   );
   const removable = priorTrips.filter((t) => generatorMayReplace(t.status as TripStatus));
   if (removable.length) {
@@ -333,12 +346,12 @@ export async function generateDayTrips(
   };
   const createdTrips: CreatedTrip[] = [];
 
+  /** The lock key for one leg — mirrors destKeyOfTrip above. */
+  const destKeyOfLeg = (baseLegKey: string, leg: Leg) =>
+    `${baseLegKey}|${leg.toSessionId ?? "home"}`;
+
   for (const [pkey, items] of byPassenger) {
     const baseLegKey = `day:${pkey}`;
-    if (lockedKeys.has(baseLegKey)) {
-      locked++;
-      continue;
-    }
     items.sort(
       (x, y) => x.leg.readyMin - y.leg.readyMin || x.leg.id.localeCompare(y.leg.id),
     );
@@ -359,6 +372,13 @@ export async function generateDayTrips(
       let legIdx = 0;
       for (const item of items) {
         if (!item.a) continue; // unassigned leg → stays in the problems list
+        // Only THIS ride is protected if a human already approved it; the rest
+        // of the passenger's day still regenerates around it.
+        if (lockedLegKeys.has(destKeyOfLeg(baseLegKey, item.leg))) {
+          locked++;
+          legIdx++;
+          continue;
+        }
         const legDriver = plan.drivers.find((d) => d.id === item.a!.driverId) ?? null;
         const built = await buildTripsForPassenger({
           plan,
@@ -392,6 +412,13 @@ export async function generateDayTrips(
         }
         legIdx++;
       }
+      continue;
+    }
+
+    // STAY builds the whole day as ONE chained trip, so a single locked ride
+    // does freeze the chain here — there is no half a chain to rebuild.
+    if (items.some((x) => lockedLegKeys.has(destKeyOfLeg(baseLegKey, x.leg)))) {
+      locked++;
       continue;
     }
 
@@ -716,12 +743,14 @@ export async function buildTripsForPassenger(args: {
   const near = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
     Math.abs(a.lat - b.lat) < 0.0005 && Math.abs(a.lng - b.lng) < 0.0005;
 
-  type WP = { pt: { lat: number; lng: number }; kind: string; label: string; plannedMin: number; sessionId: string | null };
+  // `readyMin` rides along on the pickup so the re-timing pass below knows how
+  // early the passenger may actually be collected.
+  type WP = { pt: { lat: number; lng: number }; kind: string; label: string; plannedMin: number; sessionId: string | null; readyMin: number | null };
   const wps: WP[] = [];
   let deadhead = 0;
   for (const { leg, a } of items) {
-    wps.push({ pt: leg.from, kind: "PICKUP", label: leg.fromLabel, plannedMin: a?.pickupMin ?? leg.readyMin, sessionId: leg.fromSessionId });
-    wps.push({ pt: leg.to, kind: "DROPOFF", label: leg.toLabel, plannedMin: a?.dropoffMin ?? leg.dueMin, sessionId: leg.toSessionId });
+    wps.push({ pt: leg.from, kind: "PICKUP", label: leg.fromLabel, plannedMin: a?.pickupMin ?? leg.readyMin, sessionId: leg.fromSessionId, readyMin: leg.readyMin });
+    wps.push({ pt: leg.to, kind: "DROPOFF", label: leg.toLabel, plannedMin: a?.dropoffMin ?? leg.dueMin, sessionId: leg.toSessionId, readyMin: null });
     deadhead += a?.deadheadKm ?? 0;
   }
   wps.sort((x, y) => x.plannedMin - y.plannedMin);
@@ -731,6 +760,7 @@ export async function buildTripsForPassenger(args: {
     if (last && near(last.pt, wp.pt)) {
       last.plannedMin = Math.max(last.plannedMin, wp.plannedMin);
       if (wp.sessionId && !last.sessionId) last.sessionId = wp.sessionId;
+      if (wp.readyMin != null) last.readyMin = Math.max(last.readyMin ?? wp.readyMin, wp.readyMin);
       continue;
     }
     merged.push({ ...wp });
@@ -764,9 +794,6 @@ export async function buildTripsForPassenger(args: {
       };
     });
 
-    const plannedStartMin = stops[0].plannedMin;
-    const plannedEndMin = stops[stops.length - 1].plannedMin;
-
     const points = stops.map((st) => ({ lat: st.lat, lng: st.lng }));
     const allCoordsValid = points.every((p) => coordValid(p.lat, p.lng));
     const matrix = allCoordsValid ? await getMatrixWithFallback(points) : await getFallbackProvider().getMatrix(points);
@@ -784,6 +811,44 @@ export async function buildTripsForPassenger(args: {
       if (rawDist != null) realDistM += rawDist;
       return { routingDurationS: rawDur, serviceDurationS: service, delayAllowanceS, operationalDurationS, distanceFromPrevM: rawDist };
     });
+
+    // --- Re-time the stops against the REAL road durations -------------------
+    // The allocator picks the driver and a provisional pickup minute from its
+    // own coarse estimate. Left as-is, a route the road network says takes 22
+    // minutes could be scheduled with 21 — the trip is born late and the
+    // passenger misses the start of their lesson. So once the routing matrix is
+    // in, rebuild the timeline from it: anchor on the promised arrival at the
+    // last stop and walk backwards, giving every hop its full operational time
+    // (road + traffic allowance + boarding/drop-off). The pickup simply moves
+    // earlier by whatever the road actually needs.
+    //
+    // If that would collect the passenger before they are free (a chain leg
+    // cannot start before the previous lesson ends), the trip is pinned to that
+    // floor instead and the arrival slips — which the validator then reports
+    // honestly, rather than the schedule quietly pretending to fit.
+    const hopMin = breakdown.map((b, i) =>
+      i === 0
+        ? 0
+        : Math.max(
+            1,
+            Math.ceil(
+              (b.operationalDurationS ?? Math.max(0, stops[i].plannedMin - stops[i - 1].plannedMin) * 60) / 60,
+            ),
+          ),
+    );
+    const totalHopMin = hopMin.reduce((a, b) => a + b, 0);
+    const arrivalAnchor = stops[stops.length - 1].plannedMin;
+    const collectFloor = seg.items[0].readyMin;
+    let cursor = arrivalAnchor - totalHopMin;
+    if (collectFloor != null && cursor < collectFloor) cursor = collectFloor;
+    stops[0].plannedMin = cursor;
+    for (let i = 1; i < stops.length; i++) {
+      cursor += hopMin[i];
+      stops[i].plannedMin = cursor;
+    }
+
+    const plannedStartMin = stops[0].plannedMin;
+    const plannedEndMin = stops[stops.length - 1].plannedMin;
 
     const vStops: StopForValidation[] = stops.map((st, i) => {
       const w = st.sessionId ? win?.get(st.sessionId) : undefined;
