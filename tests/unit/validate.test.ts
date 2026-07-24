@@ -6,6 +6,7 @@ import {
   validateDeparture,
   validateTrip,
   turnaroundFeasible,
+  coordValid,
   type TransportRules,
   type StopForValidation,
 } from "@/lib/transport/validate";
@@ -127,5 +128,50 @@ describe("validateTrip (whole route)", () => {
       stop({ seq: 2, kind: "DROPOFF", plannedMin: H(15, 10), sessionStartMin: H(15, 30), servesSession: true }),
     ];
     expect(validateTrip(stops, R).status).toBe("INVALID"); // 130 > 120
+  });
+});
+
+describe("road-time feasibility (spec §17-18, §34 cases 23-26)", () => {
+  const stop = (o: Partial<StopForValidation> & { seq: number; kind: string; plannedMin: number }): StopForValidation => o;
+
+  it("real road time that no longer fits the planned gap → INVALID", () => {
+    // 20 min scheduled between the stops, but OSRM says the leg is 26 min.
+    const stops = [
+      stop({ seq: 1, kind: "PICKUP", plannedMin: H(14, 20), fallbackUsed: false }),
+      stop({ seq: 2, kind: "DROPOFF", plannedMin: H(14, 40), sessionStartMin: H(15), servesSession: true, fallbackUsed: false, roadTravelFromPrevS: 26 * 60 }),
+    ];
+    const v = validateTrip(stops, R);
+    expect(v.status).toBe("INVALID");
+    expect(v.messages.some((m) => m.code === "INSUFFICIENT_TRAVEL_TIME")).toBe(true);
+  });
+
+  it("real road time that fits the gap → VALID", () => {
+    const stops = [
+      stop({ seq: 1, kind: "PICKUP", plannedMin: H(14, 20), fallbackUsed: false }),
+      stop({ seq: 2, kind: "DROPOFF", plannedMin: H(14, 45), sessionStartMin: H(15), servesSession: true, fallbackUsed: false, roadTravelFromPrevS: 18 * 60 }),
+    ];
+    expect(validateTrip(stops, R).status).toBe("VALID");
+  });
+
+  it("does NOT hard-fail on the estimator (fallback stays WARNING, not INVALID)", () => {
+    const stops = [
+      stop({ seq: 1, kind: "PICKUP", plannedMin: H(14, 20), fallbackUsed: true }),
+      stop({ seq: 2, kind: "DROPOFF", plannedMin: H(14, 40), sessionStartMin: H(15), servesSession: true, fallbackUsed: true, roadTravelFromPrevS: 26 * 60 }),
+    ];
+    const v = validateTrip(stops, R);
+    expect(v.status).toBe("WARNING");
+    expect(v.messages.some((m) => m.code === "INSUFFICIENT_TRAVEL_TIME")).toBe(false);
+  });
+});
+
+describe("coordinate validation (spec §31)", () => {
+  it("rejects null / out-of-range / null-island, accepts real Doha pins", () => {
+    expect(coordValid(25.2854, 51.531)).toBe(true);
+    expect(coordValid(null, 51.531)).toBe(false);
+    expect(coordValid(25.2854, null)).toBe(false);
+    expect(coordValid(0, 0)).toBe(false);
+    expect(coordValid(91, 51)).toBe(false);
+    expect(coordValid(25, 181)).toBe(false);
+    expect(coordValid(Number.NaN, 51)).toBe(false);
   });
 });

@@ -8,7 +8,14 @@ import { buildDayLegs, type Leg, type PassengerDay, type SkippedLeg } from "./ch
 import { allocate, type AllocDriver, type Assignment, type Unassigned } from "./allocate";
 import { driverIsDispatchable } from "./fleet";
 import { generatorMayReplace, legKeyFor } from "./trips";
-import { validateTrip, type StopForValidation } from "./validate";
+import {
+  validateTrip,
+  turnaroundFeasible,
+  coordValid,
+  type StopForValidation,
+  type ValidationMessage,
+} from "./validate";
+import { getMatrixWithFallback, getFallbackProvider } from "./routing";
 import type { TripStatus } from "@/lib/enums";
 
 /**
@@ -299,6 +306,20 @@ export async function generateDayTrips(
   const refreshed = 0;
   let locked = 0;
 
+  // Trips created this run, kept for the cross-trip turnaround pass (spec §20).
+  type CreatedTrip = {
+    id: string;
+    driverId: string;
+    vehicleId: string | null;
+    plannedStartMin: number;
+    plannedEndMin: number;
+    firstPt: { lat: number; lng: number } | null;
+    lastPt: { lat: number; lng: number } | null;
+    validationStatus: string;
+    validationMessages: ValidationMessage[];
+  };
+  const createdTrips: CreatedTrip[] = [];
+
   for (const [pkey, items] of byPassenger) {
     const legKey = `day:${pkey}`;
     if (lockedKeys.has(legKey)) {
@@ -367,11 +388,45 @@ export async function generateDayTrips(
     const plannedStartMin = Math.min(assigned[0].a!.departMin, stops[0].plannedMin);
     const plannedEndMin = stops[stops.length - 1].plannedMin;
 
-    // Validate the route against every served session's window (spec §21).
-    // Phase 1: travel is still the straight-line estimate, so every stop is
-    // fallback/estimated and the trip is at best WARNING.
+    // --- road routing: one matrix over this chain's ordered stops ------------
+    // Real road duration/distance from the configured provider (OSRM when up,
+    // the straight-line estimator otherwise — and the result says which). A stop
+    // with an invalid pin would make OSRM "route" a (0,0), so any bad coordinate
+    // forces the estimator for the whole chain rather than a nonsense road time.
+    const points = stops.map((st) => ({ lat: st.lat, lng: st.lng }));
+    const allCoordsValid = points.every((p) => coordValid(p.lat, p.lng));
+    const matrix = allCoordsValid
+      ? await getMatrixWithFallback(points)
+      : await getFallbackProvider().getMatrix(points);
+
+    const op = plan.config.operational;
+    const serviceSecFor = (kind: string) =>
+      Math.round((kind === "PICKUP" ? op.boardingTimeMin : op.dropoffTimeMin) * 60);
+
+    // Operational-duration breakdown from the previous stop, kept as separate
+    // numbers (routing + service + delay), never merged into one (spec §13).
+    let realDistM = 0;
+    const breakdown = stops.map((st, i) => {
+      const service = serviceSecFor(st.kind);
+      if (i === 0) {
+        return { routingDurationS: null as number | null, serviceDurationS: service, delayAllowanceS: 0, operationalDurationS: null as number | null, distanceFromPrevM: null as number | null };
+      }
+      const rawDur = matrix.durationsSeconds[i - 1]?.[i] ?? null;
+      const rawDist = matrix.distancesMeters[i - 1]?.[i] ?? null;
+      const fixedDelay = Math.round(op.fixedDelayMin * 60);
+      const traffic = rawDur == null ? 0 : Math.round((rawDur * op.trafficBufferPercent) / 100);
+      const delayAllowanceS = fixedDelay + traffic;
+      const operationalDurationS = rawDur == null ? null : rawDur + delayAllowanceS + service;
+      if (rawDist != null) realDistM += rawDist;
+      return { routingDurationS: rawDur, serviceDurationS: service, delayAllowanceS, operationalDurationS, distanceFromPrevM: rawDist };
+    });
+
+    // Validate against every served session's window AND, now, the real road
+    // time between consecutive stops (spec §21, §17-18). When OSRM is live the
+    // stops are no longer flagged fallback, so a clean chain can be VALID; when
+    // it degrades, `matrix.fallbackUsed` keeps the trip at WARNING.
     const win = plan.sessionWindows;
-    const vStops: StopForValidation[] = stops.map((st) => {
+    const vStops: StopForValidation[] = stops.map((st, i) => {
       const w = st.sessionId ? win?.get(st.sessionId) : undefined;
       return {
         seq: st.seq,
@@ -380,12 +435,28 @@ export async function generateDayTrips(
         sessionStartMin: w?.startMin ?? null,
         sessionEndMin: w?.endMin ?? null,
         servesSession: st.sessionId != null,
-        fallbackUsed: true,
+        fallbackUsed: matrix.fallbackUsed,
+        roadTravelFromPrevS: breakdown[i].routingDurationS,
       };
     });
     const v = validateTrip(vStops, plan.config.rules);
 
-    await db.trip.create({
+    const stopsCreate = stops.map((st, i) => ({
+      ...st,
+      routingDurationS: breakdown[i].routingDurationS,
+      serviceDurationS: breakdown[i].serviceDurationS,
+      delayAllowanceS: breakdown[i].delayAllowanceS,
+      operationalDurationS: breakdown[i].operationalDurationS,
+      distanceFromPrevM: breakdown[i].distanceFromPrevM,
+      estimated: matrix.estimated,
+      fallbackUsed: matrix.fallbackUsed,
+    }));
+
+    // Road distance when the provider gave one (it always does — the estimator
+    // reports straight-line×detour), else the allocator's straight-line total.
+    const km = realDistM > 0 ? realDistM / 1000 : totalKm;
+
+    const trip = await db.trip.create({
       data: {
         date: start,
         status: "PROPOSED",
@@ -396,17 +467,80 @@ export async function generateDayTrips(
         vehicleId: driver?.vehicleId ?? null,
         plannedStartMin,
         plannedEndMin,
-        estimatedKm: Math.round(totalKm * 100) / 100,
+        estimatedKm: Math.round(km * 100) / 100,
         estimatedMin: plannedEndMin - plannedStartMin,
         autoAllocated: true,
         allocationScore: assigned[0].a!.score,
         deadheadKm: Math.round(deadhead * 100) / 100,
         slackMin: Math.min(...assigned.map((x) => x.a!.slackMin)),
         createdById: byUserId ?? null,
-        stops: { create: stops },
+        stops: { create: stopsCreate },
       },
+      select: { id: true },
+    });
+    createdTrips.push({
+      id: trip.id,
+      driverId,
+      vehicleId: driver?.vehicleId ?? null,
+      plannedStartMin,
+      plannedEndMin,
+      firstPt: stops.length ? { lat: stops[0].lat, lng: stops[0].lng } : null,
+      lastPt: stops.length ? { lat: stops[stops.length - 1].lat, lng: stops[stops.length - 1].lng } : null,
+      validationStatus: v.status,
+      validationMessages: v.messages,
     });
     created++;
+  }
+
+  // --- turnaround: can each driver/vehicle actually get from one of its trips
+  // to the next in time (spec §20)? Deadhead between trips uses the straight-line
+  // estimator (a coarse gate); a violation downgrades the later trip to INVALID
+  // with the offending gap so it cannot be approved without an override.
+  const rules = plan.config.rules;
+  const extra = new Map<string, ValidationMessage[]>();
+  const checkResource = (
+    keyOf: (t: CreatedTrip) => string | null,
+    minTurn: number,
+    label: string,
+  ) => {
+    const groups = new Map<string, CreatedTrip[]>();
+    for (const t of createdTrips) {
+      const k = keyOf(t);
+      if (!k) continue;
+      (groups.get(k) ?? groups.set(k, []).get(k)!).push(t);
+    }
+    for (const trips of groups.values()) {
+      trips.sort((a, b) => a.plannedStartMin - b.plannedStartMin);
+      for (let i = 1; i < trips.length; i++) {
+        const prev = trips[i - 1];
+        const next = trips[i];
+        const deadheadMin =
+          prev.lastPt && next.firstPt
+            ? travelMinutes(distanceKm(prev.lastPt, next.firstPt), prev.plannedEndMin, plan.config.profile)
+            : 0;
+        if (!turnaroundFeasible(prev.plannedEndMin, next.plannedStartMin, deadheadMin, minTurn, rules)) {
+          const gap = next.plannedStartMin - prev.plannedEndMin;
+          const list = extra.get(next.id) ?? [];
+          list.push({
+            code: "TURNAROUND_TIME_INSUFFICIENT",
+            level: "INVALID",
+            text: `${label}: only ${gap} min before this trip, but the previous one needs ${deadheadMin} min to reach it plus turnaround.`,
+          });
+          extra.set(next.id, list);
+        }
+      }
+    }
+  };
+  checkResource((t) => t.driverId, rules.minDriverTurnaroundMin, "Driver turnaround");
+  checkResource((t) => t.vehicleId, rules.minVehicleTurnaroundMin, "Vehicle turnaround");
+
+  for (const [id, msgs] of extra) {
+    const t = createdTrips.find((x) => x.id === id)!;
+    const merged = [...t.validationMessages, ...msgs];
+    await db.trip.update({
+      where: { id },
+      data: { validationStatus: "INVALID", validationMessages: JSON.stringify(merged) },
+    });
   }
 
   return {

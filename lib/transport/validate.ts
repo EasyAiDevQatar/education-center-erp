@@ -23,6 +23,9 @@ export type ValidationCode =
   | "JOURNEY_EXCEEDS_HARD_MAX"
   | "TRAVEL_TIME_FALLBACK_USED"
   | "TURNAROUND_TIME_INSUFFICIENT"
+  | "INSUFFICIENT_TRAVEL_TIME"
+  | "MISSING_LOCATION"
+  | "INVALID_COORDINATES"
   | "MISSING_SESSION_WINDOW";
 
 export type ValidationMessage = {
@@ -158,7 +161,23 @@ export type StopForValidation = {
   /** True when this stop delivers to / leaves the centre-based lesson so the
    *  arrival (pickup dir) or departure (return dir) window applies. */
   servesSession?: boolean;
+  /** Real routed (road-network) travel time from the previous stop, seconds —
+   *  the raw driving time, WITHOUT service/delay allowances, so it is comparable
+   *  to the schedule's straight-line-derived gap. When present, a road time that
+   *  no longer fits the planned gap is a real infeasibility straight-line
+   *  estimation hid (spec §17-18). Null on the first stop / when unknown. */
+  roadTravelFromPrevS?: number | null;
 };
+
+/** Longitude/latitude sanity: finite, in range, and not the null-island (0,0)
+ *  that an unset pin defaults to (spec §31 INVALID_COORDINATES / MISSING). */
+export function coordValid(lat: number | null | undefined, lng: number | null | undefined): boolean {
+  if (lat == null || lng == null) return false;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+  if (Math.abs(lat) < 1e-6 && Math.abs(lng) < 1e-6) return false;
+  return true;
+}
 
 export type TripValidation = {
   status: ValidationLevel;
@@ -186,6 +205,27 @@ export function validateTrip(stops: StopForValidation[], r: TransportRules): Tri
     }
     if (st.kind === "PICKUP" && st.sessionEndMin != null) {
       messages.push(...validateDeparture(st.plannedMin, st.sessionEndMin, r, st.seq));
+    }
+  }
+
+  // Road-time feasibility: does the real (routed) travel between each pair of
+  // consecutive stops still fit the gap the schedule leaves for it? This is the
+  // check straight-line estimation could not make — OSRM may report a leg that
+  // is genuinely longer than the planned window, so the on-paper schedule is
+  // impossible however good the geography looks (spec §17-18). Only asserted
+  // when a real operational duration is supplied (i.e. not a bare estimate).
+  for (let i = 1; i < stops.length; i++) {
+    const roadS = stops[i].roadTravelFromPrevS;
+    if (roadS == null || stops[i].fallbackUsed) continue; // estimate → already WARNING, no hard fail
+    const requiredMin = Math.ceil(roadS / 60);
+    const gapMin = stops[i].plannedMin - stops[i - 1].plannedMin;
+    if (requiredMin > gapMin) {
+      messages.push({
+        code: "INSUFFICIENT_TRAVEL_TIME",
+        level: "INVALID",
+        stopSeq: stops[i].seq,
+        text: `Road travel to this stop needs ${requiredMin} min but only ${gapMin} min is scheduled.`,
+      });
     }
   }
 

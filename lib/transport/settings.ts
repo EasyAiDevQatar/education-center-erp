@@ -65,6 +65,8 @@ export type TransportConfig = {
   include: { teacher: boolean; studentToCenter: boolean; studentToHome: boolean };
   /** Validation & operational-timing rules (fed to lib/transport/validate). */
   rules: TransportRules;
+  /** Per-stop service + delay allowances (fed to the operational breakdown). */
+  operational: OperationalTunables;
   allowInvalidOverride: boolean;
   allowFallbackApproval: boolean;
   solverTimeoutSeconds: number;
@@ -147,6 +149,7 @@ export async function loadTransportConfig(): Promise<TransportConfig> {
       preTripInspectionMin: numZ(s.transportPreTripInspectionMin, 5),
       postTripCloseoutMin: numZ(s.transportPostTripCloseoutMin, 5),
     },
+    operational: operationalTunables(s),
     allowInvalidOverride: bool(s.transportAllowInvalidOverride, false),
     allowFallbackApproval: bool(s.transportAllowFallbackApproval, false),
     solverTimeoutSeconds: numZ(s.transportSolverTimeoutSeconds, 20),

@@ -1534,3 +1534,18 @@ model Room {
 
   @@index([floorId])
 }
+
+/// Cached road-routing results (spec §12). Keyed by provider+profile+coord set;
+/// a coordinate change misses automatically. Failed/fallback matrices are never
+/// stored as authoritative. Pruned by TTL.
+model RoutingCache {
+  id        String   @id @default(cuid())
+  cacheKey  String   @unique
+  provider  String
+  profile   String
+  payload   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
