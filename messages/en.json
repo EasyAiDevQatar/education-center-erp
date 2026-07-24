@@ -1954,6 +1954,10 @@
     "testConnection": "Test connection",
     "testing": "Testing…",
     "testOk": "Connection works",
-    "testFail": "Connection failed"
+    "testFail": "Connection failed",
+    "translateMissing": "Translate missing names (AI)",
+    "translating": "Translating…",
+    "translateDone": "Translated {n}; {remaining} left",
+    "translateFailed": "Translation failed — check the AI settings"
   }
 }

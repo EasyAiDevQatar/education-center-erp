@@ -3,6 +3,8 @@ import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
+import { TranslateNamesButton } from "@/components/translate-names-button";
+import { loadAiConfig, aiReady } from "@/lib/ai/config";
 import { TeachersClient, type TeacherRow, type SubjectOpt } from "./teachers-client";
 import { displayName } from "@/lib/names";
 
@@ -50,9 +52,17 @@ export default async function TeachersPage({
     label: label(sbj.nameAr, sbj.nameEn),
   }));
 
+  const aiCfg = await loadAiConfig();
+  const aiOn = aiReady(aiCfg);
+
   return (
     <div>
       <PageHeader title={t("title")} />
+      {aiOn && (
+        <div className="-mt-3 mb-3">
+          <TranslateNamesButton entity="teachers" />
+        </div>
+      )}
       <TeachersClient teachers={rows} subjects={subjectOpts} />
     </div>
   );

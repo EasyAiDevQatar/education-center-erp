@@ -2,6 +2,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
+import { TranslateNamesButton } from "@/components/translate-names-button";
+import { loadAiConfig, aiReady } from "@/lib/ai/config";
 import { StudentsClient, type StudentRow, type Option } from "./students-client";
 import { displayName } from "@/lib/names";
 
@@ -69,9 +71,17 @@ export default async function StudentsPage({
     teacherIds: s.teachers.map((x) => x.teacherId),
   }));
 
+  const aiCfg = await loadAiConfig();
+  const aiOn = aiReady(aiCfg);
+
   return (
     <div>
       <PageHeader title={t("title")} />
+      {aiOn && (
+        <div className="-mt-3 mb-3">
+          <TranslateNamesButton entity="students" />
+        </div>
+      )}
       <StudentsClient
         students={rows}
         levels={levelOptions}

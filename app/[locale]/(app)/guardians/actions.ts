@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { autoFillNameEn } from "@/lib/ai/translate-names";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -51,6 +52,7 @@ export async function saveGuardian(
   } else {
     const created = await db.guardian.create({ data: parsed.data });
     await writeAudit("Guardian", created.id, "CREATE", { after: parsed.data });
+    await autoFillNameEn("guardians", created.id, parsed.data.name, parsed.data.nameEn);
   }
   revalidatePath(`/${locale}/guardians`);
   return { ok: true };

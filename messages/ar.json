@@ -1954,6 +1954,10 @@
     "testConnection": "اختبار الاتصال",
     "testing": "جارٍ الاختبار…",
     "testOk": "الاتصال يعمل",
-    "testFail": "فشل الاتصال"
+    "testFail": "فشل الاتصال",
+    "translateMissing": "ترجمة الأسماء الناقصة (ذكاء اصطناعي)",
+    "translating": "جارٍ الترجمة…",
+    "translateDone": "تمت ترجمة {n}؛ تبقّى {remaining}",
+    "translateFailed": "فشلت الترجمة — تحقق من إعدادات الذكاء الاصطناعي"
   }
 }

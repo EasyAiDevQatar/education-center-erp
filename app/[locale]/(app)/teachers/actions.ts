@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { autoFillNameEn } from "@/lib/ai/translate-names";
 import { TEACHER_PAYMENT_MODES } from "@/lib/enums";
 import { EARNINGS_MODES } from "@/lib/earnings-mode";
 
@@ -85,6 +86,7 @@ export async function saveTeacher(
   } else {
     const created = await db.teacher.create({ data });
     await writeAudit("Teacher", created.id, "CREATE", { after: data });
+    await autoFillNameEn("teachers", created.id, data.name, data.nameEn);
     teacherId = created.id;
   }
   await setTeacherSubjects(teacherId, subjectIds);

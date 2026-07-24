@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { autoFillNameEn } from "@/lib/ai/translate-names";
 import { LOCATIONS } from "@/lib/enums";
 
 export type ActionState = { ok?: boolean; error?: string };
@@ -76,6 +77,8 @@ export async function saveStudent(
   } else {
     const created = await db.student.create({ data });
     await writeAudit("Student", created.id, "CREATE", { after: data });
+    // Fill the Latin spelling when the AI auto-translate toggle is on.
+    await autoFillNameEn("students", created.id, data.name, data.nameEn);
     studentId = created.id;
   }
 
