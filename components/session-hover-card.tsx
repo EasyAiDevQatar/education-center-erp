@@ -44,6 +44,24 @@ export type HoverSessionData = {
 const minToHHMM = (n: number) =>
   `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 
+/** Render a pre-formatted "HH:MM–HH:MM · Xh" label so the range flows with the
+ *  ambient direction (Arabic: start on the right), each clock staying LTR. */
+function flipTimeLabel(label: string): React.ReactNode {
+  const dot = label.indexOf("·");
+  const rangePart = (dot >= 0 ? label.slice(0, dot) : label).trim();
+  const durPart = dot >= 0 ? label.slice(dot + 1).trim() : "";
+  const parts = rangePart.split(/[–—-]/);
+  if (parts.length !== 2) return label;
+  return (
+    <span className="tabular-nums">
+      <bdi dir="ltr">{parts[0].trim()}</bdi>
+      <span className="mx-0.5">–</span>
+      <bdi dir="ltr">{parts[1].trim()}</bdi>
+      {durPart ? ` · ${durPart}` : null}
+    </span>
+  );
+}
+
 /** Route-icon tint per trip state; muted outline means "no trip yet". */
 export function tripTint(trip: SessionTripLite | null | undefined): string {
   if (!trip) return "text-muted-foreground/50";
@@ -186,7 +204,7 @@ function HoverCard({
       <Row label={t("teacher")} value={d.teacherName} />
       <Row label={t("subject")} value={d.subjectLabel} />
       <Row label={t("grade")} value={d.levelLabel} />
-      <Row label={t("time")} value={d.timeLabel} ltr />
+      <Row label={t("time")} value={flipTimeLabel(d.timeLabel)} />
       <Row label={t("total")} value={`${formatMoney(d.total)} ${currency}`} ltr />
       {d.paymentStatus && (
         <Row label={t("payment")} value={te(`paymentStatus.${d.paymentStatus as "PAID"}`)} />

@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import { printDoc } from "@/lib/print";
 import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
+import { TimeRange } from "@/components/time-range";
 import { findConflicts, weekdayOf, WEEKDAY_ORDER, type Conflict } from "@/lib/conflicts";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { ConflictWarnings } from "@/components/conflict-warnings";
@@ -644,9 +645,9 @@ export function PlannerClient({
                             dragId === s.id && "opacity-40 ring-2 ring-ring",
                           )}
                         >
-                          <div className="flex items-center justify-between gap-1 tabular-nums" dir="ltr">
+                          <div className="flex items-center justify-between gap-1 tabular-nums">
                             <span className="font-semibold">
-                              {minToHHMM(s.startMin)}–{minToHHMM(end)}
+                              <TimeRange start={s.startMin} end={end} />
                             </span>
                             <span className="flex shrink-0 items-center gap-1">
                               {conflictedIds.has(s.id) && (

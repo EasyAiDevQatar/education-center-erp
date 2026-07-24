@@ -312,10 +312,16 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
             <p className="border-b border-border p-3 text-sm font-medium">{t("scheduleTitle")}</p>
             {/* Column header */}
             <div className="flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground">
-              <div className="relative flex-1">
-                {ticks.map((m) => (
-                  <span key={m} className={`absolute tabular-nums ${rtl ? "translate-x-1/2" : "-translate-x-1/2"}`} style={{ [S]: `${pct(m)}%` } as React.CSSProperties} dir="ltr">{minToHHMM(m)}</span>
-                ))}
+              <div className="relative flex-1 overflow-hidden">
+                {ticks.map((m) => {
+                  const p = pct(m);
+                  // Clamp the two edge ticks inward a touch so the first/last
+                  // hour never bleeds under the status column header.
+                  const clamped = Math.min(97, Math.max(3, p));
+                  return (
+                    <span key={m} className={`absolute tabular-nums ${rtl ? "translate-x-1/2" : "-translate-x-1/2"}`} style={{ [S]: `${clamped}%` } as React.CSSProperties} dir="ltr">{minToHHMM(m)}</span>
+                  );
+                })}
               </div>
               <div className="w-20 shrink-0 text-center font-medium">{t("colStatus")}</div>
               <div className="w-28 shrink-0 font-medium">{t("colDriver")}</div>
