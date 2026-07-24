@@ -13,7 +13,32 @@ import { toNumber } from "@/lib/money";
 import { compactTimes, hhmmToMin, minToHHMM } from "@/lib/planner";
 import { LOCATIONS } from "@/lib/enums";
 
-export type PlannerState = { ok?: boolean; error?: string; count?: number };
+export type PlannerState = {
+  ok?: boolean;
+  error?: string;
+  count?: number;
+  /** Confirmed HOME sessions that no trip serves yet — prompts trip planning. */
+  homeNeedsTrip?: { count: number; date: string } | null;
+};
+
+/** How many of these sessions are HOME lessons no (live) trip serves. */
+async function countHomeNeedingTrip(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const home = await db.session.findMany({
+    where: { id: { in: ids }, location: "HOME" },
+    select: { id: true },
+  });
+  if (home.length === 0) return 0;
+  const served = await db.tripStop.findMany({
+    where: {
+      sessionId: { in: home.map((x) => x.id) },
+      trip: { status: { not: "CANCELLED" } },
+    },
+    select: { sessionId: true },
+  });
+  const covered = new Set(served.map((x) => x.sessionId));
+  return home.filter((x) => !covered.has(x.id)).length;
+}
 
 async function guard() {
   const s = await getSession();
@@ -128,7 +153,13 @@ export async function confirmSession(locale: string, id: string): Promise<Planne
   });
   await writeAudit("Session", id, "UPDATE", { after: { status: "COMPLETED", confirmedFromDraft: true } });
   revalidate(locale);
-  return { ok: true };
+  const needing = await countHomeNeedingTrip([id]);
+  return {
+    ok: true,
+    homeNeedsTrip: needing
+      ? { count: needing, date: existing.date.toISOString().slice(0, 10) }
+      : null,
+  };
 }
 
 const daySchema = z.object({
@@ -174,7 +205,12 @@ export async function confirmDay(
     after: { date: d.date, teacherId: d.teacherId ?? "all", count: res.count },
   });
   revalidate(locale);
-  return { ok: true, count: res.count };
+  const needing = await countHomeNeedingTrip(targets.map((x) => x.id));
+  return {
+    ok: true,
+    count: res.count,
+    homeNeedsTrip: needing ? { count: needing, date: d.date } : null,
+  };
 }
 
 const compactSchema = z.object({

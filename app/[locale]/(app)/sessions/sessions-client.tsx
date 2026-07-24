@@ -37,6 +37,7 @@ import {
   type PackageOpt,
 } from "./session-dialog";
 import { saveSession, deleteSession } from "./actions";
+import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 
 export type SessionRow = SessionInit & {
   studentName: string;
@@ -90,6 +91,7 @@ export function SessionsClient({
   const router = useRouter();
   // Group picked inside the add-session dialog; opens group booking preloaded.
   const [handoffGroup, setHandoffGroup] = useState<string | null>(null);
+  const [tripPrompt, setTripPrompt] = useState<TripPromptInfo | null>(null);
   const pathname = usePathname();
   const search = useTableSearch(sessions, (x) => [
     x.studentName,
@@ -223,6 +225,7 @@ export function SessionsClient({
           teacherSubjectIds={teacherSubjectIds}
           groups={groups}
           onPickGroup={setHandoffGroup}
+          onHomeNeedsTrip={setTripPrompt}
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
@@ -242,6 +245,7 @@ export function SessionsClient({
           onOpenChange={(v) => { if (!v) setHandoffGroup(null); }}
           onSaved={() => router.refresh()}
         />
+        <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
       </form>
 
       <div className="rounded-lg border border-border bg-card">

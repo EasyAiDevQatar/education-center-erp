@@ -1917,5 +1917,15 @@
     "noTripYet": "No trip planned yet",
     "openMap": "Open transport map",
     "noPin": "No home pin set — add it in the student profile"
+  },
+  "tripPrompt": {
+    "title": "Plan a trip?",
+    "text": "{n, plural, one {# home session has} other {# home sessions have}} no trip planned yet.",
+    "autoPlan": "Auto-plan trips",
+    "planning": "Planning…",
+    "openPlanner": "Open transport planner",
+    "later": "Later",
+    "result": "Proposed {created} trip(s); {unassigned} could not be assigned. Review them in the transport planner.",
+    "failed": "Could not plan trips — is the transport module enabled?"
   }
 }

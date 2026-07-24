@@ -54,7 +54,11 @@ export type SessionInit = {
 type ActionFn = (
   prev: { ok?: boolean; error?: string },
   fd: FormData,
-) => Promise<{ ok?: boolean; error?: string }>;
+) => Promise<{
+  ok?: boolean;
+  error?: string;
+  homeNeedsTrip?: { count: number; date: string } | null;
+}>;
 
 export function SessionDialog({
   title,
@@ -70,6 +74,7 @@ export function SessionDialog({
   teacherSubjectIds = {},
   groups = [],
   onPickGroup,
+  onHomeNeedsTrip,
   session,
   // Controlled-open + prefill support (used by the calendar's click-to-create).
   open: openProp,
@@ -95,6 +100,8 @@ export function SessionDialog({
   /** Saved groups; picking one hands off to group booking (add mode only). */
   groups?: GroupOpt[];
   onPickGroup?: (groupId: string) => void;
+  /** A HOME session was just booked with no ride — host may prompt planning. */
+  onHomeNeedsTrip?: (info: { count: number; date: string }) => void;
   session?: SessionInit;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
@@ -233,6 +240,7 @@ export function SessionDialog({
       if (res.ok) {
         setOpen(false);
         onSaved?.();
+        if (res.homeNeedsTrip) onHomeNeedsTrip?.(res.homeNeedsTrip);
       } else setError(res.error ?? "invalid");
     });
   }

@@ -30,6 +30,7 @@ import {
 import { saveSession } from "../sessions/actions";
 import { GroupBookingDialog, type GroupOpt } from "../sessions/group-booking-dialog";
 import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
+import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 import { rescheduleSession, resizeSession } from "./actions";
 
 export type CalEvent = {
@@ -203,6 +204,7 @@ export function CalendarClient({
   const [createAt, setCreateAt] = useState<{ date: string; time: string } | null>(null);
   // Group picked inside the quick-create dialog; opens group booking preloaded.
   const [handoffGroup, setHandoffGroup] = useState<string | null>(null);
+  const [tripPrompt, setTripPrompt] = useState<TripPromptInfo | null>(null);
   const [editEv, setEditEv] = useState<CalEvent | null>(null);
 
   // Compact is the same grid at half row height; list bypasses the grid entirely.
@@ -385,6 +387,7 @@ export function CalendarClient({
           <option value="HOME">{te("location.HOME")}</option>
         </Select>
         {hover.portal}
+        <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
 
         <div className="ms-auto flex items-center gap-1 rounded-md border border-border p-0.5">
           {(["week", "day", "compact", "list"] as const).map((v) => (
@@ -621,6 +624,7 @@ export function CalendarClient({
           defaultTime={createAt.time}
           groups={groups}
           onPickGroup={(gid) => { setCreateAt(null); setHandoffGroup(gid); }}
+          onHomeNeedsTrip={setTripPrompt}
           onSaved={() => { setCreateAt(null); router.refresh(); }}
         />
       )}

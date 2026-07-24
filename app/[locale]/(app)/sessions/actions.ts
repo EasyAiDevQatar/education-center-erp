@@ -13,7 +13,12 @@ import { notifySession } from "@/lib/integrations/notify";
 import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { LOCATIONS, PAYMENT_STATUSES } from "@/lib/enums";
 
-export type ActionState = { ok?: boolean; error?: string };
+export type ActionState = {
+  ok?: boolean;
+  error?: string;
+  /** A HOME session was booked with no trip serving it yet. */
+  homeNeedsTrip?: { count: number; date: string } | null;
+};
 
 const schema = z.object({
   date: z.string().min(1),
@@ -97,6 +102,13 @@ export async function saveSession(
     }
     await writeAudit("Session", created.id, "CREATE", { after: data });
     await notifySession("SESSION_BOOKED", created.id);
+    revalidatePath(`/${locale}/sessions`);
+    revalidatePath(`/${locale}/calendar`);
+    // A freshly booked home lesson has no ride yet by definition — prompt.
+    if (data.location === "HOME") {
+      return { ok: true, homeNeedsTrip: { count: 1, date: d.date } };
+    }
+    return { ok: true };
   }
   revalidatePath(`/${locale}/sessions`);
   revalidatePath(`/${locale}/calendar`);

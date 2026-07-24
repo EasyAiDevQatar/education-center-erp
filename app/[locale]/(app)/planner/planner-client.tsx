@@ -49,11 +49,13 @@ import { ConflictWarnings } from "@/components/conflict-warnings";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { deleteSession } from "../sessions/actions";
 import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
+import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 import {
   createDraftSession,
   updateDraft,
   confirmSession,
   confirmDay,
+  type PlannerState,
   compactTeacherDay,
   savePlannerSettings,
 } from "./actions";
@@ -188,6 +190,7 @@ export function PlannerClient({
     [allSessions, locFilter],
   );
   const hover = useSessionHover(currency);
+  const [tripPrompt, setTripPrompt] = useState<TripPromptInfo | null>(null);
 
   const [pending, start] = useTransition();
   const [addFor, setAddFor] = useState<string | null>(null); // teacherId
@@ -295,6 +298,13 @@ export function PlannerClient({
   const run = (fn: () => Promise<unknown>) =>
     start(async () => {
       await fn();
+      router.refresh();
+    });
+  /** Confirm variant: surfaces the "book a trip?" prompt for home lessons. */
+  const runConfirm = (fn: () => Promise<PlannerState>) =>
+    start(async () => {
+      const res = await fn();
+      if (res.homeNeedsTrip) setTripPrompt(res.homeNeedsTrip);
       router.refresh();
     });
 
@@ -407,13 +417,14 @@ export function PlannerClient({
           <option value="HOME">{te("location.HOME")}</option>
         </Select>
         {hover.portal}
+        <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
 
         <div className="ms-auto flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             className="gap-1"
             disabled={pending || drafts.length === 0}
-            onClick={() => run(() => confirmDay(locale, { date: day }))}
+            onClick={() => runConfirm(() => confirmDay(locale, { date: day }))}
           >
             <CheckCheck className="size-4" />
             {t("confirmDay")}
@@ -558,7 +569,7 @@ export function PlannerClient({
                         aria-label={t("confirmTeacher")}
                         title={t("confirmTeacher")}
                         disabled={pending || teacherDrafts.length === 0}
-                        onClick={() => run(() => confirmDay(locale, { date: day, teacherId: teacher.id }))}
+                        onClick={() => runConfirm(() => confirmDay(locale, { date: day, teacherId: teacher.id }))}
                       >
                         <CheckCheck className="size-4" />
                       </Button>
@@ -691,7 +702,7 @@ export function PlannerClient({
                                 aria-label={t("confirm")}
                                 title={t("confirm")}
                                 disabled={pending}
-                                onClick={() => run(() => confirmSession(locale, s.id))}
+                                onClick={() => runConfirm(() => confirmSession(locale, s.id))}
                               >
                                 <Check className="size-3.5" />
                               </Button>
