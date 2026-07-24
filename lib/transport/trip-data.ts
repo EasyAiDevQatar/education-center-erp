@@ -180,6 +180,7 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
   );
   const built = buildDayLegs(chainDays, {
     arriveEarlyMin: config.bufferMin,
+    maxAdvancePickupMin: config.maxAdvancePickupMin,
   });
   // Student direction toggles: a leg arriving at the centre is a to-center
   // pickup; a leg leaving the centre is a to-home return. Teacher legs are
@@ -284,16 +285,17 @@ export async function generateDayTrips(
   // segmentation below). Trips a human has touched are left alone.
   const priorTrips = await db.trip.findMany({
     where: { date: start },
-    select: { id: true, status: true, legKey: true },
+    select: { id: true, status: true, legKey: true, linkGroup: true },
   });
-  // A passenger's day may now be several linked trips (legKey `day:pkey:idx`).
+  // A passenger's day is several linked trips sharing a linkGroup (`day:pkey`).
   // If ANY of them is locked, the whole passenger is left alone so we never
-  // rebuild half a linked pair. Match on the shared base key.
-  const baseOf = (legKey: string | null) => (legKey ?? "").replace(/:\d+$/, "");
+  // rebuild half a linked set. Match on that shared group.
+  const baseOf = (t: { legKey: string | null; linkGroup: string | null }) =>
+    t.linkGroup ?? (t.legKey ?? "").replace(/:.*$/, "");
   const lockedKeys = new Set(
     priorTrips
       .filter((t) => !generatorMayReplace(t.status as TripStatus))
-      .map((t) => baseOf(t.legKey)),
+      .map(baseOf),
   );
   const removable = priorTrips.filter((t) => generatorMayReplace(t.status as TripStatus));
   if (removable.length) {
@@ -347,6 +349,51 @@ export async function generateDayTrips(
     const passengerId = items[0].leg.passengerId;
     const driverId = assigned[0].a!.driverId;
     const driver = plan.drivers.find((d) => d.id === driverId) ?? null;
+
+    // --- DROP_AND_RETURN model: one short trip per leg, each on that leg's own
+    // allocated driver, so a driver is freed the moment they drop the passenger
+    // instead of idling through the lesson. Legs sharing a driver stay separate
+    // trips with a gap between them — the driver's lane shows them free to take
+    // other tasks. STAY (below) keeps the whole chain on one driver. ---------
+    if (plan.config.driverModel === "DROP_AND_RETURN") {
+      let legIdx = 0;
+      for (const item of items) {
+        if (!item.a) continue; // unassigned leg → stays in the problems list
+        const legDriver = plan.drivers.find((d) => d.id === item.a!.driverId) ?? null;
+        const built = await buildTripsForPassenger({
+          plan,
+          start,
+          baseLegKey: `${baseLegKey}:L${legIdx}`,
+          linkGroup: baseLegKey,
+          pkind,
+          passengerId,
+          items: [item],
+          driverId: item.a!.driverId,
+          driver: legDriver,
+          autoAllocated: true,
+          allocationScore: item.a!.score,
+          byUserId,
+          manualEdit: false,
+          persist: true,
+        });
+        for (const b of built) {
+          createdTrips.push({
+            id: b.id!,
+            driverId: b.driverId,
+            vehicleId: b.vehicleId,
+            plannedStartMin: b.plannedStartMin,
+            plannedEndMin: b.plannedEndMin,
+            firstPt: b.firstPt,
+            lastPt: b.lastPt,
+            validationStatus: b.validationStatus,
+            validationMessages: b.validationMessages,
+          });
+          created++;
+        }
+        legIdx++;
+      }
+      continue;
+    }
 
     // Every leg contributes a pickup then a drop-off; collapse consecutive stops
     // at the same place (a lesson is arrive-then-leave, one physical stop).
@@ -651,6 +698,9 @@ export async function buildTripsForPassenger(args: {
   plan: DayPlan;
   start: Date;
   baseLegKey: string;
+  /** Groups a passenger's linked trips; defaults to baseLegKey. Pass the shared
+   *  `day:KIND:id` when baseLegKey carries a per-leg suffix (drop-and-return). */
+  linkGroup?: string;
   pkind: PassengerKind;
   passengerId: string;
   items: { leg: Leg; a: Assignment | null }[];
@@ -790,7 +840,7 @@ export async function buildTripsForPassenger(args: {
           status: "PROPOSED",
           legKey: `${baseLegKey}:${segIdx}`,
           tripKind: seg.kind,
-          linkGroup: baseLegKey,
+          linkGroup: args.linkGroup ?? baseLegKey,
           validationStatus: v.status,
           validationMessages: JSON.stringify(v.messages),
           driverId,

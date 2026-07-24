@@ -48,6 +48,9 @@ export const TRANSPORT_SETTING_KEYS = [
   "transportIncludeTeacher",
   "transportIncludeStudentToCenter",
   "transportIncludeStudentToHome",
+  // Allocation model.
+  "transportMaxAdvancePickupMin",
+  "transportDriverModel",
 ] as const;
 
 export type TransportConfig = {
@@ -70,6 +73,13 @@ export type TransportConfig = {
   allowInvalidOverride: boolean;
   allowFallbackApproval: boolean;
   solverTimeoutSeconds: number;
+  /** How long before a lesson a passenger may be collected (the first-pickup
+   *  window). Smaller = drivers leave later / sit idle less. */
+  maxAdvancePickupMin: number;
+  /** DROP_AND_RETURN: a driver drops the passenger and is freed (the return is
+   *  a separate trip, possibly another driver) — no idle during the lesson.
+   *  STAY: one driver stays with the passenger through their whole chain. */
+  driverModel: "DROP_AND_RETURN" | "STAY";
 };
 
 const num = (v: string | undefined, fallback: number): number => {
@@ -153,6 +163,8 @@ export async function loadTransportConfig(): Promise<TransportConfig> {
     allowInvalidOverride: bool(s.transportAllowInvalidOverride, false),
     allowFallbackApproval: bool(s.transportAllowFallbackApproval, false),
     solverTimeoutSeconds: numZ(s.transportSolverTimeoutSeconds, 20),
+    maxAdvancePickupMin: numZ(s.transportMaxAdvancePickupMin, 60),
+    driverModel: s.transportDriverModel === "STAY" ? "STAY" : "DROP_AND_RETURN",
   };
 }
 
