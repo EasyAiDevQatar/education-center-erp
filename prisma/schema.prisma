@@ -43,6 +43,7 @@ model User {
 
   auditLogs AuditLog[]
   leads     Lead[]
+  notifications InAppNotification[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -285,6 +286,22 @@ model Session {
   checkInLat       Float?
   checkInLng       Float?
   actualHours      Decimal?  // measured from check-in → check-out
+
+  /// What kind of lesson this is. Chosen at booking; drives how much lateness
+  /// transport may propose — an exam is never delayed, whatever the settings say.
+  sessionType  String @default("REGULAR") // REGULAR | EXAM | ASSESSMENT | TRIAL | REVISION | MAKEUP
+
+  // --- Per-session transport timing overrides -----------------------------
+  // All nullable: null means "inherit", first from the session type, then from
+  // the centre-wide settings. Only a session that genuinely differs stores a
+  // value, so changing the global policy still moves everything that follows it.
+  /// STRICT | FLEXIBLE | VERY_FLEXIBLE
+  transportTimingPolicy    String?
+  maxAllowedLatenessMin    Int?
+  maxEarlyArrivalMin       Int?
+  maxPostSessionWaitMin    Int?
+  requireDelayApproval     Boolean?
+  notifyOnDelay            Boolean?
 
   /// Trial lesson: booked at zero price as a DRAFT so it shows on the calendar
   /// and planner without ever touching the ledger.
@@ -1560,4 +1577,41 @@ model RoutingCache {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+}
+
+/// Internal notification centre.
+///
+/// The only outbound channel configured is the messaging provider, which
+/// reaches parents but has no concept of an admin inbox. Delay exceptions have
+/// to reach transport and centre admins, so they land here and are read in the
+/// app. `idempotencyKey` is what stops a regenerated plan re-announcing a delay
+/// nobody's decision changed.
+model InAppNotification {
+  id        String  @id @default(cuid())
+  /// Who should see it. USER when addressed to one account, otherwise a role
+  /// bucket every holder of that role reads (TRANSPORT_ADMIN | CENTER_ADMIN).
+  audience  String
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// e.g. TRIP_DELAY_PROPOSED | TRIP_DELAY_APPROVED | TRIP_DELAY_CHANGED
+  event     String
+  title     String
+  body      String
+  /// Rendered payload (passenger, session, arrival times, saving summary).
+  data      String?
+  severity  String  @default("INFO") // INFO | WARNING | CRITICAL
+
+  entityType String?
+  entityId   String?
+
+  /// Collapses repeats of the same announcement about the same trip.
+  idempotencyKey String @unique
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([audience, readAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

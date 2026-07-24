@@ -159,3 +159,39 @@ export type VehicleDocType = (typeof VEHICLE_DOC_TYPES)[number];
 /** What a maintenance visit was for. */
 export const MAINTENANCE_KINDS = ["SERVICE", "REPAIR", "TYRES", "OTHER"] as const;
 export type MaintenanceKind = (typeof MAINTENANCE_KINDS)[number];
+
+/**
+ * What kind of lesson this is. Drives the transport timing policy: an exam
+ * cannot start late, a revision block usually can.
+ */
+export const SESSION_TYPES = [
+  "REGULAR",
+  "EXAM",
+  "ASSESSMENT",
+  "TRIAL",
+  "REVISION",
+  "MAKEUP",
+] as const;
+export type SessionType = (typeof SESSION_TYPES)[number];
+
+/**
+ * How much lateness a session tolerates when the planner consolidates trips.
+ * STRICT never accepts any; the others accept up to their configured limit.
+ */
+export const TRANSPORT_TIMING_POLICIES = ["STRICT", "FLEXIBLE", "VERY_FLEXIBLE"] as const;
+export type TransportTimingPolicy = (typeof TRANSPORT_TIMING_POLICIES)[number];
+
+/**
+ * Session types that must never be delayed, whatever the global settings say.
+ * Sitting an exam late is not a trade worth any number of saved kilometres.
+ */
+export const STRICT_SESSION_TYPES: readonly SessionType[] = ["EXAM", "ASSESSMENT"];
+
+/** The outcome of validating a planned trip. */
+export const VALIDATION_LEVELS = [
+  "VALID",
+  "WARNING",
+  "DELAYED_EXCEPTION",
+  "INVALID",
+] as const;
+export type ValidationLevelName = (typeof VALIDATION_LEVELS)[number];
