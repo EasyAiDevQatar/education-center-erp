@@ -110,6 +110,7 @@ export const NAV_ITEMS: NavItem[] = [
     flag: "transport",
     children: [
       { href: "/transport/planner", key: "transportPlanner" },
+      { href: "/transport/manifest", key: "transportManifest" },
       { href: "/transport/trips", key: "transportTrips" },
       { href: "/transport/map", key: "transportMap" },
       { href: "/transport/vehicles", key: "transportVehicles" },

@@ -175,7 +175,8 @@
     "transportReports": "تقارير الأسطول",
     "hrDocuments": "المستندات والانتهاء",
     "groups": "المجموعات",
-    "assistant": "المساعد الذكي"
+    "assistant": "المساعد الذكي",
+    "transportManifest": "الاصطحاب والإنزال"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -2024,5 +2025,25 @@
     "maintenanceCost": "تكلفة الصيانة",
     "kmDriven": "الكيلومترات المقطوعة (رحلات)",
     "allCosts": "كل التكاليف"
+  },
+  "transportManifest": {
+    "title": "الاصطحاب والإنزال",
+    "subtitle": "كل معلم يُنقل إلى درس منزلي يجب أن يكون له نقلة تالية — إلى الدرس التالي أو المركز أو المنزل.",
+    "today": "اليوم",
+    "teachers": "المعلمون",
+    "summaryOk": "السلسلة مكتملة",
+    "summaryIssues": "تحتاج إلى مراجعة",
+    "noHomeSessions": "لا توجد دروس منزلية في هذا اليوم.",
+    "homeSessions": "{n} دروس منزلية",
+    "chainOk": "سلسلة النقل مكتملة",
+    "noRide": "لم تُخطَّط رحلة بعد.",
+    "pickup": "اصطحاب",
+    "dropoff": "إنزال",
+    "issue": {
+      "noTrip": "لا توجد رحلة مخططة",
+      "sessionNotServed": "لا يوجد إنزال لـ {name}",
+      "notBroughtHome": "لم يُعَد إلى المنزل في النهاية",
+      "startsWithDropoff": "أُنزل دون اصطحاب"
+    }
   }
 }

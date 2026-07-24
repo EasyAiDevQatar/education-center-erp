@@ -175,7 +175,8 @@
     "transportReports": "Fleet reports",
     "hrDocuments": "Documents & expiry",
     "groups": "Groups",
-    "assistant": "AI Assistant"
+    "assistant": "AI Assistant",
+    "transportManifest": "Pickups & drop-offs"
   },
   "auth": {
     "login": "Log in",
@@ -2024,5 +2025,25 @@
     "maintenanceCost": "Maintenance cost",
     "kmDriven": "Km driven (trips)",
     "allCosts": "All costs"
+  },
+  "transportManifest": {
+    "title": "Pickups & drop-offs",
+    "subtitle": "Every teacher taken to a home lesson must have an onward ride — to the next lesson, the centre, or home.",
+    "today": "Today",
+    "teachers": "Teachers",
+    "summaryOk": "Chain complete",
+    "summaryIssues": "Need attention",
+    "noHomeSessions": "No home lessons on this day.",
+    "homeSessions": "{n} home lessons",
+    "chainOk": "Ride chain complete",
+    "noRide": "No ride planned yet.",
+    "pickup": "Pick up",
+    "dropoff": "Drop off",
+    "issue": {
+      "noTrip": "No ride planned",
+      "sessionNotServed": "No drop-off for {name}",
+      "notBroughtHome": "Not brought home at the end",
+      "startsWithDropoff": "Dropped without a pickup"
+    }
   }
 }
