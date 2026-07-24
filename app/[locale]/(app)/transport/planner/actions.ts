@@ -12,7 +12,7 @@ import { loadTransportConfig, distanceKm } from "@/lib/transport/settings";
 import { poolCandidates } from "@/lib/transport/pooling";
 import { displayName } from "@/lib/names";
 import { aiChat } from "@/lib/ai/client";
-import { loadAiConfig, aiReady } from "@/lib/ai/config";
+import { loadAiConfigFor, aiReady } from "@/lib/ai/config";
 import { canTransition } from "@/lib/transport/trips";
 import { TRIP_STATUSES, type TripStatus } from "@/lib/enums";
 
@@ -187,7 +187,7 @@ export async function aiBriefing(locale: string, day: string): Promise<ActionSta
   const s = await guard();
   if (!s) return { error: "forbidden" };
   if (!daySchema.safeParse(day).success) return { error: "invalid" };
-  const cfg = await loadAiConfig();
+  const cfg = await loadAiConfigFor("briefing");
   if (!aiReady(cfg)) {
     console.error("[aiBriefing] not configured", { enabled: cfg.enabled, hasKey: !!cfg.apiKey, model: cfg.model });
     return { error: "notConfigured" };
@@ -232,7 +232,7 @@ export async function aiBriefing(locale: string, day: string): Promise<ActionSta
       },
       { role: "user", content: JSON.stringify(summary) },
     ],
-    { maxTokens: 3000, timeoutMs: 60_000 },
+    { maxTokens: 3000, timeoutMs: 60_000, config: cfg },
   );
   if (!r.ok) {
     console.error("[aiBriefing] chat failed:", r.error, r.detail?.slice(0, 300));

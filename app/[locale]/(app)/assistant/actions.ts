@@ -2,7 +2,7 @@
 
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
-import { loadAiConfig, aiReady } from "@/lib/ai/config";
+import { loadAiConfigFor, aiReady } from "@/lib/ai/config";
 import { runAssistant, type AssistantTurn } from "@/lib/ai/assistant";
 
 export type AskState =
@@ -21,7 +21,9 @@ export async function askAssistant(
 ): Promise<AskState> {
   const s = await getSession();
   if (!s) return { ok: false, error: "forbidden" };
-  const cfg = await loadAiConfig();
+  // Enabled + role come from the module default; readiness reflects the
+  // assistant's own model/key when it overrides the default.
+  const cfg = await loadAiConfigFor("assistant");
   if (!cfg.enabled || !cfg.assistantRoles.includes(s.role)) {
     return { ok: false, error: "forbidden" };
   }

@@ -626,7 +626,8 @@
     "tabTransport": "Transport",
     "tabAi": "AI",
     "tabAccess": "Users & Access",
-    "tabSystem": "System & Data"
+    "tabSystem": "System & Data",
+    "aiModels": "AI Models"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -2097,7 +2098,21 @@
     "translateDone": "Translated {n}; {remaining} left",
     "translateFailed": "Translation failed — check the AI settings",
     "floatingChat": "Show a floating assistant bubble on every page",
-    "floatingChatHint": "A chat panel slides in from the side — no need to open it from the menu. Shown only to roles allowed below."
+    "floatingChatHint": "A chat panel slides in from the side — no need to open it from the menu. Shown only to roles allowed below.",
+    "modelsHint": "Point each AI feature at its own provider, model and key — or leave it on the default configured in the AI Assistant tab.",
+    "overrideLabel": "Use a different model",
+    "usesDefault": "Uses the default AI configuration.",
+    "apiKeyShared": "Leave empty to reuse the default key.",
+    "uses": {
+      "assistant": "Assistant",
+      "translation": "Name translation",
+      "briefing": "Plan briefing"
+    },
+    "useHints": {
+      "assistant": "The management chat assistant and its tools.",
+      "translation": "Arabic ↔ Latin transliteration of people names.",
+      "briefing": "The transport day-plan narrative on the planner."
+    }
   },
   "assistant": {
     "title": "AI Assistant",

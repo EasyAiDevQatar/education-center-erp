@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { writeAudit } from "@/lib/audit";
 import { aiChatJson } from "./client";
-import { loadAiConfig, aiReady } from "./config";
+import { loadAiConfigFor, aiReady, type AiConfig } from "./config";
 
 /**
  * AI-backed name transliteration (Arabic ↔ Latin) for people records.
@@ -27,6 +27,7 @@ const SYSTEM_PROMPT =
 /** Transliterate one batch. Returns id → Latin spelling (may be partial). */
 export async function translateNamesBatch(
   rows: { id: string; name: string }[],
+  config?: AiConfig,
 ): Promise<Record<string, string>> {
   if (rows.length === 0) return {};
   const result = await aiChatJson<Record<string, string>>(
@@ -34,7 +35,7 @@ export async function translateNamesBatch(
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: JSON.stringify(rows.map((r) => ({ id: r.id, name: r.name }))) },
     ],
-    { maxTokens: 2048 },
+    { maxTokens: 2048, config },
   );
   if (!result || typeof result !== "object") return {};
   const ids = new Set(rows.map((r) => r.id));
@@ -58,7 +59,7 @@ const TABLES = {
 export async function backfillMissingNameEn(
   entity: TranslatableEntity,
 ): Promise<{ translated: number; remaining: number } | { error: string }> {
-  const cfg = await loadAiConfig();
+  const cfg = await loadAiConfigFor("translation");
   if (!aiReady(cfg)) return { error: "notConfigured" };
 
   const table = TABLES[entity];
@@ -78,7 +79,7 @@ export async function backfillMissingNameEn(
   let translated = 0;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
-    const map = await translateNamesBatch(batch);
+    const map = await translateNamesBatch(batch, cfg);
     for (const [id, nameEn] of Object.entries(map)) {
       await delegate.update({ where: { id }, data: { nameEn } });
       translated++;
@@ -107,9 +108,9 @@ export async function autoFillNameEn(
 ): Promise<void> {
   if (existingNameEn?.trim()) return;
   try {
-    const cfg = await loadAiConfig();
+    const cfg = await loadAiConfigFor("translation");
     if (!aiReady(cfg) || !cfg.autoTranslateNames) return;
-    const map = await translateNamesBatch([{ id, name }]);
+    const map = await translateNamesBatch([{ id, name }], cfg);
     const nameEn = map[id];
     if (!nameEn) return;
     const delegate = db[TABLES[entity].model as "student"] as unknown as {

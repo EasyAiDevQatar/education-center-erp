@@ -1,5 +1,6 @@
 import "server-only";
 import { aiChat, type ChatMessage } from "./client";
+import { loadAiConfigFor, type AiConfig } from "./config";
 import { getTool, toolCatalog } from "./tools";
 
 /**
@@ -46,6 +47,9 @@ export async function runAssistant(
   history: AssistantTurn[],
   locale: string,
 ): Promise<AssistantResult> {
+  // The assistant may run on its own model/key (see the AI Models settings);
+  // load it once and reuse for every tool round.
+  const config: AiConfig = await loadAiConfigFor("assistant");
   const today = new Date().toISOString().slice(0, 10);
   const messages: ChatMessage[] = [
     { role: "system", content: systemPrompt(locale, today) },
@@ -57,7 +61,7 @@ export async function runAssistant(
   const toolsUsed: string[] = [];
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const r = await aiChat(messages, { maxTokens: 1500, timeoutMs: 45_000 });
+    const r = await aiChat(messages, { maxTokens: 1500, timeoutMs: 45_000, config });
     if (!r.ok) return { ok: false, error: r.error };
 
     const parsed = parseTurn(r.text);

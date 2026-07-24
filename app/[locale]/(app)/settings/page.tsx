@@ -19,6 +19,8 @@ import { WpsSettings } from "./wps-settings";
 import { AccountingSettings } from "./accounting-settings";
 import { TransportSettings } from "./transport-settings";
 import { AiSettings } from "./ai-settings";
+import { AiModelsSettings } from "./ai-models-settings";
+import { loadAiUseSettings } from "@/lib/ai/config";
 import { parseAssistantRoles } from "@/lib/ai/presets";
 import { SiteSettings } from "./site-settings";
 import { BackupSettings } from "./backup-settings";
@@ -178,6 +180,7 @@ export default async function SettingsPage({
 
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
   const backups = await listBackups();
+  const aiUses = await loadAiUseSettings();
   const driveSa = settings.backupDriveSa ? parseServiceAccount(settings.backupDriveSa) : null;
   const matrixRows: MatrixRow[] = matrix.map((m) => ({
     id: m.gradeLevel.id,
@@ -463,6 +466,11 @@ export default async function SettingsPage({
               }}
             />
           ),
+        },
+        {
+          key: "aiModels",
+          label: t("aiModels"),
+          node: <AiModelsSettings uses={aiUses} />,
         },
       ],
     },
