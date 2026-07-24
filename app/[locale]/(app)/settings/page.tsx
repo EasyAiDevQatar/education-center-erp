@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { listAcademicYears } from "@/lib/academic-year";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
-import { CollapsibleCard, CollapsibleGroup } from "@/components/ui/collapsible-card";
+import { SettingsShell, type SettingsGroup } from "./settings-shell";
 import { AttendanceSettings } from "./attendance-settings";
 import { YearsManager } from "./years-manager";
 import { PROVIDERS, maskSecret } from "@/lib/integrations/registry";
@@ -46,10 +46,13 @@ function parseJson<T>(raw: string | null, fallback: T): T {
 
 export default async function SettingsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ tab?: string; sub?: string }>;
 }) {
   const { locale } = await params;
+  const { tab: initialTab, sub: initialSub } = await searchParams;
   setRequestLocale(locale);
   await requireRole(locale, ["ADMIN"]);
 
@@ -237,12 +240,15 @@ export default async function SettingsPage({
     action: a.action,
   }));
 
-  return (
-    <div>
-      <PageHeader title={t("title")} />
-      <CollapsibleGroup>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <CollapsibleCard title={t("center")}>
+  const groups: SettingsGroup[] = [
+    {
+      key: "center",
+      label: t("tabCenter"),
+      sections: [
+        {
+          key: "center",
+          label: t("center"),
+          node: (
             <CenterProfileForm
               values={{
                 centerName: settings.centerName ?? "",
@@ -256,189 +262,225 @@ export default async function SettingsPage({
                 centerLogo: settings.centerLogo ?? "",
               }}
             />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("buildings")} className="lg:col-span-2">
-            <BuildingsManager buildings={buildings} />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("teacherPayments")} className="lg:col-span-2">
-          <TeacherPaymentsSettings
-            defaultMode={settings.teacherEarningsMode ?? DEFAULT_EARNINGS_MODE}
-            overriddenCount={teacherRows.filter((x) => isEarningsMode(x.earningsMode)).length}
-            totalCount={teacherRows.length}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("siteSettings")} className="lg:col-span-2">
-          <SiteSettings
-            values={{
-              publicHome: settings.publicHome ?? "ERP",
-              siteHeroTitleAr: settings.siteHeroTitleAr ?? "",
-              siteHeroTitleEn: settings.siteHeroTitleEn ?? "",
-              siteHeroTextAr: settings.siteHeroTextAr ?? "",
-              siteHeroTextEn: settings.siteHeroTextEn ?? "",
-              siteAboutAr: settings.siteAboutAr ?? "",
-              siteAboutEn: settings.siteAboutEn ?? "",
-              siteYears: settings.siteYears ?? "",
-              siteStudents: settings.siteStudents ?? "",
-              siteSuccessRate: settings.siteSuccessRate ?? "",
-              siteBranches: settings.siteBranches ?? "",
-              siteWhatsApp: settings.siteWhatsApp ?? "",
-            }}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("backups")} className="lg:col-span-2">
-          <BackupSettings
-            backups={backups}
-            driveConfigured={!!driveSa}
-            driveEmail={driveSa?.client_email ?? null}
-            driveFolder={settings.backupDriveFolder ?? ""}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("transportSettings")} className="lg:col-span-2">
-          <TransportSettings
-            values={{
-              enabled: settings.transportEnabled === "1",
-              centerLat: settings.centerLat ?? "",
-              centerLng: settings.centerLng ?? "",
-              avgSpeedKmh: settings.transportAvgSpeedKmh ?? "40",
-              rushSpeedKmh: settings.transportRushSpeedKmh ?? "25",
-              rushWindows: settings.transportRushWindows ?? "07:00-09:00,16:00-19:00",
-              detourFactor: settings.transportDetourFactor ?? "1.35",
-              minTripMin: settings.transportMinTripMin ?? "5",
-              bufferMin: settings.transportBufferMin ?? "10",
-              maxDeadheadKm: settings.transportMaxDeadheadKm ?? "25",
-              pingDays: settings.transportPingDays ?? "14",
-              trackingVisibility: settings.transportTrackingVisibility ?? "ADMIN_ONLY",
-              passengers: settings.transportPassengers ?? "BOTH",
-              includeTeacher: (settings.transportIncludeTeacher ?? "1") !== "0",
-              includeStudentToCenter: (settings.transportIncludeStudentToCenter ?? "1") !== "0",
-              includeStudentToHome: (settings.transportIncludeStudentToHome ?? "1") !== "0",
-              preferredArrivalBufferMin: settings.transportPreferredArrivalBufferMin ?? "15",
-              minArrivalBufferMin: settings.transportMinArrivalBufferMin ?? "5",
-              maxEarlyArrivalMin: settings.transportMaxEarlyArrivalMin ?? "30",
-              dismissalBufferMin: settings.transportDismissalBufferMin ?? "10",
-              boardingTimeMin: settings.transportBoardingTimeMin ?? "2",
-              dropoffTimeMin: settings.transportDropoffTimeMin ?? "2",
-              maxStudentWaitMin: settings.transportMaxStudentWaitMin ?? "20",
-              maxJourneyMin: settings.transportMaxJourneyMin ?? "60",
-              minDriverTurnaroundMin: settings.transportMinDriverTurnaroundMin ?? "10",
-              minVehicleTurnaroundMin: settings.transportMinVehicleTurnaroundMin ?? "10",
-              allowInvalidOverride: settings.transportAllowInvalidOverride === "1",
-              maxAdvancePickupMin: settings.transportMaxAdvancePickupMin ?? "60",
-              driverModel: settings.transportDriverModel ?? "DROP_AND_RETURN",
-            }}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("aiSettings")} className="lg:col-span-2">
-          <AiSettings
-            values={{
-              enabled: settings.aiEnabled === "1",
-              provider: settings.aiProvider ?? "deepseek",
-              baseUrl: settings.aiBaseUrl ?? "",
-              model: settings.aiModel ?? "",
-              apiKeyMasked: maskSecret(settings.aiApiKey),
-              autoTranslateNames: settings.aiAutoTranslateNames === "1",
-              floatingChat: settings.aiFloatingChat !== "0",
-              assistantRoles: parseAssistantRoles(settings.aiAssistantRoles, [
-                "ADMIN",
-                "ACCOUNTANT",
-                "RECEPTIONIST",
-              ]),
-            }}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("accountingSettings")} className="lg:col-span-2">
-          <AccountingSettings
-            enabled={settings.accountingEnabled === "1"}
-            cheque={(() => {
-              let tpl: Record<string, { x?: number; y?: number; w?: number } | number> = {};
-              try {
-                tpl = JSON.parse(settings.chequeTemplate ?? "{}");
-              } catch {
-                /* stale JSON → defaults */
-              }
-              const pos = (k: string) => (tpl[k] ?? {}) as { x?: number; y?: number; w?: number };
-              return {
-                confReceived: settings.chequeConfReceived ?? "70",
-                confPending: settings.chequeConfPending ?? "80",
-                confDeposited: settings.chequeConfDeposited ?? "95",
-                alertDays: settings.chequeAlertDays ?? "7",
-                template: {
-                  leafW: (tpl.leafW as number) ?? 176,
-                  leafH: (tpl.leafH as number) ?? 89,
-                  dateX: pos("date").x ?? 130,
-                  dateY: pos("date").y ?? 10,
-                  payeeX: pos("payee").x ?? 25,
-                  payeeY: pos("payee").y ?? 28,
-                  wordsX: pos("amountWords").x ?? 30,
-                  wordsY: pos("amountWords").y ?? 42,
-                  wordsW: pos("amountWords").w ?? 120,
-                  digitsX: pos("amountDigits").x ?? 135,
-                  digitsY: pos("amountDigits").y ?? 42,
-                },
-              };
-            })()}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("wpsSettings")} className="lg:col-span-2">
-          <WpsSettings
-            values={{
-              wpsEmployerEID: settings.wpsEmployerEID ?? "",
-              wpsPayerEID: settings.wpsPayerEID ?? "",
-              wpsPayerQID: settings.wpsPayerQID ?? "",
-              wpsPayerBank: settings.wpsPayerBank ?? "",
-              wpsPayerIBAN: settings.wpsPayerIBAN ?? "",
-              wpsSifVersion: settings.wpsSifVersion ?? "1",
-              wpsBasicFloor: settings.wpsBasicFloor ?? "",
-            }}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("priceMatrix")}>
-            <PriceMatrixEditor rows={matrixRows} />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("subjects")} className="lg:col-span-2">
-          <SubjectsManager subjects={subjectRows} />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={t("expenseCategories")} className="lg:col-span-2">
-            <CategoriesManager categories={catRows} />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={tyear("title")} className="lg:col-span-2">
-          <YearsManager years={years} />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={tatt("title")} className="lg:col-span-2">
-          <AttendanceSettings
-            values={{
-              walkIn: settings.attendanceWalkIn ?? "FLAG",
-              pickSession: settings.attendancePickSession === "true",
-              graceHours: settings.autoCompleteGraceHours ?? "6",
-            }}
-          />
-        </CollapsibleCard>
-
-        <CollapsibleCard title={tterm("title")} className="lg:col-span-2">
+          ),
+        },
+        { key: "buildings", label: t("buildings"), node: <BuildingsManager buildings={buildings} /> },
+        {
+          key: "site",
+          label: t("siteSettings"),
+          node: (
+            <SiteSettings
+              values={{
+                publicHome: settings.publicHome ?? "ERP",
+                siteHeroTitleAr: settings.siteHeroTitleAr ?? "",
+                siteHeroTitleEn: settings.siteHeroTitleEn ?? "",
+                siteHeroTextAr: settings.siteHeroTextAr ?? "",
+                siteHeroTextEn: settings.siteHeroTextEn ?? "",
+                siteAboutAr: settings.siteAboutAr ?? "",
+                siteAboutEn: settings.siteAboutEn ?? "",
+                siteYears: settings.siteYears ?? "",
+                siteStudents: settings.siteStudents ?? "",
+                siteSuccessRate: settings.siteSuccessRate ?? "",
+                siteBranches: settings.siteBranches ?? "",
+                siteWhatsApp: settings.siteWhatsApp ?? "",
+              }}
+            />
+          ),
+        },
+      ],
+    },
+    {
+      key: "academic",
+      label: t("tabAcademic"),
+      sections: [
+        { key: "years", label: tyear("title"), node: <YearsManager years={years} /> },
+        {
+          key: "terms",
+          label: tterm("title"),
+          node: (
             <TermsManager
               terms={termRowsView}
               defaultPaymentMode={settings.defaultTeacherPaymentMode ?? "MONTH"}
             />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("users")} className="lg:col-span-2">
+          ),
+        },
+        { key: "subjects", label: t("subjects"), node: <SubjectsManager subjects={subjectRows} /> },
+        { key: "priceMatrix", label: t("priceMatrix"), node: <PriceMatrixEditor rows={matrixRows} /> },
+        {
+          key: "attendance",
+          label: tatt("title"),
+          node: (
+            <AttendanceSettings
+              values={{
+                walkIn: settings.attendanceWalkIn ?? "FLAG",
+                pickSession: settings.attendancePickSession === "true",
+                graceHours: settings.autoCompleteGraceHours ?? "6",
+              }}
+            />
+          ),
+        },
+      ],
+    },
+    {
+      key: "finance",
+      label: t("tabFinance"),
+      sections: [
+        {
+          key: "teacherPayments",
+          label: t("teacherPayments"),
+          node: (
+            <TeacherPaymentsSettings
+              defaultMode={settings.teacherEarningsMode ?? DEFAULT_EARNINGS_MODE}
+              overriddenCount={teacherRows.filter((x) => isEarningsMode(x.earningsMode)).length}
+              totalCount={teacherRows.length}
+            />
+          ),
+        },
+        {
+          key: "accounting",
+          label: t("accountingSettings"),
+          node: (
+            <AccountingSettings
+              enabled={settings.accountingEnabled === "1"}
+              cheque={(() => {
+                let tpl: Record<string, { x?: number; y?: number; w?: number } | number> = {};
+                try {
+                  tpl = JSON.parse(settings.chequeTemplate ?? "{}");
+                } catch {
+                  /* stale JSON → defaults */
+                }
+                const pos = (k: string) => (tpl[k] ?? {}) as { x?: number; y?: number; w?: number };
+                return {
+                  confReceived: settings.chequeConfReceived ?? "70",
+                  confPending: settings.chequeConfPending ?? "80",
+                  confDeposited: settings.chequeConfDeposited ?? "95",
+                  alertDays: settings.chequeAlertDays ?? "7",
+                  template: {
+                    leafW: (tpl.leafW as number) ?? 176,
+                    leafH: (tpl.leafH as number) ?? 89,
+                    dateX: pos("date").x ?? 130,
+                    dateY: pos("date").y ?? 10,
+                    payeeX: pos("payee").x ?? 25,
+                    payeeY: pos("payee").y ?? 28,
+                    wordsX: pos("amountWords").x ?? 30,
+                    wordsY: pos("amountWords").y ?? 42,
+                    wordsW: pos("amountWords").w ?? 120,
+                    digitsX: pos("amountDigits").x ?? 135,
+                    digitsY: pos("amountDigits").y ?? 42,
+                  },
+                };
+              })()}
+            />
+          ),
+        },
+        {
+          key: "wps",
+          label: t("wpsSettings"),
+          node: (
+            <WpsSettings
+              values={{
+                wpsEmployerEID: settings.wpsEmployerEID ?? "",
+                wpsPayerEID: settings.wpsPayerEID ?? "",
+                wpsPayerQID: settings.wpsPayerQID ?? "",
+                wpsPayerBank: settings.wpsPayerBank ?? "",
+                wpsPayerIBAN: settings.wpsPayerIBAN ?? "",
+                wpsSifVersion: settings.wpsSifVersion ?? "1",
+                wpsBasicFloor: settings.wpsBasicFloor ?? "",
+              }}
+            />
+          ),
+        },
+        { key: "expenseCategories", label: t("expenseCategories"), node: <CategoriesManager categories={catRows} /> },
+      ],
+    },
+    {
+      key: "transport",
+      label: t("tabTransport"),
+      sections: [
+        {
+          key: "transport",
+          label: t("transportSettings"),
+          node: (
+            <TransportSettings
+              values={{
+                enabled: settings.transportEnabled === "1",
+                centerLat: settings.centerLat ?? "",
+                centerLng: settings.centerLng ?? "",
+                avgSpeedKmh: settings.transportAvgSpeedKmh ?? "40",
+                rushSpeedKmh: settings.transportRushSpeedKmh ?? "25",
+                rushWindows: settings.transportRushWindows ?? "07:00-09:00,16:00-19:00",
+                detourFactor: settings.transportDetourFactor ?? "1.35",
+                minTripMin: settings.transportMinTripMin ?? "5",
+                bufferMin: settings.transportBufferMin ?? "10",
+                maxDeadheadKm: settings.transportMaxDeadheadKm ?? "25",
+                pingDays: settings.transportPingDays ?? "14",
+                trackingVisibility: settings.transportTrackingVisibility ?? "ADMIN_ONLY",
+                passengers: settings.transportPassengers ?? "BOTH",
+                includeTeacher: (settings.transportIncludeTeacher ?? "1") !== "0",
+                includeStudentToCenter: (settings.transportIncludeStudentToCenter ?? "1") !== "0",
+                includeStudentToHome: (settings.transportIncludeStudentToHome ?? "1") !== "0",
+                preferredArrivalBufferMin: settings.transportPreferredArrivalBufferMin ?? "15",
+                minArrivalBufferMin: settings.transportMinArrivalBufferMin ?? "5",
+                maxEarlyArrivalMin: settings.transportMaxEarlyArrivalMin ?? "30",
+                dismissalBufferMin: settings.transportDismissalBufferMin ?? "10",
+                boardingTimeMin: settings.transportBoardingTimeMin ?? "2",
+                dropoffTimeMin: settings.transportDropoffTimeMin ?? "2",
+                maxStudentWaitMin: settings.transportMaxStudentWaitMin ?? "20",
+                maxJourneyMin: settings.transportMaxJourneyMin ?? "60",
+                minDriverTurnaroundMin: settings.transportMinDriverTurnaroundMin ?? "10",
+                minVehicleTurnaroundMin: settings.transportMinVehicleTurnaroundMin ?? "10",
+                allowInvalidOverride: settings.transportAllowInvalidOverride === "1",
+                maxAdvancePickupMin: settings.transportMaxAdvancePickupMin ?? "60",
+                driverModel: settings.transportDriverModel ?? "DROP_AND_RETURN",
+              }}
+            />
+          ),
+        },
+      ],
+    },
+    {
+      key: "ai",
+      label: t("tabAi"),
+      sections: [
+        {
+          key: "ai",
+          label: t("aiSettings"),
+          node: (
+            <AiSettings
+              values={{
+                enabled: settings.aiEnabled === "1",
+                provider: settings.aiProvider ?? "deepseek",
+                baseUrl: settings.aiBaseUrl ?? "",
+                model: settings.aiModel ?? "",
+                apiKeyMasked: maskSecret(settings.aiApiKey),
+                autoTranslateNames: settings.aiAutoTranslateNames === "1",
+                floatingChat: settings.aiFloatingChat !== "0",
+                assistantRoles: parseAssistantRoles(settings.aiAssistantRoles, [
+                  "ADMIN",
+                  "ACCOUNTANT",
+                  "RECEPTIONIST",
+                ]),
+              }}
+            />
+          ),
+        },
+      ],
+    },
+    {
+      key: "access",
+      label: t("tabAccess"),
+      sections: [
+        {
+          key: "users",
+          label: t("users"),
+          node: (
             <UsersManager users={users} teachers={teacherOpts} guardians={guardianOpts} roleOptions={allRoleOptions} />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("rolePermissions")} className="lg:col-span-2">
+          ),
+        },
+        {
+          key: "roles",
+          label: t("rolePermissions"),
+          node: (
             <RolePermissionsSettings
               modules={staffModules}
               builtinRoles={builtinMatrixRoles}
@@ -447,34 +489,41 @@ export default async function SettingsPage({
               initialBuiltin={rolePerms}
               initialCustom={customMatrix}
             />
-          </CollapsibleCard>
+          ),
+        },
+        { key: "demoUsers", label: t("demoUsers"), node: <DemoUsersSettings users={demoUsers} password="demo1234" /> },
+        { key: "integrations", label: t("integrations"), node: <IntegrationsManager integrations={integrations} /> },
+      ],
+    },
+    {
+      key: "system",
+      label: t("tabSystem"),
+      sections: [
+        {
+          key: "backups",
+          label: t("backups"),
+          node: (
+            <BackupSettings
+              backups={backups}
+              driveConfigured={!!driveSa}
+              driveEmail={driveSa?.client_email ?? null}
+              driveFolder={settings.backupDriveFolder ?? ""}
+            />
+          ),
+        },
+        { key: "notifications", label: t("notificationLog"), node: <NotificationLogTable rows={logRows} /> },
+        { key: "audit", label: t("auditLog"), node: <AuditLogTable rows={audits} /> },
+        // Settings is ADMIN-only, so finance tables are always available.
+        { key: "data", label: tdata("title"), node: <DataManager canFinance /> },
+        { key: "danger", label: tdata("dangerZone"), node: <DangerZone /> },
+      ],
+    },
+  ];
 
-        <CollapsibleCard title={t("demoUsers")} className="lg:col-span-2">
-            <DemoUsersSettings users={demoUsers} password="demo1234" />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("integrations")} className="lg:col-span-2">
-            <IntegrationsManager integrations={integrations} />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("notificationLog")} className="lg:col-span-2">
-            <NotificationLogTable rows={logRows} />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={t("auditLog")} className="lg:col-span-2">
-            <AuditLogTable rows={audits} />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={tdata("title")} className="lg:col-span-2">
-            {/* Settings is ADMIN-only, so finance tables are always available. */}
-            <DataManager canFinance />
-          </CollapsibleCard>
-
-        <CollapsibleCard title={tdata("dangerZone")} tone="danger" className="lg:col-span-2">
-            <DangerZone />
-          </CollapsibleCard>
-      </div>
-      </CollapsibleGroup>
+  return (
+    <div>
+      <PageHeader title={t("title")} />
+      <SettingsShell groups={groups} initialTab={initialTab} initialSub={initialSub} />
     </div>
   );
 }

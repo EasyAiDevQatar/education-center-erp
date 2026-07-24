@@ -619,7 +619,14 @@
     "aiSettings": "AI (assistant & translation)",
     "rolePermissions": "Roles & permissions",
     "demoUsers": "Demo users",
-    "buildings": "Buildings & floors"
+    "buildings": "Buildings & floors",
+    "tabCenter": "Center",
+    "tabAcademic": "Academic",
+    "tabFinance": "Finance",
+    "tabTransport": "Transport",
+    "tabAi": "AI",
+    "tabAccess": "Users & Access",
+    "tabSystem": "System & Data"
   },
   "integrations": {
     "baseUrl": "API base URL",
