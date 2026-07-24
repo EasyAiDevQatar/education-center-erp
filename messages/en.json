@@ -168,7 +168,9 @@
     "transportPlanner": "Transport planner",
     "transportTrips": "Trips",
     "transportMap": "Live map",
-    "driverPortal": "My trips"
+    "driverPortal": "My trips",
+    "transportCosts": "Fuel & maintenance",
+    "transportReports": "Fleet reports"
   },
   "auth": {
     "login": "Log in",
@@ -754,6 +756,12 @@
     },
     "roles": {
       "DRIVER": "Driver"
+    },
+    "maintenanceKind": {
+      "SERVICE": "Service",
+      "REPAIR": "Repair",
+      "TYRES": "Tyres",
+      "OTHER": "Other"
     }
   },
   "paymentModes": {
@@ -1722,5 +1730,49 @@
     "centre": "Centre",
     "noFix": "No location yet",
     "retention": "Location history is kept {days} days."
+  },
+  "transportCosts": {
+    "title": "Fuel & maintenance",
+    "subtitle": "What the fleet costs to run. Every entry creates an expense.",
+    "fuel": "Fuel",
+    "maintenance": "Maintenance",
+    "addFuel": "Log a fill-up",
+    "addMaintenance": "Log maintenance",
+    "vehicle": "Vehicle",
+    "supplier": "Supplier",
+    "litres": "Litres",
+    "cost": "Cost",
+    "odometerKm": "Odometer (km)",
+    "odometerHint": "Record the odometer at every fill-up — fuel economy can only be worked out between two readings.",
+    "kind": "Type",
+    "description": "Description",
+    "nextDue": "Next due",
+    "nextDueKm": "Next due (km)",
+    "nextDueOn": "Next due (date)",
+    "expense": "Expense",
+    "postsToExpenses": "Each entry creates an expense in the transport category, so fleet running costs appear in the P&L with everything else.",
+    "noVehicles": "Add a vehicle first — there is nothing to log costs against yet."
+  },
+  "transportReports": {
+    "title": "Fleet reports",
+    "subtitle": "Running cost, distance and how hard each driver and vehicle worked.",
+    "trips": "Trips",
+    "km": "Distance (km)",
+    "hours": "Hours",
+    "litres": "Litres",
+    "kmPerLitre": "km / litre",
+    "fuelCost": "Fuel",
+    "maintCost": "Maintenance",
+    "totalCost": "Total cost",
+    "costPerKm": "Cost / km",
+    "costPerTrip": "Cost / trip",
+    "onTime": "On time",
+    "utilisation": "Utilisation",
+    "vehicle": "Vehicle",
+    "odometerKm": "Odometer",
+    "byDriver": "By driver",
+    "byVehicle": "By vehicle",
+    "estimateNote": "Distances come from the planner's estimates, so every figure derived from them is approximate.",
+    "onTimeBasis": "Punctuality is measured over {count, plural, =1 {# stop} other {# stops}} where the driver recorded an arrival."
   }
 }

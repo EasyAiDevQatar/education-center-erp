@@ -434,6 +434,8 @@ model Expense {
 
   @@index([date])
   @@index([categoryId])
+  fuelLog        FuelLog?
+  maintenanceLog MaintenanceLog?
 }
 
 /// Vendor register: who the centre buys from and pays. Linked from expenses
@@ -456,6 +458,8 @@ model Supplier {
   updatedAt DateTime @updatedAt
 
   @@index([name])
+  fuelLogs        FuelLog[]
+  maintenanceLogs MaintenanceLog[]
 }
 
 /// A teacher payroll run for a period.
@@ -1129,6 +1133,8 @@ model Vehicle {
   /// Drivers whose default vehicle this is (back-relation, not ownership).
   drivers Driver[]
   trips   Trip[]
+  fuel        FuelLog[]
+  maintenance MaintenanceLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1311,4 +1317,62 @@ model DriverPing {
 
   @@index([driverId, at])
   @@index([tripId, at])
+}
+
+/// A fill-up. Creates an Expense so fleet running costs land in the same P&L as
+/// everything else — with the accounting module on, the category's account
+/// (5100 transport & fuel) posts it to the journal automatically. There is
+/// deliberately no separate cost ledger to reconcile.
+model FuelLog {
+  id        String  @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  date   DateTime
+  litres Decimal
+  cost   Decimal
+  /// Reading at the pump. Fuel economy is only computable between two fills
+  /// that both recorded one, so it is optional but worth chasing.
+  odometerKm Int?
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  /// The expense this created. SetNull rather than Cascade: deleting an expense
+  /// must not silently erase the fuel history it came from.
+  expenseId String?  @unique
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId, date])
+}
+
+/// Service, repair or tyres. Same expense linkage as FuelLog.
+model MaintenanceLog {
+  id        String  @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  date        DateTime
+  kind        String // SERVICE | REPAIR | TYRES | OTHER
+  description String
+  cost        Decimal
+  odometerKm  Int?
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  expenseId  String?   @unique
+  expense    Expense?  @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+
+  /// When the next service is due — by distance, by date, or both.
+  nextDueKm Int?
+  nextDueOn DateTime?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  @@index([vehicleId, date])
 }

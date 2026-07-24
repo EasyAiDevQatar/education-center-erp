@@ -145,3 +145,7 @@ export const VEHICLE_DOC_TYPES = [
   "OTHER",
 ] as const;
 export type VehicleDocType = (typeof VEHICLE_DOC_TYPES)[number];
+
+/** What a maintenance visit was for. */
+export const MAINTENANCE_KINDS = ["SERVICE", "REPAIR", "TYRES", "OTHER"] as const;
+export type MaintenanceKind = (typeof MAINTENANCE_KINDS)[number];

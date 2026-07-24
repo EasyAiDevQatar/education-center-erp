@@ -107,6 +107,8 @@ export const NAV_ITEMS: NavItem[] = [
       { href: "/transport/map", key: "transportMap" },
       { href: "/transport/vehicles", key: "transportVehicles" },
       { href: "/transport/drivers", key: "transportDrivers" },
+      { href: "/transport/costs", key: "transportCosts" },
+      { href: "/transport/reports", key: "transportReports" },
     ],
   },
   // ADMIN only: the HR register carries QID/passport/IBAN — a categorically

@@ -80,12 +80,17 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     await tx.user.updateMany({ data: { teacherId: null, guardianId: null } });
     summary.students = (await tx.student.deleteMany()).count;
     summary.guardians = (await tx.guardian.deleteMany()).count;
-    // Transport: the driving role points at both an employee and a vehicle, so
-    // it goes before either. Documents cascade from the vehicle, but the
-    // explicit delete keeps the summary honest.
+    // Transport, innermost first. Fleet cost logs point at vehicles, suppliers
+    // and expenses, so they lead; their linked expenses were already removed by
+    // the expense sweep above — deleting a log never deletes money on its own.
+    summary.fuelLogs = (await tx.fuelLog.deleteMany()).count;
+    summary.maintenanceLogs = (await tx.maintenanceLog.deleteMany()).count;
     // Pings cascade from the driver, but this is staff location data — delete
     // it explicitly and report the count rather than letting it go silently.
     summary.driverPings = (await tx.driverPing.deleteMany()).count;
+    // The driving role points at both an employee and a vehicle, so it goes
+    // before either. Documents cascade from the vehicle; explicit keeps the
+    // summary honest.
     summary.drivers = (await tx.driver.deleteMany()).count;
     summary.vehicleDocuments = (await tx.vehicleDocument.deleteMany()).count;
     summary.vehicles = (await tx.vehicle.deleteMany()).count;
@@ -255,6 +260,33 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const [nameAr, nameEn] = EXPENSE_CATEGORIES[i];
     const existing = await db.expenseCategory.findFirst({ where: { nameAr } });
     if (!existing) await db.expenseCategory.create({ data: { nameAr, nameEn, sortOrder: i + 1 } });
+  }
+
+  // Point each category at the expense account it belongs to. Without this
+  // every posted expense falls back to 5900 miscellaneous and the P&L says
+  // nothing useful — fuel, rent and salaries all land in one bucket. Only
+  // unmapped categories are touched, so a deliberate mapping is never
+  // overwritten, and it is a no-op until the chart of accounts exists.
+  const CATEGORY_ACCOUNTS: [string, string][] = [
+    ["سيارات وبترول ومواصلات", "5100"],
+    ["كهرباء ومياه", "5310"],
+    ["تليفون وانترنت", "5310"],
+    ["رواتب", "5000"],
+    ["نسبة المعلمين والإدارة", "5000"],
+    ["ايجار سكن ومركز", "5300"],
+    ["دعاية وإعلان", "5500"],
+    ["صيانة المركز والسكن", "5400"],
+    ["أدوات مكتبية", "5600"],
+    ["نثريات", "5900"],
+    ["م إدارية وتراخيص", "5900"],
+  ];
+  for (const [nameAr, code] of CATEGORY_ACCOUNTS) {
+    const account = await db.account.findFirst({ where: { code }, select: { id: true } });
+    if (!account) continue;
+    await db.expenseCategory.updateMany({
+      where: { nameAr, accountId: null },
+      data: { accountId: account.id },
+    });
   }
 
   // Subjects (reference data, idempotent) — the list a booking can pick from.
@@ -884,6 +916,85 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     }
   }
   summary.drivers = driverCount;
+
+  // Fuel + maintenance: a short history per vehicle so the cost report has
+  // something to divide by. Odometer readings climb monotonically, which is
+  // what makes the full-to-full economy figure computable at all.
+  let fuelLogs = 0;
+  let maintenanceLogs = 0;
+  if (vehicleIds.length) {
+    const fleetCat =
+      (await db.expenseCategory.findFirst({ where: { nameAr: { contains: "مواصلات" } } })) ??
+      (await db.expenseCategory.findFirst());
+    for (const vehicleId of vehicleIds) {
+      const v = await db.vehicle.findUnique({ where: { id: vehicleId } });
+      if (!v) continue;
+      let odo = Math.max(0, v.odometerKm - 2400);
+      for (let i = 0; i < 4; i++) {
+        odo += 550 + Math.floor(rand() * 250);
+        const d = new Date(today);
+        d.setUTCDate(d.getUTCDate() - (4 - i) * 7);
+        const litres = 40 + Math.floor(rand() * 25);
+        const cost = Math.round(litres * 1.9 * 100) / 100;
+        const expense = fleetCat
+          ? await db.expense.create({
+              data: {
+                date: d,
+                description: `وقود — ${v.plate}`,
+                categoryId: fleetCat.id,
+                amount: cost,
+                status: "APPROVED",
+              },
+            })
+          : null;
+        await db.fuelLog.create({
+          data: {
+            vehicleId,
+            date: d,
+            litres,
+            cost,
+            odometerKm: odo,
+            expenseId: expense?.id ?? null,
+          },
+        });
+        fuelLogs++;
+      }
+      // One service visit per vehicle, with the next one already scheduled.
+      const md = new Date(today);
+      md.setUTCDate(md.getUTCDate() - 20);
+      const mcost = pick([250, 400, 650, 900]);
+      const mexp = fleetCat
+        ? await db.expense.create({
+            data: {
+              date: md,
+              description: `صيانة دورية — ${v.plate}`,
+              categoryId: fleetCat.id,
+              amount: mcost,
+              status: "APPROVED",
+            },
+          })
+        : null;
+      const nextOn = new Date(md);
+      nextOn.setUTCMonth(nextOn.getUTCMonth() + 6);
+      await db.maintenanceLog.create({
+        data: {
+          vehicleId,
+          date: md,
+          kind: pick(["SERVICE", "SERVICE", "REPAIR", "TYRES"]),
+          description: "صيانة دورية",
+          cost: mcost,
+          odometerKm: odo,
+          nextDueKm: odo + 10_000,
+          nextDueOn: nextOn,
+          expenseId: mexp?.id ?? null,
+        },
+      });
+      maintenanceLogs++;
+      await db.vehicle.update({ where: { id: vehicleId }, data: { odometerKm: odo } });
+    }
+  }
+  summary.fuelLogs = fuelLogs;
+  summary.maintenanceLogs = maintenanceLogs;
 
   // Leave: one request per slot, never overlapping — each employee gets its
   // own month window, mixing approved history with a pending queue.
