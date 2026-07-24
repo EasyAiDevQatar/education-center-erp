@@ -1453,3 +1453,34 @@ model CustomRole {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+/// The centre's physical buildings, their floors, and each floor's plan image.
+/// Facilities reference data — no money or sessions hang off it yet, so both
+/// models are standalone and safe to wipe/seed independently.
+model Building {
+  id        String   @id @default(cuid())
+  name      String
+  nameEn    String?
+  address   String?
+  notes     String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  floors    Floor[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Floor {
+  id         String   @id @default(cuid())
+  buildingId String
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  name       String
+  level      Int      @default(0)
+  /// Floor-plan image, stored inline as a data URL (like the centre logo).
+  mapUrl     String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([buildingId])
+}

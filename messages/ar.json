@@ -601,7 +601,8 @@
     "subjects": "المواد",
     "aiSettings": "الذكاء الاصطناعي (المساعد والترجمة)",
     "rolePermissions": "الأدوار والصلاحيات",
-    "demoUsers": "مستخدمون تجريبيون"
+    "demoUsers": "مستخدمون تجريبيون",
+    "buildings": "المباني والطوابق"
   },
   "integrations": {
     "baseUrl": "رابط الـ API",
@@ -2106,5 +2107,21 @@
     "email": "البريد",
     "role": "الدور",
     "none": "لا توجد حسابات تجريبية بعد — شغّل البذر لإنشائها."
+  },
+  "buildings": {
+    "addBuilding": "إضافة مبنى",
+    "editBuilding": "تعديل المبنى",
+    "addFloor": "إضافة طابق",
+    "editFloor": "تعديل الطابق",
+    "address": "العنوان",
+    "level": "المستوى",
+    "floorNameHint": "مثال: الطابق الأرضي",
+    "floorMap": "مخطط الطابق",
+    "uploadMap": "رفع المخطط",
+    "floorMapHint": "صورة مخطط الطابق (JPG/PNG). تُحفظ مع السجل.",
+    "hasMap": "مخطط",
+    "noFloors": "لا توجد طوابق بعد.",
+    "floorCount": "{n} طوابق",
+    "none": "لا توجد مبانٍ بعد."
   }
 }

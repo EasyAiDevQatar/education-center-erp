@@ -33,6 +33,7 @@ import { NAV_ITEMS } from "@/components/app-shell/nav-items";
 import { EDITABLE_ROLES, loadRolePermissions, loadCustomRoles, parseRoleKeys } from "@/lib/permissions";
 import { RolePermissionsSettings } from "./role-permissions-settings";
 import { DemoUsersSettings } from "./demo-users-settings";
+import { BuildingsManager, type BuildingRow } from "./buildings-manager";
 
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -74,6 +75,26 @@ export default async function SettingsPage({
     ...baseRoleOpts.map((k) => ({ key: k, label: trRoles(k) })),
     ...customRolesData.map((c) => ({ key: c.key, label: c.name })),
   ];
+  const buildingRows = await db.building.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: { floors: { orderBy: { level: "asc" } } },
+  });
+  const buildings: BuildingRow[] = buildingRows.map((b) => ({
+    id: b.id,
+    name: b.name,
+    nameEn: b.nameEn,
+    address: b.address,
+    notes: b.notes,
+    active: b.active,
+    floors: b.floors.map((f) => ({
+      id: f.id,
+      buildingId: f.buildingId,
+      name: f.name,
+      level: f.level,
+      mapUrl: f.mapUrl,
+      notes: f.notes,
+    })),
+  }));
   const demoUsers = await db.user.findMany({
     where: { email: { endsWith: "@demo.qa" } },
     select: { name: true, email: true, role: true },
@@ -225,6 +246,10 @@ export default async function SettingsPage({
                 centerLogo: settings.centerLogo ?? "",
               }}
             />
+          </CollapsibleCard>
+
+        <CollapsibleCard title={t("buildings")} className="lg:col-span-2">
+            <BuildingsManager buildings={buildings} />
           </CollapsibleCard>
 
         <CollapsibleCard title={t("teacherPayments")} className="lg:col-span-2">

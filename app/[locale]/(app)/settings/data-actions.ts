@@ -113,6 +113,8 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.subjects = (await tx.subject.deleteMany()).count;
     summary.terms = (await tx.term.deleteMany()).count;
     summary.gradeLevels = (await tx.gradeLevel.deleteMany()).count;
+    summary.floors = (await tx.floor.deleteMany()).count;
+    summary.buildings = (await tx.building.deleteMany()).count;
   });
 
   await writeAudit("System", "wipe-all", "DELETE", { after: summary });
@@ -403,6 +405,45 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     });
     summary.studentGroups = 1;
   }
+
+  // --- buildings & floors (facilities reference data) ---
+  const buildingSpec = [
+    {
+      name: "المبنى الرئيسي", nameEn: "Main Building", address: "الدوحة",
+      floors: [
+        { name: "الطابق الأرضي", level: 0 },
+        { name: "الطابق الأول", level: 1 },
+        { name: "الطابق الثاني", level: 2 },
+      ],
+    },
+    {
+      name: "مبنى البنات", nameEn: "Girls Building", address: "الدوحة",
+      floors: [
+        { name: "الطابق الأرضي", level: 0 },
+        { name: "الطابق الأول", level: 1 },
+      ],
+    },
+  ];
+  let buildings = 0;
+  let floors = 0;
+  for (let i = 0; i < buildingSpec.length; i++) {
+    const b = buildingSpec[i];
+    const created = await db.building.create({
+      data: {
+        name: b.name,
+        nameEn: b.nameEn,
+        address: b.address,
+        sortOrder: i,
+        active: true,
+        floors: { create: b.floors.map((f) => ({ name: f.name, level: f.level })) },
+      },
+    });
+    buildings++;
+    floors += b.floors.length;
+    void created;
+  }
+  summary.buildings = buildings;
+  summary.floors = floors;
 
   // --- packages ---
   let packages = 0;

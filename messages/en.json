@@ -601,7 +601,8 @@
     "subjects": "Subjects",
     "aiSettings": "AI (assistant & translation)",
     "rolePermissions": "Roles & permissions",
-    "demoUsers": "Demo users"
+    "demoUsers": "Demo users",
+    "buildings": "Buildings & floors"
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -2106,5 +2107,21 @@
     "email": "Email",
     "role": "Role",
     "none": "No demo accounts yet — run the seeder to create them."
+  },
+  "buildings": {
+    "addBuilding": "Add building",
+    "editBuilding": "Edit building",
+    "addFloor": "Add floor",
+    "editFloor": "Edit floor",
+    "address": "Address",
+    "level": "Level",
+    "floorNameHint": "e.g. Ground floor",
+    "floorMap": "Floor map",
+    "uploadMap": "Upload map",
+    "floorMapHint": "A floor-plan image (JPG/PNG). Stored with the record.",
+    "hasMap": "Map",
+    "noFloors": "No floors yet.",
+    "floorCount": "{n} floors",
+    "none": "No buildings yet."
   }
 }
