@@ -262,12 +262,33 @@ export function TransportPlannerClient({
                 </Badge>
                 <span className="font-medium">{trip.passengerName ?? "—"}</span>
                 <span className="text-muted-foreground">
-                  {trip.fromLabel} → {trip.toLabel}
+                  {t("stopsCount", { n: trip.stops.length })}
                 </span>
                 <span className="ms-auto tabular-nums" dir="ltr">
                   {minToHHMM(trip.plannedStartMin)}–{minToHHMM(trip.plannedEndMin)}
                 </span>
               </div>
+
+              {/* The chained route: numbered stops with their times, so the
+                  coordinator reads the whole journey (home → lesson → centre →
+                  … → home) rather than a single leg. */}
+              {trip.stops.length > 0 && (
+                <ol className="mt-2 space-y-1 border-s-2 border-primary/30 ps-3 text-xs">
+                  {trip.stops.map((st) => (
+                    <li key={st.seq} className="flex items-baseline gap-2">
+                      <span
+                        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold tabular-nums text-primary"
+                      >
+                        {st.seq}
+                      </span>
+                      <span className="tabular-nums text-muted-foreground" dir="ltr">
+                        {minToHHMM(st.plannedMin)}
+                      </span>
+                      <span className="font-medium">{st.label}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
 
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1">

@@ -1765,7 +1765,8 @@
     "noCentre": "Set the centre location on the map first (Settings → Transport module) — every trip to or from the centre depends on it.",
     "aiBriefing": "AI briefing",
     "aiBriefingBusy": "Briefing…",
-    "aiBriefingFailed": "Could not produce a briefing — is the AI module configured?"
+    "aiBriefingFailed": "Could not produce a briefing — is the AI module configured?",
+    "stopsCount": "{n} stops"
   },
   "trips": {
     "title": "Trips",

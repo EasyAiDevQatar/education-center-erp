@@ -92,6 +92,9 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
 
   // --- passenger days -----------------------------------------------------
   const days = new Map<string, PassengerDay>();
+  // Who genuinely needs a driver (see the chain filter below).
+  const teacherHasHome = new Set<string>();
+  const studentHasCenter = new Set<string>();
 
   for (const s of sessions) {
     const place = placeOf(s);
@@ -118,6 +121,7 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
         });
       }
       days.get(key)!.points.push(point);
+      if (s.location === "HOME") teacherHasHome.add(key);
     }
 
     // Students: explicit opt-in, because most families drive their own child.
@@ -134,24 +138,24 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
         });
       }
       days.get(key)!.points.push(point);
+      if (s.location === "CENTER") studentHasCenter.add(key);
     }
   }
 
-  const built = buildDayLegs([...days.values()], {
+  // Who actually needs a driver: a teacher who teaches at a home that day (they
+  // travel there and back, through the centre for any centre lessons in
+  // between), or a student who must reach the centre. Everyone else gets
+  // themselves about — so the board mirrors the day's home visits rather than
+  // filling with self-commutes. The FULL day is kept for those who qualify, so
+  // every trip chains inward/outward across sessions, the centre and home.
+  const chainDays = [...days.values()].filter((d) =>
+    d.passengerKind === "TEACHER"
+      ? teacherHasHome.has(`TEACHER:${d.passengerId}`)
+      : studentHasCenter.has(`STUDENT:${d.passengerId}`),
+  );
+  const { legs, skipped } = buildDayLegs(chainDays, {
     arriveEarlyMin: config.bufferMin,
   });
-  // Only home-visit legs are the centre's job: a leg counts when it delivers to
-  // or leaves a HOME lesson. Pure home↔centre commutes are dropped, so the board
-  // mirrors the home sessions on the schedule.
-  const homeSessionIds = new Set(
-    sessions.filter((x) => x.location === "HOME").map((x) => x.id),
-  );
-  const legs = built.legs.filter(
-    (l) =>
-      (l.toSessionId !== null && homeSessionIds.has(l.toSessionId)) ||
-      (l.fromSessionId !== null && homeSessionIds.has(l.fromSessionId)),
-  );
-  const skipped = built.skipped;
 
   // --- drivers ------------------------------------------------------------
   const today = new Date();
@@ -235,89 +239,127 @@ export async function generateDayTrips(
   const plan = await buildDayPlan(locale, dayIso);
   const { start } = dayBounds(dayIso);
 
-  const legById = new Map(plan.legs.map((l) => [l.id, l]));
-  const existing = await db.trip.findMany({
-    where: { date: start, legKey: { not: null } },
-    select: { id: true, legKey: true, status: true },
+  // Rebuild the generator's own proposals as ONE chained trip per passenger:
+  // their whole day — home → lesson → lesson → centre → … → home — as an
+  // ordered run of numbered stops. Trips a human has touched are left alone.
+  const priorTrips = await db.trip.findMany({
+    where: { date: start },
+    select: { id: true, status: true, legKey: true },
   });
-  const byKey = new Map(existing.map((t) => [t.legKey!, t]));
+  const lockedKeys = new Set(
+    priorTrips
+      .filter((t) => !generatorMayReplace(t.status as TripStatus))
+      .map((t) => t.legKey),
+  );
+  const removable = priorTrips.filter((t) => generatorMayReplace(t.status as TripStatus));
+  if (removable.length) {
+    const ids = removable.map((t) => t.id);
+    await db.tripStop.deleteMany({ where: { tripId: { in: ids } } });
+    await db.trip.deleteMany({ where: { id: { in: ids } } });
+  }
+
+  const asgByLeg = new Map(plan.assignments.map((a) => [a.legId, a]));
+  const byPassenger = new Map<string, { leg: Leg; a: Assignment | null }[]>();
+  for (const leg of plan.legs) {
+    const key = `${leg.passengerKind}:${leg.passengerId}`;
+    if (!byPassenger.has(key)) byPassenger.set(key, []);
+    byPassenger.get(key)!.push({ leg, a: asgByLeg.get(leg.id) ?? null });
+  }
+
+  const same = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
+    Math.abs(a.lat - b.lat) < 0.0005 && Math.abs(a.lng - b.lng) < 0.0005;
 
   let created = 0;
-  let refreshed = 0;
+  const refreshed = 0;
   let locked = 0;
 
-  for (const a of plan.assignments) {
-    const leg = legById.get(a.legId);
-    if (!leg) continue;
-
-    const key = legKeyFor({
-      passengerKind: leg.passengerKind,
-      passengerId: leg.passengerId,
-      fromSessionId: leg.fromSessionId,
-      toSessionId: leg.toSessionId,
-    });
-    const prior = byKey.get(key);
-    if (prior && !generatorMayReplace(prior.status as TripStatus)) {
+  for (const [pkey, items] of byPassenger) {
+    const legKey = `day:${pkey}`;
+    if (lockedKeys.has(legKey)) {
       locked++;
       continue;
     }
+    items.sort(
+      (x, y) => x.leg.readyMin - y.leg.readyMin || x.leg.id.localeCompare(y.leg.id),
+    );
+    const assigned = items.filter((x) => x.a);
+    if (assigned.length === 0) continue; // whole chain infeasible → stays in problems
 
-    const driver = plan.drivers.find((d) => d.id === a.driverId) ?? null;
-    const rideKm = distanceKm(leg.from, leg.to);
-    const data = {
-      date: start,
-      status: "PROPOSED",
-      legKey: key,
-      driverId: a.driverId,
-      vehicleId: driver?.vehicleId ?? null,
-      plannedStartMin: a.departMin,
-      plannedEndMin: a.dropoffMin,
-      estimatedKm: Math.round((rideKm + a.deadheadKm) * 100) / 100,
-      estimatedMin: a.dropoffMin - a.departMin,
-      autoAllocated: true,
-      allocationScore: a.score,
-      deadheadKm: a.deadheadKm,
-      slackMin: a.slackMin,
-      createdById: byUserId ?? null,
+    const kind = items[0].leg.passengerKind;
+    const passengerId = items[0].leg.passengerId;
+    const driverId = assigned[0].a!.driverId;
+    const driver = plan.drivers.find((d) => d.id === driverId) ?? null;
+
+    // Every leg contributes a pickup then a drop-off; collapse consecutive stops
+    // at the same place (a lesson is arrive-then-leave, one physical stop).
+    type WP = {
+      pt: { lat: number; lng: number };
+      kind: string;
+      label: string;
+      plannedMin: number;
+      sessionId: string | null;
     };
-
-    const stops = [
-      {
-        seq: 1,
-        kind: "PICKUP",
-        lat: leg.from.lat,
-        lng: leg.from.lng,
-        label: leg.fromLabel,
-        plannedMin: a.pickupMin,
-        passengerTeacherId: leg.passengerKind === "TEACHER" ? leg.passengerId : null,
-        passengerStudentId: leg.passengerKind === "STUDENT" ? leg.passengerId : null,
-        sessionId: leg.fromSessionId,
-      },
-      {
-        seq: 2,
-        kind: "DROPOFF",
-        lat: leg.to.lat,
-        lng: leg.to.lng,
-        label: leg.toLabel,
-        plannedMin: a.dropoffMin,
-        passengerTeacherId: leg.passengerKind === "TEACHER" ? leg.passengerId : null,
-        passengerStudentId: leg.passengerKind === "STUDENT" ? leg.passengerId : null,
-        sessionId: leg.toSessionId,
-      },
-    ];
-
-    if (prior) {
-      // Replace the stops wholesale: the ride may have moved with its lesson.
-      await db.tripStop.deleteMany({ where: { tripId: prior.id } });
-      await db.trip.update({
-        where: { id: prior.id },
-        data: { ...data, stops: { create: stops } },
-      });
-      refreshed++;
-    } else {
-      await db.trip.create({ data: { ...data, stops: { create: stops } } });
-      created++;
+    const wps: WP[] = [];
+    let totalKm = 0;
+    let deadhead = 0;
+    for (const { leg, a } of items) {
+      wps.push({ pt: leg.from, kind: "PICKUP", label: leg.fromLabel, plannedMin: a?.pickupMin ?? leg.readyMin, sessionId: leg.fromSessionId });
+      wps.push({ pt: leg.to, kind: "DROPOFF", label: leg.toLabel, plannedMin: a?.dropoffMin ?? leg.dueMin, sessionId: leg.toSessionId });
+      totalKm += distanceKm(leg.from, leg.to) + (a?.deadheadKm ?? 0);
+      deadhead += a?.deadheadKm ?? 0;
     }
+    wps.sort((x, y) => x.plannedMin - y.plannedMin);
+    const merged: WP[] = [];
+    for (const wp of wps) {
+      const last = merged[merged.length - 1];
+      if (last && same(last.pt, wp.pt)) {
+        last.plannedMin = Math.max(last.plannedMin, wp.plannedMin);
+        if (wp.sessionId && !last.sessionId) last.sessionId = wp.sessionId;
+        continue;
+      }
+      merged.push({ ...wp });
+    }
+    // Number distinct locations L1, L2, … in visit order; a place revisited
+    // (the centre, the teacher's own home) keeps its number.
+    const locNum = new Map<string, number>();
+    const stops = merged.map((wp, idx) => {
+      const ck = `${wp.pt.lat.toFixed(4)},${wp.pt.lng.toFixed(4)}`;
+      if (!locNum.has(ck)) locNum.set(ck, locNum.size + 1);
+      return {
+        seq: idx + 1,
+        kind: wp.kind,
+        lat: wp.pt.lat,
+        lng: wp.pt.lng,
+        label: `L${locNum.get(ck)} · ${wp.label}`,
+        plannedMin: wp.plannedMin,
+        passengerTeacherId: kind === "TEACHER" ? passengerId : null,
+        passengerStudentId: kind === "STUDENT" ? passengerId : null,
+        sessionId: wp.sessionId,
+      };
+    });
+
+    const plannedStartMin = Math.min(assigned[0].a!.departMin, stops[0].plannedMin);
+    const plannedEndMin = stops[stops.length - 1].plannedMin;
+    await db.trip.create({
+      data: {
+        date: start,
+        status: "PROPOSED",
+        legKey,
+        driverId,
+        vehicleId: driver?.vehicleId ?? null,
+        plannedStartMin,
+        plannedEndMin,
+        estimatedKm: Math.round(totalKm * 100) / 100,
+        estimatedMin: plannedEndMin - plannedStartMin,
+        autoAllocated: true,
+        allocationScore: assigned[0].a!.score,
+        deadheadKm: Math.round(deadhead * 100) / 100,
+        slackMin: Math.min(...assigned.map((x) => x.a!.slackMin)),
+        createdById: byUserId ?? null,
+        stops: { create: stops },
+      },
+    });
+    created++;
   }
 
   return {
