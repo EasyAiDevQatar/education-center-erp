@@ -95,3 +95,47 @@ export function proposedTimes(
   const startMin = Math.min(Math.max(raw, axis.minMin), axis.maxMin - duration);
   return { startMin, endMin: startMin + duration };
 }
+
+/**
+ * Where a RESIZE would put a lesson's edges.
+ *
+ * Sibling of `proposedTimes`, which deliberately preserves duration. Here the
+ * opposite invariant holds: one edge is pinned and the other moves, so a drag
+ * on the earlier edge changes when a lesson starts without moving when it ends.
+ *
+ * The 15-minute snap is what keeps the result expressible: hours land on exact
+ * quarters, so the client can never draw a duration the booking schema would
+ * reject.
+ */
+export function proposedResize(
+  original: { startMin: number; endMin: number },
+  edge: "from" | "to",
+  deltaMin: number,
+  axis: { minMin: number; maxMin: number },
+  opts: { stepMin?: number; minDurationMin?: number; maxDurationMin?: number } = {},
+): { startMin: number; endMin: number } {
+  const step = opts.stepMin ?? 15;
+  const min = Math.max(step, opts.minDurationMin ?? 15);
+  const max = opts.maxDurationMin ?? 12 * 60;
+
+  if (edge === "to") {
+    const raw = snapMinutes(original.endMin + deltaMin, step);
+    const endMin = Math.min(
+      Math.max(raw, original.startMin + min),
+      Math.min(axis.maxMin, original.startMin + max),
+    );
+    return { startMin: original.startMin, endMin };
+  }
+
+  const raw = snapMinutes(original.startMin + deltaMin, step);
+  const startMin = Math.min(
+    Math.max(raw, Math.max(axis.minMin, original.endMin - max)),
+    original.endMin - min,
+  );
+  return { startMin, endMin: original.endMin };
+}
+
+/** Minutes → hours, in the exact quarters the booking schema accepts. */
+export function hoursOf(startMin: number, endMin: number): number {
+  return Math.round(((endMin - startMin) / 60) * 100) / 100;
+}

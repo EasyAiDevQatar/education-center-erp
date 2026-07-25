@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
@@ -27,7 +27,7 @@ import {
   useTrack,
   hhmm,
 } from "@/components/transport/timeline";
-import { proposedTimes } from "@/lib/transport/drag-lock";
+import { hoursOf, proposedResize, proposedTimes } from "@/lib/transport/drag-lock";
 import type { MasterBoard, MasterLane, MasterSession, MasterTrip } from "@/lib/transport/master";
 import { ImpactDialog } from "./impact-dialog";
 import { RideAssignDialog } from "./ride-assign-dialog";
@@ -78,6 +78,8 @@ type Proposal = {
   fromEndMin: number;
   startMin: number;
   endMin: number;
+  /** True when the gesture changed how LONG the lesson is, not just when. */
+  resized: boolean;
 };
 
 export function MasterClient({ board }: { board: MasterBoard }) {
@@ -243,6 +245,11 @@ export function MasterClient({ board }: { board: MasterBoard }) {
             sessionId: proposal.sessionId,
             fromStartMin: proposal.fromStartMin,
             toStartMin: proposal.startMin,
+            // Only sent when the length actually changed, so a plain move
+            // stays a one-field write with no money in it.
+            ...(proposal.resized
+              ? { toHours: hoursOf(proposal.startMin, proposal.endMin) }
+              : {}),
           }}
           // The lesson is where the board now says it is, so the proposal has
           // served its purpose. Leaving it up would draw a saved lesson as an
@@ -356,6 +363,30 @@ function LayerToggle({
   );
 }
 
+/**
+ * A grab strip on one temporal edge of a lesson.
+ *
+ * Its own component so the gesture it starts stays out of the row's render
+ * path — and so the two edges are declared as two things rather than a loop
+ * over a direction, which is how a left/right assumption sneaks back in.
+ */
+function ResizeHandle({
+  style,
+  onGrab,
+}: {
+  style: React.CSSProperties;
+  onGrab: (e: React.PointerEvent) => void;
+}) {
+  return (
+    <span
+      aria-hidden
+      onPointerDown={onGrab}
+      style={style}
+      className="absolute inset-y-0 z-10 cursor-ew-resize touch-none opacity-0 transition group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 after:absolute after:inset-y-1 after:start-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:bg-white/80"
+    />
+  );
+}
+
 function LaneRow({
   lane,
   layers,
@@ -391,12 +422,25 @@ function LaneRow({
   // the finger on a tablet in the office, and the native API gives no useful
   // position on touch. Nothing here writes; the gesture ends in a proposal.
   const trackRef = useRef<HTMLDivElement>(null);
+
+  // Measured rather than read from the ref during render: a ref is not a
+  // rendering input, and the handles have to appear when the board is resized.
+  const [trackW, setTrackW] = useState(0);
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setTrackW(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // `latest` is the whole reason this is a ref and not just state: React may
   // batch the last pointermove together with pointerup, so a handler reading
   // `drag` on release sees the position from one move ago. On a quick flick
   // that lands the proposal short of the ghost the user was looking at.
   const dragRef = useRef<
     | {
+        /** Which gesture is running. Decided once, at pointerdown. */
+        kind: "move" | "from" | "to";
         sessionId: string;
         label: string;
         startMin: number;
@@ -415,9 +459,19 @@ function LaneRow({
   const deltaMinutes = (dx: number, width: number) =>
     ((rtl ? -dx : dx) / Math.max(1, width)) * (axis.maxMin - axis.minMin);
 
-  const startDrag = (e: React.PointerEvent, s: MasterSession) => {
-    if (!canDrag || s.lockReason || e.button !== 0) return;
-    const width = trackRef.current?.clientWidth ?? 0;
+  const startDrag = (
+    e: React.PointerEvent,
+    s: MasterSession,
+    kind: "move" | "from" | "to" = "move",
+  ) => {
+    if (!canDrag || s.lockReason || e.button !== 0 || !e.isPrimary) return;
+    // A handle press must never also start a move. Stopping it here makes that
+    // structural rather than a guess about where the pointer landed.
+    if (kind !== "move") e.stopPropagation();
+    // The observed width, not a fresh ref read. Still bailing on zero: an
+    // unmeasured track would turn a few pixels of touch jitter into a
+    // full-day fling.
+    const width = trackW;
     if (!width) return;
     e.preventDefault();
     // Capture so the ghost keeps following a pointer dragged off the block —
@@ -429,6 +483,7 @@ function LaneRow({
       /* pointer already released, or capture unsupported */
     }
     dragRef.current = {
+      kind,
       sessionId: s.id,
       label: s.label,
       startMin: s.startMin,
@@ -443,11 +498,11 @@ function LaneRow({
   const moveDrag = (e: React.PointerEvent) => {
     const d = dragRef.current;
     if (!d) return;
-    const next = proposedTimes(
-      { startMin: d.startMin, endMin: d.endMin },
-      deltaMinutes(e.clientX - d.x0, d.width),
-      axis,
-    );
+    const delta = deltaMinutes(e.clientX - d.x0, d.width);
+    const next =
+      d.kind === "move"
+        ? proposedTimes({ startMin: d.startMin, endMin: d.endMin }, delta, axis)
+        : proposedResize({ startMin: d.startMin, endMin: d.endMin }, d.kind, delta, axis);
     d.latest = next;
     setDrag({ sessionId: d.sessionId, ...next });
   };
@@ -458,8 +513,9 @@ function LaneRow({
     setDrag(null);
     if (!d) return;
     const moved = d.latest;
-    // A click that happened to land on a lesson is not a proposal.
-    if (moved.startMin === d.startMin) return;
+    // Both edges, because a resize leaves the start exactly where it was and a
+    // start-only comparison would throw every one of them away.
+    if (moved.startMin === d.startMin && moved.endMin === d.endMin) return;
     onPropose({
       laneId: lane.id,
       laneName: lane.name,
@@ -469,21 +525,24 @@ function LaneRow({
       fromEndMin: d.endMin,
       startMin: moved.startMin,
       endMin: moved.endMin,
+      resized: moved.endMin - moved.startMin !== d.endMin - d.startMin,
     });
   };
 
   /** Keyboard equivalent: the board must be usable without a pointer. */
-  const nudge = (s: MasterSession, steps: number) => {
+  const nudge = (s: MasterSession, steps: number, edge?: "from" | "to") => {
     if (!canDrag || s.lockReason) return;
     onPropose((prev) => {
       const base =
         prev?.sessionId === s.id
           ? { startMin: prev.startMin, endMin: prev.endMin }
           : { startMin: s.startMin, endMin: s.endMin };
-      const next = proposedTimes(base, steps * 15, axis);
-      // Nudged back to where it started: that is not a proposal, it is a
-      // change of mind.
-      if (next.startMin === s.startMin) return null;
+      const next = edge
+        ? proposedResize(base, edge, steps * 15, axis)
+        : proposedTimes(base, steps * 15, axis);
+      // Back to exactly where it started, at its original length: that is not
+      // a proposal, it is a change of mind.
+      if (next.startMin === s.startMin && next.endMin === s.endMin) return null;
       return {
         laneId: lane.id,
         laneName: lane.name,
@@ -492,12 +551,25 @@ function LaneRow({
         fromStartMin: s.startMin,
         fromEndMin: s.endMin,
         ...next,
+        resized: next.endMin - next.startMin !== s.endMin - s.startMin,
       };
     });
   };
 
   /** The one route from a minute to a position, shared with the dispatch board. */
-  const { place: span } = useTrack();
+  const { place: span, edge, pctPerMin } = useTrack();
+
+
+  /**
+   * Is there room for two handles and still something to grab in between?
+   *
+   * A quarter-hour lesson is a few pixels wide on a nine-hour axis; two grab
+   * strips would leave it with no body, so the whole block would resize when
+   * the user meant to move it. Those stay move-only — and still resizable from
+   * the keyboard, which does not care how wide anything is.
+   */
+  const wideEnough = (s: { startMin: number; endMin: number }) =>
+    trackW > 0 && ((s.endMin - s.startMin) * pctPerMin * trackW) / 100 >= 48;
 
   const hasConflict = lane.sessions.some((s) => s.conflicts);
   const problemGaps = lane.gaps.filter((g) => g.problem);
@@ -671,19 +743,28 @@ function LaneRow({
                   if (!movable) return;
                   // Arrow keys follow what the user SEES: in Arabic the axis
                   // runs right-to-left, so "left" is later.
-                  if (e.key === "ArrowRight") nudge(s, rtl ? -1 : 1);
-                  else if (e.key === "ArrowLeft") nudge(s, rtl ? 1 : -1);
+                  // Shift stretches the later edge, Alt the earlier one; plain
+                  // arrows move the whole lesson. All three mirrored in Arabic.
+                  const edge = e.shiftKey ? "to" : e.altKey ? "from" : undefined;
+                  if (e.key === "ArrowRight") nudge(s, rtl ? -1 : 1, edge);
+                  else if (e.key === "ArrowLeft") nudge(s, rtl ? 1 : -1, edge);
                   else if (e.key === "Escape") onPropose(null);
                   else return;
                   e.preventDefault();
                 }}
-                className={`absolute top-1/2 flex h-6 -translate-y-1/2 items-center gap-1 overflow-hidden rounded px-1 text-[10px] outline-none ring-offset-1 focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`group absolute top-1/2 flex h-6 -translate-y-1/2 items-center gap-1 rounded px-1 text-[10px] outline-none ring-offset-1 focus-visible:ring-2 focus-visible:ring-ring ${
                   s.location === "HOME" ? BLOCK.home : BLOCK.centre
                 } ${s.conflicts ? "ring-2 ring-destructive" : ""} ${
                   movable ? "cursor-grab touch-none active:cursor-grabbing" : locked ? "cursor-not-allowed" : ""
                 } ${drag?.sessionId === s.id || proposal?.sessionId === s.id ? "opacity-40" : ""}`}
                 style={span(s.startMin, s.endMin)}
               >
+                {movable && wideEnough(s) && (
+                  <>
+                    <ResizeHandle style={edge("from")} onGrab={(e) => startDrag(e, s, "from")} />
+                    <ResizeHandle style={edge("to")} onGrab={(e) => startDrag(e, s, "to")} />
+                  </>
+                )}
                 {locked ? (
                   <Lock className="size-3 shrink-0" />
                 ) : s.location === "HOME" ? (

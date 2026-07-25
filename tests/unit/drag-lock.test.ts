@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   isDraggable,
   lockReasonFor,
+  proposedResize,
   proposedTimes,
+  hoursOf,
   snapMinutes,
   type DragPolicy,
   type DragSubject,
@@ -127,5 +129,47 @@ describe("proposedTimes", () => {
 
   it("leaves a lesson alone when it has not moved", () => {
     expect(proposedTimes(lesson, 0, axis)).toEqual(lesson);
+  });
+});
+
+describe("proposedResize", () => {
+  const axis = { minMin: H(14), maxMin: H(22) };
+  const lesson = { startMin: H(16), endMin: H(17) };
+
+  it("moves only the edge being dragged", () => {
+    expect(proposedResize(lesson, "to", 30, axis)).toEqual({ startMin: H(16), endMin: H(17, 30) });
+    expect(proposedResize(lesson, "from", -30, axis)).toEqual({ startMin: H(15, 30), endMin: H(17) });
+  });
+
+  it("refuses to shrink a lesson away", () => {
+    // Dragging the end back past the start leaves the shortest bookable lesson.
+    expect(proposedResize(lesson, "to", -600, axis).endMin).toBe(H(16, 15));
+    expect(proposedResize(lesson, "from", 600, axis).startMin).toBe(H(16, 45));
+  });
+
+  it("honours a longer minimum, so a part-paid lesson cannot be cut below it", () => {
+    const p = proposedResize(lesson, "to", -600, axis, { minDurationMin: 45 });
+    expect(p.endMin).toBe(H(16, 45));
+  });
+
+  it("caps growth at the maximum the booking schema accepts", () => {
+    const long = proposedResize({ startMin: H(14), endMin: H(15) }, "to", 20 * 60, axis, {
+      maxDurationMin: 12 * 60,
+    });
+    // 12h from 14:00 would be 02:00; the axis ends first and wins.
+    expect(long.endMin).toBe(H(22));
+  });
+
+  it("cannot be dragged off either end of the axis", () => {
+    expect(proposedResize({ startMin: H(15), endMin: H(16) }, "from", -600, axis).startMin).toBe(H(14));
+    expect(proposedResize({ startMin: H(20), endMin: H(21) }, "to", 600, axis).endMin).toBe(H(22));
+  });
+
+  it("snaps to the quarter hour, so hours stay expressible", () => {
+    const p = proposedResize(lesson, "to", 7, axis);
+    expect(p.endMin).toBe(H(17));
+    expect(hoursOf(p.startMin, p.endMin)).toBe(1);
+    expect(hoursOf(H(16), H(17, 15))).toBe(1.25);
+    expect(hoursOf(H(16), H(16, 45))).toBe(0.75);
   });
 });

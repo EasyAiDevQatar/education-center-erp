@@ -2435,7 +2435,8 @@
       "noRoomToTravel": "No room to travel",
       "unchanged": "It is already at that time",
       "forbidden": "You may not change times",
-      "invalid": "Invalid request"
+      "invalid": "Invalid request",
+      "overAllocated": "Cannot be shortened below what has already been paid for"
     },
     "assignTitle": "Assign a ride",
     "assignFor": "{who} — travel needed with no ride planned, {from}–{to}",
@@ -2450,7 +2451,10 @@
       "forbidden": "You may not assign rides",
       "invalid": "Invalid request",
       "noDriver": "Could not assign — try another driver"
-    }
+    },
+    "proposalResize": "{student} ({teacher}): length {fromHours}h → {toHours}h",
+    "impactMoney": "The total becomes {total}, and what is owed is recalculated.",
+    "resizeHint": "Drag a lesson's edge to change its length"
   },
   "spacing": {
     "title": "No room to travel",

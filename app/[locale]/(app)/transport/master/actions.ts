@@ -8,6 +8,7 @@ import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { guardArchived } from "@/lib/academic-year";
 import { notifySession } from "@/lib/integrations/notify";
+import { applyPackageHours, revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { displayName } from "@/lib/names";
 import { toNumber } from "@/lib/money";
 import { findConflicts, weekdayOf, type Conflict } from "@/lib/conflicts";
@@ -65,6 +66,15 @@ const moveSchema = z.object({
    */
   fromStartMin: z.number().int().min(0).max(1439),
   toStartMin: z.number().int().min(0).max(1439),
+  /**
+   * A new length, when the gesture was a resize rather than a move.
+   *
+   * Absent means "same lesson, different time" and the write touches only the
+   * date. Present means the lesson itself changed, which is a different write
+   * with money in it — the same range the booking form accepts, so a resize
+   * can never produce a duration the form could not.
+   */
+  toHours: z.number().min(0.25).max(12).optional(),
 });
 
 export type MoveInput = z.infer<typeof moveSchema>;
@@ -79,8 +89,10 @@ export type BlockerCode =
   | "archived"
   /** Spacing says nobody can physically get there, and the centre blocks that. */
   | "noRoomToTravel"
-  /** It is already there. */
-  | "unchanged";
+  /** It is already there, at the same length. */
+  | "unchanged"
+  /** Shrinking it would leave the family paid for time nobody will teach. */
+  | "overAllocated";
 
 export type Blocker = { code: BlockerCode; lockReason?: LockReason };
 
@@ -154,7 +166,10 @@ type Gate = {
   blockers: Blocker[];
   session: NonNullable<Awaited<ReturnType<typeof loadSession>>>;
   fromStartMin: number;
+  /** The proposed length — the new one when resizing. */
   durationMin: number;
+  /** The length it has right now. */
+  wasMin: number;
 };
 
 function loadSession(id: string) {
@@ -177,7 +192,11 @@ async function gateFor(input: MoveInput, locale: string): Promise<Gate | { error
   if (!session) return { error: "stale" };
 
   const blockers: Blocker[] = [];
-  const durationMin = Math.round(toNumber(session.hours) * 60);
+  const wasMin = Math.round(toNumber(session.hours) * 60);
+  // The length the user is proposing, which is what every check below must be
+  // run against. Checking a resize against the OLD duration would clear a
+  // lesson that now runs straight through the next one.
+  const durationMin = input.toHours != null ? Math.round(input.toHours * 60) : wasMin;
   const actualDay = session.date.toISOString().slice(0, 10);
   const actualStart = minutesOf(session.date);
 
@@ -187,7 +206,26 @@ async function gateFor(input: MoveInput, locale: string): Promise<Gate | { error
   if (actualDay !== input.day || actualStart !== input.fromStartMin) {
     return { error: "stale" };
   }
-  if (input.toStartMin === input.fromStartMin) blockers.push({ code: "unchanged" });
+  if (input.toStartMin === input.fromStartMin && durationMin === wasMin) {
+    // Compare BOTH edges: a pure resize leaves the start where it was, and a
+    // start-only comparison would silently discard every one of them.
+    blockers.push({ code: "unchanged" });
+  }
+
+  // Money already taken against this lesson sets a floor on how short it can
+  // get. Nothing in the app un-allocates a payment, so shrinking past what has
+  // been paid would leave a credit nobody asked for and no screen to clear it.
+  if (input.toHours != null && durationMin < wasMin) {
+    const paid = await db.paymentAllocation.aggregate({
+      _sum: { amount: true },
+      where: { sessionId: session.id },
+    });
+    const allocated = toNumber(paid._sum.amount);
+    const rate = toNumber(session.pricePerHour);
+    if (allocated > 0 && rate > 0 && input.toHours * rate < allocated - 0.005) {
+      blockers.push({ code: "overAllocated" });
+    }
+  }
 
   // Is it still movable? Re-checked here rather than trusted from the client:
   // a board that stopped believing the lock must not be able to get a write.
@@ -232,7 +270,7 @@ async function gateFor(input: MoveInput, locale: string): Promise<Gate | { error
   if (frozen) blockers.push({ code: "archived" });
 
   void locale;
-  return { blockers, session, fromStartMin: actualStart, durationMin };
+  return { blockers, session, fromStartMin: actualStart, durationMin, wasMin };
 }
 
 /**
@@ -244,13 +282,21 @@ async function gateFor(input: MoveInput, locale: string): Promise<Gate | { error
  * Everyone else's day stays where it is, so the allocator has to fit the moved
  * ride around it rather than re-planning the world.
  */
-function shiftLegs(legs: Leg[], sessionId: string, deltaMin: number): Leg[] {
+function shiftLegs(
+  legs: Leg[],
+  sessionId: string,
+  deltaStartMin: number,
+  deltaEndMin: number,
+): Leg[] {
   return legs.map((l) => {
     if (l.toSessionId === sessionId) {
-      return { ...l, dueMin: l.dueMin + deltaMin, preferredMin: l.preferredMin + deltaMin };
+      // Arriving FOR the lesson: keyed to when it begins.
+      return { ...l, dueMin: l.dueMin + deltaStartMin, preferredMin: l.preferredMin + deltaStartMin };
     }
     if (l.fromSessionId === sessionId) {
-      const readyMin = l.readyMin + deltaMin;
+      // Leaving AFTER it: keyed to when it ends, which a resize moves by a
+      // different amount from the start — the whole reason this takes two.
+      const readyMin = l.readyMin + deltaEndMin;
       // The preferred departure cannot precede the moment they are ready: a
       // lesson that now ends later drags its own ride home with it.
       return { ...l, readyMin, preferredMin: Math.max(l.preferredMin, readyMin) };
@@ -359,10 +405,11 @@ export async function previewReschedule(
 
   const gate = await gateFor(d, locale);
   if ("error" in gate) return { error: gate.error };
-  const { session, durationMin, blockers } = gate;
+  const { session, durationMin, wasMin, blockers } = gate;
 
-  const deltaMin = d.toStartMin - d.fromStartMin;
   const toEnd = d.toStartMin + durationMin;
+  const deltaStartMin = d.toStartMin - d.fromStartMin;
+  const deltaEndMin = toEnd - (d.fromStartMin + wasMin);
 
   // --- clashes and travel room, in the vocabulary the booking forms use -----
   const { start, end } = dayRange(d.day);
@@ -448,7 +495,7 @@ export async function previewReschedule(
           : null) ??
         suggestFreeStart({
           preferMin: d.toStartMin,
-          hours: toNumber(session.hours),
+          hours: durationMin / 60,
           teacherId: session.teacherId ?? "",
           studentIds: [session.studentId],
           weekday: weekdayOf(d.day),
@@ -472,7 +519,10 @@ export async function previewReschedule(
   try {
     const plan = await buildDayPlan(locale, d.day);
     const before = runAllocation(plan, plan.legs);
-    const after = runAllocation(plan, shiftLegs(plan.legs, session.id, deltaMin));
+    const after = runAllocation(
+      plan,
+      shiftLegs(plan.legs, session.id, deltaStartMin, deltaEndMin),
+    );
 
     const nameOfLeg = (legId: string) => {
       const leg = plan.legs.find((l) => l.id === legId);
@@ -519,7 +569,7 @@ export async function previewReschedule(
   return {
     ok: true,
     blockers,
-    from: { startMin: d.fromStartMin, endMin: d.fromStartMin + durationMin },
+    from: { startMin: d.fromStartMin, endMin: d.fromStartMin + wasMin },
     to: { startMin: d.toStartMin, endMin: toEnd },
     studentName: displayName(session.student, locale),
     teacherName: session.teacher ? displayName(session.teacher, locale) : "",
@@ -573,12 +623,56 @@ export async function confirmReschedule(
   }
 
   const date = new Date(dateAt(d.day, d.toStartMin));
-  await db.session.update({ where: { id: d.sessionId }, data: { date } });
+  const resized = d.toHours != null && Math.round(d.toHours * 60) !== gate.wasMin;
+
+  if (!resized) {
+    // A pure move. One field: the clock changed and nothing else did, so
+    // pricePerHour, total and paymentStatus are left exactly as they are.
+    await db.session.update({ where: { id: d.sessionId }, data: { date } });
+  } else {
+    // A resize DOES change the lesson, so it changes the money — the centre's
+    // choice. Everything below happens in one transaction: a half-applied
+    // resize would leave a package drawn down for hours the session no longer
+    // has.
+    const hours = d.toHours!;
+    const rate = toNumber(gate.session.pricePerHour);
+    await db.$transaction(async (tx) => {
+      // Give the package back its old hours BEFORE the new length is written —
+      // revert reads the session's current hours to know what to return.
+      if (gate.session.packageId) await revertPackageHours(tx, d.sessionId);
+
+      await tx.session.update({
+        where: { id: d.sessionId },
+        // The rate is NOT re-resolved. A resize changes how long, not what an
+        // hour costs, and re-reading the matrix would overwrite a group
+        // booking's negotiated price exactly as it would on a move.
+        data: { date, hours, total: rate * hours },
+      });
+
+      if (gate.session.packageId) await applyPackageHours(tx, d.sessionId);
+
+      // Re-derive what is owed only where there is a real billing basis. A
+      // session someone marked PAID by hand, with no allocation behind it,
+      // would otherwise be silently un-paid by a fifteen-minute drag.
+      const paid = await tx.paymentAllocation.aggregate({
+        _sum: { amount: true },
+        where: { sessionId: d.sessionId },
+      });
+      if (gate.session.packageId || toNumber(paid._sum.amount) > 0) {
+        await syncSessionPaymentStatus(tx, d.sessionId);
+      }
+    });
+  }
   // The ride serving it was planned against the old clock: send it back for
   // review rather than leaving an approved trip that no longer fits.
   await flagTripsForSession(d.sessionId, "SESSION_CHANGED");
   await writeAudit("Session", d.sessionId, "UPDATE", {
-    after: { date, movedFromMin: d.fromStartMin, movedToMin: d.toStartMin },
+    after: {
+      date,
+      movedFromMin: d.fromStartMin,
+      movedToMin: d.toStartMin,
+      ...(resized ? { hoursFrom: gate.wasMin / 60, hoursTo: d.toHours } : {}),
+    },
   });
   await notifySession("SESSION_RESCHEDULED", d.sessionId);
 

@@ -90,7 +90,21 @@ export function useTrack() {
     /** A point in time — a marker rather than a period. */
     const at = (minute: number): CSSProperties => ({ [S]: `${pct(minute)}%` }) as CSSProperties;
 
-    return { S, rtl, pct, place, at, axis };
+    /**
+     * A grab strip on one TEMPORAL edge of a block.
+     *
+     * "from" is the earlier edge, whichever physical side that lands on. A
+     * caller asking for "the earlier edge" cannot get RTL wrong; a caller
+     * asking for "the left edge" eventually does.
+     */
+    const E: "left" | "right" = rtl ? "left" : "right";
+    const edge = (which: "from" | "to", widthPx = 12): CSSProperties =>
+      ({ [which === "from" ? S : E]: 0, width: widthPx }) as CSSProperties;
+
+    /** Percent of the axis one minute occupies — for sizing in real pixels. */
+    const pctPerMin = 100 / Math.max(1, axis.maxMin - axis.minMin);
+
+    return { S, rtl, pct, place, at, edge, pctPerMin, axis };
   }, [axis, rtl]);
 }
 
