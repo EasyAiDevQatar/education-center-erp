@@ -784,6 +784,7 @@ export function PlannerClient({
       {/* Move dialog (after drag-and-drop): confirm target teacher + new time */}
       {moveTarget && (
         <MoveDialog
+          day={day}
           session={moveTarget.session}
           targetTeacherId={moveTarget.teacherId}
           targetTeacherName={teachers.find((x) => x.id === moveTarget.teacherId)?.label ?? ""}
@@ -909,9 +910,6 @@ function AddDraftDialog({
   const [gradeLevelId, setGradeLevelId] = useState("");
   const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");
   const [hours, setHours] = useState("1");
-  // Asked of the server, not computed here: the buffer is a centre-wide
-  // setting, and a second copy of the rule in the client is how the allocator
-  // and the validator drifted apart earlier.
   const [time, setTime] = useState(() =>
     minToHHMM(
       suggestNextStart({
@@ -922,6 +920,17 @@ function AddDraftDialog({
       }),
     ),
   );
+
+  // Asked of the server, not recomputed here: the buffer is a centre-wide
+  // setting, and a second copy of the rule in the client is exactly how the
+  // allocator and the validator drifted apart earlier this project.
+  const spacing = useSpacingCheck({
+    date: day,
+    time,
+    hours: parseFloat(hours) || 1,
+    teacherId,
+    location,
+  });
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -1043,6 +1052,7 @@ function AddDraftDialog({
             </span>
           </div>
           <ConflictWarnings conflicts={conflicts} />
+          <SpacingWarning check={spacing} onUseSuggestion={setTime} />
           <p className="text-xs text-muted-foreground">{t("timeAutoHint")}</p>
 
           {error && <p className="text-sm text-destructive">{tc("required")}</p>}
@@ -1173,6 +1183,7 @@ function EditDraftDialog({
 /** Time-change prompt shown after dropping a dragged draft on a teacher row. */
 function MoveDialog({
   session,
+  day,
   targetTeacherId,
   targetTeacherName,
   targetExisting,
@@ -1183,6 +1194,8 @@ function MoveDialog({
   onSaved,
 }: {
   session: PlannerSession;
+  /** The day being planned — the spacing check needs a date, not just a time. */
+  day: string;
   targetTeacherId: string;
   targetTeacherName: string;
   targetExisting: PlannerSession[];
@@ -1209,6 +1222,17 @@ function MoveDialog({
   );
   const [time, setTime] = useState(suggested);
   const [pending, start] = useTransition();
+
+  // Checked against the TARGET teacher's day: dropping a card into another
+  // teacher's lane is exactly when room to travel stops being obvious.
+  const spacing = useSpacingCheck({
+    date: day,
+    time,
+    hours: session.hours,
+    teacherId: targetTeacherId,
+    location: session.location,
+    excludeId: session.id,
+  });
 
   function submit() {
     start(async () => {
@@ -1251,6 +1275,7 @@ function MoveDialog({
               hours: session.hours,
             })}
           />
+          <SpacingWarning check={spacing} onUseSuggestion={setTime} />
           <p className="text-xs text-muted-foreground">{t("moveHint")}</p>
         </div>
         <DialogFooter>
