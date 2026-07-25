@@ -436,6 +436,10 @@ export default async function SettingsPage({
                 maxAdvancePickupMin: settings.transportMaxAdvancePickupMin ?? "60",
                 driverModel: settings.transportDriverModel ?? "DROP_AND_RETURN",
                 logicNote: settings.transportLogicNote ?? "",
+                homeSessionBufferMin: settings.transportHomeSessionBufferMin ?? "15",
+                centreBackToBack: (settings.transportCentreBackToBack ?? "1") !== "0",
+                blockOverlappingBooking: settings.transportBlockOverlappingBooking === "1",
+                lockConflictedSessions: settings.transportLockConflictedSessions === "1",
               }}
             />
           ),

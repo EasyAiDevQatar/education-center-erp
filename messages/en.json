@@ -1804,7 +1804,17 @@
       "logicEditHint": "Edit the wording however you like. Saving replaces the generated description with your own; the warnings below stay generated from the settings.",
       "logicCustomHint": "Hand-written description. It does not update when settings change — regenerate to go back to the live one.",
       "logicRegenerate": "Regenerate from settings"
-    }
+    },
+    "spacingTitle": "Room to travel (checked when booking)",
+    "spacingHint": "The cheapest place to stop an impossible ride is before the lesson that needs it exists.",
+    "homeBuffer": "Buffer around a home visit (min)",
+    "homeBufferHint": "Minutes reserved before and after a house visit for the journey. Nobody can finish at a home at 15:30 and start at the centre at 15:30.",
+    "centreBackToBack": "Allow back-to-back centre lessons",
+    "centreBackToBackHint": "4–5 then 5–6 is fine — a teacher walks down a corridor. Overlapping is refused either way.",
+    "blockOverlapping": "Refuse a booking with no room to travel",
+    "blockOverlappingHint": "Off = warn and allow. On = the booking cannot be saved. Turn on once existing clashes are cleared, or today's bookings will be rejected.",
+    "lockConflicted": "Lock conflicted lessons on the master planner",
+    "lockConflictedHint": "On = a lesson that clashes cannot be dragged. Off = it can, which is often how you fix the clash."
   },
   "subjects": {
     "title": "Subjects",

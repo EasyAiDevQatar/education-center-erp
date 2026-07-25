@@ -50,6 +50,10 @@ export type TransportValues = {
   driverModel: string;
   /** Admin's own wording of the logic; empty means show the generated one. */
   logicNote: string;
+  homeSessionBufferMin: string;
+  centreBackToBack: boolean;
+  blockOverlappingBooking: boolean;
+  lockConflictedSessions: boolean;
 };
 
 const n = (s: string, d: number) => {
@@ -68,6 +72,34 @@ const hhmm = (m: number) =>
  * bad trips. Reads the live knob values, so editing a field immediately rewrites
  * the sentence it affects instead of leaving the admin to guess.
  */
+/** A labelled checkbox with its explanation underneath. */
+function SettingCheck({
+  name,
+  defaultChecked,
+  label,
+  hint,
+}: {
+  name: string;
+  defaultChecked: boolean;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <label className="flex items-start gap-2 text-sm">
+      <input
+        type="checkbox"
+        name={name}
+        defaultChecked={defaultChecked}
+        className="mt-0.5 size-4 accent-primary"
+      />
+      <span>
+        {label}
+        <span className="block text-xs text-muted-foreground">{hint}</span>
+      </span>
+    </label>
+  );
+}
+
 function LogicPanel({ cfg, note }: { cfg: LogicInput; note: string }) {
   const t = useTranslations("transport");
   const tc = useTranslations("common");
@@ -377,6 +409,45 @@ export function TransportSettings({ values }: { values: TransportValues }) {
             <Input id="advance" name="transportMaxAdvancePickupMin" type="number" min="0" max="240" dir="ltr" value={advance} onChange={(e) => setAdvance(e.target.value)} />
           </FormField>
         </div>
+      </div>
+
+      {/* Booking-time spacing. The cheapest place to stop an impossible ride is
+          before the lesson that needs it exists — every unassignable leg this
+          module has produced traced back to a booking with no room to travel. */}
+      <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+        <div>
+          <p className="text-sm font-medium">{t("spacingTitle")}</p>
+          <p className="text-xs text-muted-foreground">{t("spacingHint")}</p>
+        </div>
+        <FormField label={t("homeBuffer")} htmlFor="tr-homebuf" hint={t("homeBufferHint")}>
+          <Input
+            id="tr-homebuf"
+            name="transportHomeSessionBufferMin"
+            type="number"
+            min="0"
+            max="120"
+            dir="ltr"
+            defaultValue={values.homeSessionBufferMin}
+          />
+        </FormField>
+        <SettingCheck
+          name="transportCentreBackToBack"
+          defaultChecked={values.centreBackToBack}
+          label={t("centreBackToBack")}
+          hint={t("centreBackToBackHint")}
+        />
+        <SettingCheck
+          name="transportBlockOverlappingBooking"
+          defaultChecked={values.blockOverlappingBooking}
+          label={t("blockOverlapping")}
+          hint={t("blockOverlappingHint")}
+        />
+        <SettingCheck
+          name="transportLockConflictedSessions"
+          defaultChecked={values.lockConflictedSessions}
+          label={t("lockConflicted")}
+          hint={t("lockConflictedHint")}
+        />
       </div>
 
       {/* Centre location — the most common trip endpoint, so it is asked for

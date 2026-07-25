@@ -119,6 +119,11 @@ const schema = z.object({
   allowInvalidOverride: z.boolean(),
   maxAdvancePickupMin: z.coerce.number().int().min(0).max(240),
   driverModel: z.enum(["DROP_AND_RETURN", "STAY"]),
+  // Booking-time spacing.
+  homeSessionBufferMin: z.coerce.number().int().min(0).max(120),
+  centreBackToBack: z.boolean(),
+  blockOverlappingBooking: z.boolean(),
+  lockConflictedSessions: z.boolean(),
 });
 
 /**
@@ -169,6 +174,10 @@ export async function saveTransportSettings(
     allowInvalidOverride: formData.get("transportAllowInvalidOverride") === "on",
     maxAdvancePickupMin: formData.get("transportMaxAdvancePickupMin") || 60,
     driverModel: formData.get("transportDriverModel") || "DROP_AND_RETURN",
+    homeSessionBufferMin: formData.get("transportHomeSessionBufferMin") || 15,
+    centreBackToBack: formData.get("transportCentreBackToBack") === "on",
+    blockOverlappingBooking: formData.get("transportBlockOverlappingBooking") === "on",
+    lockConflictedSessions: formData.get("transportLockConflictedSessions") === "on",
   });
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
@@ -201,6 +210,10 @@ export async function saveTransportSettings(
     ["transportAllowInvalidOverride", d.allowInvalidOverride ? "1" : "0"],
     ["transportMaxAdvancePickupMin", String(d.maxAdvancePickupMin)],
     ["transportDriverModel", d.driverModel],
+    ["transportHomeSessionBufferMin", String(d.homeSessionBufferMin)],
+    ["transportCentreBackToBack", d.centreBackToBack ? "1" : "0"],
+    ["transportBlockOverlappingBooking", d.blockOverlappingBooking ? "1" : "0"],
+    ["transportLockConflictedSessions", d.lockConflictedSessions ? "1" : "0"],
   ];
   // Centre coordinates are cleared rather than stored as an empty string, so
   // "not set yet" stays distinguishable from "set to 0,0" (a real place).
