@@ -123,7 +123,7 @@ export async function masterBoard(
   const laneKind = opts.laneKind ?? "TEACHER";
   const { start, end } = dayBounds(day);
 
-  const [config, sessions, trips, stopOwners] = await Promise.all([
+  const [config, sessions, trips, stopOwners, tripOwners] = await Promise.all([
     loadTransportConfig(),
     db.session.findMany({
       where: { date: { gte: start, lt: end }, status: { in: PLANNABLE } },
@@ -138,6 +138,18 @@ export async function masterBoard(
       select: { tripId: true, passengerTeacherId: true, seq: true },
       orderBy: { seq: "asc" },
     }),
+    // Who and what ran each trip. BoardTrip carries a driver NAME and a plate,
+    // which label a card but cannot key a lane.
+    db.trip.findMany({
+      where: { date: start },
+      select: {
+        id: true,
+        driverId: true,
+        vehicleId: true,
+        vehicle: { select: { plate: true, model: true } },
+        driver: { select: { employee: { select: { name: true } } } },
+      },
+    }),
   ]);
 
   const teacherOfTrip = new Map<string, string>();
@@ -146,6 +158,35 @@ export async function masterBoard(
       teacherOfTrip.set(st.tripId, st.passengerTeacherId);
     }
   }
+  const ownerOfTrip = new Map(tripOwners.map((t) => [t.id, t]));
+
+  /**
+   * Which lane a trip belongs to, and how that lane is labelled — the ONLY
+   * thing that differs between perspectives. Everything downstream (gaps,
+   * conflicts, axis, rendering) is shared, which is what makes a perspective a
+   * grouping rather than another board.
+   */
+  const laneOfTrip = (tripId: string): { id: string; name: string; subtitle: string | null } | null => {
+    const o = ownerOfTrip.get(tripId);
+    if (laneKind === "DRIVER") {
+      if (!o?.driverId) return null;
+      return {
+        id: o.driverId,
+        name: o.driver?.employee.name ?? o.driverId,
+        subtitle: o.vehicle?.plate ?? null,
+      };
+    }
+    if (laneKind === "VEHICLE") {
+      if (!o?.vehicleId) return null;
+      return {
+        id: o.vehicleId,
+        name: o.vehicle?.plate ?? o.vehicleId,
+        subtitle: o.vehicle?.model ?? null,
+      };
+    }
+    const tid = teacherOfTrip.get(tripId);
+    return tid ? { id: tid, name: "", subtitle: null } : null;
+  };
 
   // Count only what the layer can actually reveal. Session.teacherId is
   // nullable — a walk-in is recorded before anyone knows who taught it — and
@@ -183,11 +224,15 @@ export async function masterBoard(
 
   // --- attach trips to the lane of whoever they carry ----------------------
   for (const t of trips) {
-    if (laneKind !== "TEACHER") continue;
-    const pid = teacherOfTrip.get(t.id);
-    if (!pid) continue;
-    const lane = lanes.get(pid);
-    if (!lane) continue; // a trip for a teacher whose lessons are filtered out
+    const owner = laneOfTrip(t.id);
+    if (!owner) continue;
+    // A teacher's lane already exists from their lessons; a driver's or
+    // vehicle's is created here, because a driver has no lessons to create it.
+    const lane =
+      laneKind === "TEACHER"
+        ? lanes.get(owner.id)
+        : laneFor(owner.id, owner.name, owner.subtitle);
+    if (!lane) continue; // a ride for a teacher with no lessons on this day
     lane.trips.push({
       id: t.id,
       tripKind: t.tripKind ?? "CHAIN",
@@ -256,6 +301,7 @@ export async function masterBoard(
     ];
     lane.gaps = classifyGaps(commitments, {
       maxWaitMin: config.rules.maxStudentWaitMin,
+      subject: laneKind === "TEACHER" ? "PASSENGER" : "DRIVER",
     });
 
     lane.sessions.sort((a, b) => a.startMin - b.startMin);

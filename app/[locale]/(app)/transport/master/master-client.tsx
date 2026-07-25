@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
-import { Home, Building2, Bus, Hourglass, AlertTriangle, CarFront } from "lucide-react";
+import { Home, Building2, Bus, Hourglass, AlertTriangle, CarFront, GraduationCap, Truck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { axisPct, axisTicks } from "@/lib/transport/axis";
@@ -58,15 +58,19 @@ export function MasterClient({ board }: { board: MasterBoard }) {
     waiting: true,
   });
   const toggle = (k: keyof Layers) => setLayers((l) => ({ ...l, [k]: !l[k] }));
+  /** Teacher rows carry lessons; driver and vehicle rows carry only rides. */
+  const byPerson = board.laneKind === "TEACHER";
 
   /** Physical inline-start side — the axis runs from it. */
   const S = rtl ? "right" : "left";
   const ticks = useMemo(() => axisTicks(board.axis), [board.axis]);
   const pct = (m: number) => axisPct(board.axis, m);
 
-  function go(next: { date?: string }) {
+  function go(next: { date?: string; view?: string }) {
     const p = new URLSearchParams();
     p.set("date", next.date ?? board.day);
+    const view = next.view ?? board.laneKind;
+    if (view !== "TEACHER") p.set("view", view);
     router.push(`${pathname}?${p.toString()}`);
   }
 
@@ -81,18 +85,50 @@ export function MasterClient({ board }: { board: MasterBoard }) {
           onChange={(e) => e.target.value && go({ date: e.target.value })}
           className="w-40"
         />
+        {/* One screen, three perspectives. Only what a ROW means changes; the
+            segments, gaps and axis below are the same code. */}
         <div className="flex flex-wrap items-center gap-1">
-          <LayerToggle on={layers.home} onClick={() => toggle("home")} label={t("layerHome")}>
-            <Home className="size-4" />
-          </LayerToggle>
-          <LayerToggle
-            on={layers.centre}
-            onClick={() => toggle("centre")}
-            label={t("layerCentre")}
-            count={board.centreSessionCount}
-          >
-            <Building2 className="size-4" />
-          </LayerToggle>
+          {(
+            [
+              ["TEACHER", GraduationCap],
+              ["DRIVER", Bus],
+              ["VEHICLE", Truck],
+            ] as const
+          ).map(([kind, Icon]) => (
+            <Button
+              key={kind}
+              type="button"
+              variant={board.laneKind === kind ? "default" : "outline"}
+              size="sm"
+              className="gap-1"
+              aria-pressed={board.laneKind === kind}
+              onClick={() => go({ view: kind })}
+            >
+              <Icon className="size-4" />
+              {t(`view.${kind}`)}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1">
+          {/* Lesson layers only mean something on a person's row — a driver
+              teaches nothing, so offering to hide their lessons would be a
+              control with no referent. */}
+          {byPerson && (
+            <>
+              <LayerToggle on={layers.home} onClick={() => toggle("home")} label={t("layerHome")}>
+                <Home className="size-4" />
+              </LayerToggle>
+              <LayerToggle
+                on={layers.centre}
+                onClick={() => toggle("centre")}
+                label={t("layerCentre")}
+                count={board.centreSessionCount}
+              >
+                <Building2 className="size-4" />
+              </LayerToggle>
+            </>
+          )}
           <LayerToggle on={layers.trips} onClick={() => toggle("trips")} label={t("layerTrips")}>
             <Bus className="size-4" />
           </LayerToggle>
@@ -118,7 +154,7 @@ export function MasterClient({ board }: { board: MasterBoard }) {
                labels. */
             className="flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground"
           >
-            <div className="w-36 shrink-0 font-medium">{t("colPerson")}</div>
+            <div className="w-36 shrink-0 font-medium">{t(`colPerson.${board.laneKind}`)}</div>
             <div className="relative flex-1 overflow-hidden">
               {ticks.map((m) => (
                 <span
@@ -143,6 +179,7 @@ export function MasterClient({ board }: { board: MasterBoard }) {
                   S={S}
                   pct={pct}
                   layers={layers}
+                  byPerson={byPerson}
                 />
             ))
           )}
@@ -206,11 +243,13 @@ function LaneRow({
   S,
   pct,
   layers,
+  byPerson,
 }: {
   lane: MasterLane;
   S: "left" | "right";
   pct: (m: number) => number;
   layers: Layers;
+  byPerson: boolean;
 }) {
   const t = useTranslations("transportMaster");
 
@@ -239,7 +278,11 @@ function LaneRow({
           {lane.name}
         </span>
         <span className="text-muted-foreground">
-          {t("laneSummary", { sessions: lane.sessions.length, trips: lane.trips.length })}
+          {/* A driver teaches nothing, so "0 lessons" on their row is noise
+              rather than information. */}
+          {byPerson
+            ? t("laneSummary", { sessions: lane.sessions.length, trips: lane.trips.length })
+            : t("laneSummaryTrips", { trips: lane.trips.length })}
         </span>
         {layers.waiting && problemGaps.length > 0 && (
           <span

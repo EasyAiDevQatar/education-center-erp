@@ -2356,7 +2356,6 @@
     "title": "المخطط الرئيسي",
     "subtitle": "صف لكل شخص: الحصص والتنقل والفجوات بينها.",
     "timelineTitle": "اليوم",
-    "colPerson": "المعلم",
     "empty": "لا زيارات منزلية مخططة لهذا اليوم.",
     "laneSummary": "{sessions} حصة · {trips} رحلة",
     "legendHome": "حصة منزلية",
@@ -2374,6 +2373,18 @@
       "TRAVEL_NOT_PLANNED": "{from}–{to}: تنقّل مطلوب دون رحلة مخططة ({n} د)",
       "WAITING": "{from}–{to}: انتظار ({n} د)",
       "FREE": "{from}–{to}: فراغ ({n} د)"
-    }
+    },
+    "view": {
+      "TEACHER": "المعلمون",
+      "DRIVER": "السائقون",
+      "VEHICLE": "المركبات"
+    },
+    "colPerson": {
+      "TEACHER": "المعلم",
+      "DRIVER": "السائق",
+      "VEHICLE": "المركبة"
+    },
+    "emptyView": "لا شيء مخطط لهذا العرض في هذا اليوم.",
+    "laneSummaryTrips": "{trips} رحلة"
   }
 }

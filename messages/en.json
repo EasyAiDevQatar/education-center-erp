@@ -2356,7 +2356,6 @@
     "title": "Master planner",
     "subtitle": "One row per person: lessons, travel and the gaps between them.",
     "timelineTitle": "The day",
-    "colPerson": "Teacher",
     "empty": "No home visits planned for this day.",
     "laneSummary": "{sessions} lessons · {trips} rides",
     "legendHome": "Home lesson",
@@ -2374,6 +2373,18 @@
       "TRAVEL_NOT_PLANNED": "{from}–{to}: must travel, no ride planned ({n} min)",
       "WAITING": "{from}–{to}: waiting ({n} min)",
       "FREE": "{from}–{to}: free ({n} min)"
-    }
+    },
+    "view": {
+      "TEACHER": "Teachers",
+      "DRIVER": "Drivers",
+      "VEHICLE": "Vehicles"
+    },
+    "colPerson": {
+      "TEACHER": "Teacher",
+      "DRIVER": "Driver",
+      "VEHICLE": "Vehicle"
+    },
+    "emptyView": "Nothing planned for this view on this day.",
+    "laneSummaryTrips": "{trips} rides"
   }
 }

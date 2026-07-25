@@ -167,3 +167,21 @@ describe("gapMinutes", () => {
     expect(gapMinutes(gaps, true)).toBe(180);
   });
 });
+
+describe("classifyGaps — a driver's row means something different", () => {
+  it("calls a driver's gap between rides free, not waiting", () => {
+    // The same shape on a passenger's row is waiting; on a driver's it is the
+    // fleet working as intended.
+    const between = [trip(H(14), H(15)), trip(H(17), H(18))];
+    expect(classifyGaps(between, { ...opts, subject: "PASSENGER" })[0].kind).toBe("WAITING");
+    expect(classifyGaps(between, { ...opts, subject: "DRIVER" })[0].kind).toBe("FREE");
+  });
+
+  it("never flags a driver's idle time as a problem, however long", () => {
+    const gaps = classifyGaps([trip(H(8), H(9)), trip(H(20), H(21))], {
+      ...opts,
+      subject: "DRIVER",
+    });
+    expect(gaps[0].problem).toBe(false);
+  });
+});

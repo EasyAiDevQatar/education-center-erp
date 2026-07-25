@@ -71,8 +71,17 @@ function placeOf(k: CommitmentKind): "HOME" | "CENTRE" | null {
  */
 export function classifyGaps(
   commitments: readonly Commitment[],
-  opts: { maxWaitMin: number },
+  opts: {
+    maxWaitMin: number;
+    /**
+     * Whose row this is. A passenger sitting between two rides is waiting; a
+     * DRIVER between two rides is simply available, which is the fleet working
+     * as intended rather than something to flag. Same gap, opposite meaning.
+     */
+    subject?: "PASSENGER" | "DRIVER";
+  },
 ): ClassifiedGap[] {
+  const subject = opts.subject ?? "PASSENGER";
   const sorted = [...commitments]
     .filter((c) => c.endMin > c.startMin)
     .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
@@ -106,11 +115,14 @@ export function classifyGaps(
       // when in fact they are sitting at a student's door.
       const touchesRide = afterKind === "TRIP" || beforeKind === "TRIP";
 
-      const kind: GapKind = mustMove
-        ? "TRAVEL_NOT_PLANNED"
-        : touchesRide || from === "CENTRE" || to === "CENTRE"
-          ? "WAITING"
-          : "FREE";
+      const kind: GapKind =
+        subject === "DRIVER"
+          ? "FREE"
+          : mustMove
+            ? "TRAVEL_NOT_PLANNED"
+            : touchesRide || from === "CENTRE" || to === "CENTRE"
+              ? "WAITING"
+              : "FREE";
 
       const gap = { startMin: reach, endMin: next.startMin, kind, afterKind, beforeKind };
       gaps.push({

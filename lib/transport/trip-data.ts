@@ -9,7 +9,7 @@ import { allocate, type AllocDriver, type Assignment, type LatLng, type Unassign
 import { legFeasibility } from "./feasibility";
 import { retimeStops } from "./retime";
 import { driverIsDispatchable } from "./fleet";
-import { generatorMayReplace, legKeyFor } from "./trips";
+import { generatorMayReplace } from "./trips";
 import {
   validateTrip,
   turnaroundFeasible,

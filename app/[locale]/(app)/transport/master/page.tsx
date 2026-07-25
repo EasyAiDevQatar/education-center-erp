@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireTransport } from "@/lib/transport/guard";
-import { masterBoard } from "@/lib/transport/master";
+import { masterBoard, type LaneKind } from "@/lib/transport/master";
 import { PageHeader } from "@/components/page-header";
 import { MasterClient } from "./master-client";
 
@@ -33,9 +33,16 @@ export default async function TransportMasterPage({
       ? dParam
       : new Date().toISOString().slice(0, 10);
 
-  // Everything is loaded; which layers are drawn is the client's business, so
-  // a toggle is instant and a hidden centre lesson can still mark the row busy.
-  const board = await masterBoard(locale, day);
+  // The perspective changes what a ROW is, so unlike the layer toggles it has
+  // to be re-read from the server.
+  const viewParam = one("view");
+  const laneKind: LaneKind =
+    viewParam === "DRIVER" || viewParam === "VEHICLE" ? viewParam : "TEACHER";
+
+  // Everything else is loaded; which layers are drawn is the client's
+  // business, so a toggle is instant and a hidden centre lesson still marks
+  // the row busy.
+  const board = await masterBoard(locale, day, { laneKind });
 
   return (
     <div>
