@@ -2460,7 +2460,10 @@
     "legServed": "لها رحلة",
     "legNeedsRide": "تحتاج سائقاً",
     "assignPickLeg": "أي رحلة؟ — كل حصة تحتاج توصيلة قبلها وأخرى بعدها",
-    "lockedSummary": "{n} حصة مقفلة:"
+    "lockedSummary": "{n} حصة مقفلة:",
+    "missingRideIn": "لا توجد رحلة توصيل قبل هذه الحصة",
+    "missingRideOut": "لا توجد رحلة استلام بعد هذه الحصة",
+    "ridesMissing": "{n} حصة بلا توصيل أو استلام"
   },
   "spacing": {
     "title": "لا يوجد وقت كافٍ للتنقل",

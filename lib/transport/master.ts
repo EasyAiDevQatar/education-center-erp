@@ -45,6 +45,16 @@ export type MasterSession = {
   /** True when this lesson collides with another in the same lane. */
   conflicts: boolean;
   /**
+   * Whether a ride actually delivers them to this lesson, and takes them on
+   * from it. Every lesson a transported person attends wants both; a lesson
+   * with only one side is a person who arrives and is then stranded, or who
+   * is collected from somewhere nobody took them.
+   *
+   * Null when the person drives themselves — the question does not arise.
+   */
+  rideIn: boolean | null;
+  rideOut: boolean | null;
+  /**
    * Null when this lesson may be dragged; otherwise WHY it may not.
    *
    * Computed on the server, alongside the data it judges, so the board cannot
@@ -135,6 +145,10 @@ const dayBounds = (dayIso: string) => {
 
 const minutesOf = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
 
+/** A lesson that cannot happen unless somebody is driven to it. */
+const needsRide = (s: { location: string; teacher: { transportMode: string | null } | null }) =>
+  s.location === "HOME" && s.teacher != null && s.teacher.transportMode !== "OWN_CAR";
+
 /**
  * Build the board for one day.
  *
@@ -164,7 +178,7 @@ export async function masterBoard(
     // card but cannot key a lane. Read the ids straight from the stop rows.
     db.tripStop.findMany({
       where: { trip: { date: start } },
-      select: { tripId: true, passengerTeacherId: true, sessionId: true, seq: true },
+      select: { tripId: true, passengerTeacherId: true, sessionId: true, seq: true, kind: true },
       orderBy: { seq: "asc" },
     }),
     // Who and what ran each trip. BoardTrip carries a driver NAME and a plate,
@@ -198,6 +212,15 @@ export async function masterBoard(
     servedByTrip.set(st.tripId, set);
   }
   const sessionById = new Map(sessions.map((x) => [x.id, x]));
+
+  // Which side of each lesson a ride actually covers. A DROPOFF at a lesson is
+  // the arrival; a PICKUP from it is the way onward.
+  const droppedAt = new Set<string>();
+  const collectedFrom = new Set<string>();
+  for (const st of stopOwners) {
+    if (!st.sessionId) continue;
+    (st.kind === "PICKUP" ? collectedFrom : droppedAt).add(st.sessionId);
+  }
 
   // Lessons whose ride has left the proposal stage. Moving one of these means
   // moving a car that is already committed — a driver may literally be on the
@@ -270,6 +293,16 @@ export async function masterBoard(
       status: s.status,
       sessionType: (s.sessionType ?? "REGULAR") as SessionType,
       conflicts: false,
+      // Only where travel is definitionally required. A home visit cannot
+      // happen without somebody being driven to it and away from it again.
+      //
+      // Deliberately NOT every lesson: two centre lessons in a row need no
+      // ride between them, and flagging the second as missing one would paint
+      // a normal day red. Whether a CENTRE lesson needs a ride depends on
+      // where the person was beforehand — that is the leg chain's question,
+      // and this reader does not build legs.
+      rideIn: needsRide(s) ? droppedAt.has(s.id) : null,
+      rideOut: needsRide(s) ? collectedFrom.has(s.id) : null,
       lockReason: null, // decided below, once collisions are known
     });
   }

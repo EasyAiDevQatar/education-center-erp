@@ -2460,7 +2460,10 @@
     "legServed": "has a ride",
     "legNeedsRide": "needs a driver",
     "assignPickLeg": "Which journey? — every lesson needs a drop before it and a pick-up after",
-    "lockedSummary": "{n} lesson(s) locked:"
+    "lockedSummary": "{n} lesson(s) locked:",
+    "missingRideIn": "No ride drops them off before this lesson",
+    "missingRideOut": "No ride collects them after this lesson",
+    "ridesMissing": "{n} lesson(s) missing a drop or a pick-up"
   },
   "spacing": {
     "title": "No room to travel",

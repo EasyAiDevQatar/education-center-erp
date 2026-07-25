@@ -950,6 +950,23 @@ function LaneRow({
                   <Building2 className="size-3 shrink-0" />
                 )}
                 <span className="truncate">{s.label}</span>
+                {/* A lesson wants a ride to it and a ride on from it. The one
+                    that is missing is marked on the side it is missing from,
+                    so the gap reads as a direction rather than a warning. */}
+                {s.rideIn === false && (
+                  <span
+                    title={t("missingRideIn")}
+                    style={edge("from", 6)}
+                    className="absolute inset-y-0 bg-destructive"
+                  />
+                )}
+                {s.rideOut === false && (
+                  <span
+                    title={t("missingRideOut")}
+                    style={edge("to", 6)}
+                    className="absolute inset-y-0 bg-destructive"
+                  />
+                )}
               </span>
             );
           })}
