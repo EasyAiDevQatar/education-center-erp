@@ -305,17 +305,20 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
         </div>
       )}
 
-      {/* Map */}
-      {mapTrips.length > 0 && (
-        <div className="mb-4">
-          <DispatchMap trips={mapTrips} centre={board.centre} centreLabel={t("centre")} height={360} />
-        </div>
-      )}
-
       {!mapOnly && (
         <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-          {/* Timeline table (image 1) */}
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          {/* Map first, with the unassigned pool beside it — the pool is what a
+              coordinator acts on, so it belongs in sight rather than below a
+              board they have to scroll past. Placement is explicit so the DOM
+              order (map, board, pool) can stay as it is. */}
+          {mapTrips.length > 0 && (
+            <div className="lg:col-start-1 lg:row-start-1">
+              <DispatchMap trips={mapTrips} centre={board.centre} centreLabel={t("centre")} height={360} />
+            </div>
+          )}
+          {/* Timeline table — full width, and scrollable sideways so nine hours
+              of lanes are never crushed into a narrow screen. */}
+          <div className="overflow-x-auto rounded-xl border border-border bg-card lg:col-span-2 lg:row-start-2">
             <p className="border-b border-border p-3 text-sm font-medium">{t("scheduleTitle")}</p>
             {/* Column header.
                 Reversed in Arabic so the row's identity comes first in reading
@@ -323,7 +326,7 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                 then the time axis running away from them. Without this the
                 driver column lands at the far left and is read last, after the
                 bars it is supposed to label. */}
-            <div className={`flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground ${rtl ? "flex-row-reverse" : ""}`}>
+            <div className={`flex min-w-[760px] items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground ${rtl ? "flex-row-reverse" : ""}`}>
               <div className="relative flex-1 overflow-hidden">
                 {ticks.map((m) => {
                   const p = pct(m);
@@ -345,7 +348,7 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                 const trips = lane.trips.filter(tripPasses);
                 const st = laneStatus(lane);
                 return (
-                  <div key={lane.driverId} className={`flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0 ${rtl ? "flex-row-reverse" : ""}`}>
+                  <div key={lane.driverId} className={`flex min-w-[760px] items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0 ${rtl ? "flex-row-reverse" : ""}`}>
                     {/* timeline cell — drop target */}
                     <div
                       className={`relative h-14 flex-1 rounded-md ${dragKey ? "bg-muted/40 " + haloClass(halo.get(lane.driverId)) : ""}`}
@@ -455,7 +458,7 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
 
           {/* Unassigned pool */}
           <div
-            className="h-fit rounded-xl border border-border bg-card p-3"
+            className="h-fit rounded-xl border border-border bg-card p-3 lg:col-start-2 lg:row-start-1"
             onDragOver={(e) => { if (e.dataTransfer.types.includes("application/x-unassign")) e.preventDefault(); }}
             onDrop={onPoolDrop}
           >
