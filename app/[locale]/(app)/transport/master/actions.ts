@@ -627,7 +627,7 @@ export async function driverOptionsFor(
     where: { id: { in: preview.drivers.map((d) => d.driverId) } },
     select: {
       id: true,
-      employee: { select: { name: true } },
+      employee: { select: { name: true, nameEn: true } },
       defaultVehicle: { select: { plate: true } },
     },
   });
@@ -638,7 +638,12 @@ export async function driverOptionsFor(
     drivers: preview.drivers
       .map((d) => ({
         driverId: d.driverId,
-        name: byId.get(d.driverId)?.employee.name ?? d.driverId,
+        // Every other transport reader localises the name; this one was
+        // showing Latin script on the Arabic board.
+        name: (() => {
+          const e = byId.get(d.driverId)?.employee;
+          return e ? displayName(e, locale) : d.driverId;
+        })(),
         plate: byId.get(d.driverId)?.defaultVehicle?.plate ?? null,
         status: d.status,
         feasible: d.feasible,

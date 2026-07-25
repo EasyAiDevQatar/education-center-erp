@@ -46,11 +46,35 @@ function allocateOne(
 ): { items: { leg: Leg; a: Assignment | null }[]; assignedCount: number; score: number | null } {
   const ad = plan.allocDrivers.find((d) => d.id === driverId);
   if (!ad) return { items: [], assignedCount: 0, score: null };
+  const cfg = plan.config;
   const { assignments } = allocate(
-    pLegs.map((l) => ({ id: l.id, from: l.from, to: l.to, readyMin: l.readyMin, dueMin: l.dueMin, passengers: 1 })),
+    pLegs.map((l) => ({
+      id: l.id,
+      from: l.from,
+      to: l.to,
+      readyMin: l.readyMin,
+      dueMin: l.dueMin,
+      // Dropping this made the allocator aim at "as late as still arrives on
+      // time" instead of the preferred collection minute, so a manual assign
+      // planned a different journey from the one the generator would.
+      preferredMin: l.preferredMin,
+      passengers: 1,
+    })),
     [ad],
-    plan.config.profile,
-    { distanceKm, maxDeadheadKm: plan.config.maxDeadheadKm },
+    cfg.profile,
+    {
+      distanceKm,
+      maxDeadheadKm: cfg.maxDeadheadKm,
+      // Plan by the rules the validator enforces. buildDayPlan was taught this
+      // and this path was not, so a manual assign routinely wrote a trip the
+      // validator then marked INVALID — the allocator and the validator
+      // disagreeing about the same journey, again.
+      turnaroundMin:
+        Math.max(cfg.rules.minDriverTurnaroundMin, cfg.rules.minVehicleTurnaroundMin) +
+        cfg.rules.postTripCloseoutMin +
+        cfg.rules.preTripInspectionMin,
+      serviceMin: Math.ceil(cfg.operational.boardingTimeMin + cfg.operational.dropoffTimeMin),
+    },
   );
   const asg = new Map(assignments.map((a) => [a.legId, a]));
   const items = pLegs
