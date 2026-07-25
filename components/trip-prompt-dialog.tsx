@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Route, ExternalLink } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ export function TripPromptDialog({
 }) {
   const t = useTranslations("tripPrompt");
   const locale = useLocale();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
@@ -45,13 +46,17 @@ export function TripPromptDialog({
     setBusy(true);
     try {
       const res = await generateTrips(locale, info.date);
-      if (res.ok && res.message) {
-        // message is "created/refreshed/locked/unassigned" from the generator.
-        const [created, , , unassigned] = res.message.split("/").map(Number);
-        setResult(t("result", { created: created || 0, unassigned: unassigned || 0 }));
-      } else {
+      if (!res.ok) {
+        // Only a failure keeps you here: there is nothing to go and look at.
         setResult(t("failed"));
+        return;
       }
+      // It worked — and "worked" includes proposing nothing, which is a result
+      // you have to SEE to act on. Reporting a count into a modal you then have
+      // to dismiss and navigate from yourself is the dialog stopping one step
+      // short of the thing it just started.
+      close();
+      router.push(`/transport/planner?date=${info.date}`);
     } finally {
       setBusy(false);
     }
