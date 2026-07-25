@@ -82,6 +82,8 @@ export function SessionDialog({
   defaultDate,
   defaultTime,
   defaultTeacherId,
+  defaultLocation,
+  defaultHours,
   onSaved,
 }: {
   title: string;
@@ -108,6 +110,11 @@ export function SessionDialog({
   defaultDate?: string;
   defaultTime?: string;
   defaultTeacherId?: string;
+  /** Where the lesson happens, when the caller already knows — the master
+   *  planner's legend chip is literally "a lesson at home" or "at the centre". */
+  defaultLocation?: "CENTER" | "HOME";
+  /** How long, when the caller dropped it onto a span rather than a point. */
+  defaultHours?: number;
   onSaved?: () => void;
 }) {
   const t = useTranslations("sessions");
@@ -129,8 +136,12 @@ export function SessionDialog({
   const now = localNowTime();
   const [studentId, setStudentId] = useState(session?.studentId ?? "");
   const [gradeLevelId, setGradeLevelId] = useState(session?.gradeLevelId ?? "");
-  const [location, setLocation] = useState<"CENTER" | "HOME">(session?.location ?? "CENTER");
-  const [hours, setHours] = useState<string>(session ? String(session.hours) : "1");
+  const [location, setLocation] = useState<"CENTER" | "HOME">(
+    session?.location ?? defaultLocation ?? "CENTER",
+  );
+  const [hours, setHours] = useState<string>(
+    session ? String(session.hours) : String(defaultHours ?? 1),
+  );
   const [packageId, setPackageId] = useState(session?.packageId ?? "");
   // Controlled so the conflict check can see them (they still post via `name`).
   const [date, setDate] = useState(session?.date ?? defaultDate ?? today);
@@ -143,8 +154,8 @@ export function SessionDialog({
     if (open && !session) {
       setStudentId("");
       setGradeLevelId("");
-      setLocation("CENTER");
-      setHours("1");
+      setLocation(defaultLocation ?? "CENTER");
+      setHours(String(defaultHours ?? 1));
       setPackageId("");
       setDate(defaultDate ?? localToday());
       setTime(defaultTime ?? localNowTime());
@@ -154,7 +165,7 @@ export function SessionDialog({
     }
     // `today` is stable for the life of the dialog.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, session, defaultDate, defaultTime, defaultTeacherId]);
+  }, [open, session, defaultDate, defaultTime, defaultTeacherId, defaultLocation, defaultHours]);
 
   // Advisory only — never gates the save button.
   const conflictResults = useConflictCheck(
@@ -228,7 +239,8 @@ export function SessionDialog({
     if (s?.gradeLevelId) setGradeLevelId(s.gradeLevelId);
     // Default the location — and therefore the auto-price — from the student's
     // usual study place. Only on create: editing keeps the session's own value.
-    if (!session && s?.studyLocation) setLocation(s.studyLocation);
+    // Only when the caller had no opinion: a chip that says "at home" means it.
+    if (!session && !defaultLocation && s?.studyLocation) setLocation(s.studyLocation);
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {

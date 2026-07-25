@@ -101,10 +101,26 @@ export function useTrack() {
     const edge = (which: "from" | "to", widthPx = 12): CSSProperties =>
       ({ [which === "from" ? S : E]: 0, width: widthPx }) as CSSProperties;
 
+    /**
+     * A pointer position inside a track → the minute it points at.
+     *
+     * The inverse of `place()`, and the reason a drop can land on a time: the
+     * caller hands over a clientX and the track's own rectangle, and never has
+     * to know which end of it the day starts from.
+     */
+    const minuteAt = (clientX: number, rect: DOMRect, stepMin = 15) => {
+      const frac = rtl
+        ? (rect.right - clientX) / Math.max(1, rect.width)
+        : (clientX - rect.left) / Math.max(1, rect.width);
+      const raw = axis.minMin + frac * (axis.maxMin - axis.minMin);
+      const snapped = Math.round(raw / stepMin) * stepMin;
+      return Math.min(axis.maxMin, Math.max(axis.minMin, snapped));
+    };
+
     /** Percent of the axis one minute occupies — for sizing in real pixels. */
     const pctPerMin = 100 / Math.max(1, axis.maxMin - axis.minMin);
 
-    return { S, rtl, pct, place, at, edge, pctPerMin, axis };
+    return { S, rtl, pct, place, at, edge, minuteAt, pctPerMin, axis };
   }, [axis, rtl]);
 }
 

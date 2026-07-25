@@ -31,6 +31,8 @@ import { hoursOf, proposedResize, proposedTimes } from "@/lib/transport/drag-loc
 import type { MasterBoard, MasterLane, MasterSession, MasterTrip } from "@/lib/transport/master";
 import { ImpactDialog } from "./impact-dialog";
 import { RideAssignDialog } from "./ride-assign-dialog";
+import { SessionDialog, type PriceMatrix } from "../../sessions/session-dialog";
+import { saveSession } from "../../sessions/actions";
 
 /**
  * The four block types, deliberately far apart in colour.
@@ -57,6 +59,36 @@ const GAP = {
   FREE: "bg-transparent",
 } as const;
 
+/**
+ * Everything the booking dialog needs, loaded only for someone who can book.
+ * Null for a viewer, which is also what makes the legend chips undraggable
+ * for them — the permission and the affordance come from one fact.
+ */
+export type BookingOptions = {
+  currency: string;
+  students: {
+    id: string;
+    name: string;
+    gradeLevelId: string | null;
+    gradeYear: number | null;
+    teacherIds: string[];
+    studyLocation: "CENTER" | "HOME";
+  }[];
+  teachers: { id: string; label: string }[];
+  levels: { id: string; label: string }[];
+  matrix: PriceMatrix;
+  subjects: { id: string; label: string }[];
+  teacherSubjectIds: Record<string, string[]>;
+};
+
+/** A legend chip dropped on a lane, waiting for its dialog. */
+type Dropped = {
+  chip: "home" | "centre" | "travel";
+  laneId: string;
+  laneName: string;
+  startMin: number;
+};
+
 /** What the board is currently drawing. Client-side: toggling is instant. */
 type Layers = { home: boolean; centre: boolean; trips: boolean; waiting: boolean };
 
@@ -82,7 +114,13 @@ type Proposal = {
   resized: boolean;
 };
 
-export function MasterClient({ board }: { board: MasterBoard }) {
+export function MasterClient({
+  board,
+  booking,
+}: {
+  board: MasterBoard;
+  booking: BookingOptions | null;
+}) {
   const t = useTranslations("transportMaster");
   const locale = useLocale();
   const rtl = locale === "ar";
@@ -103,6 +141,7 @@ export function MasterClient({ board }: { board: MasterBoard }) {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [reviewing, setReviewing] = useState(false);
   /** The unplanned-travel gap the user clicked, if any. */
+  const [dropped, setDropped] = useState<Dropped | null>(null);
   const [assigning, setAssigning] = useState<{
     laneId: string;
     who: string;
@@ -222,6 +261,48 @@ export function MasterClient({ board }: { board: MasterBoard }) {
         </div>
       )}
 
+      {/* A dropped chip is a request for the form that thing needs — the same
+          booking dialog the rest of the app uses, with what the drop already
+          knew filled in: whose row, which day, what time, and whether the
+          lesson is at home or at the centre. */}
+      {dropped && booking && dropped.chip !== "travel" && (
+        <SessionDialog
+          open
+          onOpenChange={(v) => !v && setDropped(null)}
+          title={t(dropped.chip === "home" ? "legendHome" : "legendCentre")}
+          action={saveSession.bind(null, locale, null)}
+          students={booking.students}
+          teachers={booking.teachers}
+          levels={booking.levels}
+          matrix={booking.matrix}
+          subjects={booking.subjects}
+          teacherSubjectIds={booking.teacherSubjectIds}
+          currency={booking.currency}
+          defaultDate={board.day}
+          defaultTime={hhmm(dropped.startMin)}
+          defaultTeacherId={dropped.laneId}
+          defaultLocation={dropped.chip === "home" ? "HOME" : "CENTER"}
+          onSaved={() => {
+            setDropped(null);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Travel is not a thing you create from nothing: it is a ride for
+          somebody, which is the same question the red gap asks. */}
+      {dropped && dropped.chip === "travel" && (
+        <RideAssignDialog
+          open
+          onOpenChange={(v) => !v && setDropped(null)}
+          day={board.day}
+          passengerKey={`TEACHER:${dropped.laneId}`}
+          who={dropped.laneName}
+          from={dropped.startMin}
+          to={dropped.startMin}
+        />
+      )}
+
       {assigning && (
         <RideAssignDialog
           open
@@ -272,18 +353,22 @@ export function MasterClient({ board }: { board: MasterBoard }) {
         title={t("timelineTitle")}
         legend={
           <>
-            <span className="inline-flex items-center gap-1">
+            {/* The legend became a palette. Each chip is the thing it labels,
+                so dragging one onto a row says "put one of these here" and the
+                board answers with the form that thing needs.
+
+                No chip for waiting: waiting is not an entity, it is the shape
+                of the space left over, and a chip that created nothing would be
+                a lie in the one place the board is meant to be literal. */}
+            <LegendChip kind="home" draggable={!!booking && byPerson} label={t("legendHome")}>
               <Home className="size-3.5 text-emerald-600" />
-              {t("legendHome")}
-            </span>
-            <span className="inline-flex items-center gap-1">
+            </LegendChip>
+            <LegendChip kind="centre" draggable={!!booking && byPerson} label={t("legendCentre")}>
               <Building2 className="size-3.5 text-sky-600" />
-              {t("legendCentre")}
-            </span>
-            <span className="inline-flex items-center gap-1">
+            </LegendChip>
+            <LegendChip kind="travel" draggable={!!booking && byPerson} label={t("legendTravel")}>
               <Bus className="size-3.5 text-violet-600" />
-              {t("legendTravel")}
-            </span>
+            </LegendChip>
             <span className="inline-flex items-center gap-1">
               <Hourglass className="size-3.5 text-amber-600" />
               {t("legendWaiting")}
@@ -315,6 +400,12 @@ export function MasterClient({ board }: { board: MasterBoard }) {
               onPropose={setProposal}
               // Only a teacher lane names a passenger; a driver's row shows the
               // same red stretch but there is nobody on it to give a ride to.
+              onDropChip={
+                booking && byPerson
+                  ? (chip, startMin) =>
+                      setDropped({ chip, laneId: lane.id, laneName: lane.name, startMin })
+                  : undefined
+              }
               onAssignGap={
                 byPerson
                   ? (g) =>
@@ -370,6 +461,39 @@ function LayerToggle({
  * path — and so the two edges are declared as two things rather than a loop
  * over a direction, which is how a left/right assumption sneaks back in.
  */
+/** Our own type, so a stray file drag can never look like a legend chip. */
+const CHIP_MIME = "application/x-master-chip";
+
+function LegendChip({
+  kind,
+  draggable,
+  label,
+  children,
+}: {
+  kind: "home" | "centre" | "travel";
+  draggable: boolean;
+  label: string;
+  children: React.ReactNode;
+}) {
+  const t = useTranslations("transportMaster");
+  return (
+    <span
+      draggable={draggable}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(CHIP_MIME, kind);
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+      title={draggable ? t("chipDragHint") : undefined}
+      className={`inline-flex items-center gap-1 rounded px-1 py-0.5 ${
+        draggable ? "cursor-grab active:cursor-grabbing hover:bg-accent" : ""
+      }`}
+    >
+      {children}
+      {label}
+    </span>
+  );
+}
+
 function ResizeHandle({
   style,
   onGrab,
@@ -397,6 +521,7 @@ function LaneRow({
   proposal,
   onPropose,
   onAssignGap,
+  onDropChip,
 }: {
   lane: MasterLane;
   layers: Layers;
@@ -407,6 +532,8 @@ function LaneRow({
   proposal: Proposal | null;
   /** Present only where the gap belongs to someone who can be given a ride. */
   onAssignGap?: (g: { startMin: number; endMin: number }) => void;
+  /** Present only for a user who may create things on this row. */
+  onDropChip?: (chip: "home" | "centre" | "travel", startMin: number) => void;
   /**
    * The setter itself, not a plain callback: a nudge is computed FROM the
    * current proposal, and two arrow presses in the same tick would otherwise
@@ -557,7 +684,7 @@ function LaneRow({
   };
 
   /** The one route from a minute to a position, shared with the dispatch board. */
-  const { place: span, edge, pctPerMin } = useTrack();
+  const { place: span, edge, minuteAt, pctPerMin } = useTrack();
 
 
   /**
@@ -591,6 +718,24 @@ function LaneRow({
   return (
     <TimelineRow
       trackRef={trackRef}
+      trackProps={
+        onDropChip
+          ? {
+              onDragOver: (e) => {
+                if (e.dataTransfer.types.includes(CHIP_MIME)) e.preventDefault();
+              },
+              onDrop: (e) => {
+                const chip = e.dataTransfer.getData(CHIP_MIME);
+                if (chip !== "home" && chip !== "centre" && chip !== "travel") return;
+                e.preventDefault();
+                const rect = e.currentTarget.getBoundingClientRect();
+                // The drop lands on a TIME, read back off the axis by the same
+                // helper that put everything else on it.
+                onDropChip(chip, minuteAt(e.clientX, rect));
+              },
+            }
+          : undefined
+      }
       leading={
         <>
         <span className="flex items-center gap-1 truncate font-medium">

@@ -1,4 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { db } from "@/lib/db";
+import { displayName } from "@/lib/names";
+import { currentPriceMatrix } from "@/lib/pricing";
+import type { PriceMatrix } from "../../sessions/session-dialog";
 import { requireTransport } from "@/lib/transport/guard";
 import { masterBoard, type LaneKind } from "@/lib/transport/master";
 import { PageHeader } from "@/components/page-header";
@@ -50,10 +54,62 @@ export default async function TransportMasterPage({
   // the row busy.
   const board = await masterBoard(locale, day, { laneKind, canDrag });
 
+  // What the booking dialog needs to exist. Loaded only for someone who can
+  // actually create a lesson — a viewer never opens it, so a viewer never pays
+  // for the roster.
+  const year = canDrag
+    ? await db.academicYear.findFirst({ where: { isCurrent: true }, select: { id: true } })
+    : null;
+  const [students, teachers, levels, matrix, settingsRows, subjectList, teacherSubjectRows] =
+    canDrag
+      ? await Promise.all([
+          db.student.findMany({
+            where: { active: true },
+            orderBy: { name: "asc" },
+            include: { teachers: { where: { academicYearId: year?.id ?? null } } },
+          }),
+          db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+          db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
+          currentPriceMatrix(),
+          db.setting.findMany({ where: { key: { in: ["currency"] } } }),
+          db.subject.findMany({
+            where: { active: true },
+            orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
+          }),
+          db.teacherSubject.findMany({ select: { teacherId: true, subjectId: true } }),
+        ])
+      : [[], [], [], [], [], [], []];
+
+  const label = (ar: string, en: string | null) => (locale === "en" && en ? en : ar);
+  const booking = canDrag
+    ? {
+        currency:
+          Object.fromEntries(settingsRows.map((r) => [r.key, r.value])).currency ?? "QAR",
+        students: students.map((st) => ({
+          id: st.id,
+          name: displayName(st, locale),
+          gradeLevelId: st.gradeLevelId,
+          gradeYear: st.gradeYear,
+          teacherIds: st.teachers.map((x) => x.teacherId),
+          studyLocation: st.studyLocation as "CENTER" | "HOME",
+        })),
+        teachers: teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) })),
+        levels: levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) })),
+        matrix: Object.fromEntries(
+          matrix.map((m) => [m.gradeLevel.id, { CENTER: m.CENTER, HOME: m.HOME }]),
+        ) as PriceMatrix,
+        subjects: subjectList.map((x) => ({ id: x.id, label: label(x.nameAr, x.nameEn) })),
+        teacherSubjectIds: teacherSubjectRows.reduce<Record<string, string[]>>((acc, r) => {
+          (acc[r.teacherId] ??= []).push(r.subjectId);
+          return acc;
+        }, {}),
+      }
+    : null;
+
   return (
     <div>
       <PageHeader title={t("title")} description={t("subtitle")} />
-      <MasterClient board={board} />
+      <MasterClient board={board} booking={booking} />
     </div>
   );
 }
