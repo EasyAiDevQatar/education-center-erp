@@ -32,8 +32,9 @@ export function RideAssignDialog({
   /** `TEACHER:<id>` — a teacher lane's id IS the teacher. */
   passengerKey: string;
   who: string;
-  from: number;
-  to: number;
+  /** The gap's window — absent when opened from a ride rather than a gap. */
+  from?: number;
+  to?: number;
 }) {
   const t = useTranslations("transportMaster");
   const tp = useTranslations("transportPlanner");
@@ -107,7 +108,12 @@ export function RideAssignDialog({
         <DialogHeader>
           <DialogTitle>{t("assignTitle")}</DialogTitle>
           <p className="text-sm text-muted-foreground" dir="auto">
-            {t("assignFor", { who, from: hhmm(from), to: hhmm(to) })}
+            {/* Opened from a red gap, the window is the point. Opened from a
+                ride, it is not — and repeating the gap's sentence there was
+                describing the wrong thing, at 00:00. */}
+            {from != null && to != null
+              ? t("assignFor", { who, from: hhmm(from), to: hhmm(to) })
+              : t("ridesFor", { who })}
           </p>
         </DialogHeader>
 
@@ -132,7 +138,11 @@ export function RideAssignDialog({
               <li key={l.legId}>
                 <button
                   type="button"
-                  disabled={l.served || saving}
+                  // A journey with a ride is not finished business: changing
+                  // who drives it is the most common thing anybody wants from
+                  // this screen, and disabling the row made it the one thing
+                  // you could not do.
+                  disabled={saving}
                   onClick={() => setLegId(l.legId)}
                   className="flex w-full items-center gap-2 rounded-md border border-border p-2 text-start text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >

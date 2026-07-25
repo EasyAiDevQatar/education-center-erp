@@ -522,10 +522,13 @@ export function MasterClient({
           open
           onOpenChange={(v) => !v && setAssigning(null)}
           day={board.day}
-          passengerKey={`TEACHER:${assigning.laneId}`}
+          passengerKey={
+            assigning.laneId.includes(":") ? assigning.laneId : `TEACHER:${assigning.laneId}`
+          }
           who={assigning.who}
-          from={assigning.startMin}
-          to={assigning.endMin}
+          {...(assigning.endMin > assigning.startMin
+            ? { from: assigning.startMin, to: assigning.endMin }
+            : {})}
         />
       )}
 
@@ -630,6 +633,12 @@ export function MasterClient({
                   : undefined
               }
               halo={halo.get(lane.id)}
+              onOpenRide={
+                board.canDrag
+                  ? (passengerKey, w) =>
+                      setAssigning({ laneId: passengerKey, who: w, startMin: 0, endMin: 0 })
+                  : undefined
+              }
               onDropChip={
                 booking && byPerson
                   ? (chip, startMin) =>
@@ -755,6 +764,7 @@ function LaneRow({
   onAssignGap,
   onDropChip,
   onDropPassenger,
+  onOpenRide,
   halo,
 }: {
   lane: MasterLane;
@@ -770,6 +780,8 @@ function LaneRow({
   onDropChip?: (chip: "home" | "centre" | "travel", startMin: number) => void;
   /** Present only on a driver's row, for a user who may assign. */
   onDropPassenger?: (passengerKey: string) => void;
+  /** Open a ride's details — who drives it, and the chance to change that. */
+  onOpenRide?: (passengerKey: string, who: string) => void;
   /** The verdict this lane would give the card currently being dragged. */
   halo?: string;
   /**
@@ -1220,6 +1232,10 @@ function LaneRow({
         {layers.trips &&
           lane.trips.map((tr) => {
           const backKey = !byPerson && tr.linkGroup ? tr.linkGroup.replace(/^day:/, "") : null;
+          // Every ride is openable, on any perspective: the question "who is
+          // driving this and can it be someone else" belongs to the bar you
+          // are looking at, not to a different screen.
+          const who = tr.linkGroup ? tr.linkGroup.replace(/^day:/, "") : null;
           return (
           <span
             key={tr.id}
@@ -1229,6 +1245,18 @@ function LaneRow({
               e.dataTransfer.setData(UNASSIGN_MIME, backKey);
               e.dataTransfer.effectAllowed = "move";
             }}
+            role={who && onOpenRide ? "button" : undefined}
+            tabIndex={who && onOpenRide ? 0 : undefined}
+            onClick={who && onOpenRide ? () => onOpenRide(who, tr.passengerName ?? lane.name) : undefined}
+            onKeyDown={
+              who && onOpenRide
+                ? (e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    onOpenRide(who, tr.passengerName ?? lane.name);
+                  }
+                : undefined
+            }
             title={[
               `${hhmm(tr.startMin)}–${hhmm(tr.endMin)}`,
               tr.passengerName,
@@ -1237,7 +1265,7 @@ function LaneRow({
             ]
               .filter(Boolean)
               .join(" · ")}
-            className={`absolute top-1/2 flex h-3.5 -translate-y-1/2 items-center justify-center rounded-full ${BLOCK.travel} ${
+            className={`absolute top-1/2 flex h-3.5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring ${BLOCK.travel} ${
               tr.validationStatus === "INVALID" ? "ring-2 ring-destructive" : ""
             }`}
             style={span(tr.startMin, tr.endMin)}

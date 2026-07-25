@@ -161,6 +161,9 @@ const PLANNABLE = ["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED"];
 /** Trip statuses that mean a driver has been committed to the journey. */
 const DISPATCHED_TRIP = new Set(["ASSIGNED", "STARTED", "COMPLETED"]);
 
+/** Lessons that are no longer a plan — nothing about them is still to arrange. */
+const SETTLED_SESSION = new Set(["COMPLETED", "CHECKED_IN", "CANCELLED", "NO_SHOW"]);
+
 const dayBounds = (dayIso: string) => {
   const start = new Date(`${dayIso}T00:00:00.000Z`);
   const end = new Date(start);
@@ -368,8 +371,17 @@ export async function masterBoard(
       conflicts: false,
       // null = no journey is required for this side, so nothing is missing.
       // false = one is required and nobody is driving it.
-      rideIn: needsIn.has(s.id) ? droppedAt.has(s.id) : null,
-      rideOut: needsOut.has(s.id) ? collectedFrom.has(s.id) : null,
+      //
+      // A lesson that has already been taught is never missing a ride: whatever
+      // happened, happened, and nobody is going to plan a car for it now.
+      // Marking eight finished lessons as needing transport is how a board full
+      // of red teaches people to stop reading the red.
+      rideIn: SETTLED_SESSION.has(s.status) ? null : needsIn.has(s.id) ? droppedAt.has(s.id) : null,
+      rideOut: SETTLED_SESSION.has(s.status)
+        ? null
+        : needsOut.has(s.id)
+          ? collectedFrom.has(s.id)
+          : null,
       lockReason: null, // decided below, once collisions are known
     });
   }
