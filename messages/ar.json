@@ -2455,7 +2455,12 @@
     "proposalResize": "{student} ({teacher}): الطول من {fromHours} إلى {toHours} ساعة",
     "impactMoney": "سيتغيّر الإجمالي إلى {total} — والحالة المالية ستُحتسب من جديد.",
     "resizeHint": "اسحب حافة الحصة لتغيير طولها",
-    "chipDragHint": "اسحبها إلى صف لإضافتها"
+    "chipDragHint": "اسحبها إلى صف لإضافتها",
+    "legRoute": "من {from} إلى {to}",
+    "legServed": "لها رحلة",
+    "legNeedsRide": "تحتاج سائقاً",
+    "assignPickLeg": "أي رحلة؟ — كل حصة تحتاج توصيلة قبلها وأخرى بعدها",
+    "lockedSummary": "{n} حصة مقفلة:"
   },
   "spacing": {
     "title": "لا يوجد وقت كافٍ للتنقل",

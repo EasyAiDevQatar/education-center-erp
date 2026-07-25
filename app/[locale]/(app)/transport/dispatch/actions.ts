@@ -177,3 +177,137 @@ export async function unassignPassenger(locale: string, day: string, passengerKe
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true, message: String(ids.length) };
 }
+
+/* ---------------------------------------------- one direction at a time */
+
+export type LegOption = {
+  legId: string;
+  fromLabel: string;
+  toLabel: string;
+  readyMin: number;
+  dueMin: number;
+  /** True when a ride already covers this direction. */
+  served: boolean;
+};
+
+/** The journey key a trip and a leg share — destination, not just passenger. */
+const destKeyOf = (base: string, toSessionId: string | null) =>
+  `${base}|${toSessionId ?? "home"}`;
+
+/**
+ * Every journey this passenger needs today, and which already have a ride.
+ *
+ * A person's day is a chain of separate journeys — out to a lesson, on to the
+ * next, home at the end — and each is somebody's driving job. Assigning all of
+ * them at once because they belong to the same passenger is how one drop
+ * silently produced two trips nobody chose.
+ */
+export async function legOptionsFor(
+  locale: string,
+  day: string,
+  passengerKey: string,
+): Promise<{ ok: true; legs: LegOption[] } | { ok?: false; error: string }> {
+  const s = await guard();
+  if (!s) return { error: "forbidden" };
+  if (!daySchema.safeParse(day).success || !keySchema.safeParse(passengerKey).success)
+    return { error: "invalid" };
+  const pk = parseKey(passengerKey);
+  if (!pk) return { error: "invalid" };
+
+  const plan = await buildDayPlan(locale, day);
+  const pLegs = plan.legs.filter((l) => l.passengerKind === pk.kind && l.passengerId === pk.id);
+  if (pLegs.length === 0) return { error: "noLegs" };
+
+  const base = `day:${passengerKey}`;
+  const existing = await db.trip.findMany({
+    where: { date: dayStart(day), linkGroup: base },
+    select: { stops: { select: { sessionId: true, seq: true } } },
+  });
+  const servedKeys = new Set(
+    existing.map((t) =>
+      destKeyOf(base, [...t.stops].sort((a, b) => b.seq - a.seq)[0]?.sessionId ?? null),
+    ),
+  );
+
+  return {
+    ok: true,
+    legs: pLegs
+      .map((l) => ({
+        legId: l.id,
+        fromLabel: l.fromLabel,
+        toLabel: l.toLabel,
+        readyMin: l.readyMin,
+        dueMin: l.dueMin,
+        served: servedKeys.has(destKeyOf(base, l.toSessionId)),
+      }))
+      .sort((a, b) => a.readyMin - b.readyMin),
+  };
+}
+
+/**
+ * Give ONE journey to a driver, leaving the passenger's other journeys alone.
+ *
+ * The difference from `assignToDriver` is the whole point: that one replaces
+ * every trip in the passenger's link group, which is right when you are
+ * (re)planning their entire day and wrong when you are answering "who takes
+ * her to this one lesson".
+ */
+export async function assignLegToDriver(
+  locale: string,
+  day: string,
+  passengerKey: string,
+  legId: string,
+  driverId: string,
+): Promise<ActionState> {
+  const s = await guard();
+  if (!s) return { error: "forbidden" };
+  if (!daySchema.safeParse(day).success || !keySchema.safeParse(passengerKey).success)
+    return { error: "invalid" };
+  const pk = parseKey(passengerKey);
+  if (!pk) return { error: "invalid" };
+
+  const plan = await buildDayPlan(locale, day);
+  const leg = plan.legs.find(
+    (l) => l.id === legId && l.passengerKind === pk.kind && l.passengerId === pk.id,
+  );
+  if (!leg) return { error: "noLegs" };
+
+  const { items, assignedCount, score } = allocateOne(plan, [leg], driverId);
+  if (assignedCount === 0) return { error: "infeasible" };
+
+  const start = dayStart(day);
+  const base = `day:${passengerKey}`;
+  const target = destKeyOf(base, leg.toSessionId);
+
+  // Replace only the trips serving THIS journey. The other direction is
+  // somebody's committed work and is not ours to delete.
+  const prior = await db.trip.findMany({
+    where: { date: start, linkGroup: base },
+    select: { id: true, status: true, stops: { select: { sessionId: true, seq: true } } },
+  });
+  const mine = prior.filter(
+    (t) =>
+      destKeyOf(base, [...t.stops].sort((a, b) => b.seq - a.seq)[0]?.sessionId ?? null) === target,
+  );
+  const removable = mine.filter((t) => generatorMayReplace(t.status as TripStatus));
+  if (removable.length < mine.length) return { error: "locked" };
+  if (removable.length) {
+    const ids = removable.map((t) => t.id);
+    await db.tripStop.deleteMany({ where: { tripId: { in: ids } } });
+    await db.trip.deleteMany({ where: { id: { in: ids } } });
+  }
+
+  const driver = plan.drivers.find((d) => d.id === driverId) ?? null;
+  const built = await buildTripsForPassenger({
+    plan, start, baseLegKey: base, pkind: pk.kind, passengerId: pk.id, items, driverId, driver,
+    autoAllocated: false, allocationScore: score, byUserId: s.userId ?? null, manualEdit: true,
+    persist: true,
+  });
+  await writeAudit("Trip", `assign-leg-${legId}-${day}`, "CREATE", {
+    after: { driverId, legId, trips: built.length },
+  });
+  revalidatePath(`/${locale}/transport/master`);
+  revalidatePath(`/${locale}/transport/dispatch`);
+  revalidatePath(`/${locale}/transport/planner`);
+  return { ok: true, message: String(built.length) };
+}

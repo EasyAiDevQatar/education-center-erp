@@ -141,6 +141,19 @@ export function MasterClient({
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [reviewing, setReviewing] = useState(false);
   /** The unplanned-travel gap the user clicked, if any. */
+  /** Every lock reason on the board today, counted, worst-first. */
+  const lockSummary = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const lane of board.lanes) {
+      for (const s of lane.sessions) {
+        if (s.lockReason) n.set(s.lockReason, (n.get(s.lockReason) ?? 0) + 1);
+      }
+    }
+    return [...n.entries()]
+      .map(([reason, count]) => ({ reason, n: count }))
+      .sort((a, b) => b.n - a.n);
+  }, [board.lanes]);
+
   const [dropped, setDropped] = useState<Dropped | null>(null);
   const [assigning, setAssigning] = useState<{
     laneId: string;
@@ -221,6 +234,25 @@ export function MasterClient({
           </LayerToggle>
         </div>
       </div>
+
+      {/* Why anything is locked, said out loud.
+          The padlocks were correct and completely unexplained: the reason
+          lived in a title attribute, so the board showed a wall of locks and
+          left you to discover that hovering was the way to ask. A day's worth
+          of reasons is a short list; here it is, counted. */}
+      {board.canDrag && lockSummary.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-muted/30 p-2.5 text-xs">
+          <span className="inline-flex items-center gap-1 font-medium">
+            <Lock className="size-3.5 shrink-0" />
+            {t("lockedSummary", { n: lockSummary.reduce((a, x) => a + x.n, 0) })}
+          </span>
+          {lockSummary.map((x) => (
+            <span key={x.reason} className="text-muted-foreground">
+              {t(`lock.${x.reason}`)} ({x.n})
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* An unsaved proposal. Loud enough that nobody walks away believing the
           day was changed, and undoable in one click. */}

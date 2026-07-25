@@ -7,7 +7,7 @@ import { Ban, CarFront, Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { hhmm } from "@/components/transport/timeline";
 import { driverOptionsFor, type DriverOption } from "./actions";
-import { assignToDriver } from "../dispatch/actions";
+import { assignLegToDriver, legOptionsFor, type LegOption } from "../dispatch/actions";
 
 /**
  * The one gap with an obvious next action.
@@ -40,36 +40,65 @@ export function RideAssignDialog({
   const locale = useLocale();
   const router = useRouter();
 
+  // Two steps, in the order the question is actually asked: WHICH journey,
+  // then who drives it. Assigning every journey a passenger has because they
+  // share a name is how one drop produced a ride out and a ride back that
+  // nobody chose.
+  const [legs, setLegs] = useState<LegOption[] | null>(null);
+  const [legId, setLegId] = useState<string | null>(null);
   const [drivers, setDrivers] = useState<DriverOption[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Derived, not stored: "still waiting" is exactly "the answer has not
+  // arrived", and a second copy of that fact can only ever disagree with it.
+  const loading = error == null && (legId ? drivers === null : legs === null);
   const [saving, startSaving] = useTransition();
+  /** Bumped after a successful assign so the journey list re-reads itself. */
+  const [round, setRound] = useState(0);
 
+  // Step 1: which journeys need a driver.
   useEffect(() => {
+    let live = true;
+    legOptionsFor(locale, day, passengerKey)
+      .then((res) => {
+        if (!live) return;
+        if ("error" in res && res.error) setError(res.error);
+        else setLegs((res as { legs: LegOption[] }).legs);
+      });
+    return () => {
+      live = false;
+    };
+  }, [locale, day, passengerKey, round]);
+
+  // Step 2: who can drive the one that was picked.
+  useEffect(() => {
+    if (!legId) return;
     let live = true;
     driverOptionsFor(locale, day, passengerKey)
       .then((res) => {
         if (!live) return;
         if ("error" in res && res.error) setError(res.error);
         else setDrivers((res as { drivers: DriverOption[] }).drivers);
-      })
-      .finally(() => {
-        if (live) setLoading(false);
       });
     return () => {
       live = false;
     };
-  }, [locale, day, passengerKey]);
+  }, [legId, locale, day, passengerKey]);
 
   const assign = (driverId: string) =>
     startSaving(async () => {
-      const res = await assignToDriver(locale, day, passengerKey, driverId);
+      if (!legId) return;
+      const res = await assignLegToDriver(locale, day, passengerKey, legId, driverId);
       if (res.error) {
         setError(res.error);
         return;
       }
-      onOpenChange(false);
       router.refresh();
+      // Straight back to the list, which now shows this journey covered and
+      // the next one waiting — the "and what about the way back?" question
+      // asked by the screen instead of left to the user to remember.
+      setDrivers(null);
+      setLegId(null);
+      setRound((r) => r + 1);
     });
 
   return (
@@ -96,11 +125,46 @@ export function RideAssignDialog({
           </p>
         )}
 
-        {drivers && drivers.length === 0 && (
+        {/* Step 1 — the journeys. */}
+        {!legId && legs && (
+          <ul className="space-y-1.5">
+            {legs.map((l) => (
+              <li key={l.legId}>
+                <button
+                  type="button"
+                  disabled={l.served || saving}
+                  onClick={() => setLegId(l.legId)}
+                  className="flex w-full items-center gap-2 rounded-md border border-border p-2 text-start text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CarFront className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1" dir="auto">
+                    <span className="block truncate font-medium">
+                      {t("legRoute", { from: l.fromLabel, to: l.toLabel })}
+                    </span>
+                    <span className="block text-xs text-muted-foreground" dir="ltr">
+                      {hhmm(l.readyMin)}–{hhmm(l.dueMin)}
+                    </span>
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      l.served
+                        ? "bg-green-500/15 text-green-700 dark:text-green-300"
+                        : "bg-amber-400/20 text-amber-800 dark:text-amber-200"
+                    }`}
+                  >
+                    {t(l.served ? "legServed" : "legNeedsRide")}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {legId && drivers && drivers.length === 0 && (
           <p className="text-sm text-muted-foreground">{t("assignNone")}</p>
         )}
 
-        {drivers && drivers.length > 0 && (
+        {legId && drivers && drivers.length > 0 && (
           <>
             <p className="mb-2 text-sm font-medium">{t("assignPick")}</p>
             <ul className="space-y-1.5">

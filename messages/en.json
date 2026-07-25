@@ -2455,7 +2455,12 @@
     "proposalResize": "{student} ({teacher}): length {fromHours}h → {toHours}h",
     "impactMoney": "The total becomes {total}, and what is owed is recalculated.",
     "resizeHint": "Drag a lesson's edge to change its length",
-    "chipDragHint": "Drag onto a row to add one"
+    "chipDragHint": "Drag onto a row to add one",
+    "legRoute": "{from} → {to}",
+    "legServed": "has a ride",
+    "legNeedsRide": "needs a driver",
+    "assignPickLeg": "Which journey? — every lesson needs a drop before it and a pick-up after",
+    "lockedSummary": "{n} lesson(s) locked:"
   },
   "spacing": {
     "title": "No room to travel",
