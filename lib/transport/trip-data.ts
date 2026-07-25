@@ -928,10 +928,22 @@ export async function buildTripsForPassenger(args: {
             ),
           ),
     );
-    const totalHopMin = hopMin.reduce((a, b) => a + b, 0);
-    const arrivalAnchor = stops[stops.length - 1].plannedMin;
+    // Anchor on the TIGHTEST stop, not the last one.
+    //
+    // Anchoring on the final stop is only right when the final stop is the one
+    // with the deadline. On a trip that carries a delivery and the ride home,
+    // the last stop is the ride home — which has no real deadline — so walking
+    // back from it dragged the delivery in the middle nearly two hours past the
+    // start of the lesson. Every stop keeps the time it was promised: take the
+    // earliest start any of them demands.
     const collectFloor = seg.items[0].readyMin;
-    let cursor = arrivalAnchor - totalHopMin;
+    let cursor = Number.POSITIVE_INFINITY;
+    let cumulative = 0;
+    for (let i = 0; i < stops.length; i++) {
+      if (i > 0) cumulative += hopMin[i];
+      cursor = Math.min(cursor, stops[i].plannedMin - cumulative);
+    }
+    if (!Number.isFinite(cursor)) cursor = stops[0].plannedMin;
     if (collectFloor != null && cursor < collectFloor) cursor = collectFloor;
     stops[0].plannedMin = cursor;
     for (let i = 1; i < stops.length; i++) {
