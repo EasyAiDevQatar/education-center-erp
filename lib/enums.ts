@@ -195,3 +195,10 @@ export const VALIDATION_LEVELS = [
   "INVALID",
 ] as const;
 export type ValidationLevelName = (typeof VALIDATION_LEVELS)[number];
+
+/**
+ * How a teacher reaches a home visit. Explicit, rather than inferred from
+ * whether an address happens to be pinned.
+ */
+export const TEACHER_TRANSPORT_MODES = ["CENTER", "OWN_CAR"] as const;
+export type TeacherTransportMode = (typeof TEACHER_TRANSPORT_MODES)[number];

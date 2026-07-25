@@ -27,6 +27,7 @@ const schema = z.object({
   // Home pickup point. Having coordinates is what opts the teacher into
   // transport planning (see lib/transport/trip-data.ts).
   address: z.string().trim().optional().nullable(),
+  transportMode: z.enum(["CENTER", "OWN_CAR"]).default("CENTER"),
   homeLat: z.coerce.number().min(-90).max(90).optional().nullable(),
   homeLng: z.coerce.number().min(-180).max(180).optional().nullable(),
 });
@@ -68,6 +69,7 @@ export async function saveTeacher(
     active: formData.get("active") === "on" || formData.get("active") === "true",
     notes: formData.get("notes") || null,
     address: orNull(formData.get("address")),
+    transportMode: formData.get("transportMode") || "CENTER",
     homeLat: orNull(formData.get("homeLat")),
     homeLng: orNull(formData.get("homeLng")),
   });

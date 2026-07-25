@@ -132,9 +132,18 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       endMin: minutesOf(s.date) + Math.round(toNumber(s.hours) * 60),
     };
 
-    // Teachers: having home coordinates IS the opt-in (see the Teacher.address
-    // comment) — only teachers the centre actually collects have a pin.
-    if (wantTeachers && s.teacher && s.teacher.homeLat != null && s.teacher.homeLng != null) {
+    // Teachers opt in explicitly via transportMode. A pin alone used to mean
+    // "collect me", so anyone whose address was recorded for another reason was
+    // silently added to the plan, and a teacher who drove herself could only be
+    // removed by deleting her address. A pin is still required — we cannot
+    // route to an unknown place — but it no longer decides the question.
+    if (
+      wantTeachers &&
+      s.teacher &&
+      s.teacher.transportMode !== "OWN_CAR" &&
+      s.teacher.homeLat != null &&
+      s.teacher.homeLng != null
+    ) {
       const key = `TEACHER:${s.teacher.id}`;
       if (!days.has(key)) {
         days.set(key, {

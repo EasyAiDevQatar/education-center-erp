@@ -470,7 +470,11 @@
     "homeLocation": "Home location (for transport)",
     "address": "Address",
     "locateOnMap": "Locate on map",
-    "homeHint": "Setting a pin includes this teacher in transport planning: rides start and end here."
+    "homeHint": "Setting a pin includes this teacher in transport planning: rides start and end here.",
+    "transportMode": "Getting to home visits",
+    "transportModeHint": "Centre transport puts this teacher in the daily transport plan. Own car leaves them out — the home pin is still used for distance, but no driver is arranged.",
+    "transportModeCenter": "Centre transport",
+    "transportModeOwnCar": "Own car"
   },
   "guardians": {
     "title": "Guardians",

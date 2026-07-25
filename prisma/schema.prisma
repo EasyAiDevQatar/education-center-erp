@@ -49,6 +49,13 @@ model User {
 }
 
 model Teacher {
+  /// How this teacher gets to a home visit. CENTER means the centre arranges a
+  /// driver; OWN_CAR means they drive themselves and the planner leaves them
+  /// out. Defaults to CENTER: until now the opt-in was implicit — having home
+  /// coordinates — so a teacher pinned for any other reason was silently added
+  /// to the transport plan, and one who genuinely drove herself could only be
+  /// excluded by deleting her address.
+  transportMode String   @default("CENTER") // CENTER | OWN_CAR
   id            String   @id @default(cuid())
   name          String
   /// Latin-script name, shown when the interface is in English. Optional: the

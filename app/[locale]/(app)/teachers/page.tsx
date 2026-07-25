@@ -42,6 +42,7 @@ export default async function TeachersPage({
     active: teacher.active,
     notes: teacher.notes,
     address: teacher.address,
+    transportMode: teacher.transportMode,
     homeLat: teacher.homeLat,
     homeLng: teacher.homeLng,
     subjectIds: teacher.subjects.map((ts) => ts.subjectId),

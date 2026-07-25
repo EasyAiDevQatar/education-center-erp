@@ -48,6 +48,7 @@ export type TeacherRow = {
   active: boolean;
   notes: string | null;
   address: string | null;
+  transportMode: string;
   homeLat: number | null;
   homeLng: number | null;
   /** Subject ids the teacher teaches (for the edit form). */
@@ -64,6 +65,7 @@ function TeacherFields({ teacher, subjects }: { teacher?: TeacherRow; subjects: 
   const tm = useTranslations("paymentModes");
   const tem = useTranslations("earningsModes");
   const [address, setAddress] = useState(teacher?.address ?? "");
+  const [transportMode, setTransportMode] = useState(teacher?.transportMode ?? "CENTER");
   const [lat, setLat] = useState(teacher?.homeLat != null ? String(teacher.homeLat) : "");
   const [lng, setLng] = useState(teacher?.homeLng != null ? String(teacher.homeLng) : "");
   return (
@@ -136,9 +138,22 @@ function TeacherFields({ teacher, subjects }: { teacher?: TeacherRow; subjects: 
           </Select>
         </FormField>
       </div>
-      {/* Home pickup point — a pin here is what opts the teacher into transport
-          planning: house-to-house legs start and end at this address. */}
+      {/* Home pickup point. The pin says WHERE to collect; transportMode below
+          says WHETHER to. They used to be the same answer, which meant a
+          teacher who drove herself could only be left out of the plan by
+          deleting her address. */}
       <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+        <FormField label={t("transportMode")} htmlFor="tr-mode" hint={t("transportModeHint")}>
+          <Select
+            id="tr-mode"
+            name="transportMode"
+            value={transportMode}
+            onChange={(e) => setTransportMode(e.target.value)}
+          >
+            <option value="CENTER">{t("transportModeCenter")}</option>
+            <option value="OWN_CAR">{t("transportModeOwnCar")}</option>
+          </Select>
+        </FormField>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold text-muted-foreground">{t("homeLocation")}</p>
           <MapPicker
