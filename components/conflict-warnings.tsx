@@ -181,6 +181,10 @@ export function SpacingWarning({
               to: minToHHMM(p.otherEndMin),
               need: p.requiredGapMin,
               short: p.shortfallMin,
+              // What the day actually leaves. Stating the requirement without
+              // it makes the reader do the subtraction to find out how bad it
+              // is — and the answer can be zero, which is worth saying plainly.
+              has: Math.max(0, p.requiredGapMin - p.shortfallMin),
             })}
           </li>
         ))}

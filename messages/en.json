@@ -2478,8 +2478,8 @@
   "spacing": {
     "title": "No room to travel",
     "titleBlocking": "Cannot be booked at this time",
-    "overlap": "Overlaps {name} ({from}–{to}) — {short} min short once travel is counted",
-    "tooTight": "Only minutes after {name} ({from}–{to}); a journey needs {need} min — {short} min short",
+    "overlap": "Overlaps {name} ({from}–{to}): the journey needs {need} min and there is no time between them — {short} min short",
+    "tooTight": "After {name} ({from}–{to}): the journey needs {need} min, the day allows {has} — {short} min short",
     "suggestion": "The first clear time is {time}.",
     "useSuggestion": "Use {time}"
   }
