@@ -75,6 +75,10 @@ export type Assignment = {
 };
 
 export type UnassignedReason =
+  /** Impossible before any driver is considered — the passenger is booked into
+   *  two places at once, so no vehicle could bridge the gap. Kept apart from
+   *  `tooLate` so a scheduling defect is not reported as a transport one. */
+  | "scheduleConflict"
   | "tooLate"
   | "noCapacity"
   | "outsideShift"

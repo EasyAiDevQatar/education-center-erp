@@ -6,6 +6,7 @@ import { loadTransportConfig, distanceKm, type TransportConfig } from "./setting
 import { travelMinutes } from "./eta";
 import { buildDayLegs, type Leg, type PassengerDay, type PassengerKind, type SkippedLeg } from "./chain";
 import { allocate, type AllocDriver, type Assignment, type LatLng, type Unassigned } from "./allocate";
+import { legFeasibility } from "./feasibility";
 import { driverIsDispatchable } from "./fleet";
 import { generatorMayReplace, legKeyFor } from "./trips";
 import {
@@ -275,8 +276,20 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       }
     : undefined;
 
-  const { assignments, unassigned } = allocate(
-    legs.map((l) => ({
+  // Legs that could never work are separated BEFORE allocation. Sending them
+  // through it makes them fail the deadline check and be reported as "tooLate"
+  // — the same word used for a journey that was merely a few minutes tight —
+  // so a double-booked teacher looked like a fleet shortage. The board can now
+  // say which lessons collide instead.
+  const impossible: Unassigned[] = [];
+  const schedulable = legs.filter((l) => {
+    if (legFeasibility({ readyMin: l.readyMin, dueMin: l.dueMin }).possible) return true;
+    impossible.push({ legId: l.id, reason: "scheduleConflict" });
+    return false;
+  });
+
+  const { assignments, unassigned: allocUnassigned } = allocate(
+    schedulable.map((l) => ({
       id: l.id,
       from: l.from,
       to: l.to,
@@ -307,6 +320,10 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       ),
     },
   );
+
+  // Impossible first: a schedule conflict is the thing to fix, and burying it
+  // under the fleet's near-misses is how it stayed invisible.
+  const unassigned: Unassigned[] = [...impossible, ...allocUnassigned];
 
   return {
     date: dayIso,

@@ -32,6 +32,10 @@ function laneStatus(lane: DriverLane): { key: string; cls: string } {
   return { key: "remaining", cls: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" };
 }
 
+/** Vertical position of each direction's strand inside a driver lane. */
+const DELIVERY_ROW_TOP = "34%";
+const RETURN_ROW_TOP = "70%";
+
 export function DispatchClient({ board }: { board: DispatchBoard }) {
   const t = useTranslations("transportDispatch");
   const tp = useTranslations("transportPlanner");
@@ -341,12 +345,17 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                   <div key={lane.driverId} className={`flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0 ${rtl ? "flex-row-reverse" : ""}`}>
                     {/* timeline cell — drop target */}
                     <div
-                      className={`relative h-11 flex-1 rounded-md ${dragKey ? "bg-muted/40 " + haloClass(halo.get(lane.driverId)) : ""}`}
+                      className={`relative h-14 flex-1 rounded-md ${dragKey ? "bg-muted/40 " + haloClass(halo.get(lane.driverId)) : ""}`}
                       onDragOver={(e) => { if (e.dataTransfer.types.includes("application/x-assign")) e.preventDefault(); }}
                       onDrop={(e) => onLaneDrop(e, lane.driverId)}
                     >
                       {/* baseline */}
-                      <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+                      {/* Two baselines: deliveries ride the upper line, returns
+                          the lower one, so a driver's outbound and inbound work
+                          read as separate strands instead of overlapping on a
+                          single row. */}
+                      <div className="absolute inset-x-0 h-px bg-border" style={{ top: DELIVERY_ROW_TOP }} />
+                      <div className="absolute inset-x-0 h-px bg-border/60" style={{ top: RETURN_ROW_TOP }} />
                       {trips.length === 0 ? (
                         <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
                           {lane.trips.length === 0 ? t("noTrips") : t("noMatch")}
@@ -372,7 +381,7 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                                 title={tooltip}
                                 onDragStart={(e) => { if (pkey) { e.dataTransfer.setData("application/x-unassign", pkey); e.dataTransfer.effectAllowed = "move"; } }}
                                 className="absolute flex h-4 -translate-y-1/2 cursor-grab items-center active:cursor-grabbing"
-                                style={{ top: "50%", [S]: `${lo}%`, width: `${Math.max(span, 0.5)}%` } as React.CSSProperties}
+                                style={{ top: dashed ? RETURN_ROW_TOP : DELIVERY_ROW_TOP, [S]: `${lo}%`, width: `${Math.max(span, 0.5)}%` } as React.CSSProperties}
                               >
                                 <div className="w-full" style={{ borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}` }} />
                               </div>
@@ -384,8 +393,13 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                                   <span
                                     key={st2.seq}
                                     title={`${st2.seq}. ${st2.label} · ${minToHHMM(st2.plannedMin)}`}
-                                    className="absolute top-1/2 flex size-5 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border-2 bg-card"
-                                    style={{ [S]: `${pct(st2.plannedMin)}%`, borderColor: color, color } as React.CSSProperties}
+                                    className="absolute flex size-5 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border-2 bg-card"
+                                    style={{
+                                      top: dashed ? RETURN_ROW_TOP : DELIVERY_ROW_TOP,
+                                      [S]: `${pct(st2.plannedMin)}%`,
+                                      borderColor: color,
+                                      color,
+                                    } as React.CSSProperties}
                                   >
                                     <Icon className="size-2.5" />
                                   </span>
