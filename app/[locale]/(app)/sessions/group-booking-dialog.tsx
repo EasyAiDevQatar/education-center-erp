@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { formatMoney } from "@/lib/money";
 import { weeklyOccurrences } from "@/lib/recurrence";
-import { useConflictCheck } from "@/components/conflict-warnings";
+import { useConflictCheck, SpacingWarning, useSpacingCheck } from "@/components/conflict-warnings";
 import { createGroupSessions } from "./actions";
 import { suggestFix, type FixSuggestion } from "./suggest-actions";
 import type { StudentOpt, Opt, PriceMatrix } from "./session-dialog";
@@ -207,6 +207,28 @@ export function GroupBookingDialog({
     },
     open,
   );
+  // Room to travel, checked once for the slot rather than per student: the
+  // time, the length and the place are the same for everyone in a group, so
+  // the answer is too. Same first-occurrence limit as the clash check above.
+  //
+  // This form creates up to sixty lessons in one press. It was the only way to
+  // fill a day with journeys nobody can drive without the system saying a word.
+  const spacing = useSpacingCheck(
+    teacherId
+      ? {
+          date: occurrences[0] ?? date,
+          time,
+          hours: parseFloat(hours) || 1,
+          teacherId,
+          // One student stands for the group: they share a slot, and the pin
+          // that matters for a HOME booking is whichever home it happens at.
+          studentId: [...selected][0],
+          location,
+        }
+      : null,
+    open,
+  );
+
   const conflictedStudents = conflictResults.filter((r) => r.conflicts.length > 0);
   const conflictByStudent = new Map(conflictResults.map((r) => [r.studentId, r.conflicts.length]));
 
@@ -465,6 +487,7 @@ export function GroupBookingDialog({
           {noGradeCount > 0 && (
             <p className="text-xs text-warning">{t("noGradeWarn", { n: noGradeCount })}</p>
           )}
+          <SpacingWarning check={spacing} onUseSuggestion={setTime} />
           {conflictedStudents.length > 0 && (
             <div className="rounded-md border border-warning bg-warning/10 p-2.5 text-sm">
               <div className="mb-1 flex items-center gap-1.5 font-medium">

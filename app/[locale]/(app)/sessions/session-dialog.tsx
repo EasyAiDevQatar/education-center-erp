@@ -18,7 +18,12 @@ import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { formatMoney } from "@/lib/money";
 import { localNowTime, localToday } from "@/lib/session-time";
-import { ConflictWarnings, useConflictCheck } from "@/components/conflict-warnings";
+import {
+  ConflictWarnings,
+  useConflictCheck,
+  SpacingWarning,
+  useSpacingCheck,
+} from "@/components/conflict-warnings";
 import type { GroupOpt } from "./group-booking-dialog";
 
 export type StudentOpt = {
@@ -180,6 +185,25 @@ export function SessionDialog({
     open,
   );
   const conflicts = conflictResults[0]?.conflicts ?? [];
+
+  // Whether anyone can physically get there — a different question from "is
+  // the teacher double-booked", and until now the only booking surface that
+  // never asked it. The planner refused what this form accepted in silence,
+  // which makes the stricter screen the one people learn to avoid.
+  const spacing = useSpacingCheck(
+    teacherId
+      ? {
+          date,
+          time,
+          hours: parseFloat(hours) || 1,
+          teacherId,
+          studentId: studentId || undefined,
+          location,
+          excludeId: session?.id ?? null,
+        }
+      : null,
+    open,
+  );
 
   const studentPackages = useMemo(
     () => packages.filter((p) => p.studentId === studentId),
@@ -415,6 +439,7 @@ export function SessionDialog({
         )}
 
         <ConflictWarnings conflicts={conflicts} />
+        <SpacingWarning check={spacing} onUseSuggestion={setTime} />
 
         <div className="flex items-center justify-between rounded-md bg-accent/60 px-3 py-2 text-sm">
           <span className="text-muted-foreground">
