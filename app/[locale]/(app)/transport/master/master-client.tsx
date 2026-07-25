@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { type DayAxis } from "@/lib/transport/axis";
 import {
   TimelineFrame,
@@ -127,6 +128,7 @@ export function MasterClient({
   // The pool's words already exist on the dispatch board; borrowed rather than
   // copied, so the two never drift into describing the same thing differently.
   const td = useTranslations("transportDispatch");
+  const tpl = useTranslations("transportPlanner");
   const locale = useLocale();
   const rtl = locale === "ar";
   const router = useRouter();
@@ -167,6 +169,29 @@ export function MasterClient({
   const [assignErr, setAssignErr] = useState<string | null>(null);
   /** The last assignment made here, so it can be taken back in one click. */
   const [lastAssign, setLastAssign] = useState<string | null>(null);
+
+  // Narrowing, not hiding: a filtered-out ride is still on the board's data,
+  // so the pool count and the lock summary keep telling the truth about the
+  // whole day rather than about the current view of it.
+  const [driverFilter, setDriverFilter] = useState("all");
+  const [directionFilter, setDirectionFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [exceptionsOnly, setExceptionsOnly] = useState(false);
+
+  const visibleLanes = useMemo(() => {
+    const tripPasses = (tr: MasterTrip) =>
+      (directionFilter === "all" || tr.tripKind === directionFilter) &&
+      (statusFilter === "all" || tr.validationStatus === statusFilter) &&
+      (!exceptionsOnly || tr.validationStatus !== "VALID");
+    return board.lanes
+      .filter((l) => driverFilter === "all" || l.id === driverFilter)
+      .map((l) => {
+        const trips = l.trips.filter(tripPasses);
+        // Same object when nothing was removed, so an unfiltered board does
+        // not re-render every row for nothing.
+        return trips.length === l.trips.length ? l : { ...l, trips };
+      });
+  }, [board.lanes, driverFilter, directionFilter, statusFilter, exceptionsOnly]);
   const [, startAssign] = useTransition();
 
   const [dropped, setDropped] = useState<Dropped | null>(null);
@@ -249,6 +274,52 @@ export function MasterClient({
           </LayerToggle>
         </div>
       </div>
+
+      {/* Only on a driver or vehicle board: filtering a teacher's day by
+          "direction of travel" is not a question anybody asks. */}
+      {!byPerson && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Select
+            value={driverFilter}
+            onChange={(e) => setDriverFilter(e.target.value)}
+            className="h-8 w-44 text-xs"
+          >
+            <option value="all">{td(board.laneKind === "DRIVER" ? "allDrivers" : "allStatuses")}</option>
+            {board.lanes.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={directionFilter}
+            onChange={(e) => setDirectionFilter(e.target.value)}
+            className="h-8 w-40 text-xs"
+          >
+            <option value="all">{td("allDirections")}</option>
+            <option value="PICKUP">{tpl("tripKind.PICKUP")}</option>
+            <option value="RETURN">{tpl("tripKind.RETURN")}</option>
+          </Select>
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-8 w-36 text-xs"
+          >
+            <option value="all">{td("allStatuses")}</option>
+            <option value="INVALID">{tpl("validation.INVALID")}</option>
+            <option value="WARNING">{tpl("validation.WARNING")}</option>
+            <option value="VALID">{tpl("validation.VALID")}</option>
+          </Select>
+          <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs">
+            <input
+              type="checkbox"
+              checked={exceptionsOnly}
+              onChange={(e) => setExceptionsOnly(e.target.checked)}
+            />
+            {td("exceptionsOnly")}
+          </label>
+        </div>
+      )}
 
       {/* A refused assignment says so where the pool is, not in a console. */}
       {assignErr && (
@@ -527,10 +598,10 @@ export function MasterClient({
       >
         <TimelineHeader label={t(`colPerson.${board.laneKind}`)} />
 
-        {board.lanes.length === 0 ? (
+        {visibleLanes.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
-          board.lanes.map((lane) => (
+          visibleLanes.map((lane) => (
             <LaneRow
               key={lane.id}
               lane={lane}
