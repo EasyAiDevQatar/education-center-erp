@@ -19,6 +19,7 @@ import { allocate, type Assignment, type Unassigned } from "@/lib/transport/allo
 import { comparePlans, EMPTY_METRICS, type PlanMetrics } from "@/lib/transport/cost";
 import { buildDayPlan, flagTripsForSession, type DayPlan } from "@/lib/transport/trip-data";
 import { transportEnabled, loadTransportConfig, distanceKm } from "@/lib/transport/settings";
+import { previewAssignAll } from "../dispatch/actions";
 import type { Leg } from "@/lib/transport/chain";
 import type { Role, SessionType } from "@/lib/enums";
 
@@ -587,3 +588,69 @@ export async function confirmReschedule(
   revalidatePath(`/${locale}/calendar`);
   return { ok: true };
 }
+
+/* -------------------------------------------- a ride for an unplanned gap */
+
+export type DriverOption = {
+  driverId: string;
+  name: string;
+  plate: string | null;
+  /** The validation the ride WOULD get on this driver. */
+  status: string;
+  /** False when this driver cannot serve the journey at all. */
+  feasible: boolean;
+};
+
+/**
+ * Which drivers could serve this person's unplanned travel, and how well.
+ *
+ * A red gap on the board says "they have to be somewhere else and no ride is
+ * planned". That is the one gap kind with an obvious next action, so it gets
+ * one — but the board knows nothing about drivers, and offering a list without
+ * saying which of them can actually make it would just move the guesswork.
+ *
+ * Read-only: `previewAssignAll` is the dispatch board's own hover-preview, and
+ * it writes nothing. Names are joined here because it returns ids alone.
+ */
+export async function driverOptionsFor(
+  locale: string,
+  day: string,
+  passengerKey: string,
+): Promise<{ ok: true; drivers: DriverOption[] } | { ok?: false; error: string }> {
+  const forbidden = await guard();
+  if (forbidden) return { error: forbidden };
+
+  const preview = await previewAssignAll(locale, day, passengerKey);
+  if (!preview.ok) return { error: preview.error };
+
+  const rows = await db.driver.findMany({
+    where: { id: { in: preview.drivers.map((d) => d.driverId) } },
+    select: {
+      id: true,
+      employee: { select: { name: true } },
+      defaultVehicle: { select: { plate: true } },
+    },
+  });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  return {
+    ok: true,
+    drivers: preview.drivers
+      .map((d) => ({
+        driverId: d.driverId,
+        name: byId.get(d.driverId)?.employee.name ?? d.driverId,
+        plate: byId.get(d.driverId)?.defaultVehicle?.plate ?? null,
+        status: d.status,
+        feasible: d.feasible,
+      }))
+      // Whoever can actually do it first, then by how clean the ride would be.
+      .sort(
+        (a, b) =>
+          Number(b.feasible) - Number(a.feasible) ||
+          RANK[a.status] - RANK[b.status] ||
+          a.name.localeCompare(b.name, locale),
+      ),
+  };
+}
+
+const RANK: Record<string, number> = { VALID: 0, WARNING: 1, DELAYED_EXCEPTION: 2, INVALID: 3 };

@@ -30,6 +30,7 @@ import {
 import { proposedTimes } from "@/lib/transport/drag-lock";
 import type { MasterBoard, MasterLane, MasterSession, MasterTrip } from "@/lib/transport/master";
 import { ImpactDialog } from "./impact-dialog";
+import { RideAssignDialog } from "./ride-assign-dialog";
 
 /**
  * The four block types, deliberately far apart in colour.
@@ -99,6 +100,13 @@ export function MasterClient({ board }: { board: MasterBoard }) {
 
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  /** The unplanned-travel gap the user clicked, if any. */
+  const [assigning, setAssigning] = useState<{
+    laneId: string;
+    who: string;
+    startMin: number;
+    endMin: number;
+  } | null>(null);
   /** Teacher rows carry lessons; driver and vehicle rows carry only rides. */
   const byPerson = board.laneKind === "TEACHER";
 
@@ -212,6 +220,18 @@ export function MasterClient({ board }: { board: MasterBoard }) {
         </div>
       )}
 
+      {assigning && (
+        <RideAssignDialog
+          open
+          onOpenChange={(v) => !v && setAssigning(null)}
+          day={board.day}
+          passengerKey={`TEACHER:${assigning.laneId}`}
+          who={assigning.who}
+          from={assigning.startMin}
+          to={assigning.endMin}
+        />
+      )}
+
       {/* Mounted only while it is open, so each review starts from a blank
           answer rather than flashing the previous one. */}
       {proposal && reviewing && (
@@ -286,6 +306,19 @@ export function MasterClient({ board }: { board: MasterBoard }) {
               canDrag={board.canDrag}
               proposal={proposal?.laneId === lane.id ? proposal : null}
               onPropose={setProposal}
+              // Only a teacher lane names a passenger; a driver's row shows the
+              // same red stretch but there is nobody on it to give a ride to.
+              onAssignGap={
+                byPerson
+                  ? (g) =>
+                      setAssigning({
+                        laneId: lane.id,
+                        who: lane.name,
+                        startMin: g.startMin,
+                        endMin: g.endMin,
+                      })
+                  : undefined
+              }
             />
           ))
         )}
@@ -332,6 +365,7 @@ function LaneRow({
   canDrag,
   proposal,
   onPropose,
+  onAssignGap,
 }: {
   lane: MasterLane;
   layers: Layers;
@@ -340,6 +374,8 @@ function LaneRow({
   rtl: boolean;
   canDrag: boolean;
   proposal: Proposal | null;
+  /** Present only where the gap belongs to someone who can be given a ride. */
+  onAssignGap?: (g: { startMin: number; endMin: number }) => void;
   /**
    * The setter itself, not a plain callback: a nudge is computed FROM the
    * current proposal, and two arrow presses in the same tick would otherwise
@@ -516,12 +552,37 @@ function LaneRow({
           lane.gaps.map((g) => (
             <span
               key={`gap-${g.startMin}`}
-              title={t(`gapKind.${g.kind}`, {
-                from: hhmm(g.startMin),
-                to: hhmm(g.endMin),
-                n: g.endMin - g.startMin,
-              })}
-              className={`absolute inset-y-1.5 cursor-help rounded ${
+              role={g.kind === "TRAVEL_NOT_PLANNED" && onAssignGap ? "button" : undefined}
+              tabIndex={g.kind === "TRAVEL_NOT_PLANNED" && onAssignGap ? 0 : undefined}
+              onClick={
+                g.kind === "TRAVEL_NOT_PLANNED" && onAssignGap
+                  ? () => onAssignGap({ startMin: g.startMin, endMin: g.endMin })
+                  : undefined
+              }
+              onKeyDown={
+                g.kind === "TRAVEL_NOT_PLANNED" && onAssignGap
+                  ? (e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      onAssignGap({ startMin: g.startMin, endMin: g.endMin });
+                    }
+                  : undefined
+              }
+              title={[
+                t(`gapKind.${g.kind}`, {
+                  from: hhmm(g.startMin),
+                  to: hhmm(g.endMin),
+                  n: g.endMin - g.startMin,
+                }),
+                g.kind === "TRAVEL_NOT_PLANNED" && onAssignGap ? t("gapAssignHint") : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              className={`absolute inset-y-1.5 rounded outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                g.kind === "TRAVEL_NOT_PLANNED" && onAssignGap
+                  ? "cursor-pointer hover:brightness-110"
+                  : "cursor-help"
+              } ${
                 g.kind === "TRAVEL_NOT_PLANNED"
                   ? GAP.TRAVEL_NOT_PLANNED
                   : g.kind === "WAITING"

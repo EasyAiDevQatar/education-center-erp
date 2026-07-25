@@ -2436,6 +2436,20 @@
       "unchanged": "It is already at that time",
       "forbidden": "You may not change times",
       "invalid": "Invalid request"
+    },
+    "assignTitle": "Assign a ride",
+    "assignFor": "{who} — travel needed with no ride planned, {from}–{to}",
+    "assignPick": "Choose a driver — ordered by who can actually make it",
+    "assignNone": "No driver can serve this journey.",
+    "assignInfeasible": "Cannot make it",
+    "assignDo": "Assign",
+    "assignWorking": "Finding a driver who can make it…",
+    "gapAssignHint": "Click to assign a driver",
+    "assignErr": {
+      "noLegs": "No journey is required for this person today",
+      "forbidden": "You may not assign rides",
+      "invalid": "Invalid request",
+      "noDriver": "Could not assign — try another driver"
     }
   },
   "spacing": {
