@@ -231,6 +231,38 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
     shiftEndMin: d.shiftEndMin,
   }));
 
+  /**
+   * When each driver is genuinely next free.
+   *
+   * The allocator used to start every driver at their shift start, so a driver
+   * already committed to an approved trip still scored as idle all day — and
+   * the manual-assign dialog, which ranks drivers by exactly this, would offer
+   * a busy one first. Nothing downstream caught it: the cross-trip turnaround
+   * sweep runs only over trips generateDayTrips created in the same pass.
+   *
+   * Only trips the generator would NOT replace count. A PROPOSED trip is about
+   * to be deleted and rebuilt, so planning around it would make the generator
+   * dodge its own shadow.
+   */
+  const committed = await db.trip.findMany({
+    where: {
+      date: start,
+      status: { notIn: ["PROPOSED", "CANCELLED"] },
+      driverId: { not: null },
+    },
+    select: { driverId: true, plannedEndMin: true },
+  });
+  const turnaroundMin =
+    Math.max(config.rules.minDriverTurnaroundMin, config.rules.minVehicleTurnaroundMin) +
+    config.rules.postTripCloseoutMin +
+    config.rules.preTripInspectionMin;
+  const busyUntil = new Map<string, number>();
+  for (const t of committed) {
+    if (!t.driverId) continue;
+    const free = t.plannedEndMin + turnaroundMin;
+    busyUntil.set(t.driverId, Math.max(busyUntil.get(t.driverId) ?? 0, free));
+  }
+
   const allocDrivers: AllocDriver[] = dispatchable.map((d) => ({
     id: d.id,
     // A driver with no home pin starts from the centre rather than being
@@ -239,7 +271,7 @@ export async function buildDayPlan(locale: string, dayIso: string): Promise<DayP
       d.employee.homeLat != null && d.employee.homeLng != null
         ? { lat: d.employee.homeLat, lng: d.employee.homeLng }
         : (centre ?? { lat: 0, lng: 0 }),
-    freeFromMin: d.shiftStartMin ?? 0,
+    freeFromMin: Math.max(d.shiftStartMin ?? 0, busyUntil.get(d.id) ?? 0),
     capacity: d.defaultVehicle?.capacity ?? 4,
     shiftStartMin: d.shiftStartMin,
     shiftEndMin: d.shiftEndMin,
