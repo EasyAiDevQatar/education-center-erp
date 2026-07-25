@@ -33,6 +33,9 @@ function laneStatus(lane: DriverLane): { key: string; cls: string } {
 }
 
 /** Vertical position of each direction's strand inside a driver lane. */
+/** Narrowest a trip may render. Two 16px end markers plus a visible run
+ *  between them — below this the icons touch and the trip reads as a blob. */
+const TRIP_MIN_WIDTH_PX = 44;
 const DELIVERY_ROW_TOP = "34%";
 const RETURN_ROW_TOP = "70%";
 
@@ -373,38 +376,51 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
                             ...trip.validationMessages.map((m) => `• ${reasonLabel(m.code)}`),
                           ].join("\n");
                           const pkey = trip.linkGroup ? trip.linkGroup.replace(/^day:/, "") : null;
+                          // Stops belong to the trip bar, not to the lane.
+                          //
+                          // Positioning each marker by its absolute time put a
+                          // 17-minute trip's two icons ~28px apart on a 9-hour
+                          // axis — closer than the icons are wide, so they
+                          // collided into a blob that only became readable by
+                          // zooming the browser out. Anchoring them inside a bar
+                          // with a floor width keeps every stop legible at any
+                          // scale, while the bar itself still starts and ends at
+                          // the true times.
+                          const first = stops[0];
+                          const last = stops[stops.length - 1];
                           return (
-                            <div key={trip.id}>
-                              {/* connecting line — draggable to unassign */}
-                              <div
-                                draggable={!!pkey}
-                                title={tooltip}
-                                onDragStart={(e) => { if (pkey) { e.dataTransfer.setData("application/x-unassign", pkey); e.dataTransfer.effectAllowed = "move"; } }}
-                                className="absolute flex h-4 -translate-y-1/2 cursor-grab items-center active:cursor-grabbing"
-                                style={{ top: dashed ? RETURN_ROW_TOP : DELIVERY_ROW_TOP, [S]: `${lo}%`, width: `${Math.max(span, 0.5)}%` } as React.CSSProperties}
-                              >
-                                <div className="w-full" style={{ borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}` }} />
-                              </div>
-                              {/* stop markers */}
-                              {stops.map((st2) => {
+                            <div
+                              key={trip.id}
+                              draggable={!!pkey}
+                              title={tooltip}
+                              onDragStart={(e) => { if (pkey) { e.dataTransfer.setData("application/x-unassign", pkey); e.dataTransfer.effectAllowed = "move"; } }}
+                              className="absolute flex h-5 -translate-y-1/2 cursor-grab items-center justify-between active:cursor-grabbing"
+                              style={{
+                                top: dashed ? RETURN_ROW_TOP : DELIVERY_ROW_TOP,
+                                [S]: `${lo}%`,
+                                width: `${Math.max(span, 0.5)}%`,
+                                minWidth: TRIP_MIN_WIDTH_PX,
+                              } as React.CSSProperties}
+                            >
+                              {[first, last].map((st2, endIdx) => {
                                 const isCentre = near(st2.lat, st2.lng);
                                 const Icon = isCentre ? (st2.kind === "PICKUP" ? Flag : Building2) : Home;
                                 return (
                                   <span
-                                    key={st2.seq}
+                                    key={`${st2.seq}-${endIdx}`}
                                     title={`${st2.seq}. ${st2.label} · ${minToHHMM(st2.plannedMin)}`}
-                                    className="absolute flex size-5 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border-2 bg-card"
-                                    style={{
-                                      top: dashed ? RETURN_ROW_TOP : DELIVERY_ROW_TOP,
-                                      [S]: `${pct(st2.plannedMin)}%`,
-                                      borderColor: color,
-                                      color,
-                                    } as React.CSSProperties}
+                                    className="z-10 flex size-4 shrink-0 items-center justify-center rounded-full border-2 bg-card"
+                                    style={{ borderColor: color, color }}
                                   >
-                                    <Icon className="size-2.5" />
+                                    <Icon className="size-2" />
                                   </span>
                                 );
                               })}
+                              {/* the run between the two ends, drawn behind them */}
+                              <div
+                                className="absolute inset-x-0"
+                                style={{ borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}` }}
+                              />
                             </div>
                           );
                         })
