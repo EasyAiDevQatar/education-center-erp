@@ -2358,11 +2358,17 @@
     "timelineTitle": "The day",
     "colPerson": "Teacher",
     "empty": "No home visits planned for this day.",
-    "toggleCentre": "Centre lessons",
     "laneSummary": "{sessions} lessons · {trips} rides",
     "legendHome": "Home lesson",
     "legendCentre": "Centre lesson",
     "legendTravel": "Travel",
-    "legendWaiting": "Waiting"
+    "legendWaiting": "Waiting",
+    "layerHome": "Home",
+    "layerCentre": "Centre",
+    "layerTrips": "Trips",
+    "layerWaiting": "Waiting",
+    "centreOccupied": "Busy at the centre {from}–{to}",
+    "uncovered": "{n} min unplanned",
+    "uncoveredHint": "{n} minutes are neither a lesson nor a ride. Flagged past {max} min."
   }
 }

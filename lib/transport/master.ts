@@ -5,7 +5,12 @@ import { toNumber } from "@/lib/money";
 import { loadTransportConfig } from "./settings";
 import { loadDayTrips } from "./trip-data";
 import { dayAxis, type DayAxis } from "./axis";
-import { uncoveredMinutes, overlappingSessions, type SessionWindow } from "./feasibility";
+import {
+  uncoveredMinutes,
+  overlappingSessions,
+  mergeSpans,
+  type SessionWindow,
+} from "./feasibility";
 
 /**
  * The master planner's reader: one day, one timeline, several perspectives.
@@ -56,6 +61,14 @@ export type MasterLane = {
   sessions: MasterSession[];
   trips: MasterTrip[];
   /**
+   * Merged spans during which the person is teaching at the centre.
+   *
+   * Kept separate from `sessions` because hidden must not mean ignored: with
+   * centre lessons toggled off, a wall of them collapses to one muted band so
+   * the row still reads as occupied. A blank stretch has to mean free.
+   */
+  centreBands: { startMin: number; endMin: number }[];
+  /**
    * Minutes in the lane's span that are neither a lesson nor a ride.
    *
    * Computed, never inferred from the gap between two trips: a teacher dropped
@@ -70,9 +83,11 @@ export type MasterBoard = {
   laneKind: LaneKind;
   axis: DayAxis;
   lanes: MasterLane[];
-  /** Lessons at the centre are hidden by default — step 2 turns them on. */
+  /** Count for the toggle's badge. */
   centreSessionCount: number;
   transportEnabled: boolean;
+  /** Waiting past this is drawn as a problem, not just shown. */
+  maxWaitMin: number;
 };
 
 const PLANNABLE = ["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED"];
@@ -89,17 +104,17 @@ const minutesOf = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
 /**
  * Build the board for one day.
  *
- * `includeCentre` controls whether centre lessons are returned at all: a
- * teacher who only teaches at the centre has no transport story, and showing
- * every such lesson by default buries the home visits the planner exists for.
+ * Everything is returned; the client decides what to draw. Filtering on the
+ * server would make each toggle a round-trip, and — worse — a centre lesson
+ * that was never sent could not contribute to the occupied band, so hiding it
+ * would silently make a busy teacher look free.
  */
 export async function masterBoard(
   locale: string,
   day: string,
-  opts: { laneKind?: LaneKind; includeCentre?: boolean } = {},
+  opts: { laneKind?: LaneKind } = {},
 ): Promise<MasterBoard> {
   const laneKind = opts.laneKind ?? "TEACHER";
-  const includeCentre = opts.includeCentre ?? false;
   const { start, end } = dayBounds(day);
 
   const [config, sessions, trips, stopOwners] = await Promise.all([
@@ -126,21 +141,26 @@ export async function masterBoard(
     }
   }
 
-  const centreSessionCount = sessions.filter((s) => s.location === "CENTER").length;
+  // Count only what the layer can actually reveal. Session.teacherId is
+  // nullable — a walk-in is recorded before anyone knows who taught it — and
+  // the lane loop below drops those, so counting them here made the badge
+  // promise blocks that never appear when the layer is switched on.
+  const centreSessionCount = sessions.filter(
+    (s) => s.location === "CENTER" && s.teacher,
+  ).length;
 
   // --- group sessions into lanes ------------------------------------------
   const lanes = new Map<string, MasterLane>();
   const laneFor = (id: string, name: string, subtitle: string | null): MasterLane => {
     let l = lanes.get(id);
     if (!l) {
-      l = { id, kind: laneKind, name, subtitle, sessions: [], trips: [], uncoveredMin: 0 };
+      l = { id, kind: laneKind, name, subtitle, sessions: [], trips: [], centreBands: [], uncoveredMin: 0 };
       lanes.set(id, l);
     }
     return l;
   };
 
   for (const s of sessions) {
-    if (!includeCentre && s.location === "CENTER") continue;
     if (laneKind !== "TEACHER" || !s.teacher) continue;
     const lane = laneFor(s.teacher.id, displayName(s.teacher, locale), s.teacher.phone ?? null);
     const startMin = minutesOf(s.date);
@@ -193,6 +213,10 @@ export async function masterBoard(
     }
     for (const s of lane.sessions) s.conflicts = clashing.has(s.id);
 
+    lane.centreBands = mergeSpans(
+      lane.sessions.filter((s) => s.location === "CENTER"),
+    );
+
     // Everything the lane is committed to — lessons AND rides — so a ride is
     // never counted as free time.
     const busy: SessionWindow[] = [
@@ -225,5 +249,6 @@ export async function masterBoard(
     lanes: [...lanes.values()].sort((a, b) => a.name.localeCompare(b.name, locale)),
     centreSessionCount,
     transportEnabled: config.enabled,
+    maxWaitMin: config.rules.maxStudentWaitMin,
   };
 }

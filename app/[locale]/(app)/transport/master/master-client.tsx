@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Home, Building2, Bus, Hourglass, AlertTriangle } from "lucide-react";
@@ -24,31 +24,37 @@ const BLOCK = {
   home: "bg-emerald-500/85 text-white",
   centre: "bg-sky-500/80 text-white",
   travel: "bg-violet-500/85 text-white",
-  waiting: "bg-amber-400/30 text-amber-900 dark:text-amber-200",
 } as const;
 
-export function MasterClient({
-  board,
-  includeCentre,
-}: {
-  board: MasterBoard;
-  includeCentre: boolean;
-}) {
+/** What the board is currently drawing. Client-side: toggling is instant. */
+type Layers = { home: boolean; centre: boolean; trips: boolean; waiting: boolean };
+
+export function MasterClient({ board }: { board: MasterBoard }) {
   const t = useTranslations("transportMaster");
   const locale = useLocale();
   const rtl = locale === "ar";
   const router = useRouter();
   const pathname = usePathname();
 
+  // Centre lessons start hidden: a teacher can have a wall of them and they
+  // bury the home visits this planner exists for. Hidden is not ignored —
+  // they still draw as a muted occupied band below.
+  const [layers, setLayers] = useState<Layers>({
+    home: true,
+    centre: false,
+    trips: true,
+    waiting: true,
+  });
+  const toggle = (k: keyof Layers) => setLayers((l) => ({ ...l, [k]: !l[k] }));
+
   /** Physical inline-start side — the axis runs from it. */
   const S = rtl ? "right" : "left";
   const ticks = useMemo(() => axisTicks(board.axis), [board.axis]);
   const pct = (m: number) => axisPct(board.axis, m);
 
-  function go(next: { date?: string; centre?: boolean }) {
+  function go(next: { date?: string }) {
     const p = new URLSearchParams();
     p.set("date", next.date ?? board.day);
-    if (next.centre ?? includeCentre) p.set("centre", "1");
     router.push(`${pathname}?${p.toString()}`);
   }
 
@@ -63,19 +69,25 @@ export function MasterClient({
           onChange={(e) => e.target.value && go({ date: e.target.value })}
           className="w-40"
         />
-        <Button
-          type="button"
-          variant={includeCentre ? "default" : "outline"}
-          size="sm"
-          className="gap-1"
-          onClick={() => go({ centre: !includeCentre })}
-        >
-          <Building2 className="size-4" />
-          {t("toggleCentre")}
-          {board.centreSessionCount > 0 && (
-            <span className="tabular-nums opacity-80">({board.centreSessionCount})</span>
-          )}
-        </Button>
+        <div className="flex flex-wrap items-center gap-1">
+          <LayerToggle on={layers.home} onClick={() => toggle("home")} label={t("layerHome")}>
+            <Home className="size-4" />
+          </LayerToggle>
+          <LayerToggle
+            on={layers.centre}
+            onClick={() => toggle("centre")}
+            label={t("layerCentre")}
+            count={board.centreSessionCount}
+          >
+            <Building2 className="size-4" />
+          </LayerToggle>
+          <LayerToggle on={layers.trips} onClick={() => toggle("trips")} label={t("layerTrips")}>
+            <Bus className="size-4" />
+          </LayerToggle>
+          <LayerToggle on={layers.waiting} onClick={() => toggle("waiting")} label={t("layerWaiting")}>
+            <Hourglass className="size-4" />
+          </LayerToggle>
+        </div>
       </div>
 
       {/* Timeline */}
@@ -86,9 +98,13 @@ export function MasterClient({
           {/* Hour ruler. Mirrors the dispatch board: the person column comes
               first in reading order, the axis runs away from it. */}
           <div
-            className={`flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground ${
-              rtl ? "flex-row-reverse" : ""
-            }`}
+            /* No flex-row-reverse: our DOM order is [person, timeline], so the
+               normal direction already puts the person on the inline-start
+               side. The dispatch board reverses because its DOM order is the
+               other way round — copying the class blindly put the teacher's
+               name at the far LEFT in Arabic, read last, after the bars it
+               labels. */
+            className="flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground"
           >
             <div className="w-36 shrink-0 font-medium">{t("colPerson")}</div>
             <div className="relative flex-1 overflow-hidden">
@@ -109,7 +125,14 @@ export function MasterClient({
             <p className="p-6 text-center text-sm text-muted-foreground">{t("empty")}</p>
           ) : (
             board.lanes.map((lane) => (
-              <LaneRow key={lane.id} lane={lane} rtl={rtl} S={S} pct={pct} />
+              <LaneRow
+                  key={lane.id}
+                  lane={lane}
+                  S={S}
+                  pct={pct}
+                  layers={layers}
+                  maxWaitMin={board.maxWaitMin}
+                />
             ))
           )}
 
@@ -138,16 +161,47 @@ export function MasterClient({
   );
 }
 
+function LayerToggle({
+  on,
+  onClick,
+  label,
+  count,
+  children,
+}: {
+  on: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      variant={on ? "default" : "outline"}
+      size="sm"
+      className="gap-1"
+      aria-pressed={on}
+      onClick={onClick}
+    >
+      {children}
+      {label}
+      {count != null && count > 0 && <span className="tabular-nums opacity-80">({count})</span>}
+    </Button>
+  );
+}
+
 function LaneRow({
   lane,
-  rtl,
   S,
   pct,
+  layers,
+  maxWaitMin,
 }: {
   lane: MasterLane;
-  rtl: boolean;
   S: "left" | "right";
   pct: (m: number) => number;
+  layers: Layers;
+  maxWaitMin: number;
 }) {
   const t = useTranslations("transportMaster");
 
@@ -166,9 +220,7 @@ function LaneRow({
 
   return (
     <div
-      className={`flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0 ${
-        rtl ? "flex-row-reverse" : ""
-      }`}
+      className="flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0"
     >
       {/* Person */}
       <div className="flex w-36 shrink-0 flex-col justify-center text-xs">
@@ -179,13 +231,41 @@ function LaneRow({
         <span className="text-muted-foreground">
           {t("laneSummary", { sessions: lane.sessions.length, trips: lane.trips.length })}
         </span>
+        {layers.waiting && lane.uncoveredMin > 0 && (
+          <span
+            className={`mt-0.5 inline-flex w-fit items-center gap-1 rounded px-1 py-0.5 text-[10px] ${
+              lane.uncoveredMin > maxWaitMin
+                ? "bg-amber-400/25 text-amber-800 dark:text-amber-200"
+                : "text-muted-foreground"
+            }`}
+            title={t("uncoveredHint", { n: lane.uncoveredMin, max: maxWaitMin })}
+          >
+            <Hourglass className="size-3 shrink-0" />
+            {t("uncovered", { n: lane.uncoveredMin })}
+          </span>
+        )}
       </div>
 
       {/* The day */}
       <div className="relative h-10 flex-1 rounded-md bg-muted/20">
         <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
 
-        {lane.sessions.map((s) => (
+        {/* Occupied at the centre. Drawn only when centre lessons are HIDDEN —
+            hidden must not mean ignored, or a fully-booked teacher reads as
+            free. Sits behind everything and is never interactive. */}
+        {!layers.centre &&
+          lane.centreBands.map((b) => (
+            <span
+              key={`band-${b.startMin}`}
+              title={t("centreOccupied", { from: hhmm(b.startMin), to: hhmm(b.endMin) })}
+              className="absolute inset-y-1 cursor-help rounded bg-sky-500/15 ring-1 ring-inset ring-sky-500/30"
+              style={span(b.startMin, b.endMin)}
+            />
+          ))}
+
+        {lane.sessions
+          .filter((s) => (s.location === "HOME" ? layers.home : layers.centre))
+          .map((s) => (
           <span
             key={s.id}
             title={`${s.label} · ${hhmm(s.startMin)}–${hhmm(s.endMin)}`}
@@ -203,7 +283,8 @@ function LaneRow({
           </span>
         ))}
 
-        {lane.trips.map((tr) => (
+        {layers.trips &&
+          lane.trips.map((tr) => (
           <span
             key={tr.id}
             title={`${hhmm(tr.startMin)}–${hhmm(tr.endMin)}${tr.driverName ? " · " + tr.driverName : ""}`}

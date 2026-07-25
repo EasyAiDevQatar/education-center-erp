@@ -33,16 +33,14 @@ export default async function TransportMasterPage({
       ? dParam
       : new Date().toISOString().slice(0, 10);
 
-  // Centre lessons are off by default — a teacher can have a wall of them, and
-  // they would bury the home visits this planner exists for.
-  const includeCentre = one("centre") === "1";
-
-  const board = await masterBoard(locale, day, { includeCentre });
+  // Everything is loaded; which layers are drawn is the client's business, so
+  // a toggle is instant and a hidden centre lesson can still mark the row busy.
+  const board = await masterBoard(locale, day);
 
   return (
     <div>
       <PageHeader title={t("title")} description={t("subtitle")} />
-      <MasterClient board={board} includeCentre={includeCentre} />
+      <MasterClient board={board} />
     </div>
   );
 }

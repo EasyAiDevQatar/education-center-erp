@@ -116,3 +116,27 @@ export function uncoveredMinutes(
   const busy = merged.reduce((acc, m) => acc + (m.e - m.s), 0);
   return Math.max(0, toMin - fromMin - busy);
 }
+
+/**
+ * Merge overlapping or touching spans into the fewest that cover the same time.
+ *
+ * Exported and pure so the "occupied at the centre" band is testable: four
+ * back-to-back lessons must collapse to ONE band, or the muted indicator is
+ * just the wall of blocks it was meant to replace.
+ */
+export function mergeSpans(
+  spans: readonly { startMin: number; endMin: number }[],
+): { startMin: number; endMin: number }[] {
+  const sorted = [...spans]
+    .filter((s) => s.endMin > s.startMin)
+    .sort((a, b) => a.startMin - b.startMin);
+  const out: { startMin: number; endMin: number }[] = [];
+  for (const s of sorted) {
+    const last = out[out.length - 1];
+    // `<=` so 15:00-16:00 and 16:00-17:00 become one band: a teacher moving
+    // straight from one lesson to the next was never free in between.
+    if (last && s.startMin <= last.endMin) last.endMin = Math.max(last.endMin, s.endMin);
+    else out.push({ startMin: s.startMin, endMin: s.endMin });
+  }
+  return out;
+}
