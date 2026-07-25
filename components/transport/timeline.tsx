@@ -61,6 +61,8 @@ export type PlaceOpts = {
   minPct?: number;
 };
 
+export type Track = ReturnType<typeof useTrack>;
+
 /**
  * Positioning helpers for whatever a board draws inside a row.
  *
@@ -204,9 +206,18 @@ export function TimelineRow({
   trackProps?: React.HTMLAttributes<HTMLDivElement>;
   /** The hairline a day is drawn along. Off for rows with their own strands. */
   baseline?: boolean;
-  children?: ReactNode;
+  /**
+   * Either plain children, or a function given the positioning helpers.
+   *
+   * The function form exists so a board can position blocks without first
+   * extracting its row into a component of its own — `useTrack` needs to run
+   * inside the frame, and forcing that extraction is how a brittle file gets
+   * rewritten wholesale and broken.
+   */
+  children?: ReactNode | ((track: Track) => ReactNode);
 }) {
   const { leadWidth } = useCtx();
+  const track = useTrack();
   return (
     <div className="flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0">
       <div className={`${leadWidth} shrink-0 flex flex-col justify-center text-xs`}>{leading}</div>
@@ -216,7 +227,7 @@ export function TimelineRow({
         className={`relative ${trackHeight} flex-1 rounded-md bg-muted/20 ${trackClassName}`}
       >
         {baseline && <div className="absolute inset-x-0 top-1/2 h-px bg-border" />}
-        {children}
+        {typeof children === "function" ? children(track) : children}
       </div>
     </div>
   );

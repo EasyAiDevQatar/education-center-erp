@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { minToHHMM } from "@/lib/planner";
+import { TimelineFrame, TimelineHeader, TimelineRow } from "@/components/transport/timeline";
 import { DispatchMap, type MapTrip } from "@/components/dispatch-map";
 import { previewAssignAll, assignToDriver, unassignPassenger } from "./actions";
 import type { DispatchBoard, DriverLane, LaneTrip } from "@/lib/transport/dispatch";
@@ -49,7 +50,6 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
   const pathname = usePathname();
 
   const rtl = locale === "ar";
-  const S = rtl ? "right" : "left"; // inline-start physical side
   const kindLabel = (k: string | null) => (k ? tp(`tripKind.${k}`) : "—");
   const go = (d: string) => router.push(`${pathname}?date=${d}`);
   const shiftDay = (delta: number) => {
@@ -155,16 +155,6 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
     { label: t("stopHomes"), value: s.stops.homes, icon: Home, tone: "text-green-600" },
     { label: t("stopTotal"), value: s.stops.total, icon: MapIcon, tone: "text-slate-500" },
   ];
-
-  const ticks = useMemo(() => {
-    const out: number[] = [];
-    const from = Math.floor(board.axis.minMin / 60) * 60;
-    const to = Math.ceil(board.axis.maxMin / 60) * 60;
-    for (let m = from; m <= to; m += 60) out.push(m);
-    return out;
-  }, [board.axis]);
-  const range = Math.max(1, board.axis.maxMin - board.axis.minMin);
-  const pct = (m: number) => ((m - board.axis.minMin) / range) * 100;
 
   const driverColour = useMemo(() => {
     const m = new Map<string, string>();
@@ -316,144 +306,140 @@ export function DispatchClient({ board }: { board: DispatchBoard }) {
               <DispatchMap trips={mapTrips} centre={board.centre} centreLabel={t("centre")} height={360} />
             </div>
           )}
-          {/* Timeline table — full width, and scrollable sideways so nine hours
-              of lanes are never crushed into a narrow screen. */}
-          <div className="overflow-x-auto rounded-xl border border-border bg-card lg:col-span-2 lg:row-start-2">
-            <p className="border-b border-border p-3 text-sm font-medium">{t("scheduleTitle")}</p>
-            {/* Column header.
-                Reversed in Arabic so the row's identity comes first in reading
-                order: driver on the inline-start (right) edge, then status,
-                then the time axis running away from them. Without this the
-                driver column lands at the far left and is read last, after the
-                bars it is supposed to label. */}
-            <div className={`flex min-w-[760px] items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground ${rtl ? "flex-row-reverse" : ""}`}>
-              <div className="relative flex-1 overflow-hidden">
-                {ticks.map((m) => {
-                  const p = pct(m);
-                  // Clamp the two edge ticks inward a touch so the first/last
-                  // hour never bleeds under the status column header.
-                  const clamped = Math.min(97, Math.max(3, p));
-                  return (
-                    <span key={m} className={`absolute tabular-nums ${rtl ? "translate-x-1/2" : "-translate-x-1/2"}`} style={{ [S]: `${clamped}%` } as React.CSSProperties} dir="ltr">{minToHHMM(m)}</span>
-                  );
-                })}
-              </div>
-              <div className="w-20 shrink-0 text-center font-medium">{t("colStatus")}</div>
-              <div className="w-28 shrink-0 font-medium">{t("colDriver")}</div>
-            </div>
+          {/* The timeline — now the SAME component the master planner draws.
+              It used to be this file's own: its own ticks, its own percent
+              maths, its own edge clamping. Two boards showing one day drew a
+              trip at two different widths, and width is what a dispatcher is
+              being asked to judge. */}
+          <div className="lg:col-span-2 lg:row-start-2">
+            <TimelineFrame
+              axis={board.axis}
+              rtl={rtl}
+              title={t("scheduleTitle")}
+              legend={
+                <>
+                  <span className="inline-flex items-center gap-1"><Home className="size-3.5 text-green-600" />{t("legendHome")}</span>
+                  <span className="inline-flex items-center gap-1"><Building2 className="size-3.5 text-blue-500" />{t("legendArrive")}</span>
+                  <span className="inline-flex items-center gap-1"><Flag className="size-3.5 text-purple-500" />{t("legendDepart")}</span>
+                  <span className="inline-flex items-center gap-1"><span className="inline-block h-0 w-5 border-t-2 border-slate-500" />{t("legendToCentre")}</span>
+                  <span className="inline-flex items-center gap-1"><span className="inline-block h-0 w-5 border-t-2 border-dashed border-slate-500" />{t("legendFromCentre")}</span>
+                </>
+              }
+            >
+              <TimelineHeader label={t("colDriver")} />
 
-            {/* Rows */}
-            <div>
               {visibleLanes.map((lane) => {
                 const trips = lane.trips.filter(tripPasses);
                 const st = laneStatus(lane);
+                const color = driverColour.get(lane.driverId) ?? "#2563eb";
                 return (
-                  <div key={lane.driverId} className={`flex min-w-[760px] items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0 ${rtl ? "flex-row-reverse" : ""}`}>
-                    {/* timeline cell — drop target */}
-                    <div
-                      className={`relative h-14 flex-1 rounded-md ${dragKey ? "bg-muted/40 " + haloClass(halo.get(lane.driverId)) : ""}`}
-                      onDragOver={(e) => { if (e.dataTransfer.types.includes("application/x-assign")) e.preventDefault(); }}
-                      onDrop={(e) => onLaneDrop(e, lane.driverId)}
-                    >
-                      {/* baseline */}
-                      {/* Two baselines: deliveries ride the upper line, returns
-                          the lower one, so a driver's outbound and inbound work
-                          read as separate strands instead of overlapping on a
-                          single row. */}
-                      <div className="absolute inset-x-0 h-px bg-border" style={{ top: DELIVERY_ROW_TOP }} />
-                      <div className="absolute inset-x-0 h-px bg-border/60" style={{ top: RETURN_ROW_TOP }} />
-                      {trips.length === 0 ? (
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
-                          {lane.trips.length === 0 ? t("noTrips") : t("noMatch")}
+                  <TimelineRow
+                    key={lane.driverId}
+                    trackHeight="h-14"
+                    /* Two strands of its own, so the shared centre hairline
+                       would be a third line meaning nothing. */
+                    baseline={false}
+                    trackClassName={dragKey ? "bg-muted/40 " + haloClass(halo.get(lane.driverId)) : ""}
+                    trackProps={{
+                      onDragOver: (e) => {
+                        if (e.dataTransfer.types.includes("application/x-assign")) e.preventDefault();
+                      },
+                      onDrop: (e) => onLaneDrop(e, lane.driverId),
+                    }}
+                    leading={
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
+                          <span className="truncate font-medium">{lane.driverName}</span>
+                        </div>
+                        <div className="text-muted-foreground" dir="ltr">{lane.plate ?? "—"} · {lane.capacity}</div>
+                        {/* Was its own column. Folded into the identity cell so
+                            a row here is shaped like a row on the master board. */}
+                        <span className={`mt-0.5 w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>
+                          {t(`laneStatus.${st.key}`)}
                         </span>
-                      ) : (
-                        trips.map((trip) => {
-                          const color = driverColour.get(lane.driverId) ?? "#2563eb";
-                          const dashed = trip.tripKind === "RETURN";
-                          const stops = [...trip.stops].sort((a, b) => a.plannedMin - b.plannedMin);
-                          const a = pct(stops[0].plannedMin);
-                          const b = pct(stops[stops.length - 1].plannedMin);
-                          const lo = Math.min(a, b), span = Math.abs(b - a);
-                          const tooltip = [
-                            `${kindLabel(trip.tripKind)} · ${minToHHMM(trip.plannedStartMin)}–${minToHHMM(trip.plannedEndMin)}${trip.passengerName ? " · " + trip.passengerName : ""}`,
-                            ...trip.validationMessages.map((m) => `• ${reasonLabel(m.code)}`),
-                          ].join("\n");
-                          const pkey = trip.linkGroup ? trip.linkGroup.replace(/^day:/, "") : null;
-                          // Stops belong to the trip bar, not to the lane.
-                          //
-                          // Positioning each marker by its absolute time put a
-                          // 17-minute trip's two icons ~28px apart on a 9-hour
-                          // axis — closer than the icons are wide, so they
-                          // collided into a blob that only became readable by
-                          // zooming the browser out. Anchoring them inside a bar
-                          // with a floor width keeps every stop legible at any
-                          // scale, while the bar itself still starts and ends at
-                          // the true times.
-                          const first = stops[0];
-                          const last = stops[stops.length - 1];
-                          return (
-                            <div
-                              key={trip.id}
-                              draggable={!!pkey}
-                              title={tooltip}
-                              onDragStart={(e) => { if (pkey) { e.dataTransfer.setData("application/x-unassign", pkey); e.dataTransfer.effectAllowed = "move"; } }}
-                              className="absolute flex h-5 -translate-y-1/2 cursor-grab items-center justify-between active:cursor-grabbing"
-                              style={{
-                                top: dashed ? RETURN_ROW_TOP : DELIVERY_ROW_TOP,
-                                [S]: `${lo}%`,
-                                width: `${Math.max(span, 0.5)}%`,
-                                minWidth: TRIP_MIN_WIDTH_PX,
-                              } as React.CSSProperties}
-                            >
-                              {[first, last].map((st2, endIdx) => {
-                                const isCentre = near(st2.lat, st2.lng);
-                                const Icon = isCentre ? (st2.kind === "PICKUP" ? Flag : Building2) : Home;
-                                return (
-                                  <span
-                                    key={`${st2.seq}-${endIdx}`}
-                                    title={`${st2.seq}. ${st2.label} · ${minToHHMM(st2.plannedMin)}`}
-                                    className="z-10 flex size-4 shrink-0 items-center justify-center rounded-full border-2 bg-card"
-                                    style={{ borderColor: color, color }}
-                                  >
-                                    <Icon className="size-2" />
-                                  </span>
-                                );
-                              })}
-                              {/* the run between the two ends, drawn behind them */}
+                      </>
+                    }
+                  >
+                    {(track) => (
+                      <>
+                        {/* Deliveries ride the upper strand, returns the lower,
+                            so a driver's outbound and inbound work read apart
+                            instead of overlapping on one line. */}
+                        <div className="absolute inset-x-0 h-px bg-border" style={{ top: DELIVERY_ROW_TOP }} />
+                        <div className="absolute inset-x-0 h-px bg-border/60" style={{ top: RETURN_ROW_TOP }} />
+                        {trips.length === 0 ? (
+                          <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground">
+                            {lane.trips.length === 0 ? t("noTrips") : t("noMatch")}
+                          </span>
+                        ) : (
+                          trips.map((trip) => {
+                            const dashed = trip.tripKind === "RETURN";
+                            const stops = [...trip.stops].sort((a, b) => a.plannedMin - b.plannedMin);
+                            const tooltip = [
+                              `${kindLabel(trip.tripKind)} · ${minToHHMM(trip.plannedStartMin)}–${minToHHMM(trip.plannedEndMin)}${trip.passengerName ? " · " + trip.passengerName : ""}`,
+                              ...trip.validationMessages.map((m) => `• ${reasonLabel(m.code)}`),
+                            ].join("\n");
+                            const pkey = trip.linkGroup ? trip.linkGroup.replace(/^day:/, "") : null;
+                            // Stops belong to the trip bar, not to the lane.
+                            // Positioning each marker by its absolute time put a
+                            // 17-minute trip's two icons ~28px apart on a 9-hour
+                            // axis — closer than the icons are wide, so they
+                            // collided into a blob only legible zoomed out. A bar
+                            // with a floor width keeps every stop readable at any
+                            // scale, while still starting and ending at the true
+                            // times.
+                            const first = stops[0];
+                            const last = stops[stops.length - 1];
+                            return (
                               <div
-                                className="absolute inset-x-0"
-                                style={{ borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}` }}
-                              />
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                    {/* status */}
-                    <div className="flex w-20 shrink-0 items-center justify-center">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>{t(`laneStatus.${st.key}`)}</span>
-                    </div>
-                    {/* driver / vehicle */}
-                    <div className="w-28 shrink-0 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="size-2 shrink-0 rounded-full" style={{ background: driverColour.get(lane.driverId) }} />
-                        <span className="truncate font-medium">{lane.driverName}</span>
-                      </div>
-                      <div className="text-muted-foreground" dir="ltr">{lane.plate ?? "—"} · {lane.capacity}</div>
-                    </div>
-                  </div>
+                                key={trip.id}
+                                draggable={!!pkey}
+                                title={tooltip}
+                                onDragStart={(e) => {
+                                  if (pkey) {
+                                    e.dataTransfer.setData("application/x-unassign", pkey);
+                                    e.dataTransfer.effectAllowed = "move";
+                                  }
+                                }}
+                                className="absolute flex h-5 -translate-y-1/2 cursor-grab items-center justify-between active:cursor-grabbing"
+                                style={{
+                                  ...track.place(first.plannedMin, last.plannedMin, {
+                                    minWidthPx: TRIP_MIN_WIDTH_PX,
+                                    minPct: 0.5,
+                                  }),
+                                  top: dashed ? RETURN_ROW_TOP : DELIVERY_ROW_TOP,
+                                }}
+                              >
+                                {[first, last].map((st2, endIdx) => {
+                                  const isCentre = near(st2.lat, st2.lng);
+                                  const Icon = isCentre ? (st2.kind === "PICKUP" ? Flag : Building2) : Home;
+                                  return (
+                                    <span
+                                      key={`${st2.seq}-${endIdx}`}
+                                      title={`${st2.seq}. ${st2.label} · ${minToHHMM(st2.plannedMin)}`}
+                                      className="z-10 flex size-4 shrink-0 items-center justify-center rounded-full border-2 bg-card"
+                                      style={{ borderColor: color, color }}
+                                    >
+                                      <Icon className="size-2" />
+                                    </span>
+                                  );
+                                })}
+                                {/* the run between the two ends, drawn behind them */}
+                                <div
+                                  className="absolute inset-x-0"
+                                  style={{ borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}` }}
+                                />
+                              </div>
+                            );
+                          })
+                        )}
+                      </>
+                    )}
+                  </TimelineRow>
                 );
               })}
-            </div>
-
-            {/* Legend */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border p-3 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1"><Home className="size-3.5 text-green-600" />{t("legendHome")}</span>
-              <span className="inline-flex items-center gap-1"><Building2 className="size-3.5 text-blue-500" />{t("legendArrive")}</span>
-              <span className="inline-flex items-center gap-1"><Flag className="size-3.5 text-purple-500" />{t("legendDepart")}</span>
-              <span className="inline-flex items-center gap-1"><span className="inline-block h-0 w-5 border-t-2 border-slate-500" />{t("legendToCentre")}</span>
-              <span className="inline-flex items-center gap-1"><span className="inline-block h-0 w-5 border-t-2 border-dashed border-slate-500" />{t("legendFromCentre")}</span>
-            </div>
+            </TimelineFrame>
           </div>
 
           {/* Unassigned pool */}
