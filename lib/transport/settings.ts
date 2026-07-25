@@ -11,6 +11,7 @@ import { TRANSPORT_PASSENGERS, type TransportPassengers } from "@/lib/enums";
 import type { TransportRules } from "./validate";
 import { DEFAULT_LATENESS_CONFIG, type LatenessConfig } from "./lateness";
 import { DEFAULT_WEIGHTS, type OptimizationWeights } from "./cost";
+import { DEFAULT_SPACING, type SpacingConfig } from "./spacing";
 
 /** Every Setting key the transport module reads. */
 export const TRANSPORT_SETTING_KEYS = [
@@ -73,6 +74,12 @@ export const TRANSPORT_SETTING_KEYS = [
   "transportWeightJourneyMinutes",
   "transportWeightEmptyKm",
   "transportWeightTotalKm",
+  // Booking-time spacing (stops an impossible leg being created at all).
+  "transportHomeSessionBufferMin",
+  "transportCentreBackToBack",
+  "transportBlockOverlappingBooking",
+  // Master planner.
+  "transportLockConflictedSessions",
 ] as const;
 
 export type TransportConfig = {
@@ -110,6 +117,18 @@ export type TransportConfig = {
   returnGroupingWindowMin: number;
   /** Re-notify only once the expected delay moves by at least this much. */
   notificationDelayChangeThresholdMin: number;
+  /**
+   * Room a teacher's lessons need between them, enforced when booking.
+   *
+   * The cheapest place to stop an impossible ride is before the lesson that
+   * requires it exists: no allocator can drive someone from a house at 15:30
+   * to the centre at 15:00.
+   */
+  spacing: SpacingConfig;
+  /** Refuse a booking that breaks spacing, rather than only warning. */
+  blockOverlappingBooking: boolean;
+  /** Conflicted lessons cannot be dragged on the master planner. */
+  lockConflictedSessions: boolean;
 };
 
 const num = (v: string | undefined, fallback: number): number => {
@@ -247,6 +266,12 @@ export async function loadTransportConfig(): Promise<TransportConfig> {
       s.transportNotificationDelayChangeThresholdMin,
       5,
     ),
+    spacing: {
+      homeBufferMin: numZ(s.transportHomeSessionBufferMin, DEFAULT_SPACING.homeBufferMin),
+      centreBackToBack: bool(s.transportCentreBackToBack, DEFAULT_SPACING.centreBackToBack),
+    },
+    blockOverlappingBooking: bool(s.transportBlockOverlappingBooking, false),
+    lockConflictedSessions: bool(s.transportLockConflictedSessions, false),
   };
 }
 
