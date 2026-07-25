@@ -1,5 +1,6 @@
 import "server-only";
 import { buildDayPlan, loadDayTrips, type BoardTrip, type DayPlan } from "./trip-data";
+import { dayAxis, type DayAxis } from "./axis";
 
 /**
  * The dispatch cockpit's data (the "المخطط اليومي للنقل" board).
@@ -72,8 +73,8 @@ export type DispatchBoard = {
   lanes: DriverLane[];
   pool: PoolItem[];
   stats: DispatchStats;
-  /** Timeline extent across every trip stop (minutes from midnight). */
-  axis: { minMin: number; maxMin: number };
+  /** The day's drawing window — the same one the master planner uses. */
+  axis: DayAxis;
 };
 
 const LIFECYCLE_DONE = new Set(["COMPLETED"]);
@@ -211,24 +212,13 @@ export async function dispatchBoard(locale: string, day: string): Promise<Dispat
     }
   }
   // The axis is a fixed working window, not the extent of whatever happens to
-  // be booked. Deriving it from the trips alone made a single trip stretch
-  // across the whole board, so two lanes an hour apart looked like a full day
-  // and the same trip changed width every time another was added.
-  //
-  // So: always show the working window, and grow past it only when something is
-  // actually scheduled out there — never beyond the hours the centre can run.
-  const DAY_OPEN_MIN = 7 * 60; // 07:00 — earliest the centre ever operates
-  const DAY_CLOSE_MIN = 26 * 60; // 02:00 next day — latest
-  const WINDOW_FROM_MIN = 14 * 60; // 14:00 — shown even when empty
-  const WINDOW_TO_MIN = 22 * 60; // 22:00
-
-  const earliestHour = Number.isFinite(minMin)
-    ? Math.floor(minMin / 60) * 60
-    : WINDOW_FROM_MIN;
-  const latestHour = Number.isFinite(maxMin) ? Math.ceil(maxMin / 60) * 60 : WINDOW_TO_MIN;
-
-  minMin = Math.max(DAY_OPEN_MIN, Math.min(WINDOW_FROM_MIN, earliestHour));
-  maxMin = Math.min(DAY_CLOSE_MIN, Math.max(WINDOW_TO_MIN, latestHour));
+  // be booked — deriving it from the trips alone made a single trip stretch
+  // across the whole board. That rule now lives in one place: this board and
+  // the master planner MUST agree about the width of a day, and they only do
+  // if they compute it with the same code. Four window constants and the
+  // clamping were duplicated here, so a centre that started running until
+  // 23:00 would have had to be told twice.
+  const axis = dayAxis([minMin, maxMin]);
 
   return {
     day,
@@ -246,6 +236,6 @@ export async function dispatchBoard(locale: string, day: string): Promise<Dispat
       remaining,
       stops: { total: stopsTotal, homes: stopsHome, centre: stopsCentre, toCentre, fromCentre },
     },
-    axis: { minMin, maxMin },
+    axis,
   };
 }

@@ -18,13 +18,16 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { axisPct, axisTicks, type DayAxis } from "@/lib/transport/axis";
+import { type DayAxis } from "@/lib/transport/axis";
+import {
+  TimelineFrame,
+  TimelineHeader,
+  TimelineRow,
+  useTrack,
+  hhmm,
+} from "@/components/transport/timeline";
 import { proposedTimes } from "@/lib/transport/drag-lock";
 import type { MasterBoard, MasterLane, MasterSession, MasterTrip } from "@/lib/transport/master";
-
-/** Minutes → HH:MM. */
-const hhmm = (m: number) =>
-  `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
 /**
  * The four block types, deliberately far apart in colour.
@@ -95,11 +98,6 @@ export function MasterClient({ board }: { board: MasterBoard }) {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   /** Teacher rows carry lessons; driver and vehicle rows carry only rides. */
   const byPerson = board.laneKind === "TEACHER";
-
-  /** Physical inline-start side — the axis runs from it. */
-  const S = rtl ? "right" : "left";
-  const ticks = useMemo(() => axisTicks(board.axis), [board.axis]);
-  const pct = (m: number) => axisPct(board.axis, m);
 
   function go(next: { date?: string; view?: string }) {
     // A proposal belongs to one day and one perspective; carrying it across a
@@ -202,59 +200,15 @@ export function MasterClient({ board }: { board: MasterBoard }) {
         </div>
       )}
 
-      {/* Timeline */}
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <div className="min-w-[760px]">
-          <p className="border-b border-border p-3 text-sm font-medium">{t("timelineTitle")}</p>
-
-          {/* Hour ruler. Mirrors the dispatch board: the person column comes
-              first in reading order, the axis runs away from it. */}
-          <div
-            /* No flex-row-reverse: our DOM order is [person, timeline], so the
-               normal direction already puts the person on the inline-start
-               side. The dispatch board reverses because its DOM order is the
-               other way round — copying the class blindly put the teacher's
-               name at the far LEFT in Arabic, read last, after the bars it
-               labels. */
-            className="flex items-stretch gap-2 border-b border-border bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground"
-          >
-            <div className="w-36 shrink-0 font-medium">{t(`colPerson.${board.laneKind}`)}</div>
-            <div className="relative flex-1 overflow-hidden">
-              {ticks.map((m) => (
-                <span
-                  key={m}
-                  dir="ltr"
-                  className={`absolute tabular-nums ${rtl ? "translate-x-1/2" : "-translate-x-1/2"}`}
-                  style={{ [S]: `${Math.min(97, Math.max(3, pct(m)))}%` } as React.CSSProperties}
-                >
-                  {hhmm(m)}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {board.lanes.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">{t("empty")}</p>
-          ) : (
-            board.lanes.map((lane) => (
-              <LaneRow
-                  key={lane.id}
-                  lane={lane}
-                  S={S}
-                  pct={pct}
-                  layers={layers}
-                  byPerson={byPerson}
-                  axis={board.axis}
-                  rtl={rtl}
-                  canDrag={board.canDrag}
-                  proposal={proposal?.laneId === lane.id ? proposal : null}
-                  onPropose={setProposal}
-                />
-            ))
-          )}
-
-          {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border p-3 text-[11px] text-muted-foreground">
+      {/* The timeline. Frame, ruler and row geometry are the shared component's
+          business now — this board and the dispatch board cannot draw the same
+          day two different widths. */}
+      <TimelineFrame
+        axis={board.axis}
+        rtl={rtl}
+        title={t("timelineTitle")}
+        legend={
+          <>
             <span className="inline-flex items-center gap-1">
               <Home className="size-3.5 text-emerald-600" />
               {t("legendHome")}
@@ -277,9 +231,29 @@ export function MasterClient({ board }: { board: MasterBoard }) {
                 {t("dragHint")}
               </span>
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      >
+        <TimelineHeader label={t(`colPerson.${board.laneKind}`)} />
+
+        {board.lanes.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">{t("empty")}</p>
+        ) : (
+          board.lanes.map((lane) => (
+            <LaneRow
+              key={lane.id}
+              lane={lane}
+              layers={layers}
+              byPerson={byPerson}
+              axis={board.axis}
+              rtl={rtl}
+              canDrag={board.canDrag}
+              proposal={proposal?.laneId === lane.id ? proposal : null}
+              onPropose={setProposal}
+            />
+          ))
+        )}
+      </TimelineFrame>
     </div>
   );
 }
@@ -315,8 +289,6 @@ function LayerToggle({
 
 function LaneRow({
   lane,
-  S,
-  pct,
   layers,
   byPerson,
   axis,
@@ -326,8 +298,6 @@ function LaneRow({
   onPropose,
 }: {
   lane: MasterLane;
-  S: "left" | "right";
-  pct: (m: number) => number;
   layers: Layers;
   byPerson: boolean;
   axis: DayAxis;
@@ -454,16 +424,8 @@ function LaneRow({
     });
   };
 
-  /** A block spanning a real period, positioned on the axis. */
-  const span = (startMin: number, endMin: number) => {
-    const a = pct(startMin);
-    const b = pct(endMin);
-    return {
-      [S]: `${Math.min(a, b)}%`,
-      width: `${Math.max(Math.abs(b - a), 0.4)}%`,
-      minWidth: 26,
-    } as React.CSSProperties;
-  };
+  /** The one route from a minute to a position, shared with the dispatch board. */
+  const { place: span } = useTrack();
 
   const hasConflict = lane.sessions.some((s) => s.conflicts);
   const problemGaps = lane.gaps.filter((g) => g.problem);
@@ -483,11 +445,10 @@ function LaneRow({
   }, [lane.trips]);
 
   return (
-    <div
-      className="flex items-stretch gap-2 border-b border-border px-3 py-2 last:border-b-0"
-    >
-      {/* Person */}
-      <div className="flex w-36 shrink-0 flex-col justify-center text-xs">
+    <TimelineRow
+      trackRef={trackRef}
+      leading={
+        <>
         <span className="flex items-center gap-1 truncate font-medium">
           {hasConflict && <AlertTriangle className="size-3.5 shrink-0 text-destructive" />}
           {lane.name}
@@ -508,12 +469,9 @@ function LaneRow({
             {t("gapsFlagged", { n: problemGaps.length })}
           </span>
         )}
-      </div>
-
-      {/* The day */}
-      <div ref={trackRef} className="relative h-10 flex-1 rounded-md bg-muted/20">
-        <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
-
+        </>
+      }
+    >
         {/* Classified gaps, drawn first so lessons and rides sit on top. Every
             uncovered stretch gets a reason — a blank row is what hid a missing
             ride as empty space. FREE is deliberately invisible: a quiet
@@ -680,7 +638,6 @@ function LaneRow({
             <Bus className="size-2.5" />
           </span>
         ))}
-      </div>
-    </div>
+    </TimelineRow>
   );
 }
