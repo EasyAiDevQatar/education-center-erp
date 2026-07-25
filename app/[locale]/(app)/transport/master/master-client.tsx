@@ -33,8 +33,8 @@ import { ImpactDialog } from "./impact-dialog";
 import { RideAssignDialog } from "./ride-assign-dialog";
 import { SessionDialog, type PriceMatrix } from "../../sessions/session-dialog";
 import { saveSession } from "../../sessions/actions";
-import { assignToDriver, previewAssignAll } from "../dispatch/actions";
-import { Users, GripVertical } from "lucide-react";
+import { assignToDriver, previewAssignAll, unassignPassenger } from "../dispatch/actions";
+import { Users, GripVertical, Undo2 as UndoIcon } from "lucide-react";
 
 /**
  * The four block types, deliberately far apart in colour.
@@ -165,6 +165,8 @@ export function MasterClient({
   const [carrying, setCarrying] = useState<string | null>(null);
   const [halo, setHalo] = useState<Map<string, string>>(new Map());
   const [assignErr, setAssignErr] = useState<string | null>(null);
+  /** The last assignment made here, so it can be taken back in one click. */
+  const [lastAssign, setLastAssign] = useState<string | null>(null);
   const [, startAssign] = useTransition();
 
   const [dropped, setDropped] = useState<Dropped | null>(null);
@@ -259,10 +261,46 @@ export function MasterClient({
           Only on the driver view: on a teacher board these same people are the
           passengers, and "assign حنان to حنان" is not a sentence. */}
       {board.laneKind === "DRIVER" && board.canDrag && (
-        <div className="rounded-xl border border-border bg-card p-3">
+        <div
+          className="rounded-xl border border-border bg-card p-3"
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes(UNASSIGN_MIME)) e.preventDefault();
+          }}
+          onDrop={(e) => {
+            const key = e.dataTransfer.getData(UNASSIGN_MIME);
+            if (!key) return;
+            e.preventDefault();
+            startAssign(async () => {
+              const res = await unassignPassenger(locale, board.day, key);
+              setAssignErr(res.error ?? null);
+              if (!res.error) setLastAssign(null);
+              router.refresh();
+            });
+          }}
+        >
           <p className="mb-2 flex items-center gap-1 text-sm font-medium">
             <Users className="size-4 text-orange-500" />
             {td("unassignedPool", { n: board.pool.length })}
+            {/* Taking back the last assignment, without having to find which
+                ride it became. Dragging a bar back here does the same thing
+                for any of them. */}
+            {lastAssign && (
+              <button
+                type="button"
+                onClick={() =>
+                  startAssign(async () => {
+                    const res = await unassignPassenger(locale, board.day, lastAssign);
+                    setAssignErr(res.error ?? null);
+                    if (!res.error) setLastAssign(null);
+                    router.refresh();
+                  })
+                }
+                className="ms-auto inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs font-normal hover:bg-accent"
+              >
+                <UndoIcon className="size-3.5" />
+                {td("undo")}
+              </button>
+            )}
           </p>
           {board.pool.length === 0 ? (
             <p className="text-xs text-muted-foreground">{td("poolEmpty")}</p>
@@ -515,6 +553,7 @@ export function MasterClient({
                         setHalo(new Map());
                         const res = await assignToDriver(locale, board.day, passengerKey, lane.id);
                         setAssignErr(res.error ?? null);
+                        if (!res.error) setLastAssign(passengerKey);
                         router.refresh();
                       })
                   : undefined
@@ -584,6 +623,7 @@ function LayerToggle({
 /** Our own types, so a stray file drag can never look like one of ours. */
 const CHIP_MIME = "application/x-master-chip";
 const PASSENGER_MIME = "application/x-assign";
+const UNASSIGN_MIME = "application/x-unassign";
 
 function LegendChip({
   kind,
@@ -1107,9 +1147,17 @@ function LaneRow({
         })()}
 
         {layers.trips &&
-          lane.trips.map((tr) => (
+          lane.trips.map((tr) => {
+          const backKey = !byPerson && tr.linkGroup ? tr.linkGroup.replace(/^day:/, "") : null;
+          return (
           <span
             key={tr.id}
+            draggable={!!backKey}
+            onDragStart={(e) => {
+              if (!backKey) return;
+              e.dataTransfer.setData(UNASSIGN_MIME, backKey);
+              e.dataTransfer.effectAllowed = "move";
+            }}
             title={[
               `${hhmm(tr.startMin)}–${hhmm(tr.endMin)}`,
               tr.passengerName,
@@ -1125,7 +1173,8 @@ function LaneRow({
           >
             <Bus className="size-2.5" />
           </span>
-        ))}
+          );
+        })}
     </TimelineRow>
   );
 }

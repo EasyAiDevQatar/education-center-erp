@@ -77,6 +77,14 @@ export type MasterTrip = {
   /** Who is aboard — the answer to "who is this car carrying?". */
   passengerName: string | null;
   /**
+   * `day:TEACHER:<id>` — the passenger this ride serves.
+   *
+   * Carried so a ride can be dragged back to the pool: that is the key
+   * `unassignPassenger` takes, and without it the only way to undo an
+   * assignment was to remember having made it.
+   */
+  linkGroup: string | null;
+  /**
    * The lessons this ride exists for.
    *
    * Carried on the trip itself so a driver's or vehicle's row can say what the
@@ -413,6 +421,7 @@ export async function masterBoard(
       validationStatus: t.validationStatus ?? "VALID",
       driverName: t.driverName ?? null,
       passengerName: t.passengerName ?? null,
+      linkGroup: t.linkGroup ?? null,
       serves: [...(servedByTrip.get(t.id) ?? [])]
         .map((sid) => sessionById.get(sid))
         .filter((x): x is NonNullable<typeof x> => !!x)
