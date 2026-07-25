@@ -17,6 +17,7 @@ const subject = (over: Partial<DragSubject> = {}): DragSubject => ({
   sessionType: "REGULAR",
   conflicts: false,
   tripDispatched: false,
+  hasStarted: true,
   ...over,
 });
 
@@ -46,6 +47,25 @@ describe("lockReasonFor — what may be moved", () => {
       expect(
         lockReasonFor(subject({ sessionType }), { canDrag: true, lockConflicted: false }),
       ).toBe("STRICT_TYPE");
+    }
+  });
+
+  it("does NOT believe a future lesson that claims to be finished", () => {
+    // Seeded and imported data does this. A lesson next week marked COMPLETED
+    // is bad data, and locking it repeats the error back as a rule.
+    for (const status of ["COMPLETED", "CHECKED_IN"]) {
+      expect(lockReasonFor(subject({ status, hasStarted: false }), scheduler)).toBeNull();
+      expect(lockReasonFor(subject({ status, hasStarted: true }), scheduler)).toBe(
+        "ALREADY_HAPPENED",
+      );
+    }
+  });
+
+  it("still refuses a cancelled lesson whatever the clock says", () => {
+    for (const status of ["CANCELLED", "NO_SHOW"]) {
+      expect(lockReasonFor(subject({ status, hasStarted: false }), scheduler)).toBe(
+        "ALREADY_HAPPENED",
+      );
     }
   });
 

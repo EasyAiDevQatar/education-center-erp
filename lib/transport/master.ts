@@ -467,6 +467,11 @@ export async function masterBoard(
     });
   }
 
+  // Which lessons the clock says have begun. Status claims history; only this
+  // says whether there is any history to claim.
+  const now = new Date();
+  const startedBy = new Set(sessions.filter((x) => x.date <= now).map((x) => x.id));
+
   // --- flag collisions and measure genuinely uncovered time ---------------
   for (const lane of lanes.values()) {
     const windows: SessionWindow[] = lane.sessions.map((s) => ({
@@ -490,6 +495,7 @@ export async function masterBoard(
           sessionType: s.sessionType,
           conflicts: s.conflicts,
           tripDispatched: dispatched.has(s.id),
+          hasStarted: startedBy.has(s.id),
         },
         { canDrag, lockConflicted: config.lockConflictedSessions },
       );

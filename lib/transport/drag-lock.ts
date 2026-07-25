@@ -32,6 +32,16 @@ export type DragSubject = {
   conflicts: boolean;
   /** True when a trip serving it has left the proposed stage. */
   tripDispatched: boolean;
+  /**
+   * Whether the lesson has actually begun, by the clock.
+   *
+   * Status alone is not enough. A lesson dated next week and marked COMPLETED
+   * is bad data, not history — and refusing to move it because it "already
+   * happened" is the board repeating the error back to the user as a rule.
+   * The clock decides what is in the past; the status only decides what kind
+   * of past it was.
+   */
+  hasStarted: boolean;
 };
 
 export type DragPolicy = {
@@ -41,8 +51,10 @@ export type DragPolicy = {
   lockConflicted: boolean;
 };
 
-/** Statuses that mean the lesson is no longer a plan. */
-const SETTLED = new Set(["COMPLETED", "CHECKED_IN", "CANCELLED", "NO_SHOW"]);
+/** Statuses claiming the lesson has been taught — only true once it has begun. */
+const HAPPENED = new Set(["COMPLETED", "CHECKED_IN"]);
+/** Statuses that stop being a plan whatever the clock says. */
+const ABANDONED = new Set(["CANCELLED", "NO_SHOW"]);
 
 /**
  * Why this lesson cannot be dragged, or null when it can.
@@ -56,7 +68,8 @@ export function lockReasonFor(
   policy: DragPolicy,
 ): LockReason | null {
   if (!policy.canDrag) return "NOT_PERMITTED";
-  if (SETTLED.has(subject.status)) return "ALREADY_HAPPENED";
+  if (ABANDONED.has(subject.status)) return "ALREADY_HAPPENED";
+  if (HAPPENED.has(subject.status) && subject.hasStarted) return "ALREADY_HAPPENED";
   if (STRICT_SESSION_TYPES.includes(subject.sessionType)) return "STRICT_TYPE";
   if (subject.tripDispatched) return "DISPATCHED";
   if (subject.conflicts && policy.lockConflicted) return "CONFLICTED";

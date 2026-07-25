@@ -256,6 +256,9 @@ async function gateFor(input: MoveInput, locale: string): Promise<Gate | { error
       sessionType: (session.sessionType ?? "REGULAR") as SessionType,
       conflicts: conflictsNow,
       tripDispatched: dispatched,
+      // The clock, not the status: a lesson dated next week and marked
+      // COMPLETED is bad data, and the gate must not enforce it as history.
+      hasStarted: session.date <= new Date(),
     },
     { canDrag: true, lockConflicted: config.lockConflictedSessions },
   );
