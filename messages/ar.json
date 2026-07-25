@@ -2388,5 +2388,13 @@
     "laneSummaryTrips": "{trips} رحلة",
     "headingTo": "متجه لحصة {student} الساعة {from} — يقل {who}",
     "forLesson": "لحصة {student} الساعة {at}"
+  },
+  "spacing": {
+    "title": "لا يوجد وقت كافٍ للتنقل",
+    "titleBlocking": "لا يمكن الحجز في هذا الوقت",
+    "overlap": "يتداخل مع {name} ({from}–{to}) — ينقص {short} د بعد حساب التنقل",
+    "tooTight": "بعد {name} ({from}–{to}) بدقائق فقط؛ التنقل يحتاج {need} د — ينقص {short} د",
+    "suggestion": "أقرب وقت متاح هو {time}.",
+    "useSuggestion": "استخدم {time}"
   }
 }

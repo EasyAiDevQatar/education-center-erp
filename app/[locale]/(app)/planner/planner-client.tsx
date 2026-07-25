@@ -46,7 +46,11 @@ import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
 import { TimeRange } from "@/components/time-range";
 import { findConflicts, weekdayOf, WEEKDAY_ORDER, type Conflict } from "@/lib/conflicts";
 import { localNowTime, localToday } from "@/lib/session-time";
-import { ConflictWarnings } from "@/components/conflict-warnings";
+import {
+  ConflictWarnings,
+  SpacingWarning,
+  useSpacingCheck,
+} from "@/components/conflict-warnings";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { deleteSession } from "../sessions/actions";
 import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
@@ -766,6 +770,7 @@ export function PlannerClient({
       {editing && (
         <EditDraftDialog
           session={editing}
+          day={day}
           teachers={teachers}
           conflictsFor={conflictsFor}
           onClose={() => setEditing(null)}
@@ -904,6 +909,9 @@ function AddDraftDialog({
   const [gradeLevelId, setGradeLevelId] = useState("");
   const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");
   const [hours, setHours] = useState("1");
+  // Asked of the server, not computed here: the buffer is a centre-wide
+  // setting, and a second copy of the rule in the client is how the allocator
+  // and the validator drifted apart earlier.
   const [time, setTime] = useState(() =>
     minToHHMM(
       suggestNextStart({
@@ -1054,12 +1062,15 @@ function AddDraftDialog({
 
 function EditDraftDialog({
   session,
+  day,
   teachers,
   conflictsFor,
   onClose,
   onSaved,
 }: {
   session: PlannerSession;
+  /** The day being planned — the spacing check needs a date, not just a time. */
+  day: string;
   teachers: Opt[];
   conflictsFor: ConflictsFor;
   onClose: () => void;
@@ -1076,6 +1087,15 @@ function EditDraftDialog({
   const [location, setLocation] = useState<"CENTER" | "HOME">(session.location);
   const [teacherId, setTeacherId] = useState(session.teacherId);
   const [pending, start] = useTransition();
+
+  const spacing = useSpacingCheck({
+    date: day,
+    time,
+    hours: parseFloat(hours) || 1,
+    teacherId,
+    location,
+    excludeId: session.id,
+  });
 
   const conflicts = conflictsFor({
     id: session.id,
@@ -1135,6 +1155,7 @@ function EditDraftDialog({
             </FormField>
           </div>
           <ConflictWarnings conflicts={conflicts} />
+          <SpacingWarning check={spacing} onUseSuggestion={setTime} />
         </div>
         <DialogFooter>
           <DialogClose asChild>

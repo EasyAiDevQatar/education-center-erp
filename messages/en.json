@@ -2388,5 +2388,13 @@
     "laneSummaryTrips": "{trips} rides",
     "headingTo": "Heading to {student}'s lesson at {from} — carrying {who}",
     "forLesson": "for {student} at {at}"
+  },
+  "spacing": {
+    "title": "No room to travel",
+    "titleBlocking": "Cannot be booked at this time",
+    "overlap": "Overlaps {name} ({from}–{to}) — {short} min short once travel is counted",
+    "tooTight": "Only minutes after {name} ({from}–{to}); a journey needs {need} min — {short} min short",
+    "suggestion": "The first clear time is {time}.",
+    "useSuggestion": "Use {time}"
   }
 }
