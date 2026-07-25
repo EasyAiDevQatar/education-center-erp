@@ -7,7 +7,8 @@ import { STAFF_ROLES } from "@/lib/rbac";
 import { toNumber } from "@/lib/money";
 import { findConflicts, weekdayOf, type Conflict } from "@/lib/conflicts";
 import { hhmmToMin } from "@/lib/planner";
-import { loadTransportConfig } from "@/lib/transport/settings";
+import { loadTransportConfig, distanceKm } from "@/lib/transport/settings";
+import { travelMinutes } from "@/lib/transport/eta";
 import { spacingProblems, suggestStart, type SpacedSession } from "@/lib/transport/spacing";
 
 const schema = z.object({
@@ -97,6 +98,14 @@ const spacingSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/),
   hours: z.coerce.number().min(0.25).max(12),
   teacherId: z.string().min(1),
+  /**
+   * Whose home, when the lesson is at one.
+   *
+   * Optional so existing callers keep working, but without it the rule cannot
+   * measure the journey and falls back to the flat buffer — which is exactly
+   * the behaviour this step exists to replace. Pass it wherever you know it.
+   */
+  studentId: z.string().optional(),
   location: z.enum(["CENTER", "HOME"]),
   excludeId: z.string().optional().nullable(),
 });
@@ -146,8 +155,31 @@ export async function checkSpacing(
       // A cancelled lesson blocks nothing, and a no-show already happened.
       status: { notIn: ["CANCELLED", "NO_SHOW"] },
     },
-    include: { student: { select: { name: true } } },
+    include: { student: { select: { name: true, homeLat: true, homeLng: true } } },
   });
+
+  // Where each lesson physically happens. A centre lesson is at the centre; a
+  // home visit is at that student's pin. Without both ends the rule cannot
+  // measure and says so by falling back.
+  const centre = config.centre ?? null;
+  const placeOf = (
+    location: string,
+    student: { homeLat: number | null; homeLng: number | null } | null,
+  ) =>
+    location === "HOME"
+      ? student?.homeLat != null && student.homeLng != null
+        ? { lat: student.homeLat, lng: student.homeLng }
+        : null
+      : centre;
+
+  // The same function the allocator plans with. A booking rule that computes
+  // travel differently from the engine permits journeys the engine cannot
+  // drive — which is how a 15-minute gap across 15 km passed in silence.
+  const travel = (
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number },
+    departMin: number,
+  ) => travelMinutes(distanceKm(from, to), departMin, config.profile);
 
   const existing: SpacedSession[] = rows
     .filter((x) => x.id !== d.excludeId)
@@ -158,19 +190,30 @@ export async function checkSpacing(
         startMin,
         endMin: startMin + Math.round(toNumber(x.hours) * 60),
         location: x.location,
+        at: placeOf(x.location, x.student),
       };
     });
 
   const startMin = hhmmToMin(d.time, 0);
+  // The lesson being booked is not in `rows` — it does not exist yet — so its
+  // pin has to be fetched on its own.
+  const candidateStudent = d.studentId
+    ? await db.student.findUnique({
+        where: { id: d.studentId },
+        select: { homeLat: true, homeLng: true },
+      })
+    : null;
+
   const candidate: SpacedSession = {
     id: d.excludeId ?? null,
     startMin,
     endMin: startMin + Math.round(d.hours * 60),
     location: d.location,
+    at: placeOf(d.location, candidateStudent),
   };
 
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const found = spacingProblems(candidate, existing, config.spacing);
+  const found = spacingProblems(candidate, existing, config.spacing, travel);
 
   return {
     problems: found.map((p) => {
@@ -189,7 +232,7 @@ export async function checkSpacing(
       };
     }),
     suggestedStartMin:
-      found.length > 0 ? suggestStart(candidate, existing, config.spacing) : null,
+      found.length > 0 ? suggestStart(candidate, existing, config.spacing, {}, travel) : null,
     blocking: found.length > 0 && config.blockOverlappingBooking,
   };
 }

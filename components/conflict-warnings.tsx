@@ -102,6 +102,8 @@ type SpacingQuery = {
   time: string;
   hours: number;
   teacherId: string;
+  /** Whose home, so the rule can measure instead of assuming. */
+  studentId?: string;
   location: "CENTER" | "HOME";
   excludeId?: string | null;
 };

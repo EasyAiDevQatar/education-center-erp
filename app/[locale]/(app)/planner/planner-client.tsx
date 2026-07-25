@@ -929,6 +929,9 @@ function AddDraftDialog({
     time,
     hours: parseFloat(hours) || 1,
     teacherId,
+    // Whose home, so the rule can measure the journey rather than assume a
+    // flat fifteen minutes. Without it a cross-town booking passes in silence.
+    studentId: studentId || undefined,
     location,
   });
   const [pending, start] = useTransition();
@@ -1103,6 +1106,7 @@ function EditDraftDialog({
     time,
     hours: parseFloat(hours) || 1,
     teacherId,
+    studentId: session.studentId,
     location,
     excludeId: session.id,
   });
@@ -1230,6 +1234,7 @@ function MoveDialog({
     time,
     hours: session.hours,
     teacherId: targetTeacherId,
+    studentId: session.studentId,
     location: session.location,
     excludeId: session.id,
   });
