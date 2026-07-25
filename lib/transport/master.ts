@@ -5,6 +5,7 @@ import { toNumber } from "@/lib/money";
 import { loadTransportConfig } from "./settings";
 import { buildDayPlan, loadDayTrips } from "./trip-data";
 import { dayAxis, type DayAxis } from "./axis";
+import { driverIsDispatchable } from "./fleet";
 import { classifyGaps, type ClassifiedGap, type Commitment } from "./gaps";
 import { lockReasonFor, type LockReason } from "./drag-lock";
 import type { SessionType } from "@/lib/enums";
@@ -315,6 +316,34 @@ export async function masterBoard(
       rideOut: needsOut.has(s.id) ? collectedFrom.has(s.id) : null,
       lockReason: null, // decided below, once collisions are known
     });
+  }
+
+  // --- every driver and vehicle gets a row, busy or not --------------------
+  //
+  // Lanes used to be created BY trips, so anyone with nothing booked simply was
+  // not on the board. That is precisely backwards for a dispatcher: the row you
+  // most want is the idle one, and an empty row is the answer to "who is free?"
+  // It also made the row unavailable as a drop target, which is the whole point
+  // of a driver view you can assign on.
+  if (laneKind === "DRIVER") {
+    const roster = await db.driver.findMany({
+      where: { active: true },
+      include: {
+        employee: { select: { name: true, nameEn: true } },
+        defaultVehicle: { select: { plate: true } },
+      },
+    });
+    const today = new Date();
+    for (const d of roster) {
+      if (!driverIsDispatchable({ active: d.active, licenceExpiry: d.licenceExpiry }, today)) continue;
+      laneFor(d.id, displayName(d.employee, locale), d.defaultVehicle?.plate ?? null);
+    }
+  } else if (laneKind === "VEHICLE") {
+    const fleet = await db.vehicle.findMany({
+      where: { active: true },
+      select: { id: true, plate: true, model: true },
+    });
+    for (const v of fleet) laneFor(v.id, v.plate, v.model);
   }
 
   // --- attach trips to the lane of whoever they carry ----------------------
