@@ -193,7 +193,8 @@
     "groups": "Groups",
     "assistant": "AI Assistant",
     "transportManifest": "Pickups & drop-offs",
-    "transportDispatch": "Dispatch board"
+    "transportDispatch": "Dispatch board",
+    "transportMaster": "Master planner"
   },
   "auth": {
     "login": "Log in",
@@ -2350,5 +2351,18 @@
       "remaining": "Remaining",
       "completed": "Completed"
     }
+  },
+  "transportMaster": {
+    "title": "Master planner",
+    "subtitle": "One row per person: lessons, travel and the gaps between them.",
+    "timelineTitle": "The day",
+    "colPerson": "Teacher",
+    "empty": "No home visits planned for this day.",
+    "toggleCentre": "Centre lessons",
+    "laneSummary": "{sessions} lessons · {trips} rides",
+    "legendHome": "Home lesson",
+    "legendCentre": "Centre lesson",
+    "legendTravel": "Travel",
+    "legendWaiting": "Waiting"
   }
 }

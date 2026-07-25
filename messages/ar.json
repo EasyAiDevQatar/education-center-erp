@@ -193,7 +193,8 @@
     "groups": "المجموعات",
     "assistant": "المساعد الذكي",
     "transportManifest": "الاصطحاب والإنزال",
-    "transportDispatch": "لوحة الإرسال"
+    "transportDispatch": "لوحة الإرسال",
+    "transportMaster": "المخطط الرئيسي"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -2350,5 +2351,18 @@
       "remaining": "متبقية",
       "completed": "مكتملة"
     }
+  },
+  "transportMaster": {
+    "title": "المخطط الرئيسي",
+    "subtitle": "صف لكل شخص: الحصص والتنقل والفجوات بينها.",
+    "timelineTitle": "اليوم",
+    "colPerson": "المعلم",
+    "empty": "لا زيارات منزلية مخططة لهذا اليوم.",
+    "toggleCentre": "حصص المركز",
+    "laneSummary": "{sessions} حصة · {trips} رحلة",
+    "legendHome": "حصة منزلية",
+    "legendCentre": "حصة بالمركز",
+    "legendTravel": "تنقل",
+    "legendWaiting": "انتظار"
   }
 }
