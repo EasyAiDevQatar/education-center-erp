@@ -829,7 +829,9 @@
       "outsideShift": "Outside every driver's shift",
       "tooFar": "Pickup too far",
       "noDriver": "No driver available",
-      "noCoordinates": "Address has no map pin"
+      "noCoordinates": "Address has no map pin",
+      "scheduleConflict": "The two lessons are too close — no time to travel between them",
+      "notPlanned": "Not planned yet"
     },
     "roles": {
       "DRIVER": "Driver"
