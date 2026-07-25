@@ -129,6 +129,21 @@ export type MasterBoard = {
   transportEnabled: boolean;
   /** Waiting past this is drawn as a problem, not just shown. */
   maxWaitMin: number;
+  /**
+   * Passengers the allocator could not place — the work still to be given out.
+   *
+   * Carried on the board rather than fetched separately so the pool and the
+   * lanes are always the same day's answer; two reads could disagree, and a
+   * dispatcher dropping a card would be acting on the older one.
+   */
+  pool: {
+    /** `TEACHER:<id>` — what the assign actions take. */
+    passengerKey: string;
+    passengerName: string;
+    reason: string;
+    /** Earliest lesson the day hinges on, for urgency. */
+    needByMin: number | null;
+  }[];
   /** May this user move anything at all? Role-gated, decided on the server. */
   canDrag: boolean;
 };
@@ -220,8 +235,13 @@ export async function masterBoard(
   // one went unflagged because it was not at a home.
   const needsIn = new Set<string>();
   const needsOut = new Set<string>();
+  const pool: MasterBoard["pool"] = [];
+  let legs: Awaited<ReturnType<typeof buildDayPlan>>["legs"] = [];
+  let reasonOfLeg = new Map<string, string>();
   try {
     const plan = await buildDayPlan(locale, day);
+    reasonOfLeg = new Map(plan.unassigned.map((u) => [u.legId, u.reason]));
+    legs = plan.legs;
     for (const leg of plan.legs) {
       if (leg.toSessionId) needsIn.add(leg.toSessionId);
       if (leg.fromSessionId) needsOut.add(leg.fromSessionId);
@@ -248,6 +268,34 @@ export async function masterBoard(
     if (DISPATCHED_TRIP.has(ownerOfTrip.get(st.tripId)?.status ?? "")) {
       dispatched.add(st.sessionId);
     }
+  }
+
+  // What a dispatcher still has to hand out: journeys with nobody driving
+  // them. NOT the allocator's own unassigned list — that says "I could not
+  // place this", and a journey it could have placed but which was never
+  // generated is just as undriven and just as much work. This is the same
+  // question the board's red edge marks answer, asked per passenger.
+  {
+    const byKey = new Map<string, MasterBoard["pool"][number]>();
+    for (const leg of legs) {
+      const covered = leg.toSessionId
+        ? droppedAt.has(leg.toSessionId)
+        : leg.fromSessionId
+          ? collectedFrom.has(leg.fromSessionId)
+          : false;
+      if (covered) continue;
+      const key = `${leg.passengerKind}:${leg.passengerId}`;
+      const prior = byKey.get(key);
+      if (!prior || (prior.needByMin ?? Infinity) > leg.dueMin) {
+        byKey.set(key, {
+          passengerKey: key,
+          passengerName: leg.passengerName,
+          reason: reasonOfLeg.get(leg.id) ?? "notPlanned",
+          needByMin: leg.dueMin,
+        });
+      }
+    }
+    pool.push(...[...byKey.values()].sort((a, b) => (a.needByMin ?? 0) - (b.needByMin ?? 0)));
   }
 
   /**
@@ -474,6 +522,7 @@ export async function masterBoard(
     centreSessionCount,
     transportEnabled: config.enabled,
     maxWaitMin: config.rules.maxStudentWaitMin,
+    pool,
     canDrag,
   };
 }

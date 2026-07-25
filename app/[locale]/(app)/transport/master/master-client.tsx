@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
@@ -33,6 +33,8 @@ import { ImpactDialog } from "./impact-dialog";
 import { RideAssignDialog } from "./ride-assign-dialog";
 import { SessionDialog, type PriceMatrix } from "../../sessions/session-dialog";
 import { saveSession } from "../../sessions/actions";
+import { assignToDriver, previewAssignAll } from "../dispatch/actions";
+import { Users, GripVertical } from "lucide-react";
 
 /**
  * The four block types, deliberately far apart in colour.
@@ -122,6 +124,9 @@ export function MasterClient({
   booking: BookingOptions | null;
 }) {
   const t = useTranslations("transportMaster");
+  // The pool's words already exist on the dispatch board; borrowed rather than
+  // copied, so the two never drift into describing the same thing differently.
+  const td = useTranslations("transportDispatch");
   const locale = useLocale();
   const rtl = locale === "ar";
   const router = useRouter();
@@ -153,6 +158,14 @@ export function MasterClient({
       .map(([reason, count]) => ({ reason, n: count }))
       .sort((a, b) => b.n - a.n);
   }, [board.lanes]);
+
+  // Dragging a pool card: which passenger, and how each driver would fare.
+  // The halo is the honest part — a lane that lights up red is one where the
+  // ride would be blocked, said before the drop rather than after it.
+  const [carrying, setCarrying] = useState<string | null>(null);
+  const [halo, setHalo] = useState<Map<string, string>>(new Map());
+  const [assignErr, setAssignErr] = useState<string | null>(null);
+  const [, startAssign] = useTransition();
 
   const [dropped, setDropped] = useState<Dropped | null>(null);
   const [assigning, setAssigning] = useState<{
@@ -234,6 +247,66 @@ export function MasterClient({
           </LayerToggle>
         </div>
       </div>
+
+      {/* A refused assignment says so where the pool is, not in a console. */}
+      {assignErr && (
+        <p className="rounded-xl border border-destructive bg-destructive/10 p-2.5 text-sm text-destructive">
+          {t.has(`assignErr.${assignErr}`) ? t(`assignErr.${assignErr}`) : assignErr}
+        </p>
+      )}
+
+      {/* The work still to be handed out, beside the rows that could take it.
+          Only on the driver view: on a teacher board these same people are the
+          passengers, and "assign حنان to حنان" is not a sentence. */}
+      {board.laneKind === "DRIVER" && board.canDrag && (
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="mb-2 flex items-center gap-1 text-sm font-medium">
+            <Users className="size-4 text-orange-500" />
+            {td("unassignedPool", { n: board.pool.length })}
+          </p>
+          {board.pool.length === 0 ? (
+            <p className="text-xs text-muted-foreground">{td("poolEmpty")}</p>
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {board.pool.map((p) => (
+                <li
+                  key={p.passengerKey}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(PASSENGER_MIME, p.passengerKey);
+                    e.dataTransfer.effectAllowed = "move";
+                    setCarrying(p.passengerKey);
+                    // Ask, the moment the card leaves the pool, which lanes
+                    // could actually take it. Read-only.
+                    previewAssignAll(locale, board.day, p.passengerKey).then((r) => {
+                      if (r.ok)
+                        setHalo(
+                          new Map(r.drivers.map((d) => [d.driverId, d.feasible ? d.status : "INVALID"])),
+                        );
+                    });
+                  }}
+                  onDragEnd={() => {
+                    setCarrying(null);
+                    setHalo(new Map());
+                  }}
+                  className={`flex cursor-grab items-start gap-1 rounded-md border border-border border-s-2 border-s-orange-500 p-2 text-xs active:cursor-grabbing ${
+                    carrying === p.passengerKey ? "opacity-50" : ""
+                  }`}
+                >
+                  <GripVertical className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{p.passengerName}</span>
+                    <span className="text-muted-foreground" dir="ltr">
+                      {p.needByMin != null && p.needByMin < 24 * 60 ? hhmm(p.needByMin) : "—"}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {carrying && <p className="mt-2 text-xs text-muted-foreground">{td("dragHint")}</p>}
+        </div>
+      )}
 
       {/* Why anything is locked, said out loud.
           The padlocks were correct and completely unexplained: the reason
@@ -432,6 +505,21 @@ export function MasterClient({
               onPropose={setProposal}
               // Only a teacher lane names a passenger; a driver's row shows the
               // same red stretch but there is nobody on it to give a ride to.
+              // Only a driver's row can take a passenger — a teacher's row is
+              // the person being carried, not the one doing the carrying.
+              onDropPassenger={
+                board.canDrag && board.laneKind === "DRIVER"
+                  ? (passengerKey) =>
+                      startAssign(async () => {
+                        setCarrying(null);
+                        setHalo(new Map());
+                        const res = await assignToDriver(locale, board.day, passengerKey, lane.id);
+                        setAssignErr(res.error ?? null);
+                        router.refresh();
+                      })
+                  : undefined
+              }
+              halo={halo.get(lane.id)}
               onDropChip={
                 booking && byPerson
                   ? (chip, startMin) =>
@@ -493,8 +581,9 @@ function LayerToggle({
  * path — and so the two edges are declared as two things rather than a loop
  * over a direction, which is how a left/right assumption sneaks back in.
  */
-/** Our own type, so a stray file drag can never look like a legend chip. */
+/** Our own types, so a stray file drag can never look like one of ours. */
 const CHIP_MIME = "application/x-master-chip";
+const PASSENGER_MIME = "application/x-assign";
 
 function LegendChip({
   kind,
@@ -554,6 +643,8 @@ function LaneRow({
   onPropose,
   onAssignGap,
   onDropChip,
+  onDropPassenger,
+  halo,
 }: {
   lane: MasterLane;
   layers: Layers;
@@ -566,6 +657,10 @@ function LaneRow({
   onAssignGap?: (g: { startMin: number; endMin: number }) => void;
   /** Present only for a user who may create things on this row. */
   onDropChip?: (chip: "home" | "centre" | "travel", startMin: number) => void;
+  /** Present only on a driver's row, for a user who may assign. */
+  onDropPassenger?: (passengerKey: string) => void;
+  /** The verdict this lane would give the card currently being dragged. */
+  halo?: string;
   /**
    * The setter itself, not a plain callback: a nudge is computed FROM the
    * current proposal, and two arrow presses in the same tick would otherwise
@@ -750,15 +845,36 @@ function LaneRow({
   return (
     <TimelineRow
       trackRef={trackRef}
+      trackClassName={
+        halo === undefined
+          ? ""
+          : halo === "INVALID"
+            ? "ring-2 ring-inset ring-destructive/60"
+            : halo === "WARNING"
+              ? "ring-2 ring-inset ring-amber-500/60"
+              : "ring-2 ring-inset ring-green-500/70"
+      }
       trackProps={
-        onDropChip
+        onDropChip || onDropPassenger
           ? {
               onDragOver: (e) => {
-                if (e.dataTransfer.types.includes(CHIP_MIME)) e.preventDefault();
+                const ty = e.dataTransfer.types;
+                if (
+                  (onDropChip && ty.includes(CHIP_MIME)) ||
+                  (onDropPassenger && ty.includes(PASSENGER_MIME))
+                )
+                  e.preventDefault();
               },
               onDrop: (e) => {
+                const who = e.dataTransfer.getData(PASSENGER_MIME);
+                if (who && onDropPassenger) {
+                  e.preventDefault();
+                  onDropPassenger(who);
+                  return;
+                }
                 const chip = e.dataTransfer.getData(CHIP_MIME);
-                if (chip !== "home" && chip !== "centre" && chip !== "travel") return;
+                if (!onDropChip || (chip !== "home" && chip !== "centre" && chip !== "travel"))
+                  return;
                 e.preventDefault();
                 const rect = e.currentTarget.getBoundingClientRect();
                 // The drop lands on a TIME, read back off the axis by the same
