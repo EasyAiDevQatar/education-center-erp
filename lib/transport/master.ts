@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { displayName } from "@/lib/names";
 import { toNumber } from "@/lib/money";
 import { loadTransportConfig } from "./settings";
-import { loadDayTrips } from "./trip-data";
+import { buildDayPlan, loadDayTrips } from "./trip-data";
 import { dayAxis, type DayAxis } from "./axis";
 import { classifyGaps, type ClassifiedGap, type Commitment } from "./gaps";
 import { lockReasonFor, type LockReason } from "./drag-lock";
@@ -46,11 +46,12 @@ export type MasterSession = {
   conflicts: boolean;
   /**
    * Whether a ride actually delivers them to this lesson, and takes them on
-   * from it. Every lesson a transported person attends wants both; a lesson
-   * with only one side is a person who arrives and is then stranded, or who
-   * is collected from somewhere nobody took them.
+   * from it. A lesson with only one side is a person who arrives and is then
+   * stranded, or who is collected from somewhere nobody took them.
    *
-   * Null when the person drives themselves — the question does not arise.
+   * Null when no journey is required on that side at all — the engine's leg
+   * chain decides that, so two centre lessons in a row are not each accused of
+   * missing a ride between them.
    */
   rideIn: boolean | null;
   rideOut: boolean | null;
@@ -145,10 +146,6 @@ const dayBounds = (dayIso: string) => {
 
 const minutesOf = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
 
-/** A lesson that cannot happen unless somebody is driven to it. */
-const needsRide = (s: { location: string; teacher: { transportMode: string | null } | null }) =>
-  s.location === "HOME" && s.teacher != null && s.teacher.transportMode !== "OWN_CAR";
-
 /**
  * Build the board for one day.
  *
@@ -215,6 +212,25 @@ export async function masterBoard(
 
   // Which side of each lesson a ride actually covers. A DROPOFF at a lesson is
   // the arrival; a PICKUP from it is the way onward.
+  // Which lessons actually REQUIRE a ride, from the engine's own leg chain
+  // rather than a guess about location. Two centre lessons in a row generate
+  // no leg between them, so the second is not missing anything; a centre
+  // lesson reached after a home visit does generate one, and until now that
+  // one went unflagged because it was not at a home.
+  const needsIn = new Set<string>();
+  const needsOut = new Set<string>();
+  try {
+    const plan = await buildDayPlan(locale, day);
+    for (const leg of plan.legs) {
+      if (leg.toSessionId) needsIn.add(leg.toSessionId);
+      if (leg.fromSessionId) needsOut.add(leg.fromSessionId);
+    }
+  } catch {
+    // The board is still worth drawing when the routing engine is unreachable;
+    // it just cannot say who is missing a ride, so it says nothing rather than
+    // marking every lesson as fine.
+  }
+
   const droppedAt = new Set<string>();
   const collectedFrom = new Set<string>();
   for (const st of stopOwners) {
@@ -293,16 +309,10 @@ export async function masterBoard(
       status: s.status,
       sessionType: (s.sessionType ?? "REGULAR") as SessionType,
       conflicts: false,
-      // Only where travel is definitionally required. A home visit cannot
-      // happen without somebody being driven to it and away from it again.
-      //
-      // Deliberately NOT every lesson: two centre lessons in a row need no
-      // ride between them, and flagging the second as missing one would paint
-      // a normal day red. Whether a CENTRE lesson needs a ride depends on
-      // where the person was beforehand — that is the leg chain's question,
-      // and this reader does not build legs.
-      rideIn: needsRide(s) ? droppedAt.has(s.id) : null,
-      rideOut: needsRide(s) ? collectedFrom.has(s.id) : null,
+      // null = no journey is required for this side, so nothing is missing.
+      // false = one is required and nobody is driving it.
+      rideIn: needsIn.has(s.id) ? droppedAt.has(s.id) : null,
+      rideOut: needsOut.has(s.id) ? collectedFrom.has(s.id) : null,
       lockReason: null, // decided below, once collisions are known
     });
   }
