@@ -20,6 +20,7 @@ import { allocate, type Assignment, type Unassigned } from "@/lib/transport/allo
 import { comparePlans, EMPTY_METRICS, type PlanMetrics } from "@/lib/transport/cost";
 import { buildDayPlan, flagTripsForSession, type DayPlan } from "@/lib/transport/trip-data";
 import { transportEnabled, loadTransportConfig, distanceKm } from "@/lib/transport/settings";
+import { travelMinutes } from "@/lib/transport/eta";
 import { previewAssignAll } from "../dispatch/actions";
 import type { Leg } from "@/lib/transport/chain";
 import type { Role, SessionType } from "@/lib/enums";
@@ -685,6 +686,31 @@ export async function confirmReschedule(
 
 /* -------------------------------------------- a ride for an unplanned gap */
 
+/** Why a journey is hard, in the terms the journey itself sets. */
+export type LegDiagnosis = {
+  fromLabel: string;
+  toLabel: string;
+  /** Minutes the day leaves for it. */
+  hasMin: number;
+  /** Minutes it takes: driving plus boarding and dropping off. */
+  needsMin: number;
+  km: number;
+  /** How many more minutes it would need. 0 when it fits. */
+  shortfallMin: number;
+  /**
+   * The change that would make it fit: the lesson at the far end, moved later
+   * by the shortfall. A reason with no fix is still a dead end, and this is the
+   * one fix the board can actually name — the journey cannot get faster, so
+   * the day has to make room for it.
+   */
+  fix: {
+    sessionId: string;
+    label: string;
+    fromStartMin: number;
+    toStartMin: number;
+  } | null;
+};
+
 export type DriverOption = {
   driverId: string;
   name: string;
@@ -710,12 +736,73 @@ export async function driverOptionsFor(
   locale: string,
   day: string,
   passengerKey: string,
-): Promise<{ ok: true; drivers: DriverOption[] } | { ok?: false; error: string }> {
+  legId?: string,
+): Promise<
+  { ok: true; drivers: DriverOption[]; leg: LegDiagnosis | null } | { ok?: false; error: string }
+> {
   const forbidden = await guard();
   if (forbidden) return { error: forbidden };
 
   const preview = await previewAssignAll(locale, day, passengerKey);
   if (!preview.ok) return { error: preview.error };
+
+  // Why nobody can do it is usually not about anybody. A journey between two
+  // home visits fifteen minutes apart has no minutes left once the dismissal
+  // and arrival buffers are taken, and no driver can be the answer to that —
+  // so say what the journey needs, not just that three people declined.
+  let leg: LegDiagnosis | null = null;
+  if (legId) {
+    try {
+      const plan = await buildDayPlan(locale, day);
+      const l = plan.legs.find((x) => x.id === legId);
+      if (l) {
+        const km = distanceKm(l.from, l.to);
+        const cfg = plan.config;
+        // The same helper the allocator plans with, so the number quoted here
+        // is the number that made the journey impossible.
+        const driveMin = travelMinutes(km, l.readyMin, cfg.profile);
+        const serviceMin = Math.ceil(
+          cfg.operational.boardingTimeMin + cfg.operational.dropoffTimeMin,
+        );
+        const needsMin = driveMin + serviceMin;
+        const hasMin = l.dueMin - l.readyMin;
+        const shortfallMin = Math.max(0, needsMin - hasMin);
+        // Round the push up to the quarter hour the office books on, so the
+        // suggestion is a time somebody would actually write down.
+        const target =
+          shortfallMin > 0 && l.toSessionId
+            ? await db.session.findUnique({
+                where: { id: l.toSessionId },
+                select: { id: true, date: true, student: { select: { name: true, nameEn: true } } },
+              })
+            : null;
+        leg = {
+          fromLabel: l.fromLabel,
+          toLabel: l.toLabel,
+          hasMin,
+          needsMin,
+          km: Math.round(km * 10) / 10,
+          shortfallMin,
+          fix: target
+            ? (() => {
+                const from = minutesOf(target.date);
+                return {
+                  sessionId: target.id,
+                  label: displayName(target.student, locale),
+                  fromStartMin: from,
+                  toStartMin: Math.min(
+                    23 * 60 + 45,
+                    Math.ceil((from + shortfallMin) / 15) * 15,
+                  ),
+                };
+              })()
+            : null,
+        };
+      }
+    } catch {
+      /* the diagnosis is a courtesy; its absence must not break the list */
+    }
+  }
 
   const rows = await db.driver.findMany({
     where: { id: { in: preview.drivers.map((d) => d.driverId) } },
@@ -729,6 +816,7 @@ export async function driverOptionsFor(
 
   return {
     ok: true,
+    leg,
     drivers: preview.drivers
       .map((d) => ({
         driverId: d.driverId,

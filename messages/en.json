@@ -2450,7 +2450,9 @@
       "noLegs": "No journey is required for this person today",
       "forbidden": "You may not assign rides",
       "invalid": "Invalid request",
-      "noDriver": "Could not assign — try another driver"
+      "noDriver": "Could not assign — try another driver",
+      "infeasible": "That driver cannot make this journey in the time it has",
+      "locked": "An approved ride — it cannot be replaced from here"
     },
     "proposalResize": "{student} ({teacher}): length {fromHours}h → {toHours}h",
     "impactMoney": "The total becomes {total}, and what is owed is recalculated.",
@@ -2464,7 +2466,9 @@
     "missingRideIn": "No ride drops them off before this lesson",
     "missingRideOut": "No ride collects them after this lesson",
     "ridesMissing": "{n} lesson(s) missing a drop or a pick-up",
-    "ridesFor": "{who}'s journeys today — pick one to assign it or change its driver"
+    "ridesFor": "{who}'s journeys today — pick one to assign it or change its driver",
+    "legImpossible": "No driver can: {from} → {to} ({km} km) needs {needs} min and the day allows {has} — {short} min short. This is the two lessons being too close, not the drivers; move the later lesson at least {short} min.",
+    "legFix": "Move {student} {n} min later to {time} — and preview the impact"
   },
   "spacing": {
     "title": "No room to travel",

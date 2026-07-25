@@ -4,9 +4,10 @@ import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Ban, CarFront, Check, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { hhmm } from "@/components/transport/timeline";
-import { driverOptionsFor, type DriverOption } from "./actions";
+import { driverOptionsFor, type DriverOption, type LegDiagnosis } from "./actions";
 import { assignLegToDriver, legOptionsFor, type LegOption } from "../dispatch/actions";
 
 /**
@@ -25,6 +26,7 @@ export function RideAssignDialog({
   who,
   from,
   to,
+  onFix,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -35,6 +37,8 @@ export function RideAssignDialog({
   /** The gap's window — absent when opened from a ride rather than a gap. */
   from?: number;
   to?: number;
+  /** Hand the suggested reschedule up to the board's own preview→confirm. */
+  onFix?: (fix: { sessionId: string; fromStartMin: number; toStartMin: number }) => void;
 }) {
   const t = useTranslations("transportMaster");
   const tp = useTranslations("transportPlanner");
@@ -48,6 +52,7 @@ export function RideAssignDialog({
   const [legs, setLegs] = useState<LegOption[] | null>(null);
   const [legId, setLegId] = useState<string | null>(null);
   const [drivers, setDrivers] = useState<DriverOption[] | null>(null);
+  const [diag, setDiag] = useState<LegDiagnosis | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Derived, not stored: "still waiting" is exactly "the answer has not
   // arrived", and a second copy of that fact can only ever disagree with it.
@@ -74,11 +79,16 @@ export function RideAssignDialog({
   useEffect(() => {
     if (!legId) return;
     let live = true;
-    driverOptionsFor(locale, day, passengerKey)
+    driverOptionsFor(locale, day, passengerKey, legId)
       .then((res) => {
         if (!live) return;
-        if ("error" in res && res.error) setError(res.error);
-        else setDrivers((res as { drivers: DriverOption[] }).drivers);
+        if ("error" in res && res.error) {
+          setError(res.error);
+          return;
+        }
+        const ok = res as { drivers: DriverOption[]; leg: LegDiagnosis | null };
+        setDrivers(ok.drivers);
+        setDiag(ok.leg);
       });
     return () => {
       live = false;
@@ -168,6 +178,36 @@ export function RideAssignDialog({
               </li>
             ))}
           </ul>
+        )}
+
+        {/* When nobody can do it, the reason is usually not about anybody.
+            Say what the journey needs before listing three refusals. */}
+        {legId && diag && drivers && !drivers.some((d) => d.feasible) && (
+          <p className="rounded-md border border-destructive bg-destructive/10 p-2.5 text-sm">
+            {t("legImpossible", {
+              from: diag.fromLabel,
+              to: diag.toLabel,
+              km: diag.km,
+              needs: diag.needsMin,
+              has: Math.max(0, diag.hasMin),
+              short: diag.shortfallMin,
+            })}
+            {diag.fix && onFix && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={() => onFix(diag.fix!)}
+              >
+                {t("legFix", {
+                  student: diag.fix.label,
+                  time: hhmm(diag.fix.toStartMin),
+                  n: diag.fix.toStartMin - diag.fix.fromStartMin,
+                })}
+              </Button>
+            )}
+          </p>
         )}
 
         {legId && drivers && drivers.length === 0 && (

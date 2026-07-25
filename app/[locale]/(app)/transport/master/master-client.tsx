@@ -530,6 +530,26 @@ export function MasterClient({
           {...(assigning.endMin > assigning.startMin
             ? { from: assigning.startMin, to: assigning.endMin }
             : {})}
+          // Accepting the suggestion hands it to the board's own
+          // preview→confirm rather than writing behind a second door.
+          onFix={(fix) => {
+            const lesson = board.lanes
+              .flatMap((l) => l.sessions.map((x) => ({ lane: l, s: x })))
+              .find(({ s }) => s.id === fix.sessionId);
+            setAssigning(null);
+            setProposal({
+              laneId: lesson?.lane.id ?? "",
+              laneName: lesson?.lane.name ?? "",
+              sessionId: fix.sessionId,
+              label: lesson?.s.label ?? "",
+              fromStartMin: fix.fromStartMin,
+              fromEndMin: lesson ? lesson.s.endMin : fix.fromStartMin,
+              startMin: fix.toStartMin,
+              endMin: fix.toStartMin + (lesson ? lesson.s.endMin - lesson.s.startMin : 60),
+              resized: false,
+            });
+            setReviewing(true);
+          }}
         />
       )}
 
