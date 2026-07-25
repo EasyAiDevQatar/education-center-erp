@@ -32,6 +32,7 @@ import { hoursOf, proposedResize, proposedTimes } from "@/lib/transport/drag-loc
 import type { MasterBoard, MasterLane, MasterSession, MasterTrip } from "@/lib/transport/master";
 import { ImpactDialog } from "./impact-dialog";
 import { RideAssignDialog } from "./ride-assign-dialog";
+import { DaySummary } from "./day-summary";
 import { SessionDialog, type PriceMatrix } from "../../sessions/session-dialog";
 import { saveSession } from "../../sessions/actions";
 import { assignToDriver, previewAssignAll, unassignPassenger } from "../dispatch/actions";
@@ -660,6 +661,11 @@ export function MasterClient({
           ))
         )}
       </TimelineFrame>
+
+      {/* The day in numbers and on a map, BELOW the board they describe —
+          counted off that same board, so a summary can never disagree with the
+          thing it summarises. */}
+      <DaySummary board={board} />
     </div>
   );
 }

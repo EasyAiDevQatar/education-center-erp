@@ -73,6 +73,10 @@ export type MasterTrip = {
   startMin: number;
   endMin: number;
   validationStatus: string;
+  /** Lifecycle, not validity: PROPOSED | ASSIGNED | STARTED | COMPLETED … */
+  status: string;
+  /** Straight-line km, for the day's totals. */
+  estimatedKm: number;
   driverName: string | null;
   /** Who is aboard — the answer to "who is this car carrying?". */
   passengerName: string | null;
@@ -93,7 +97,7 @@ export type MasterTrip = {
    * dispatcher needs to know.
    */
   serves: { id: string; label: string; startMin: number; endMin: number; location: string }[];
-  stops: { seq: number; kind: string; label: string; plannedMin: number }[];
+  stops: { seq: number; kind: string; label: string; plannedMin: number; lat: number; lng: number }[];
 };
 
 export type MasterLane = {
@@ -154,6 +158,8 @@ export type MasterBoard = {
   }[];
   /** May this user move anything at all? Role-gated, decided on the server. */
   canDrag: boolean;
+  /** The centre, so a stop can be told apart from a home without a second read. */
+  centre: { lat: number; lng: number } | null;
 };
 
 const PLANNABLE = ["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED"];
@@ -431,6 +437,8 @@ export async function masterBoard(
       startMin: t.plannedStartMin,
       endMin: t.plannedEndMin,
       validationStatus: t.validationStatus ?? "VALID",
+      status: t.status ?? "PROPOSED",
+      estimatedKm: t.estimatedKm ?? 0,
       driverName: t.driverName ?? null,
       passengerName: t.passengerName ?? null,
       linkGroup: t.linkGroup ?? null,
@@ -453,6 +461,8 @@ export async function masterBoard(
         kind: st.kind,
         label: st.label,
         plannedMin: st.plannedMin,
+        lat: st.lat,
+        lng: st.lng,
       })),
     });
   }
@@ -545,5 +555,6 @@ export async function masterBoard(
     maxWaitMin: config.rules.maxStudentWaitMin,
     pool,
     canDrag,
+    centre: config.centre ?? null,
   };
 }

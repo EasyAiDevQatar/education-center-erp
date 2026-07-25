@@ -153,7 +153,7 @@ export async function assignToDriver(locale: string, day: string, passengerKey: 
     autoAllocated: false, allocationScore: score, byUserId: s.userId ?? null, manualEdit: true, persist: true,
   });
   await writeAudit("Trip", `assign-${passengerKey}-${day}`, "CREATE", { after: { driverId, trips: built.length } });
-  revalidatePath(`/${locale}/transport/dispatch`);
+  revalidatePath(`/${locale}/transport/master`);
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true, message: String(built.length) };
 }
@@ -173,7 +173,7 @@ export async function unassignPassenger(locale: string, day: string, passengerKe
   await db.tripStop.deleteMany({ where: { tripId: { in: ids } } });
   await db.trip.deleteMany({ where: { id: { in: ids } } });
   await writeAudit("Trip", `unassign-${passengerKey}-${day}`, "DELETE", { after: { removed: ids.length } });
-  revalidatePath(`/${locale}/transport/dispatch`);
+  revalidatePath(`/${locale}/transport/master`);
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true, message: String(ids.length) };
 }
@@ -307,7 +307,7 @@ export async function assignLegToDriver(
     after: { driverId, legId, trips: built.length },
   });
   revalidatePath(`/${locale}/transport/master`);
-  revalidatePath(`/${locale}/transport/dispatch`);
+  revalidatePath(`/${locale}/transport/master`);
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true, message: String(built.length) };
 }
