@@ -2385,6 +2385,8 @@
       "VEHICLE": "Vehicle"
     },
     "emptyView": "Nothing planned for this view on this day.",
-    "laneSummaryTrips": "{trips} rides"
+    "laneSummaryTrips": "{trips} rides",
+    "headingTo": "Heading to {student}'s lesson at {from} — carrying {who}",
+    "forLesson": "for {student} at {at}"
   }
 }

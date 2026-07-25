@@ -2385,6 +2385,8 @@
       "VEHICLE": "المركبة"
     },
     "emptyView": "لا شيء مخطط لهذا العرض في هذا اليوم.",
-    "laneSummaryTrips": "{trips} رحلة"
+    "laneSummaryTrips": "{trips} رحلة",
+    "headingTo": "متجه لحصة {student} الساعة {from} — يقل {who}",
+    "forLesson": "لحصة {student} الساعة {at}"
   }
 }

@@ -7,7 +7,7 @@ import { Home, Building2, Bus, Hourglass, AlertTriangle, CarFront, GraduationCap
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { axisPct, axisTicks } from "@/lib/transport/axis";
-import type { MasterBoard, MasterLane } from "@/lib/transport/master";
+import type { MasterBoard, MasterLane, MasterTrip } from "@/lib/transport/master";
 
 /** Minutes → HH:MM. */
 const hhmm = (m: number) =>
@@ -111,12 +111,10 @@ export function MasterClient({ board }: { board: MasterBoard }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-1">
-          {/* Lesson layers only mean something on a person's row — a driver
-              teaches nothing, so offering to hide their lessons would be a
-              control with no referent. */}
-          {byPerson && (
-            <>
-              <LayerToggle on={layers.home} onClick={() => toggle("home")} label={t("layerHome")}>
+          {/* On a teacher's row these are their lessons; on a driver's or
+              vehicle's they are the lessons the rides are FOR, which is what
+              tells a dispatcher where a car is heading. */}
+          <LayerToggle on={layers.home} onClick={() => toggle("home")} label={t("layerHome")}>
                 <Home className="size-4" />
               </LayerToggle>
               <LayerToggle
@@ -126,9 +124,7 @@ export function MasterClient({ board }: { board: MasterBoard }) {
                 count={board.centreSessionCount}
               >
                 <Building2 className="size-4" />
-              </LayerToggle>
-            </>
-          )}
+          </LayerToggle>
           <LayerToggle on={layers.trips} onClick={() => toggle("trips")} label={t("layerTrips")}>
             <Bus className="size-4" />
           </LayerToggle>
@@ -266,6 +262,20 @@ function LaneRow({
 
   const hasConflict = lane.sessions.some((s) => s.conflicts);
   const problemGaps = lane.gaps.filter((g) => g.problem);
+  /**
+   * The lessons this lane's rides are for, once each. A delivery and its
+   * return serve the SAME lesson, so drawing them per-trip stacked two
+   * identical blocks in the same position.
+   */
+  const servedLessons = useMemo(() => {
+    const byId = new Map<string, MasterTrip["serves"][number] & { who: string | null }>();
+    for (const tr of lane.trips) {
+      for (const v of tr.serves) {
+        if (!byId.has(v.id)) byId.set(v.id, { ...v, who: tr.passengerName });
+      }
+    }
+    return [...byId.values()];
+  }, [lane.trips]);
 
   return (
     <div
@@ -342,6 +352,37 @@ function LaneRow({
             />
           ))}
 
+        {/* What the rides are FOR. Only on driver/vehicle rows — on a teacher's
+            row these same lessons are already drawn as her own, and repeating
+            them would double every block. Muted, because the lesson is not
+            this driver's commitment; it is the reason for theirs. */}
+        {!byPerson &&
+          servedLessons
+              .filter((v) => (v.location === "HOME" ? layers.home : layers.centre))
+              .map((v) => (
+                <span
+                  key={`serves-${v.id}`}
+                  title={t("headingTo", {
+                    who: v.who ?? v.label,
+                    student: v.label,
+                    from: hhmm(v.startMin),
+                  })}
+                  className={`absolute top-1/2 flex h-5 -translate-y-1/2 items-center gap-1 overflow-hidden rounded px-1 text-[10px] opacity-60 ring-1 ring-inset ${
+                    v.location === "HOME"
+                      ? "bg-emerald-500/25 text-emerald-900 ring-emerald-600/40 dark:text-emerald-100"
+                      : "bg-sky-500/25 text-sky-900 ring-sky-600/40 dark:text-sky-100"
+                  }`}
+                  style={span(v.startMin, v.endMin)}
+                >
+                  {v.location === "HOME" ? (
+                    <Home className="size-3 shrink-0" />
+                  ) : (
+                    <Building2 className="size-3 shrink-0" />
+                  )}
+                  <span className="truncate">{v.label}</span>
+                </span>
+              ))}
+
         {lane.sessions
           .filter((s) => (s.location === "HOME" ? layers.home : layers.centre))
           .map((s) => (
@@ -366,7 +407,14 @@ function LaneRow({
           lane.trips.map((tr) => (
           <span
             key={tr.id}
-            title={`${hhmm(tr.startMin)}–${hhmm(tr.endMin)}${tr.driverName ? " · " + tr.driverName : ""}`}
+            title={[
+              `${hhmm(tr.startMin)}–${hhmm(tr.endMin)}`,
+              tr.passengerName,
+              tr.driverName,
+              ...tr.serves.map((v) => t("forLesson", { student: v.label, at: hhmm(v.startMin) })),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
             className={`absolute top-1/2 flex h-3.5 -translate-y-1/2 items-center justify-center rounded-full ${BLOCK.travel} ${
               tr.validationStatus === "INVALID" ? "ring-2 ring-destructive" : ""
             }`}

@@ -50,6 +50,17 @@ export type MasterTrip = {
   endMin: number;
   validationStatus: string;
   driverName: string | null;
+  /** Who is aboard — the answer to "who is this car carrying?". */
+  passengerName: string | null;
+  /**
+   * The lessons this ride exists for.
+   *
+   * Carried on the trip itself so a driver's or vehicle's row can say what the
+   * journey is FOR. Without it those rows show bars moving across a day with
+   * no way to tell which lesson a car is heading to, which is most of what a
+   * dispatcher needs to know.
+   */
+  serves: { id: string; label: string; startMin: number; endMin: number; location: string }[];
   stops: { seq: number; kind: string; label: string; plannedMin: number }[];
 };
 
@@ -134,8 +145,8 @@ export async function masterBoard(
     // BoardTrip.stops carries a passenger NAME, not an id, which is fine for a
     // card but cannot key a lane. Read the ids straight from the stop rows.
     db.tripStop.findMany({
-      where: { trip: { date: start }, passengerTeacherId: { not: null } },
-      select: { tripId: true, passengerTeacherId: true, seq: true },
+      where: { trip: { date: start } },
+      select: { tripId: true, passengerTeacherId: true, sessionId: true, seq: true },
       orderBy: { seq: "asc" },
     }),
     // Who and what ran each trip. BoardTrip carries a driver NAME and a plate,
@@ -159,6 +170,15 @@ export async function masterBoard(
     }
   }
   const ownerOfTrip = new Map(tripOwners.map((t) => [t.id, t]));
+
+  const servedByTrip = new Map<string, Set<string>>();
+  for (const st of stopOwners) {
+    if (!st.sessionId) continue;
+    const set = servedByTrip.get(st.tripId) ?? new Set<string>();
+    set.add(st.sessionId);
+    servedByTrip.set(st.tripId, set);
+  }
+  const sessionById = new Map(sessions.map((x) => [x.id, x]));
 
   /**
    * Which lane a trip belongs to, and how that lane is labelled — the ONLY
@@ -240,6 +260,21 @@ export async function masterBoard(
       endMin: t.plannedEndMin,
       validationStatus: t.validationStatus ?? "VALID",
       driverName: t.driverName ?? null,
+      passengerName: t.passengerName ?? null,
+      serves: [...(servedByTrip.get(t.id) ?? [])]
+        .map((sid) => sessionById.get(sid))
+        .filter((x): x is NonNullable<typeof x> => !!x)
+        .map((x) => {
+          const startMin = minutesOf(x.date);
+          return {
+            id: x.id,
+            label: displayName(x.student, locale),
+            startMin,
+            endMin: startMin + Math.round(toNumber(x.hours) * 60),
+            location: x.location,
+          };
+        })
+        .sort((a, b) => a.startMin - b.startMin),
       stops: t.stops.map((st) => ({
         seq: st.seq,
         kind: st.kind,
