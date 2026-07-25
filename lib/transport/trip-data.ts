@@ -7,6 +7,7 @@ import { travelMinutes } from "./eta";
 import { buildDayLegs, type Leg, type PassengerDay, type PassengerKind, type SkippedLeg } from "./chain";
 import { allocate, type AllocDriver, type Assignment, type LatLng, type Unassigned } from "./allocate";
 import { legFeasibility } from "./feasibility";
+import { retimeStops } from "./retime";
 import { driverIsDispatchable } from "./fleet";
 import { generatorMayReplace, legKeyFor } from "./trips";
 import {
@@ -928,28 +929,15 @@ export async function buildTripsForPassenger(args: {
             ),
           ),
     );
-    // Anchor on the TIGHTEST stop, not the last one.
-    //
-    // Anchoring on the final stop is only right when the final stop is the one
-    // with the deadline. On a trip that carries a delivery and the ride home,
-    // the last stop is the ride home — which has no real deadline — so walking
-    // back from it dragged the delivery in the middle nearly two hours past the
-    // start of the lesson. Every stop keeps the time it was promised: take the
-    // earliest start any of them demands.
-    const collectFloor = seg.items[0].readyMin;
-    let cursor = Number.POSITIVE_INFINITY;
-    let cumulative = 0;
-    for (let i = 0; i < stops.length; i++) {
-      if (i > 0) cumulative += hopMin[i];
-      cursor = Math.min(cursor, stops[i].plannedMin - cumulative);
-    }
-    if (!Number.isFinite(cursor)) cursor = stops[0].plannedMin;
-    if (collectFloor != null && cursor < collectFloor) cursor = collectFloor;
-    stops[0].plannedMin = cursor;
-    for (let i = 1; i < stops.length; i++) {
-      cursor += hopMin[i];
-      stops[i].plannedMin = cursor;
-    }
+    // Fit the schedule onto the real road times. See lib/transport/retime.ts —
+    // extracted and unit-tested because two defects have shipped from this
+    // arithmetic, and neither was reachable while it lived inline here.
+    const retimed = retimeStops({
+      stops,
+      hopMin,
+      collectFloor: seg.items[0].readyMin,
+    });
+    for (let i = 0; i < stops.length; i++) stops[i].plannedMin = retimed.plannedMin[i];
 
     const plannedStartMin = stops[0].plannedMin;
     const plannedEndMin = stops[stops.length - 1].plannedMin;
