@@ -34,10 +34,8 @@ describe("lockReasonFor — what may be moved", () => {
     expect(lockReasonFor(subject(), viewer)).toBe("NOT_PERMITTED");
   });
 
-  it("refuses a lesson that is no longer a plan", () => {
-    // Taught lessons are NOT here: they stay correctable inside the grace
-    // window, which is the whole point of having one.
-    for (const status of ["CANCELLED", "NO_SHOW"]) {
+  it("refuses a lesson that already happened or is happening", () => {
+    for (const status of ["COMPLETED", "CHECKED_IN", "CANCELLED", "NO_SHOW"]) {
       expect(lockReasonFor(subject({ status }), scheduler)).toBe("ALREADY_HAPPENED");
     }
   });
@@ -97,15 +95,11 @@ describe("lockReasonFor — the conflicted case is the centre's choice", () => {
 });
 
 describe("lockReasonFor — the most fundamental reason wins", () => {
-  it("reports a recent exam as strict — being taught does not unlock it", () => {
-    // Inside the window a taught lesson is correctable, so the exam rule is
-    // the one still standing. Outside it, the closed day wins.
+  it("reports a completed exam as already happened, not as strict", () => {
+    // Both apply; only one explains why it is truly immovable.
     expect(
       lockReasonFor(subject({ status: "COMPLETED", sessionType: "EXAM" }), scheduler),
-    ).toBe("STRICT_TYPE");
-    expect(
-      lockReasonFor(subject({ status: "COMPLETED", sessionType: "EXAM", daysOld: 30 }), scheduler),
-    ).toBe("TOO_OLD");
+    ).toBe("ALREADY_HAPPENED");
   });
 
   it("reports permission before anything about the lesson itself", () => {

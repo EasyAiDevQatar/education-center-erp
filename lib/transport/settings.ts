@@ -129,6 +129,15 @@ export type TransportConfig = {
   blockOverlappingBooking: boolean;
   /** Conflicted lessons cannot be dragged on the master planner. */
   lockConflictedSessions: boolean;
+  /**
+   * How many days back a day may still be corrected, from the planner.
+   *
+   * Records get fixed after the fact, and a system that freezes the past the
+   * instant it happens is a worse record than the paper it replaced. A week
+   * covers the normal "we got Thursday wrong" case without leaving last term
+   * open to editing.
+   */
+  editPastDays: number;
 };
 
 const num = (v: string | undefined, fallback: number): number => {
@@ -272,6 +281,7 @@ export async function loadTransportConfig(): Promise<TransportConfig> {
     },
     blockOverlappingBooking: bool(s.transportBlockOverlappingBooking, false),
     lockConflictedSessions: bool(s.transportLockConflictedSessions, false),
+    editPastDays: num(s.transportEditPastDays, 7),
   };
 }
 

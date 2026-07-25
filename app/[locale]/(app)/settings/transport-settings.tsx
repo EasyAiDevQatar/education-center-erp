@@ -54,6 +54,7 @@ export type TransportValues = {
   centreBackToBack: boolean;
   blockOverlappingBooking: boolean;
   lockConflictedSessions: boolean;
+  editPastDays: string;
 };
 
 const n = (s: string, d: number) => {
@@ -448,6 +449,17 @@ export function TransportSettings({ values }: { values: TransportValues }) {
           label={t("lockConflicted")}
           hint={t("lockConflictedHint")}
         />
+        <FormField label={t("editPastDays")} htmlFor="tr-editpast" hint={t("editPastDaysHint")}>
+          <Input
+            id="tr-editpast"
+            name="transportEditPastDays"
+            type="number"
+            min="0"
+            max="365"
+            dir="ltr"
+            defaultValue={values.editPastDays}
+          />
+        </FormField>
       </div>
 
       {/* Centre location — the most common trip endpoint, so it is asked for

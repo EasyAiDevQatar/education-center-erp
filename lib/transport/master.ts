@@ -43,6 +43,8 @@ export type MasterSession = {
   status: string;
   /** Drives the timing policy: an exam is never moved, a revision block can be. */
   sessionType: SessionType;
+  /** When it starts — the only honest source for "is this in the past". */
+  startsAt: Date;
   /** True when this lesson collides with another in the same lane. */
   conflicts: boolean;
   /**
@@ -374,6 +376,7 @@ export async function masterBoard(
       location: s.location,
       status: s.status,
       sessionType: (s.sessionType ?? "REGULAR") as SessionType,
+      startsAt: s.date,
       conflicts: false,
       // null = no journey is required for this side, so nothing is missing.
       // false = one is required and nobody is driving it.
@@ -467,10 +470,10 @@ export async function masterBoard(
     });
   }
 
-  // Which lessons the clock says have begun. Status claims history; only this
-  // says whether there is any history to claim.
-  const now = new Date();
-  const startedBy = new Set(sessions.filter((x) => x.date <= now).map((x) => x.id));
+  // How old each lesson is, in whole days. Negative in the future. The clock
+  // is the only thing that knows; the status column merely claims.
+  const now = Date.now();
+  const daysOldOf = (d: Date) => Math.floor((now - d.valueOf()) / 86400000);
 
   // --- flag collisions and measure genuinely uncovered time ---------------
   for (const lane of lanes.values()) {
@@ -495,9 +498,13 @@ export async function masterBoard(
           sessionType: s.sessionType,
           conflicts: s.conflicts,
           tripDispatched: dispatched.has(s.id),
-          hasStarted: startedBy.has(s.id),
+          daysOld: daysOldOf(s.startsAt),
         },
-        { canDrag, lockConflicted: config.lockConflictedSessions },
+        {
+          canDrag,
+          lockConflicted: config.lockConflictedSessions,
+          graceDays: config.editPastDays,
+        },
       );
     }
 

@@ -124,6 +124,7 @@ const schema = z.object({
   centreBackToBack: z.boolean(),
   blockOverlappingBooking: z.boolean(),
   lockConflictedSessions: z.boolean(),
+  editPastDays: z.coerce.number().int().min(0).max(365),
 });
 
 /**
@@ -178,6 +179,7 @@ export async function saveTransportSettings(
     centreBackToBack: formData.get("transportCentreBackToBack") === "on",
     blockOverlappingBooking: formData.get("transportBlockOverlappingBooking") === "on",
     lockConflictedSessions: formData.get("transportLockConflictedSessions") === "on",
+    editPastDays: formData.get("transportEditPastDays") || 7,
   });
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
@@ -214,6 +216,7 @@ export async function saveTransportSettings(
     ["transportCentreBackToBack", d.centreBackToBack ? "1" : "0"],
     ["transportBlockOverlappingBooking", d.blockOverlappingBooking ? "1" : "0"],
     ["transportLockConflictedSessions", d.lockConflictedSessions ? "1" : "0"],
+    ["transportEditPastDays", String(d.editPastDays)],
   ];
   // Centre coordinates are cleared rather than stored as an empty string, so
   // "not set yet" stays distinguishable from "set to 0,0" (a real place).

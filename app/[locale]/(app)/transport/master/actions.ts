@@ -258,9 +258,13 @@ async function gateFor(input: MoveInput, locale: string): Promise<Gate | { error
       tripDispatched: dispatched,
       // The clock, not the status: a lesson dated next week and marked
       // COMPLETED is bad data, and the gate must not enforce it as history.
-      hasStarted: session.date <= new Date(),
+      daysOld: Math.floor((Date.now() - session.date.valueOf()) / 86400000),
     },
-    { canDrag: true, lockConflicted: config.lockConflictedSessions },
+    {
+      canDrag: true,
+      lockConflicted: config.lockConflictedSessions,
+      graceDays: config.editPastDays,
+    },
   );
   if (lockReason) blockers.push({ code: "locked", lockReason });
 

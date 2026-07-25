@@ -440,6 +440,7 @@ export default async function SettingsPage({
                 centreBackToBack: (settings.transportCentreBackToBack ?? "1") !== "0",
                 blockOverlappingBooking: settings.transportBlockOverlappingBooking === "1",
                 lockConflictedSessions: settings.transportLockConflictedSessions === "1",
+                editPastDays: settings.transportEditPastDays ?? "7",
               }}
             />
           ),
