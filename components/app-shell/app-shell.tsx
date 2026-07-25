@@ -5,9 +5,30 @@ import { useTranslations } from "next-intl";
 import { Menu, GraduationCap, LogOut, ChevronDown } from "lucide-react";
 import { ProfileMenu, type RoleOption } from "./profile-menu";
 import { Link, usePathname } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/enums";
 import { NAV_ITEMS } from "./nav-items";
+
+/**
+ * Screens that are about ONE day.
+ *
+ * Moving between them used to drop the date and land you on today: pick the
+ * 1st of August in the session planner, click the trip planner, and you are
+ * looking at a different day than the one you were working on — with no sign
+ * that anything changed. These carry it across instead.
+ */
+const DATE_AWARE = new Set([
+  "/planner",
+  // The transport landing page itself does nothing with a date, but its
+  // children are only rendered once you are inside it — so if the parent hop
+  // drops the day, every screen beyond it starts on today no matter what.
+  "/transport",
+  "/calendar",
+  "/transport/planner",
+  "/transport/master",
+  "/transport/manifest",
+]);
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import { Button } from "@/components/ui/button";
@@ -45,6 +66,12 @@ export function AppShell({
   const t = useTranslations("nav");
   const tc = useTranslations("common");
   const pathname = usePathname();
+  const day = useSearchParams().get("date");
+  /** The same href, still pointed at the day you are already looking at. */
+  const withDate = (href: string) =>
+    day && DATE_AWARE.has(href) && /^\d{4}-\d{2}-\d{2}$/.test(day)
+      ? `${href}?date=${day}`
+      : href;
   const [open, setOpen] = useState(false);
   // Everything starts expanded and the saved state is applied after mount:
   // reading localStorage during render would make the server and client markup
@@ -114,7 +141,7 @@ export function AppShell({
               return (
                 <div key={item.href}>
                   <Link
-                    href={item.href}
+                    href={withDate(item.href)}
                     onClick={() => setOpen(false)}
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -137,7 +164,7 @@ export function AppShell({
                         return (
                           <Link
                             key={child.href}
-                            href={child.href}
+                            href={withDate(child.href)}
                             onClick={() => setOpen(false)}
                             className={cn(
                               "rounded-md px-3 py-1.5 text-sm transition-colors",
