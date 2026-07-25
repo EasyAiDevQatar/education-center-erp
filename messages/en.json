@@ -2368,7 +2368,12 @@
     "layerTrips": "Trips",
     "layerWaiting": "Waiting",
     "centreOccupied": "Busy at the centre {from}–{to}",
-    "uncovered": "{n} min unplanned",
-    "uncoveredHint": "{n} minutes are neither a lesson nor a ride. Flagged past {max} min."
+    "gapsFlagged": "{n} to check",
+    "gapsHint": "{n} stretches need attention",
+    "gapKind": {
+      "TRAVEL_NOT_PLANNED": "{from}–{to}: must travel, no ride planned ({n} min)",
+      "WAITING": "{from}–{to}: waiting ({n} min)",
+      "FREE": "{from}–{to}: free ({n} min)"
+    }
   }
 }

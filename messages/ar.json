@@ -2368,7 +2368,12 @@
     "layerTrips": "الرحلات",
     "layerWaiting": "الانتظار",
     "centreOccupied": "مشغول بالمركز {from}–{to}",
-    "uncovered": "{n} د غير مخططة",
-    "uncoveredHint": "{n} دقيقة ليست حصة ولا رحلة. تُعلَّم بعد {max} د."
+    "gapsFlagged": "{n} للمراجعة",
+    "gapsHint": "{n} فترات تحتاج انتباهاً",
+    "gapKind": {
+      "TRAVEL_NOT_PLANNED": "{from}–{to}: تنقّل مطلوب دون رحلة مخططة ({n} د)",
+      "WAITING": "{from}–{to}: انتظار ({n} د)",
+      "FREE": "{from}–{to}: فراغ ({n} د)"
+    }
   }
 }

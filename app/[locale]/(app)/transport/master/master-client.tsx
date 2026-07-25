@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
-import { Home, Building2, Bus, Hourglass, AlertTriangle } from "lucide-react";
+import { Home, Building2, Bus, Hourglass, AlertTriangle, CarFront } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { axisPct, axisTicks } from "@/lib/transport/axis";
@@ -24,6 +24,18 @@ const BLOCK = {
   home: "bg-emerald-500/85 text-white",
   centre: "bg-sky-500/80 text-white",
   travel: "bg-violet-500/85 text-white",
+} as const;
+
+/**
+ * Gap styling. A journey nobody planned is a defect and is drawn as one; a
+ * long wait is a warning; a genuinely free stretch is quiet on purpose.
+ * Making all three look alike is what let a missing ride pass for idle time.
+ */
+const GAP = {
+  TRAVEL_NOT_PLANNED: "bg-destructive/20 ring-1 ring-inset ring-destructive/50",
+  WAITING_PROBLEM: "bg-amber-400/30 ring-1 ring-inset ring-amber-500/40",
+  WAITING: "bg-amber-400/15",
+  FREE: "bg-transparent",
 } as const;
 
 /** What the board is currently drawing. Client-side: toggling is instant. */
@@ -131,7 +143,6 @@ export function MasterClient({ board }: { board: MasterBoard }) {
                   S={S}
                   pct={pct}
                   layers={layers}
-                  maxWaitMin={board.maxWaitMin}
                 />
             ))
           )}
@@ -195,13 +206,11 @@ function LaneRow({
   S,
   pct,
   layers,
-  maxWaitMin,
 }: {
   lane: MasterLane;
   S: "left" | "right";
   pct: (m: number) => number;
   layers: Layers;
-  maxWaitMin: number;
 }) {
   const t = useTranslations("transportMaster");
 
@@ -217,6 +226,7 @@ function LaneRow({
   };
 
   const hasConflict = lane.sessions.some((s) => s.conflicts);
+  const problemGaps = lane.gaps.filter((g) => g.problem);
 
   return (
     <div
@@ -231,17 +241,13 @@ function LaneRow({
         <span className="text-muted-foreground">
           {t("laneSummary", { sessions: lane.sessions.length, trips: lane.trips.length })}
         </span>
-        {layers.waiting && lane.uncoveredMin > 0 && (
+        {layers.waiting && problemGaps.length > 0 && (
           <span
-            className={`mt-0.5 inline-flex w-fit items-center gap-1 rounded px-1 py-0.5 text-[10px] ${
-              lane.uncoveredMin > maxWaitMin
-                ? "bg-amber-400/25 text-amber-800 dark:text-amber-200"
-                : "text-muted-foreground"
-            }`}
-            title={t("uncoveredHint", { n: lane.uncoveredMin, max: maxWaitMin })}
+            className="mt-0.5 inline-flex w-fit items-center gap-1 rounded bg-amber-400/25 px-1 py-0.5 text-[10px] text-amber-800 dark:text-amber-200"
+            title={t("gapsHint", { n: problemGaps.length })}
           >
             <Hourglass className="size-3 shrink-0" />
-            {t("uncovered", { n: lane.uncoveredMin })}
+            {t("gapsFlagged", { n: problemGaps.length })}
           </span>
         )}
       </div>
@@ -249,6 +255,36 @@ function LaneRow({
       {/* The day */}
       <div className="relative h-10 flex-1 rounded-md bg-muted/20">
         <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+
+        {/* Classified gaps, drawn first so lessons and rides sit on top. Every
+            uncovered stretch gets a reason — a blank row is what hid a missing
+            ride as empty space. FREE is deliberately invisible: a quiet
+            afternoon needs no decoration, only an explanation on hover. */}
+        {layers.waiting &&
+          lane.gaps.map((g) => (
+            <span
+              key={`gap-${g.startMin}`}
+              title={t(`gapKind.${g.kind}`, {
+                from: hhmm(g.startMin),
+                to: hhmm(g.endMin),
+                n: g.endMin - g.startMin,
+              })}
+              className={`absolute inset-y-1.5 cursor-help rounded ${
+                g.kind === "TRAVEL_NOT_PLANNED"
+                  ? GAP.TRAVEL_NOT_PLANNED
+                  : g.kind === "WAITING"
+                    ? g.problem
+                      ? GAP.WAITING_PROBLEM
+                      : GAP.WAITING
+                    : GAP.FREE
+              }`}
+              style={span(g.startMin, g.endMin)}
+            >
+              {g.kind === "TRAVEL_NOT_PLANNED" && (
+                <CarFront className="absolute inset-0 m-auto size-3 text-destructive" />
+              )}
+            </span>
+          ))}
 
         {/* Occupied at the centre. Drawn only when centre lessons are HIDDEN —
             hidden must not mean ignored, or a fully-booked teacher reads as

@@ -5,6 +5,7 @@ import { toNumber } from "@/lib/money";
 import { loadTransportConfig } from "./settings";
 import { loadDayTrips } from "./trip-data";
 import { dayAxis, type DayAxis } from "./axis";
+import { classifyGaps, type ClassifiedGap, type Commitment } from "./gaps";
 import {
   uncoveredMinutes,
   overlappingSessions,
@@ -68,6 +69,11 @@ export type MasterLane = {
    * the row still reads as occupied. A blank stretch has to mean free.
    */
   centreBands: { startMin: number; endMin: number }[];
+  /**
+   * Every uncovered stretch, classified. Nothing on a row is left blank
+   * without a reason — that is how a missing ride hid as empty space.
+   */
+  gaps: ClassifiedGap[];
   /**
    * Minutes in the lane's span that are neither a lesson nor a ride.
    *
@@ -154,7 +160,7 @@ export async function masterBoard(
   const laneFor = (id: string, name: string, subtitle: string | null): MasterLane => {
     let l = lanes.get(id);
     if (!l) {
-      l = { id, kind: laneKind, name, subtitle, sessions: [], trips: [], centreBands: [], uncoveredMin: 0 };
+      l = { id, kind: laneKind, name, subtitle, sessions: [], trips: [], centreBands: [], gaps: [], uncoveredMin: 0 };
       lanes.set(id, l);
     }
     return l;
@@ -231,6 +237,26 @@ export async function masterBoard(
     const from = Math.min(...busy.map((b) => b.startMin));
     const to = Math.max(...busy.map((b) => b.endMin));
     lane.uncoveredMin = busy.length ? uncoveredMinutes(busy, from, to) : 0;
+
+    // Classify the holes. A lesson and a ride are both commitments; what is
+    // left over is what the row must explain.
+    const commitments: Commitment[] = [
+      ...lane.sessions.map((x) => ({
+        id: x.id,
+        startMin: x.startMin,
+        endMin: x.endMin,
+        kind: (x.location === "HOME" ? "LESSON_HOME" : "LESSON_CENTRE") as Commitment["kind"],
+      })),
+      ...lane.trips.map((x) => ({
+        id: x.id,
+        startMin: x.startMin,
+        endMin: x.endMin,
+        kind: "TRIP" as const,
+      })),
+    ];
+    lane.gaps = classifyGaps(commitments, {
+      maxWaitMin: config.rules.maxStudentWaitMin,
+    });
 
     lane.sessions.sort((a, b) => a.startMin - b.startMin);
     lane.trips.sort((a, b) => a.startMin - b.startMin);
