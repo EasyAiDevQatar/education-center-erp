@@ -6,6 +6,8 @@ import { loadTransportConfig } from "./settings";
 import { loadDayTrips } from "./trip-data";
 import { dayAxis, type DayAxis } from "./axis";
 import { classifyGaps, type ClassifiedGap, type Commitment } from "./gaps";
+import { lockReasonFor, type LockReason } from "./drag-lock";
+import type { SessionType } from "@/lib/enums";
 import {
   uncoveredMinutes,
   overlappingSessions,
@@ -38,8 +40,18 @@ export type MasterSession = {
   /** CENTER | HOME — a home visit is what makes transport necessary. */
   location: string;
   status: string;
+  /** Drives the timing policy: an exam is never moved, a revision block can be. */
+  sessionType: SessionType;
   /** True when this lesson collides with another in the same lane. */
   conflicts: boolean;
+  /**
+   * Null when this lesson may be dragged; otherwise WHY it may not.
+   *
+   * Computed on the server, alongside the data it judges, so the board cannot
+   * offer a move the save path would refuse — and so the reason shown is the
+   * real one rather than a guess reconstructed in the browser.
+   */
+  lockReason: LockReason | null;
 };
 
 /** A ride, already validated, drawn between the lessons it connects. */
@@ -105,9 +117,14 @@ export type MasterBoard = {
   transportEnabled: boolean;
   /** Waiting past this is drawn as a problem, not just shown. */
   maxWaitMin: number;
+  /** May this user move anything at all? Role-gated, decided on the server. */
+  canDrag: boolean;
 };
 
 const PLANNABLE = ["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED"];
+
+/** Trip statuses that mean a driver has been committed to the journey. */
+const DISPATCHED_TRIP = new Set(["ASSIGNED", "STARTED", "COMPLETED"]);
 
 const dayBounds = (dayIso: string) => {
   const start = new Date(`${dayIso}T00:00:00.000Z`);
@@ -129,9 +146,10 @@ const minutesOf = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
 export async function masterBoard(
   locale: string,
   day: string,
-  opts: { laneKind?: LaneKind } = {},
+  opts: { laneKind?: LaneKind; canDrag?: boolean } = {},
 ): Promise<MasterBoard> {
   const laneKind = opts.laneKind ?? "TEACHER";
+  const canDrag = opts.canDrag ?? false;
   const { start, end } = dayBounds(day);
 
   const [config, sessions, trips, stopOwners, tripOwners] = await Promise.all([
@@ -155,6 +173,7 @@ export async function masterBoard(
       where: { date: start },
       select: {
         id: true,
+        status: true,
         driverId: true,
         vehicleId: true,
         vehicle: { select: { plate: true, model: true } },
@@ -179,6 +198,17 @@ export async function masterBoard(
     servedByTrip.set(st.tripId, set);
   }
   const sessionById = new Map(sessions.map((x) => [x.id, x]));
+
+  // Lessons whose ride has left the proposal stage. Moving one of these means
+  // moving a car that is already committed — a driver may literally be on the
+  // road for it — so the board must refuse rather than silently re-plan.
+  const dispatched = new Set<string>();
+  for (const st of stopOwners) {
+    if (!st.sessionId) continue;
+    if (DISPATCHED_TRIP.has(ownerOfTrip.get(st.tripId)?.status ?? "")) {
+      dispatched.add(st.sessionId);
+    }
+  }
 
   /**
    * Which lane a trip belongs to, and how that lane is labelled — the ONLY
@@ -238,7 +268,9 @@ export async function masterBoard(
       endMin: startMin + Math.round(toNumber(s.hours) * 60),
       location: s.location,
       status: s.status,
+      sessionType: (s.sessionType ?? "REGULAR") as SessionType,
       conflicts: false,
+      lockReason: null, // decided below, once collisions are known
     });
   }
 
@@ -297,7 +329,20 @@ export async function masterBoard(
       clashing.add(c.a.sessionId);
       clashing.add(c.b.sessionId);
     }
-    for (const s of lane.sessions) s.conflicts = clashing.has(s.id);
+    for (const s of lane.sessions) {
+      s.conflicts = clashing.has(s.id);
+      // Only now: whether a clash locks a lesson is the centre's setting, and
+      // a clash is not known until the whole lane has been read.
+      s.lockReason = lockReasonFor(
+        {
+          status: s.status,
+          sessionType: s.sessionType,
+          conflicts: s.conflicts,
+          tripDispatched: dispatched.has(s.id),
+        },
+        { canDrag, lockConflicted: config.lockConflictedSessions },
+      );
+    }
 
     lane.centreBands = mergeSpans(
       lane.sessions.filter((s) => s.location === "CENTER"),
@@ -357,5 +402,6 @@ export async function masterBoard(
     centreSessionCount,
     transportEnabled: config.enabled,
     maxWaitMin: config.rules.maxStudentWaitMin,
+    canDrag,
   };
 }

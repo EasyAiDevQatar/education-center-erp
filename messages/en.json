@@ -2397,7 +2397,20 @@
     "emptyView": "Nothing planned for this view on this day.",
     "laneSummaryTrips": "{trips} rides",
     "headingTo": "Heading to {student}'s lesson at {from} — carrying {who}",
-    "forLesson": "for {student} at {at}"
+    "forLesson": "for {student} at {at}",
+    "dragHint": "Drag a lesson to propose a new time",
+    "dragAria": "{student}'s lesson — drag or use the arrow keys to propose a new time",
+    "proposalTitle": "Unsaved proposal",
+    "proposalMove": "{student} ({teacher}): {fromRange} → {toRange}",
+    "proposalNote": "Nothing has been saved yet — preview and confirm come next.",
+    "proposalCancel": "Undo",
+    "lock": {
+      "NOT_PERMITTED": "You may not change times",
+      "ALREADY_HAPPENED": "Finished or under way — cannot be moved",
+      "STRICT_TYPE": "An exam or assessment — never delayed",
+      "DISPATCHED": "A driver is assigned — change the trip first",
+      "CONFLICTED": "Clashing, and locked by the centre's settings"
+    }
   },
   "spacing": {
     "title": "No room to travel",

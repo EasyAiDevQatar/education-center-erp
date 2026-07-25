@@ -2397,7 +2397,20 @@
     "emptyView": "لا شيء مخطط لهذا العرض في هذا اليوم.",
     "laneSummaryTrips": "{trips} رحلة",
     "headingTo": "متجه لحصة {student} الساعة {from} — يقل {who}",
-    "forLesson": "لحصة {student} الساعة {at}"
+    "forLesson": "لحصة {student} الساعة {at}",
+    "dragHint": "اسحب حصة لاقتراح وقت جديد",
+    "dragAria": "حصة {student} — اسحب أو استخدم الأسهم لاقتراح وقت جديد",
+    "proposalTitle": "اقتراح غير محفوظ",
+    "proposalMove": "{student} ({teacher}): من {fromRange} إلى {toRange}",
+    "proposalNote": "لم يُحفظ شيء بعد — المعاينة والاعتماد في الخطوة التالية.",
+    "proposalCancel": "تراجع",
+    "lock": {
+      "NOT_PERMITTED": "لا تملك صلاحية تغيير المواعيد",
+      "ALREADY_HAPPENED": "انتهت أو جارية — لا يمكن نقلها",
+      "STRICT_TYPE": "امتحان أو تقييم — لا يُؤجَّل",
+      "DISPATCHED": "الرحلة مُسندة لسائق — عدّل الرحلة أولاً",
+      "CONFLICTED": "حصة متعارضة ومقفلة حسب الإعدادات"
+    }
   },
   "spacing": {
     "title": "لا يوجد وقت كافٍ للتنقل",

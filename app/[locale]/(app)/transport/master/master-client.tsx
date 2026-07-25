@@ -1,13 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
-import { Home, Building2, Bus, Hourglass, AlertTriangle, CarFront, GraduationCap, Truck } from "lucide-react";
+import {
+  Home,
+  Building2,
+  Bus,
+  Hourglass,
+  AlertTriangle,
+  CarFront,
+  GraduationCap,
+  Truck,
+  Lock,
+  Undo2,
+  MoveHorizontal,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { axisPct, axisTicks } from "@/lib/transport/axis";
-import type { MasterBoard, MasterLane, MasterTrip } from "@/lib/transport/master";
+import { axisPct, axisTicks, type DayAxis } from "@/lib/transport/axis";
+import { proposedTimes } from "@/lib/transport/drag-lock";
+import type { MasterBoard, MasterLane, MasterSession, MasterTrip } from "@/lib/transport/master";
 
 /** Minutes → HH:MM. */
 const hhmm = (m: number) =>
@@ -41,6 +54,26 @@ const GAP = {
 /** What the board is currently drawing. Client-side: toggling is instant. */
 type Layers = { home: boolean; centre: boolean; trips: boolean; waiting: boolean };
 
+/**
+ * A move the user has drawn but nobody has agreed to.
+ *
+ * Deliberately not a mutation. Dragging a lesson re-times a car, a driver and
+ * possibly a second lesson at the other end of the day; committing that on
+ * mouse-up would be a write nobody reviewed. So the gesture produces a
+ * PROPOSAL — visible, reversible, saved nowhere — and the next step gives it a
+ * preview and a confirm button.
+ */
+type Proposal = {
+  laneId: string;
+  laneName: string;
+  sessionId: string;
+  label: string;
+  fromStartMin: number;
+  fromEndMin: number;
+  startMin: number;
+  endMin: number;
+};
+
 export function MasterClient({ board }: { board: MasterBoard }) {
   const t = useTranslations("transportMaster");
   const locale = useLocale();
@@ -58,6 +91,8 @@ export function MasterClient({ board }: { board: MasterBoard }) {
     waiting: true,
   });
   const toggle = (k: keyof Layers) => setLayers((l) => ({ ...l, [k]: !l[k] }));
+
+  const [proposal, setProposal] = useState<Proposal | null>(null);
   /** Teacher rows carry lessons; driver and vehicle rows carry only rides. */
   const byPerson = board.laneKind === "TEACHER";
 
@@ -67,6 +102,9 @@ export function MasterClient({ board }: { board: MasterBoard }) {
   const pct = (m: number) => axisPct(board.axis, m);
 
   function go(next: { date?: string; view?: string }) {
+    // A proposal belongs to one day and one perspective; carrying it across a
+    // navigation would leave a ghost pointing at a lesson no longer on screen.
+    setProposal(null);
     const p = new URLSearchParams();
     p.set("date", next.date ?? board.day);
     const view = next.view ?? board.laneKind;
@@ -134,6 +172,36 @@ export function MasterClient({ board }: { board: MasterBoard }) {
         </div>
       </div>
 
+      {/* An unsaved proposal. Loud enough that nobody walks away believing the
+          day was changed, and undoable in one click. */}
+      {proposal && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-amber-500/50 bg-amber-400/10 p-3 text-sm">
+          <span className="inline-flex items-center gap-1 font-medium">
+            <MoveHorizontal className="size-4 shrink-0 text-amber-600" />
+            {t("proposalTitle")}
+          </span>
+          <span dir="auto">
+            {t("proposalMove", {
+              student: proposal.label,
+              teacher: proposal.laneName,
+              fromRange: `${hhmm(proposal.fromStartMin)}–${hhmm(proposal.fromEndMin)}`,
+              toRange: `${hhmm(proposal.startMin)}–${hhmm(proposal.endMin)}`,
+            })}
+          </span>
+          <span className="text-muted-foreground">{t("proposalNote")}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => setProposal(null)}
+          >
+            <Undo2 className="size-4" />
+            {t("proposalCancel")}
+          </Button>
+        </div>
+      )}
+
       {/* Timeline */}
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <div className="min-w-[760px]">
@@ -176,6 +244,11 @@ export function MasterClient({ board }: { board: MasterBoard }) {
                   pct={pct}
                   layers={layers}
                   byPerson={byPerson}
+                  axis={board.axis}
+                  rtl={rtl}
+                  canDrag={board.canDrag}
+                  proposal={proposal?.laneId === lane.id ? proposal : null}
+                  onPropose={setProposal}
                 />
             ))
           )}
@@ -198,6 +271,12 @@ export function MasterClient({ board }: { board: MasterBoard }) {
               <Hourglass className="size-3.5 text-amber-600" />
               {t("legendWaiting")}
             </span>
+            {board.canDrag && byPerson && (
+              <span className="inline-flex items-center gap-1">
+                <MoveHorizontal className="size-3.5" />
+                {t("dragHint")}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -240,14 +319,140 @@ function LaneRow({
   pct,
   layers,
   byPerson,
+  axis,
+  rtl,
+  canDrag,
+  proposal,
+  onPropose,
 }: {
   lane: MasterLane;
   S: "left" | "right";
   pct: (m: number) => number;
   layers: Layers;
   byPerson: boolean;
+  axis: DayAxis;
+  rtl: boolean;
+  canDrag: boolean;
+  proposal: Proposal | null;
+  /**
+   * The setter itself, not a plain callback: a nudge is computed FROM the
+   * current proposal, and two arrow presses in the same tick would otherwise
+   * both read the pre-render value and the second would undo the first.
+   */
+  onPropose: React.Dispatch<React.SetStateAction<Proposal | null>>;
 }) {
   const t = useTranslations("transportMaster");
+
+  // --- dragging a lesson to a new time -----------------------------------
+  //
+  // Pointer events rather than HTML5 drag-and-drop: the ghost has to follow
+  // the finger on a tablet in the office, and the native API gives no useful
+  // position on touch. Nothing here writes; the gesture ends in a proposal.
+  const trackRef = useRef<HTMLDivElement>(null);
+  // `latest` is the whole reason this is a ref and not just state: React may
+  // batch the last pointermove together with pointerup, so a handler reading
+  // `drag` on release sees the position from one move ago. On a quick flick
+  // that lands the proposal short of the ghost the user was looking at.
+  const dragRef = useRef<
+    | {
+        sessionId: string;
+        label: string;
+        startMin: number;
+        endMin: number;
+        x0: number;
+        width: number;
+        latest: { startMin: number; endMin: number };
+      }
+    | null
+  >(null);
+  const [drag, setDrag] = useState<{ sessionId: string; startMin: number; endMin: number } | null>(
+    null,
+  );
+
+  /** Pixels → minutes, mirrored in Arabic where the axis runs the other way. */
+  const deltaMinutes = (dx: number, width: number) =>
+    ((rtl ? -dx : dx) / Math.max(1, width)) * (axis.maxMin - axis.minMin);
+
+  const startDrag = (e: React.PointerEvent, s: MasterSession) => {
+    if (!canDrag || s.lockReason || e.button !== 0) return;
+    const width = trackRef.current?.clientWidth ?? 0;
+    if (!width) return;
+    e.preventDefault();
+    // Capture so the ghost keeps following a pointer dragged off the block —
+    // and off the row. Not every browser will grant it; the drag still works
+    // while the pointer stays over the block, so a refusal is not fatal.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* pointer already released, or capture unsupported */
+    }
+    dragRef.current = {
+      sessionId: s.id,
+      label: s.label,
+      startMin: s.startMin,
+      endMin: s.endMin,
+      x0: e.clientX,
+      width,
+      latest: { startMin: s.startMin, endMin: s.endMin },
+    };
+    setDrag({ sessionId: s.id, startMin: s.startMin, endMin: s.endMin });
+  };
+
+  const moveDrag = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const next = proposedTimes(
+      { startMin: d.startMin, endMin: d.endMin },
+      deltaMinutes(e.clientX - d.x0, d.width),
+      axis,
+    );
+    d.latest = next;
+    setDrag({ sessionId: d.sessionId, ...next });
+  };
+
+  const endDrag = () => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    setDrag(null);
+    if (!d) return;
+    const moved = d.latest;
+    // A click that happened to land on a lesson is not a proposal.
+    if (moved.startMin === d.startMin) return;
+    onPropose({
+      laneId: lane.id,
+      laneName: lane.name,
+      sessionId: d.sessionId,
+      label: d.label,
+      fromStartMin: d.startMin,
+      fromEndMin: d.endMin,
+      startMin: moved.startMin,
+      endMin: moved.endMin,
+    });
+  };
+
+  /** Keyboard equivalent: the board must be usable without a pointer. */
+  const nudge = (s: MasterSession, steps: number) => {
+    if (!canDrag || s.lockReason) return;
+    onPropose((prev) => {
+      const base =
+        prev?.sessionId === s.id
+          ? { startMin: prev.startMin, endMin: prev.endMin }
+          : { startMin: s.startMin, endMin: s.endMin };
+      const next = proposedTimes(base, steps * 15, axis);
+      // Nudged back to where it started: that is not a proposal, it is a
+      // change of mind.
+      if (next.startMin === s.startMin) return null;
+      return {
+        laneId: lane.id,
+        laneName: lane.name,
+        sessionId: s.id,
+        label: s.label,
+        fromStartMin: s.startMin,
+        fromEndMin: s.endMin,
+        ...next,
+      };
+    });
+  };
 
   /** A block spanning a real period, positioned on the axis. */
   const span = (startMin: number, endMin: number) => {
@@ -306,7 +511,7 @@ function LaneRow({
       </div>
 
       {/* The day */}
-      <div className="relative h-10 flex-1 rounded-md bg-muted/20">
+      <div ref={trackRef} className="relative h-10 flex-1 rounded-md bg-muted/20">
         <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
 
         {/* Classified gaps, drawn first so lessons and rides sit on top. Every
@@ -385,23 +590,75 @@ function LaneRow({
 
         {lane.sessions
           .filter((s) => (s.location === "HOME" ? layers.home : layers.centre))
-          .map((s) => (
-          <span
-            key={s.id}
-            title={`${s.label} · ${hhmm(s.startMin)}–${hhmm(s.endMin)}`}
-            className={`absolute top-1/2 flex h-6 -translate-y-1/2 items-center gap-1 overflow-hidden rounded px-1 text-[10px] ${
-              s.location === "HOME" ? BLOCK.home : BLOCK.centre
-            } ${s.conflicts ? "ring-2 ring-destructive" : ""}`}
-            style={span(s.startMin, s.endMin)}
-          >
-            {s.location === "HOME" ? (
-              <Home className="size-3 shrink-0" />
-            ) : (
-              <Building2 className="size-3 shrink-0" />
-            )}
-            <span className="truncate">{s.label}</span>
-          </span>
-        ))}
+          .map((s) => {
+            const movable = canDrag && !s.lockReason;
+            // A lock is only worth drawing for someone who could otherwise
+            // move it. For a read-only viewer every lesson is "locked", and
+            // padlocking the whole board says nothing.
+            const locked = canDrag && !!s.lockReason;
+            return (
+              <span
+                key={s.id}
+                role={movable ? "button" : undefined}
+                tabIndex={movable ? 0 : undefined}
+                aria-label={movable ? t("dragAria", { student: s.label }) : undefined}
+                title={[
+                  `${s.label} · ${hhmm(s.startMin)}–${hhmm(s.endMin)}`,
+                  locked ? t(`lock.${s.lockReason}`) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                onPointerDown={(e) => startDrag(e, s)}
+                onPointerMove={moveDrag}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                onKeyDown={(e) => {
+                  if (!movable) return;
+                  // Arrow keys follow what the user SEES: in Arabic the axis
+                  // runs right-to-left, so "left" is later.
+                  if (e.key === "ArrowRight") nudge(s, rtl ? -1 : 1);
+                  else if (e.key === "ArrowLeft") nudge(s, rtl ? 1 : -1);
+                  else if (e.key === "Escape") onPropose(null);
+                  else return;
+                  e.preventDefault();
+                }}
+                className={`absolute top-1/2 flex h-6 -translate-y-1/2 items-center gap-1 overflow-hidden rounded px-1 text-[10px] outline-none ring-offset-1 focus-visible:ring-2 focus-visible:ring-ring ${
+                  s.location === "HOME" ? BLOCK.home : BLOCK.centre
+                } ${s.conflicts ? "ring-2 ring-destructive" : ""} ${
+                  movable ? "cursor-grab touch-none active:cursor-grabbing" : locked ? "cursor-not-allowed" : ""
+                } ${drag?.sessionId === s.id || proposal?.sessionId === s.id ? "opacity-40" : ""}`}
+                style={span(s.startMin, s.endMin)}
+              >
+                {locked ? (
+                  <Lock className="size-3 shrink-0" />
+                ) : s.location === "HOME" ? (
+                  <Home className="size-3 shrink-0" />
+                ) : (
+                  <Building2 className="size-3 shrink-0" />
+                )}
+                <span className="truncate">{s.label}</span>
+              </span>
+            );
+          })}
+
+        {/* The ghost: where the lesson WOULD go. Dashed and hollow on purpose
+            — it is a drawing, not a booking, and must never be mistaken for
+            one. Live while the pointer is down, and it stays put afterwards so
+            the proposal can be read and undone. */}
+        {(() => {
+          const g = drag ?? (proposal ? { startMin: proposal.startMin, endMin: proposal.endMin } : null);
+          if (!g) return null;
+          return (
+            <span
+              className="pointer-events-none absolute top-1/2 flex h-6 -translate-y-1/2 items-center justify-center rounded border-2 border-dashed border-amber-500 bg-amber-400/25 px-1 text-[10px] font-medium text-amber-900 dark:text-amber-100"
+              style={span(g.startMin, g.endMin)}
+            >
+              <span dir="ltr" className="tabular-nums">
+                {hhmm(g.startMin)}
+              </span>
+            </span>
+          );
+        })()}
 
         {layers.trips &&
           lane.trips.map((tr) => (

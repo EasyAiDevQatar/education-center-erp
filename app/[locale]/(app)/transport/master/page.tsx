@@ -21,7 +21,13 @@ export default async function TransportMasterPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireTransport(locale);
+  const auth = await requireTransport(locale);
+
+  // Who may move a lesson. The page guard already limits this screen to staff;
+  // this narrows further to the roles that actually schedule. An accountant
+  // reads the day, they do not re-time it. Enforced again on the save path in
+  // the next step — this only decides what the board offers.
+  const canDrag = auth.role === "ADMIN" || auth.role === "RECEPTIONIST";
   const t = await getTranslations("transportMaster");
 
   const sp = await searchParams;
@@ -42,7 +48,7 @@ export default async function TransportMasterPage({
   // Everything else is loaded; which layers are drawn is the client's
   // business, so a toggle is instant and a hidden centre lesson still marks
   // the row busy.
-  const board = await masterBoard(locale, day, { laneKind });
+  const board = await masterBoard(locale, day, { laneKind, canDrag });
 
   return (
     <div>
