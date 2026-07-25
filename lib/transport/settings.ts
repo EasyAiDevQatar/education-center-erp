@@ -9,6 +9,8 @@ import {
 import type { LatLng } from "./allocate";
 import { TRANSPORT_PASSENGERS, type TransportPassengers } from "@/lib/enums";
 import type { TransportRules } from "./validate";
+import { DEFAULT_LATENESS_CONFIG, type LatenessConfig } from "./lateness";
+import { DEFAULT_WEIGHTS, type OptimizationWeights } from "./cost";
 
 /** Every Setting key the transport module reads. */
 export const TRANSPORT_SETTING_KEYS = [
@@ -51,6 +53,26 @@ export const TRANSPORT_SETTING_KEYS = [
   // Allocation model.
   "transportMaxAdvancePickupMin",
   "transportDriverModel",
+  // Controlled lateness (phase 2). Off by default — see DEFAULT_LATENESS_CONFIG.
+  "transportAllowControlledLateness",
+  "transportDefaultMaxLatenessMin",
+  "transportAbsoluteMaxLatenessMin",
+  "transportAutomaticLatenessApprovalMin",
+  "transportRequireAdminApprovalAboveMin",
+  "transportMinTripsSavedForDelay",
+  "transportMinVehicleCountSavedForDelay",
+  "transportMinEmptyKmSavedForDelay",
+  "transportMinDriverMinutesSavedForDelay",
+  "transportReturnGroupingWindowMin",
+  "transportNotificationDelayChangeThresholdMin",
+  // Optimisation weights.
+  "transportWeightTripCount",
+  "transportWeightVehicleCount",
+  "transportWeightLatenessMinutes",
+  "transportWeightWaitingMinutes",
+  "transportWeightJourneyMinutes",
+  "transportWeightEmptyKm",
+  "transportWeightTotalKm",
 ] as const;
 
 export type TransportConfig = {
@@ -80,6 +102,14 @@ export type TransportConfig = {
    *  a separate trip, possibly another driver) — no idle during the lesson.
    *  STAY: one driver stays with the passenger through their whole chain. */
   driverModel: "DROP_AND_RETURN" | "STAY";
+  /** Controlled lateness policy — what the planner may propose and when. */
+  lateness: LatenessConfig;
+  /** How the planner ranks one candidate plan against another. */
+  weights: OptimizationWeights;
+  /** Returns finishing within this window may be consolidated onto one trip. */
+  returnGroupingWindowMin: number;
+  /** Re-notify only once the expected delay moves by at least this much. */
+  notificationDelayChangeThresholdMin: number;
 };
 
 const num = (v: string | undefined, fallback: number): number => {
@@ -165,6 +195,58 @@ export async function loadTransportConfig(): Promise<TransportConfig> {
     solverTimeoutSeconds: numZ(s.transportSolverTimeoutSeconds, 20),
     maxAdvancePickupMin: numZ(s.transportMaxAdvancePickupMin, 60),
     driverModel: s.transportDriverModel === "STAY" ? "STAY" : "DROP_AND_RETURN",
+    lateness: {
+      allowControlledLateness: bool(
+        s.transportAllowControlledLateness,
+        DEFAULT_LATENESS_CONFIG.allowControlledLateness,
+      ),
+      defaultMaxLatenessMin: numZ(
+        s.transportDefaultMaxLatenessMin,
+        DEFAULT_LATENESS_CONFIG.defaultMaxLatenessMin,
+      ),
+      absoluteMaxLatenessMin: numZ(
+        s.transportAbsoluteMaxLatenessMin,
+        DEFAULT_LATENESS_CONFIG.absoluteMaxLatenessMin,
+      ),
+      automaticLatenessApprovalMin: numZ(
+        s.transportAutomaticLatenessApprovalMin,
+        DEFAULT_LATENESS_CONFIG.automaticLatenessApprovalMin,
+      ),
+      requireAdminApprovalAboveMin: numZ(
+        s.transportRequireAdminApprovalAboveMin,
+        DEFAULT_LATENESS_CONFIG.requireAdminApprovalAboveMin,
+      ),
+      minTripsSavedForDelay: numZ(
+        s.transportMinTripsSavedForDelay,
+        DEFAULT_LATENESS_CONFIG.minTripsSavedForDelay,
+      ),
+      minVehicleCountSavedForDelay: numZ(
+        s.transportMinVehicleCountSavedForDelay,
+        DEFAULT_LATENESS_CONFIG.minVehicleCountSavedForDelay,
+      ),
+      minEmptyKmSavedForDelay: numZ(
+        s.transportMinEmptyKmSavedForDelay,
+        DEFAULT_LATENESS_CONFIG.minEmptyKmSavedForDelay,
+      ),
+      minDriverMinutesSavedForDelay: numZ(
+        s.transportMinDriverMinutesSavedForDelay,
+        DEFAULT_LATENESS_CONFIG.minDriverMinutesSavedForDelay,
+      ),
+    },
+    weights: {
+      tripCount: numZ(s.transportWeightTripCount, DEFAULT_WEIGHTS.tripCount),
+      vehicleCount: numZ(s.transportWeightVehicleCount, DEFAULT_WEIGHTS.vehicleCount),
+      latenessMinutes: numZ(s.transportWeightLatenessMinutes, DEFAULT_WEIGHTS.latenessMinutes),
+      waitingMinutes: numZ(s.transportWeightWaitingMinutes, DEFAULT_WEIGHTS.waitingMinutes),
+      journeyMinutes: numZ(s.transportWeightJourneyMinutes, DEFAULT_WEIGHTS.journeyMinutes),
+      emptyKm: numZ(s.transportWeightEmptyKm, DEFAULT_WEIGHTS.emptyKm),
+      totalKm: numZ(s.transportWeightTotalKm, DEFAULT_WEIGHTS.totalKm),
+    },
+    returnGroupingWindowMin: numZ(s.transportReturnGroupingWindowMin, 20),
+    notificationDelayChangeThresholdMin: numZ(
+      s.transportNotificationDelayChangeThresholdMin,
+      5,
+    ),
   };
 }
 
