@@ -2410,6 +2410,32 @@
       "STRICT_TYPE": "امتحان أو تقييم — لا يُؤجَّل",
       "DISPATCHED": "الرحلة مُسندة لسائق — عدّل الرحلة أولاً",
       "CONFLICTED": "حصة متعارضة ومقفلة حسب الإعدادات"
+    },
+    "previewAction": "معاينة الأثر",
+    "impactTitle": "أثر نقل الحصة",
+    "impactWorking": "جارٍ حساب الأثر…",
+    "impactRides": "الرحلات المتأثرة",
+    "impactRideRow": "{who}: الالتقاط {before} ← {after}",
+    "impactRideNew": "{who}: التقاط جديد {after}",
+    "impactRideLost": "{who}: لا رحلة (كانت {before})",
+    "impactRidesNone": "لا تتغير أوقات أي رحلة.",
+    "impactStranded": "بلا رحلة بعد النقل: {names}",
+    "impactSaving": "توفير تشغيلي: {min} دقيقة سائق و{km} كم.",
+    "impactCost": "تكلفة إضافية: {min} دقيقة سائق و{km} كم.",
+    "impactNeutral": "لا فرق تشغيلي يُذكر.",
+    "impactReview": "{n} رحلة ستعود إلى «قيد المراجعة» وتحتاج اعتماداً جديداً.",
+    "impactNotify": "سيتم إشعار: {names}",
+    "impactConfirm": "اعتماد النقل",
+    "impactBlocked": "لا يمكن تنفيذ هذا النقل",
+    "impactSaved": "تم نقل الحصة.",
+    "blocked": {
+      "stale": "تغيّرت الحصة منذ فتح اللوحة — حدّث الصفحة وأعد المحاولة",
+      "locked": "الحصة مقفلة ولا يمكن نقلها",
+      "archived": "السنة الدراسية مؤرشفة",
+      "noRoomToTravel": "لا يوجد وقت كافٍ للتنقل",
+      "unchanged": "الحصة في وقتها الحالي",
+      "forbidden": "لا تملك صلاحية تغيير المواعيد",
+      "invalid": "طلب غير صالح"
     }
   },
   "spacing": {

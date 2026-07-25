@@ -15,6 +15,7 @@ import {
   Lock,
   Undo2,
   MoveHorizontal,
+  ClipboardCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import {
 } from "@/components/transport/timeline";
 import { proposedTimes } from "@/lib/transport/drag-lock";
 import type { MasterBoard, MasterLane, MasterSession, MasterTrip } from "@/lib/transport/master";
+import { ImpactDialog } from "./impact-dialog";
 
 /**
  * The four block types, deliberately far apart in colour.
@@ -96,6 +98,7 @@ export function MasterClient({ board }: { board: MasterBoard }) {
   const toggle = (k: keyof Layers) => setLayers((l) => ({ ...l, [k]: !l[k] }));
 
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [reviewing, setReviewing] = useState(false);
   /** Teacher rows carry lessons; driver and vehicle rows carry only rides. */
   const byPerson = board.laneKind === "TEACHER";
 
@@ -187,17 +190,50 @@ export function MasterClient({ board }: { board: MasterBoard }) {
             })}
           </span>
           <span className="text-muted-foreground">{t("proposalNote")}</span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={() => setProposal(null)}
-          >
-            <Undo2 className="size-4" />
-            {t("proposalCancel")}
-          </Button>
+          <div className="ms-auto flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => setProposal(null)}
+            >
+              <Undo2 className="size-4" />
+              {t("proposalCancel")}
+            </Button>
+            {/* The note used to promise a next step. This is it: the proposal
+                becomes a question about what it would cost, and only an
+                explicit answer to that question writes anything. */}
+            <Button type="button" size="sm" className="gap-1" onClick={() => setReviewing(true)}>
+              <ClipboardCheck className="size-4" />
+              {t("previewAction")}
+            </Button>
+          </div>
         </div>
+      )}
+
+      {/* Mounted only while it is open, so each review starts from a blank
+          answer rather than flashing the previous one. */}
+      {proposal && reviewing && (
+        <ImpactDialog
+          open
+          onOpenChange={setReviewing}
+          move={{
+            day: board.day,
+            sessionId: proposal.sessionId,
+            fromStartMin: proposal.fromStartMin,
+            toStartMin: proposal.startMin,
+          }}
+          // The lesson is where the board now says it is, so the proposal has
+          // served its purpose. Leaving it up would draw a saved lesson as an
+          // unsaved change and offer to undo something already done.
+          onApplied={() => setProposal(null)}
+          onRetime={(startMin) =>
+            setProposal((p) =>
+              p ? { ...p, startMin, endMin: startMin + (p.endMin - p.startMin) } : p,
+            )
+          }
+        />
       )}
 
       {/* The timeline. Frame, ruler and row geometry are the shared component's

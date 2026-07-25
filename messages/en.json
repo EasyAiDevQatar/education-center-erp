@@ -2410,6 +2410,32 @@
       "STRICT_TYPE": "An exam or assessment — never delayed",
       "DISPATCHED": "A driver is assigned — change the trip first",
       "CONFLICTED": "Clashing, and locked by the centre's settings"
+    },
+    "previewAction": "Preview impact",
+    "impactTitle": "Impact of this move",
+    "impactWorking": "Working out the impact…",
+    "impactRides": "Rides affected",
+    "impactRideRow": "{who}: pickup {before} → {after}",
+    "impactRideNew": "{who}: new pickup at {after}",
+    "impactRideLost": "{who}: no ride (was {before})",
+    "impactRidesNone": "No ride times change.",
+    "impactStranded": "Left without a ride: {names}",
+    "impactSaving": "Operational saving: {min} driver minutes and {km} km.",
+    "impactCost": "Operational cost: {min} more driver minutes and {km} more km.",
+    "impactNeutral": "No meaningful operational difference.",
+    "impactReview": "{n} ride(s) go back to “needs review” and must be approved again.",
+    "impactNotify": "Will be notified: {names}",
+    "impactConfirm": "Confirm move",
+    "impactBlocked": "This move cannot be made",
+    "impactSaved": "The lesson was moved.",
+    "blocked": {
+      "stale": "The lesson changed since the board loaded — refresh and try again",
+      "locked": "The lesson is locked and cannot be moved",
+      "archived": "That academic year is archived",
+      "noRoomToTravel": "No room to travel",
+      "unchanged": "It is already at that time",
+      "forbidden": "You may not change times",
+      "invalid": "Invalid request"
     }
   },
   "spacing": {
