@@ -7,8 +7,17 @@ import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { FormField } from "@/components/crud/form-field";
-import { EARNINGS_MODES, DEFAULT_EARNINGS_MODE } from "@/lib/earnings-mode";
-import { saveDefaultEarningsMode, applyEarningsModeToAll } from "./earnings-actions";
+import {
+  EARNINGS_MODES,
+  DEFAULT_EARNINGS_MODE,
+  COMMISSION_BASES,
+  DEFAULT_COMMISSION_BASIS,
+} from "@/lib/earnings-mode";
+import {
+  saveDefaultEarningsMode,
+  applyEarningsModeToAll,
+  saveCommissionBasis,
+} from "./earnings-actions";
 
 /**
  * How teachers are paid, centre-wide.
@@ -20,10 +29,13 @@ import { saveDefaultEarningsMode, applyEarningsModeToAll } from "./earnings-acti
  */
 export function TeacherPaymentsSettings({
   defaultMode,
+  defaultBasis,
   overriddenCount,
   totalCount,
 }: {
   defaultMode: string;
+  /** Billed or collected — see COMMISSION_BASES. Centre-wide, no override. */
+  defaultBasis: string;
   /** Teachers with their own mode — the ones a bulk apply would overwrite. */
   overriddenCount: number;
   totalCount: number;
@@ -31,11 +43,15 @@ export function TeacherPaymentsSettings({
   const t = useTranslations("settings");
   const tc = useTranslations("common");
   const tm = useTranslations("earningsModes");
+  const tb = useTranslations("commissionBases");
   const locale = useLocale();
   const router = useRouter();
 
   const [mode, setMode] = useState(
     EARNINGS_MODES.includes(defaultMode as never) ? defaultMode : DEFAULT_EARNINGS_MODE,
+  );
+  const [basis, setBasis] = useState(
+    COMMISSION_BASES.includes(defaultBasis as never) ? defaultBasis : DEFAULT_COMMISSION_BASIS,
   );
   const [bulk, setBulk] = useState<string>("inherit");
   const [msg, setMsg] = useState<string | null>(null);
@@ -81,6 +97,39 @@ export function TeacherPaymentsSettings({
         >
           {tc("save")}
         </Button>
+      </div>
+
+      {/* Which figure the percentage is taken on. Its own row rather than a
+          line in the mode box: the mode decides WHETHER commission is paid,
+          this decides what it is paid ON, and conflating them is how a centre
+          ends up paying against invoices nobody has settled. */}
+      <div className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3">
+        <FormField
+          label={t("commissionBasis")}
+          htmlFor="commission-basis"
+          hint={t("commissionBasisHint")}
+        >
+          <Select
+            id="commission-basis"
+            value={basis}
+            onChange={(e) => setBasis(e.target.value)}
+            className="w-56"
+          >
+            {COMMISSION_BASES.map((b) => (
+              <option key={b} value={b}>
+                {tb(b)}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <Button
+          size="sm"
+          disabled={pending}
+          onClick={() => run(() => saveCommissionBasis(locale, basis))}
+        >
+          {tc("save")}
+        </Button>
+        <p className="w-full text-xs text-muted-foreground">{t("commissionBasisNote")}</p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-md border border-warning/40 bg-warning/5 p-3">

@@ -56,7 +56,14 @@ export function AppShell({
   roleLabel: string;
   onLogout: () => void;
   /** Optional-module switches, read from Settings by the server layout. */
-  flags?: { accounting?: boolean; transport?: boolean; ai?: boolean };
+  flags?: {
+    accounting?: boolean;
+    transport?: boolean;
+    ai?: boolean;
+    hr?: boolean;
+    reports?: boolean;
+    leads?: boolean;
+  };
   /** Per-role menu narrowing (navKey → allowed). Only `false` entries hide. */
   perms?: Record<string, boolean>;
   /** Roles the user may switch between, and the active one. */
@@ -259,6 +266,11 @@ export function AppShell({
               accounting: !!flags?.accounting,
               transport: !!flags?.transport,
               ai: !!flags?.ai,
+              // `!== false` not `!!`: undefined means the layout did not say,
+              // and for an on-by-default module that is on.
+              hr: flags?.hr !== false,
+              reports: flags?.reports !== false,
+              leads: flags?.leads !== false,
             }}
           >
             {children}

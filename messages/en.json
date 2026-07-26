@@ -633,7 +633,19 @@
     "tabAi": "AI",
     "tabAccess": "Users & Access",
     "tabSystem": "System & Data",
-    "aiModels": "AI Models"
+    "aiModels": "AI Models",
+    "modulesSettings": "Optional modules",
+    "modulesIntro": "Switch off anything this centre does not use. Off hides it from the menu and from every screen, and blocks direct links — it deletes nothing.",
+    "moduleHr": "Human resources",
+    "moduleHrHint": "Employee register, documents and their expiry dates, leave, and payroll runs.",
+    "moduleReports": "Reports",
+    "moduleReportsHint": "The financial and operational reports page.",
+    "moduleLeads": "Leads",
+    "moduleLeadsHint": "Prospective students and trial sessions.",
+    "modulesDataKept": "Data is kept exactly as it is; switching back on restores everything.",
+    "commissionBasis": "Commission is calculated on",
+    "commissionBasisHint": "The percentage applies either to money actually collected, or to what was billed once the lesson was taught.",
+    "commissionBasisNote": "Collected is the default: a teacher is not paid before the parent has paid. Expected pays once the lesson is taught and moves the collection risk onto the centre."
   },
   "integrations": {
     "baseUrl": "API base URL",
@@ -2486,5 +2498,9 @@
     "tooTight": "After {name} ({from}–{to}): the journey needs {need} min, the day allows {has} — {short} min short",
     "suggestion": "The first clear time is {time}.",
     "useSuggestion": "Use {time}"
+  },
+  "commissionBases": {
+    "COLLECTED": "Collected",
+    "EXPECTED": "Expected (billed)"
   }
 }

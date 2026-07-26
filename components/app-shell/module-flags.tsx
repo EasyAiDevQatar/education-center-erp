@@ -2,7 +2,14 @@
 
 import { createContext, useContext } from "react";
 
-export type ModuleFlags = { accounting: boolean; transport: boolean; ai: boolean };
+export type ModuleFlags = {
+  accounting: boolean;
+  transport: boolean;
+  ai: boolean;
+  hr: boolean;
+  reports: boolean;
+  leads: boolean;
+};
 
 /**
  * Which optional modules are switched on, for any client component under the
@@ -18,7 +25,16 @@ export type ModuleFlags = { accounting: boolean; transport: boolean; ai: boolean
  * hides its optional UI rather than showing it, so the failure mode is a
  * missing icon rather than a live button into a module that is off.
  */
-const Ctx = createContext<ModuleFlags>({ accounting: false, transport: false, ai: false });
+const Ctx = createContext<ModuleFlags>({
+  accounting: false,
+  transport: false,
+  ai: false,
+  // On by default, matching `lib/modules.ts`: these three predate being
+  // optional, so absent configuration means present, not missing.
+  hr: true,
+  reports: true,
+  leads: true,
+});
 
 export const ModuleFlagsProvider = Ctx.Provider;
 

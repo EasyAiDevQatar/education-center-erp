@@ -133,7 +133,7 @@ export async function createPayrollRun(
     let earnMode: ReturnType<typeof resolveEarningsMode> = "SALARY";
     if (e.teacher) {
       const earnings = await getTeacherEarnings(e.teacher.id, periodStart, periodEnd);
-      commission = earnings?.dueCommission ?? 0;
+      commission = earnings?.payableCommission ?? 0;
       earnMode = resolveEarningsMode(e.teacher.earningsMode, centreEarn?.value ?? null);
     }
 

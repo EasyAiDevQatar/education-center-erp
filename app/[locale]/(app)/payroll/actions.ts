@@ -82,15 +82,16 @@ export async function createPayout(
   if (end < start) return { error: "invalidPeriod" };
 
   const earnings = await getTeacherEarnings(d.teacherId, start, end);
-  // Pay on what was actually collected; keep the expected figure for comparison.
-  const dueCommission = earnings?.dueCommission ?? 0;
+  // Pay on the centre's basis, and keep the billed figure either way so the
+  // payslip can still show what was invoiced next to what was paid on.
+  const payableCommission = earnings?.payableCommission ?? 0;
   const expectedCommission = earnings?.expectedCommission ?? 0;
   // The earnings mode decides which components count. Suppressed ones are
   // stored as zero rather than as the teacher's standing figure, so a payslip
   // never shows a salary the teacher was not paid.
   const earnMode = earnings?.earningsMode ?? DEFAULT_EARNINGS_MODE;
   const pay = computePay(earnMode, {
-    commission: dueCommission,
+    commission: payableCommission,
     salary: earnings?.fixedSalary ?? 0,
     deductions: earnings?.fixedDeductions ?? 0,
     advances: d.advances,

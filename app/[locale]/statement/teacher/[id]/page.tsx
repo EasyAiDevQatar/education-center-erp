@@ -65,7 +65,9 @@ export default async function TeacherStatementPage({
   const currency = settings.currency ?? "QAR";
   const pct = toNumber(teacher.commissionPct);
   const totalPaidOut = payouts.reduce((sum, p) => sum + toNumber(p.netPaid), 0);
-  const dueCommission = earnings?.dueCommission ?? 0;
+  // The closing balance is what the centre owes, so it follows the basis the
+  // centre pays on rather than always the collected column.
+  const dueCommission = earnings?.payableCommission ?? 0;
   const closing = dueCommission - totalPaidOut;
 
   return (

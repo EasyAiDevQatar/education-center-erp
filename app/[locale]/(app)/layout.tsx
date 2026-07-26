@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireAuth } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { moduleFlags } from "@/lib/modules";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { loadRolePermissions, loadCustomRoles, activePerms, roleLabel } from "@/lib/permissions";
 import { AiChatWidget } from "@/components/ai-chat-widget";
@@ -28,6 +29,9 @@ export default async function AppLayout({
     where: { key: { in: ["accountingEnabled", "transportEnabled", "aiEnabled"] } },
   });
   const flagOn = (key: string) => flagRows.some((r) => r.key === key && r.value === "1");
+  // HR, Reports and Leads read the other way round — on unless switched off —
+  // so they cannot share `flagOn`. See lib/modules.ts.
+  const optional = await moduleFlags();
   const rolePerms = await loadRolePermissions();
   const customRoles = await loadCustomRoles();
   const activeRoleKey = session.activeRoleKey ?? session.role;
@@ -51,7 +55,12 @@ export default async function AppLayout({
       userName={session.name}
       roleLabel={tr(session.role)}
       onLogout={logoutAction.bind(null, locale)}
-      flags={{ accounting: flagOn("accountingEnabled"), transport: flagOn("transportEnabled"), ai: flagOn("aiEnabled") }}
+      flags={{
+        accounting: flagOn("accountingEnabled"),
+        transport: flagOn("transportEnabled"),
+        ai: flagOn("aiEnabled"),
+        ...optional,
+      }}
       perms={activePerms(activeRoleKey, rolePerms, customRoles)}
       roles={switcherRoles}
       activeRoleKey={activeRoleKey}

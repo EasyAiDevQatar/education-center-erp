@@ -2,8 +2,11 @@ import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
 import {
+  commissionOn,
   computePay,
+  resolveCommissionBasis,
   resolveEarningsMode,
+  type CommissionBasis,
   type EarningsMode,
 } from "./earnings-mode";
 
@@ -18,8 +21,17 @@ export type TeacherEarnings = {
   collected: number;
   /** commissionPct applied to `expected` — what the sessions will earn once collected. */
   expectedCommission: number;
-  /** commissionPct applied to `collected` — what is actually payable now. */
+  /** commissionPct applied to `collected` — the cash-basis figure. */
   dueCommission: number;
+  /**
+   * The one of the two the centre actually pays on.
+   *
+   * Every screen that answers "what do we owe this teacher" must read this
+   * rather than picking a column, or the payroll run and the teacher statement
+   * will quote different numbers for the same month.
+   */
+  payableCommission: number;
+  commissionBasis: CommissionBasis;
   fixedSalary: number;
   fixedDeductions: number;
   /** What this teacher is actually owed under their earnings mode, before
@@ -39,6 +51,12 @@ export type TeacherEarnings = {
 async function centreEarningsMode(): Promise<string | null> {
   const row = await db.setting.findUnique({ where: { key: "teacherEarningsMode" } });
   return row?.value ?? null;
+}
+
+/** Collected or Expected, centre-wide. One settings row, read once per query. */
+async function centreCommissionBasis(): Promise<CommissionBasis> {
+  const row = await db.setting.findUnique({ where: { key: "teacherCommissionBasis" } });
+  return resolveCommissionBasis(row?.value);
 }
 
 function rangeWhere(from?: Date, to?: Date) {
@@ -63,15 +81,17 @@ function build(
   collected: number,
   hours: number,
   centreDefault: string | null,
+  basis: CommissionBasis,
 ): TeacherEarnings {
   const pct = toNumber(t.commissionPct as never);
   const fixedSalary = toNumber(t.fixedSalary as never);
   const fixedDeductions = toNumber(t.fixedDeductions as never);
   const expectedCommission = (expected * pct) / 100;
   const dueCommission = (collected * pct) / 100;
+  const payableCommission = commissionOn(basis, { expectedCommission, dueCommission });
   const mode = resolveEarningsMode(t.earningsMode, centreDefault);
   const pay = computePay(mode, {
-    commission: dueCommission,
+    commission: payableCommission,
     salary: fixedSalary,
     deductions: fixedDeductions,
   });
@@ -84,6 +104,8 @@ function build(
     collected,
     expectedCommission,
     dueCommission,
+    payableCommission,
+    commissionBasis: basis,
     fixedSalary,
     fixedDeductions,
     netPayable: pay.net,
@@ -98,9 +120,10 @@ export async function getAllTeacherEarnings(
   to?: Date,
 ): Promise<TeacherEarnings[]> {
   const dateRange = rangeWhere(from, to);
-  const [teachers, centreDefault] = await Promise.all([
+  const [teachers, centreDefault, basis] = await Promise.all([
     db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     centreEarningsMode(),
+    centreCommissionBasis(),
   ]);
 
   const [sessionsGrouped, paymentsGrouped] = await Promise.all([
@@ -127,6 +150,7 @@ export async function getAllTeacherEarnings(
       toNumber(pMap.get(t.id)?.amount),
       toNumber(sMap.get(t.id)?.hours),
       centreDefault,
+      basis,
     ),
   );
 }
@@ -137,9 +161,10 @@ export async function getTeacherEarnings(
   from: Date,
   to: Date,
 ): Promise<TeacherEarnings | null> {
-  const [teacher, centreDefault] = await Promise.all([
+  const [teacher, centreDefault, basis] = await Promise.all([
     db.teacher.findUnique({ where: { id: teacherId } }),
     centreEarningsMode(),
+    centreCommissionBasis(),
   ]);
   if (!teacher) return null;
   const dateRange = rangeWhere(from, to);
@@ -159,5 +184,6 @@ export async function getTeacherEarnings(
     toNumber(p._sum.amount),
     toNumber(s._sum.hours),
     centreDefault,
+    basis,
   );
 }

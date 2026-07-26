@@ -89,7 +89,10 @@ export default async function TeacherProfilePage({
         <StatCard label={t("hoursTaught")} value={formatHours(earnings?.hours ?? 0)} icon={Clock} />
         <StatCard label={t("expectedIncome")} value={formatMoney(earnings?.expected ?? 0)} suffix={currency} icon={TrendingUp} />
         <StatCard label={t("collectedIncome")} value={formatMoney(earnings?.collected ?? 0)} suffix={currency} icon={TrendingDown} tone="success" />
-        <StatCard label={t("commissionDue")} value={formatMoney(earnings?.dueCommission ?? 0)} suffix={currency} icon={Wallet} tone="primary" />
+        {/* What we owe, on whichever basis the centre pays on. Reading
+            dueCommission here would contradict the payroll run the moment a
+            centre switches to Expected. */}
+        <StatCard label={t("commissionDue")} value={formatMoney(earnings?.payableCommission ?? 0)} suffix={currency} icon={Wallet} tone="primary" />
       </div>
 
       <ProfileTabs tabs={tabs} active={tab} basePath={`/teachers/${id}`} />
@@ -154,12 +157,12 @@ export default async function TeacherProfilePage({
             <Row label={t("hoursTaught")} value={formatHours(earnings?.hours ?? 0)} />
             <Row label={t("expectedIncome")} value={`${formatMoney(earnings?.expected ?? 0)} ${currency}`} />
             <Row label={t("collectedIncome")} value={`${formatMoney(earnings?.collected ?? 0)} ${currency}`} />
-            <Row label={t("commissionDue")} value={`${formatMoney(earnings?.dueCommission ?? 0)} ${currency}`} />
+            <Row label={t("commissionDue")} value={`${formatMoney(earnings?.payableCommission ?? 0)} ${currency}`} />
             <Row label={tp("payouts")} value={`− ${formatMoney(paidOut)} ${currency}`} />
             <div className="border-t border-border pt-2">
               <Row
                 label={t("netPayable")}
-                value={`${formatMoney((earnings?.dueCommission ?? 0) - paidOut)} ${currency}`}
+                value={`${formatMoney((earnings?.payableCommission ?? 0) - paidOut)} ${currency}`}
               />
             </div>
           </CardContent>

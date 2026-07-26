@@ -33,8 +33,11 @@ export type EarningRow = {
   collected: number;
   /** commissionPct x billed session totals. */
   expectedCommission: number;
-  /** commissionPct x income actually collected — this is what gets paid. */
+  /** commissionPct x income actually collected. */
   dueCommission: number;
+  /** Whichever of the two the centre pays on — see lib/earnings-mode.ts. */
+  payableCommission: number;
+  commissionBasis: "COLLECTED" | "EXPECTED";
   fixedSalary: number;
   fixedDeductions: number;
   netPayable: number;
@@ -356,8 +359,26 @@ export function PayrollClient({
                 <TableCell className="tabular-nums">{formatMoney(e.expected)}</TableCell>
                 <TableCell className="tabular-nums">{formatMoney(e.collected)}</TableCell>
                 <TableCell className="tabular-nums">{e.commissionPct}%</TableCell>
-                <TableCell className="tabular-nums text-muted-foreground">{formatMoney(e.expectedCommission)}</TableCell>
-                <TableCell className="tabular-nums font-medium">{formatMoney(e.dueCommission)} {currency}</TableCell>
+                {/* Emphasis marks the figure being paid on, so the table cannot
+                    imply one basis while payroll writes the other. */}
+                <TableCell
+                  className={
+                    e.commissionBasis === "EXPECTED"
+                      ? "tabular-nums font-medium"
+                      : "tabular-nums text-muted-foreground"
+                  }
+                >
+                  {formatMoney(e.expectedCommission)}
+                </TableCell>
+                <TableCell
+                  className={
+                    e.commissionBasis === "EXPECTED"
+                      ? "tabular-nums text-muted-foreground"
+                      : "tabular-nums font-medium"
+                  }
+                >
+                  {formatMoney(e.dueCommission)} {currency}
+                </TableCell>
                 {showSalary && (
                   <TableCell className="tabular-nums">{formatMoney(e.fixedSalary)}</TableCell>
                 )}
@@ -371,7 +392,7 @@ export function PayrollClient({
                         teacherId={e.teacherId}
                         teacherName={e.name}
                         period={period}
-                        commission={e.dueCommission}
+                        commission={e.payableCommission}
                         salary={e.fixedSalary}
                         deductions={e.fixedDeductions}
                         earningsMode={e.earningsMode}

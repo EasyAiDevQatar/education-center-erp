@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { BadgeCheck, CalendarDays, Phone, Mail, Wallet, FileText } from "lucide-react";
 import { requireRole, HR_ROLES } from "@/lib/rbac";
+import { requireModule } from "@/lib/modules";
 import { db } from "@/lib/db";
 import { formatMoney, toNumber } from "@/lib/money";
 import { displayName, fullName } from "@/lib/names";
@@ -39,6 +40,7 @@ export default async function EmployeeProfilePage({
   const { locale, id } = await params;
   setRequestLocale(locale);
   await requireRole(locale, HR_ROLES);
+  await requireModule(locale, "hr");
 
   const t = await getTranslations("hr");
   const tc = await getTranslations("common");

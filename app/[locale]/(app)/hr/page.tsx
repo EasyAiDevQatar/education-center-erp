@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole, HR_ROLES } from "@/lib/rbac";
+import { requireModule } from "@/lib/modules";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { displayName } from "@/lib/names";
@@ -17,6 +18,7 @@ export default async function HrPage({
   const { locale } = await params;
   setRequestLocale(locale);
   await requireRole(locale, HR_ROLES);
+  await requireModule(locale, "hr");
 
   const t = await getTranslations("hr");
 

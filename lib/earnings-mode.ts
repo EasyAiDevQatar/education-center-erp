@@ -10,6 +10,39 @@
  * and this is money.
  */
 
+/**
+ * Which figure a percentage commission is taken on.
+ *
+ * COLLECTED pays on money actually in the till, so the centre never pays out
+ * against an invoice that is never settled — the safe default, and what the
+ * system did before this was configurable. EXPECTED pays on what was billed,
+ * which some centres prefer because a teacher who taught the lesson has done
+ * their part regardless of when the parent pays; it moves the collection risk
+ * onto the centre, which is a real decision and so is a setting rather than an
+ * assumption.
+ */
+export const COMMISSION_BASES = ["COLLECTED", "EXPECTED"] as const;
+export type CommissionBasis = (typeof COMMISSION_BASES)[number];
+
+export const DEFAULT_COMMISSION_BASIS: CommissionBasis = "COLLECTED";
+
+export function isCommissionBasis(v: unknown): v is CommissionBasis {
+  return typeof v === "string" && (COMMISSION_BASES as readonly string[]).includes(v);
+}
+
+/** Stored value to basis, defaulting rather than throwing on anything stale. */
+export function resolveCommissionBasis(v: string | null | undefined): CommissionBasis {
+  return isCommissionBasis(v) ? v : DEFAULT_COMMISSION_BASIS;
+}
+
+/** The commission actually payable under a basis. */
+export function commissionOn(
+  basis: CommissionBasis,
+  c: { expectedCommission: number; dueCommission: number },
+): number {
+  return basis === "EXPECTED" ? c.expectedCommission : c.dueCommission;
+}
+
 export const EARNINGS_MODES = ["SALARY", "COMMISSION", "BOTH"] as const;
 export type EarningsMode = (typeof EARNINGS_MODES)[number];
 

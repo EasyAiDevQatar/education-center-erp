@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole, HR_ROLES } from "@/lib/rbac";
+import { requireModule } from "@/lib/modules";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/names";
 import { EXPIRY_WINDOW_DAYS, daysUntil, expiryLevel, latestPerType } from "@/lib/transport/fleet";
@@ -21,6 +22,7 @@ export default async function ExpiringDocumentsPage({
   const { locale } = await params;
   setRequestLocale(locale);
   await requireRole(locale, HR_ROLES);
+  await requireModule(locale, "hr");
   const t = await getTranslations("expiringDocs");
 
   const [employees, vehicles] = await Promise.all([

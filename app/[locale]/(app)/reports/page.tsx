@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireRole, FINANCE_ROLES } from "@/lib/rbac";
+import { requireModule } from "@/lib/modules";
 import { db } from "@/lib/db";
 import {
   getAttendance,
@@ -24,6 +25,7 @@ export default async function ReportsPage({
   const { locale } = await params;
   setRequestLocale(locale);
   await requireRole(locale, FINANCE_ROLES);
+  await requireModule(locale, "reports");
 
   const t = await getTranslations("reports");
   const sp = await searchParams;

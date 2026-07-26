@@ -15,6 +15,7 @@ import { SubjectsManager, type SubjectRow } from "./subjects-manager";
 import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
 import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
+import { ModulesSettings } from "./modules-settings";
 import { WpsSettings } from "./wps-settings";
 import { AccountingSettings } from "./accounting-settings";
 import { TransportSettings } from "./transport-settings";
@@ -26,7 +27,7 @@ import { SiteSettings } from "./site-settings";
 import { BackupSettings } from "./backup-settings";
 import { listBackups } from "@/lib/backups";
 import { parseServiceAccount } from "@/lib/drive";
-import { DEFAULT_EARNINGS_MODE, isEarningsMode } from "@/lib/earnings-mode";
+import { DEFAULT_EARNINGS_MODE, DEFAULT_COMMISSION_BASIS, isEarningsMode } from "@/lib/earnings-mode";
 import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
 import { AuditLogTable, type AuditRow } from "./audit-log-table";
@@ -249,6 +250,21 @@ export default async function SettingsPage({
       label: t("tabCenter"),
       sections: [
         {
+          key: "modules",
+          label: t("modulesSettings"),
+          node: (
+            <ModulesSettings
+              values={{
+                // Absent means on — see lib/modules.ts for why these three read
+                // the opposite way from transport, accounting and AI.
+                hr: settings.hrEnabled !== "0",
+                reports: settings.reportsEnabled !== "0",
+                leads: settings.leadsEnabled !== "0",
+              }}
+            />
+          ),
+        },
+        {
           key: "center",
           label: t("center"),
           node: (
@@ -334,6 +350,7 @@ export default async function SettingsPage({
           node: (
             <TeacherPaymentsSettings
               defaultMode={settings.teacherEarningsMode ?? DEFAULT_EARNINGS_MODE}
+              defaultBasis={settings.teacherCommissionBasis ?? DEFAULT_COMMISSION_BASIS}
               overriddenCount={teacherRows.filter((x) => isEarningsMode(x.earningsMode)).length}
               totalCount={teacherRows.length}
             />

@@ -36,7 +36,7 @@ export type NavItem = {
   children?: { href: string; key: string }[];
   /** Optional-module gate: item renders only when this flag is on. The flag
       value comes from Settings, read server-side in the (app) layout. */
-  flag?: "accounting" | "transport" | "ai";
+  flag?: "accounting" | "transport" | "ai" | "hr" | "reports" | "leads";
 };
 
 const ALL: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST", "TEACHER", "PARENT"];
@@ -66,7 +66,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/students", key: "students", icon: Users, roles: STAFF, section: "people" },
   { href: "/teachers", key: "teachers", icon: GraduationCap, roles: STAFF, section: "people" },
   { href: "/guardians", key: "guardians", icon: UserRound, roles: STAFF, section: "people" },
-  { href: "/leads", key: "leads", icon: UserPlus, roles: STAFF, section: "people" },
+  { href: "/leads", key: "leads", icon: UserPlus, roles: STAFF, section: "people", flag: "leads" },
   { href: "/groups", key: "groups", icon: Users2, roles: STAFF, section: "people" },
   { href: "/payments", key: "payments", icon: Receipt, roles: STAFF, section: "finance" },
   { href: "/packages", key: "packages", icon: Package, roles: STAFF, section: "finance" },
@@ -82,7 +82,7 @@ export const NAV_ITEMS: NavItem[] = [
       { href: "/payroll/runs", key: "payrollRuns" },
     ],
   },
-  { href: "/reports", key: "reports", icon: BarChart3, roles: FINANCE, section: "finance" },
+  { href: "/reports", key: "reports", icon: BarChart3, roles: FINANCE, section: "finance", flag: "reports" },
   {
     href: "/accounting",
     key: "accounting",
@@ -128,6 +128,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: BriefcaseBusiness,
     roles: ["ADMIN"],
     section: "hr",
+    flag: "hr",
     children: [
       { href: "/hr", key: "hrRegister" },
       { href: "/hr/documents", key: "hrDocuments" },
