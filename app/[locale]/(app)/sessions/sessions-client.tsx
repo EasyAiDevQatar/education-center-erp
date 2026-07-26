@@ -38,6 +38,7 @@ import {
 } from "./session-dialog";
 import { saveSession, deleteSession } from "./actions";
 import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
+import { useModuleFlags } from "@/components/app-shell/module-flags";
 
 export type SessionRow = SessionInit & {
   studentName: string;
@@ -85,6 +86,7 @@ export function SessionsClient({
 }) {
   const t = useTranslations("sessions");
   const tc = useTranslations("common");
+  const { transport } = useModuleFlags();
   const te = useTranslations("enums");
   const tg = useTranslations("group");
   const locale = useLocale();
@@ -246,7 +248,9 @@ export function SessionsClient({
           onOpenChange={(v) => { if (!v) setHandoffGroup(null); }}
           onSaved={() => router.refresh()}
         />
-        <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
+        {transport && (
+          <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
+        )}
       </form>
 
       <div className="rounded-lg border border-border bg-card">

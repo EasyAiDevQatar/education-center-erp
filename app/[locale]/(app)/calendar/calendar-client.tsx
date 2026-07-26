@@ -30,6 +30,7 @@ import {
 import { saveSession } from "../sessions/actions";
 import { GroupBookingDialog, type GroupOpt } from "../sessions/group-booking-dialog";
 import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
+import { useModuleFlags } from "@/components/app-shell/module-flags";
 import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 import { rescheduleSession, resizeSession } from "./actions";
 
@@ -177,6 +178,7 @@ export function CalendarClient({
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const { transport } = useModuleFlags();
 
   const hover = useSessionHover(currency);
   const [events, setEvents] = useState<CalEvent[]>(eventsProp);
@@ -387,7 +389,9 @@ export function CalendarClient({
           <option value="HOME">{te("location.HOME")}</option>
         </Select>
         {hover.portal}
-        <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
+        {transport && (
+          <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
+        )}
 
         <div className="ms-auto flex items-center gap-1 rounded-md border border-border p-0.5">
           {(["week", "day", "compact", "list"] as const).map((v) => (
@@ -570,7 +574,9 @@ export function CalendarClient({
                             <span className="truncate font-semibold">{ev.studentName}</span>
                             {ev.location === "HOME" ? (
                               <span className="flex shrink-0 items-center gap-0.5">
-                                <Route className={cn("size-3 shrink-0", tripTint(ev.trip))} />
+                                {transport && (
+                                  <Route className={cn("size-3 shrink-0", tripTint(ev.trip))} />
+                                )}
                                 <Home className="size-3 shrink-0" />
                               </span>
                             ) : (

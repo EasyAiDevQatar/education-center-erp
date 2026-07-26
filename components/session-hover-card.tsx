@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { useModuleFlags } from "@/components/app-shell/module-flags";
 import { Route, Phone, MapPin, ExternalLink } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
@@ -185,6 +186,7 @@ function HoverCard({
 }) {
   const t = useTranslations("hoverCard");
   const te = useTranslations("enums");
+  const { transport } = useModuleFlags();
   const d = data;
 
   return (
@@ -229,7 +231,12 @@ function HoverCard({
         />
       )}
 
-      {d.location === "HOME" && (
+      {/* Everything below is the transport module talking: the ride, who is
+          driving it, the little map, the link into the live map. With the
+          module off none of it has a meaning, so none of it is drawn — not
+          even the "no trip yet" line, which otherwise reports a gap in a
+          system the centre does not run. */}
+      {transport && d.location === "HOME" && (
         <div className="mt-1 space-y-1 border-t border-border pt-1.5">
           <div className="flex items-center gap-1.5 font-semibold">
             <Route className={`size-3.5 ${tripTint(d.trip)}`} />
@@ -265,7 +272,7 @@ function HoverCard({
           )}
         </div>
       )}
-      {d.location === "HOME" && !d.home && (
+      {transport && d.location === "HOME" && !d.home && (
         <p className="flex items-center gap-1 text-muted-foreground">
           <MapPin className="size-3" />
           {t("noPin")}

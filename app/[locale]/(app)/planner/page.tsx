@@ -13,6 +13,7 @@ import {
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { displayName } from "@/lib/names";
 import { tripsBySession } from "@/lib/session-trips";
+import { transportEnabled } from "@/lib/transport/settings";
 
 export default async function PlannerPage({
   params,
@@ -63,7 +64,9 @@ export default async function PlannerPage({
     ]);
 
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
-  const tripMap = await tripsBySession(sessions.map((s) => s.id), locale);
+  const tripMap = (await transportEnabled())
+    ? await tripsBySession(sessions.map((s) => s.id), locale)
+    : {};
   const centreLat = parseFloat(settings.centerLat ?? "");
   const centreLng = parseFloat(settings.centerLng ?? "");
   const centre =

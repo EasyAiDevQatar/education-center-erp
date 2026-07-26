@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { requireRole } from "@/lib/rbac";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { transportEnabled } from "@/lib/transport/settings";
 import { displayName } from "@/lib/names";
 import { formatMoney, toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -61,7 +62,10 @@ export default async function SessionProfilePage({
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
   const paid = s.allocations.reduce((a, x) => a + toNumber(x.amount), 0);
-  const trips = [...new Map(s.tripStops.map((st) => [st.trip.id, st.trip])).values()];
+  const showTransport = await transportEnabled();
+  const trips = showTransport
+    ? [...new Map(s.tripStops.map((st) => [st.trip.id, st.trip])).values()]
+    : [];
 
   const statusTone: Record<string, "success" | "warning" | "muted" | "default"> = {
     COMPLETED: "success",
@@ -169,6 +173,7 @@ export default async function SessionProfilePage({
           </CardContent>
         </Card>
 
+        {showTransport && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -193,6 +198,7 @@ export default async function SessionProfilePage({
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );

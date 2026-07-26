@@ -3,6 +3,7 @@ import { requireRole, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadGroupOpts } from "@/lib/groups";
 import { tripsBySession } from "@/lib/session-trips";
+import { transportEnabled } from "@/lib/transport/settings";
 import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
@@ -104,7 +105,9 @@ export default async function CalendarPage({
 
   const settingsMap = Object.fromEntries(settingsRows.map((r) => [r.key, r.value]));
   const currency = settingsMap.currency ?? "QAR";
-  const tripMap = await tripsBySession(sessions.map((s) => s.id), locale);
+  const tripMap = (await transportEnabled())
+    ? await tripsBySession(sessions.map((s) => s.id), locale)
+    : {};
   const centreLat = parseFloat(settingsMap.centerLat ?? "");
   const centreLng = parseFloat(settingsMap.centerLng ?? "");
   const centre =

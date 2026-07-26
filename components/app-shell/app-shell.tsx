@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ModuleFlagsProvider } from "./module-flags";
 import { useTranslations } from "next-intl";
 import { Menu, GraduationCap, LogOut, ChevronDown } from "lucide-react";
 import { ProfileMenu, type RoleOption } from "./profile-menu";
@@ -249,7 +250,20 @@ export function AppShell({
             </form>
           </div>
         </header>
-        <main className="flex-1 p-4 print:p-0 sm:p-6">{children}</main>
+        {/* The same flags the nav filters on, published to everything below.
+            A module that is off should be off on every screen, not just absent
+            from the menu. */}
+        <main className="flex-1 p-4 print:p-0 sm:p-6">
+          <ModuleFlagsProvider
+            value={{
+              accounting: !!flags?.accounting,
+              transport: !!flags?.transport,
+              ai: !!flags?.ai,
+            }}
+          >
+            {children}
+          </ModuleFlagsProvider>
+        </main>
       </div>
     </div>
   );

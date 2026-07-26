@@ -54,6 +54,7 @@ import {
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { deleteSession } from "../sessions/actions";
 import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
+import { useModuleFlags } from "@/components/app-shell/module-flags";
 import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 import {
   createDraftSession,
@@ -188,6 +189,7 @@ export function PlannerClient({
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const { transport } = useModuleFlags();
   // CENTER/HOME narrows the whole board — rows, totals, conflicts, print.
   const [locFilter, setLocFilter] = useState("");
   const sessions = useMemo(
@@ -422,7 +424,9 @@ export function PlannerClient({
           <option value="HOME">{te("location.HOME")}</option>
         </Select>
         {hover.portal}
-        <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
+        {transport && (
+          <TripPromptDialog info={tripPrompt} onClose={() => setTripPrompt(null)} />
+        )}
 
         <div className="ms-auto flex flex-wrap items-center gap-2">
           <Button
@@ -662,7 +666,9 @@ export function PlannerClient({
                               )}
                               {s.location === "HOME" ? (
                                 <>
-                                  <Route className={cn("size-3.5", tripTint(s.trip))} />
+                                  {transport && (
+                                    <Route className={cn("size-3.5", tripTint(s.trip))} />
+                                  )}
                                   <Home className="size-3.5" />
                                 </>
                               ) : (

@@ -2,7 +2,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { displayName } from "@/lib/names";
 import { toNumber } from "@/lib/money";
+import { notFound } from "next/navigation";
 import { requireDriverPortal } from "@/lib/portal";
+import { transportEnabled } from "@/lib/transport/settings";
 import { DriverClient, type DriverTrip } from "./driver-client";
 
 export default async function DriverPortalPage({
@@ -13,6 +15,12 @@ export default async function DriverPortalPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const { driverId, session } = await requireDriverPortal(locale);
+  // The driver app IS the transport module. Its actions already refused to do
+  // anything with the module off; the page itself still rendered, which left a
+  // working-looking screen on top of a switched-off system. `requireTransport`
+  // is the wrong guard here — it demands a staff role, and a driver is not
+  // staff — so this checks the flag alone.
+  if (!(await transportEnabled())) notFound();
   const t = await getTranslations("driverApp");
 
   const today = new Date().toISOString().slice(0, 10);
