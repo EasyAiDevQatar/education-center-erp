@@ -134,7 +134,8 @@
       "INSUFFICIENT_TRAVEL_TIME": "Road travel does not fit the schedule",
       "MISSING_LOCATION": "Missing location",
       "INVALID_COORDINATES": "Invalid coordinates",
-      "MISSING_SESSION_WINDOW": "Missing lesson time window"
+      "MISSING_SESSION_WINDOW": "Missing lesson time window",
+      "NO_ROOM_IN_SHIFT": "No room in this driver's shift"
     }
   },
   "nav": {
@@ -2473,7 +2474,8 @@
     "ridesMissing": "{n} lesson(s) missing a drop or a pick-up",
     "ridesFor": "{who}'s journeys today — pick one to assign it or change its driver",
     "legImpossible": "No driver can: {from} → {to} ({km} km) needs {needs} min and the day allows {has} — {short} min short. This is the two lessons being too close, not the drivers; move the later lesson at least {short} min.",
-    "legFix": "Move {student} {n} min later to {time} — and preview the impact"
+    "legFix": "Move {student} {n} min later to {time} — and preview the impact",
+    "assignNoneClean": "No driver comes out clean on this journey — the reason is under each name. You can still assign, or change the timing first."
   },
   "spacing": {
     "title": "No room to travel",

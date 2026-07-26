@@ -42,6 +42,7 @@ export function RideAssignDialog({
 }) {
   const t = useTranslations("transportMaster");
   const tp = useTranslations("transportPlanner");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
 
@@ -60,6 +61,16 @@ export function RideAssignDialog({
   const [saving, startSaving] = useTransition();
   /** Bumped after a successful assign so the journey list re-reads itself. */
   const [round, setRound] = useState(0);
+
+  /**
+   * Every candidate would produce a blocked ride.
+   *
+   * Distinct from "nobody is feasible": a driver can be perfectly able to take
+   * the job and still arrive after the lesson starts. That is the case a
+   * dispatcher actually meets, and the case the old gate stayed silent for.
+   */
+  const noneClean =
+    !!drivers && drivers.length > 0 && !drivers.some((d) => d.feasible && d.status !== "INVALID");
 
   // Step 1: which journeys need a driver.
   useEffect(() => {
@@ -180,35 +191,43 @@ export function RideAssignDialog({
           </ul>
         )}
 
-        {/* When nobody can do it, the reason is usually not about anybody.
-            Say what the journey needs before listing three refusals. */}
-        {legId && diag && drivers && !drivers.some((d) => d.feasible) && (
-          <p className="rounded-md border border-destructive bg-destructive/10 p-2.5 text-sm">
-            {t("legImpossible", {
-              from: diag.fromLabel,
-              to: diag.toLabel,
-              km: diag.km,
-              needs: diag.needsMin,
-              has: Math.max(0, diag.hasMin),
-              short: diag.shortfallMin,
-            })}
-            {diag.fix && onFix && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full"
-                onClick={() => onFix(diag.fix!)}
-              >
-                {t("legFix", {
-                  student: diag.fix.label,
-                  time: hhmm(diag.fix.toStartMin),
-                  n: diag.fix.toStartMin - diag.fix.fromStartMin,
-                })}
-              </Button>
-            )}
-          </p>
-        )}
+        {/* When nobody comes out clean, the reason is usually not about
+            anybody. If the journey itself is short of minutes, no driver can be
+            the answer — say what it needs and offer the reschedule. If it is
+            not, the per-driver reasons below carry it, so point at those rather
+            than blaming the clock for something else. */}
+        {legId && noneClean &&
+          (diag && diag.shortfallMin > 0 ? (
+            <div className="rounded-md border border-destructive bg-destructive/10 p-2.5 text-sm">
+              {t("legImpossible", {
+                from: diag.fromLabel,
+                to: diag.toLabel,
+                km: diag.km,
+                needs: diag.needsMin,
+                has: Math.max(0, diag.hasMin),
+                short: diag.shortfallMin,
+              })}
+              {diag.fix && onFix && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => onFix(diag.fix!)}
+                >
+                  {t("legFix", {
+                    student: diag.fix.label,
+                    time: hhmm(diag.fix.toStartMin),
+                    n: diag.fix.toStartMin - diag.fix.fromStartMin,
+                  })}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <p className="rounded-md border border-amber-400/50 bg-amber-400/10 p-2.5 text-sm">
+              {t("assignNoneClean")}
+            </p>
+          ))}
 
         {legId && drivers && drivers.length === 0 && (
           <p className="text-sm text-muted-foreground">{t("assignNone")}</p>
@@ -257,6 +276,38 @@ export function RideAssignDialog({
                     </span>
                     {d.feasible && <Check className="size-4 shrink-0 opacity-40" />}
                   </button>
+                  {/* A red badge with nothing beside it is the screen refusing
+                      to explain itself. */}
+                  {d.reasons.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 ps-8 text-[11px] leading-snug">
+                      {d.reasons.slice(0, 3).map((r) => (
+                        <li key={r.code} className="flex items-start gap-1.5">
+                          <span
+                            aria-hidden
+                            className={`mt-1 size-1.5 shrink-0 rounded-full ${
+                              r.level === "INVALID" ? "bg-destructive" : "bg-amber-500"
+                            }`}
+                          />
+                          <span dir="auto">
+                            <span className="text-foreground/80">
+                              {tc.has(`validationCode.${r.code}`)
+                                ? tc(`validationCode.${r.code}`)
+                                : r.code}
+                            </span>
+                            {/* The validator writes its detail in English and
+                                the planner shows it the same way; it is where
+                                the actual minutes live. */}
+                            {r.text && (
+                              <span className="ms-1 text-muted-foreground" dir="ltr">
+                                {"\u2014 "}
+                                {r.text}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

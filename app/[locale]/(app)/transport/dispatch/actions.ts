@@ -83,15 +83,37 @@ function allocateOne(
   return { items, assignedCount: items.filter((x) => x.a).length, score: assignments[0]?.score ?? null };
 }
 
+/**
+ * Why a driver would be blocked, in the validator's own words.
+ *
+ * `code` is usually a `ValidationCode`, looked up in `common.validationCode.*`;
+ * `NO_ROOM_IN_SHIFT` is ours, for the case the validator never gets to see
+ * because the allocator placed nothing at all.
+ */
+export type DriverReason = { code: string; level: string; text: string };
+
 export type PreviewAll =
-  | { ok: true; drivers: { driverId: string; status: string; feasible: boolean }[] }
+  | {
+      ok: true;
+      drivers: { driverId: string; status: string; feasible: boolean; reasons: DriverReason[] }[];
+    }
   | { ok: false; error: string };
 
 /**
  * Score assigning a pool passenger to EVERY driver in one plan build — powers the
  * best-lane halo the moment a card is picked up. No writes.
  */
-export async function previewAssignAll(locale: string, day: string, passengerKey: string): Promise<PreviewAll> {
+export async function previewAssignAll(
+  locale: string,
+  day: string,
+  passengerKey: string,
+  /**
+   * Score just this journey. Without it every driver is judged on "take this
+   * person's whole day" — a different question from the one the Assign button
+   * asks. See the note over `scored`.
+   */
+  legId?: string,
+): Promise<PreviewAll> {
   const s = await guard();
   if (!s) return { ok: false, error: "forbidden" };
   if (!daySchema.safeParse(day).success || !keySchema.safeParse(passengerKey).success) return { ok: false, error: "invalid" };
@@ -101,13 +123,36 @@ export async function previewAssignAll(locale: string, day: string, passengerKey
   const plan = await buildDayPlan(locale, day);
   const pLegs = plan.legs.filter((l) => l.passengerKind === pk.kind && l.passengerId === pk.id);
   if (pLegs.length === 0) return { ok: false, error: "noLegs" };
+
+  // Score exactly what will be written. `assignLegToDriver` allocates ONE leg;
+  // scoring all of them judged each driver on taking the entire day, and
+  // `allocateOne` is deliberately lenient — a leg that does not fit still
+  // becomes a trip, falls back to its session window, and is flagged INVALID.
+  // `worstOf` then collapsed that to blocked for EVERY driver, including the
+  // one already driving the journey cleanly: a correct answer to a question
+  // nobody asked.
+  const scored = legId ? pLegs.filter((l) => l.id === legId) : pLegs;
+  if (scored.length === 0) return { ok: false, error: "noLegs" };
   const start = dayStart(day);
 
-  const drivers: { driverId: string; status: string; feasible: boolean }[] = [];
+  const drivers: {
+    driverId: string;
+    status: string;
+    feasible: boolean;
+    reasons: DriverReason[];
+  }[] = [];
   for (const ad of plan.allocDrivers) {
-    const { items, assignedCount, score } = allocateOne(plan, pLegs, ad.id);
+    const { items, assignedCount, score } = allocateOne(plan, scored, ad.id);
     if (assignedCount === 0) {
-      drivers.push({ driverId: ad.id, status: "INVALID", feasible: false });
+      // Nothing placed at all: shift, deadhead, or the clock. The validator
+      // never runs on a trip that was never built, so say the one true thing
+      // rather than showing a bare red badge.
+      drivers.push({
+        driverId: ad.id,
+        status: "INVALID",
+        feasible: false,
+        reasons: [{ code: "NO_ROOM_IN_SHIFT", level: "INVALID", text: "" }],
+      });
       continue;
     }
     const driver = plan.drivers.find((d) => d.id === ad.id) ?? null;
@@ -116,7 +161,17 @@ export async function previewAssignAll(locale: string, day: string, passengerKey
       items, driverId: ad.id, driver, autoAllocated: false, allocationScore: score, persist: false,
     });
     const status = built.reduce((acc, b) => worstOf(acc, b.validationStatus), "VALID");
-    drivers.push({ driverId: ad.id, status, feasible: true });
+    // `worstOf` keeps the verdict and drops the evidence. The messages were
+    // computed either way; discarding them is what left the badge unanswerable.
+    const seen = new Set<string>();
+    const reasons: DriverReason[] = [];
+    for (const b of built)
+      for (const m of b.validationMessages) {
+        if (m.level === "VALID" || seen.has(m.code)) continue;
+        seen.add(m.code);
+        reasons.push({ code: m.code, level: m.level, text: m.text });
+      }
+    drivers.push({ driverId: ad.id, status, feasible: true, reasons });
   }
   return { ok: true, drivers };
 }
@@ -306,7 +361,6 @@ export async function assignLegToDriver(
   await writeAudit("Trip", `assign-leg-${legId}-${day}`, "CREATE", {
     after: { driverId, legId, trips: built.length },
   });
-  revalidatePath(`/${locale}/transport/master`);
   revalidatePath(`/${locale}/transport/master`);
   revalidatePath(`/${locale}/transport/planner`);
   return { ok: true, message: String(built.length) };

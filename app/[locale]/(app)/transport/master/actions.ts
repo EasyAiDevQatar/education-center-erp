@@ -21,7 +21,7 @@ import { comparePlans, EMPTY_METRICS, type PlanMetrics } from "@/lib/transport/c
 import { buildDayPlan, flagTripsForSession, type DayPlan } from "@/lib/transport/trip-data";
 import { transportEnabled, loadTransportConfig, distanceKm } from "@/lib/transport/settings";
 import { travelMinutes } from "@/lib/transport/eta";
-import { previewAssignAll } from "../dispatch/actions";
+import { previewAssignAll, type DriverReason } from "../dispatch/actions";
 import type { Leg } from "@/lib/transport/chain";
 import type { Role, SessionType } from "@/lib/enums";
 
@@ -726,6 +726,8 @@ export type DriverOption = {
   status: string;
   /** False when this driver cannot serve the journey at all. */
   feasible: boolean;
+  /** Why, whenever the answer is anything other than a clean yes. */
+  reasons: DriverReason[];
 };
 
 /**
@@ -750,7 +752,8 @@ export async function driverOptionsFor(
   const forbidden = await guard();
   if (forbidden) return { error: forbidden };
 
-  const preview = await previewAssignAll(locale, day, passengerKey);
+  // Ask about the journey the dispatcher picked, not about the whole day.
+  const preview = await previewAssignAll(locale, day, passengerKey, legId);
   if (!preview.ok) return { error: preview.error };
 
   // Why nobody can do it is usually not about anybody. A journey between two
@@ -836,6 +839,7 @@ export async function driverOptionsFor(
         plate: byId.get(d.driverId)?.defaultVehicle?.plate ?? null,
         status: d.status,
         feasible: d.feasible,
+        reasons: d.reasons,
       }))
       // Whoever can actually do it first, then by how clean the ride would be.
       .sort(
