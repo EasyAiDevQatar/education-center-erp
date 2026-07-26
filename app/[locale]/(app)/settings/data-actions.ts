@@ -4,6 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { toNumber } from "@/lib/money";
+import { packageStatusFor } from "@/lib/billing-rules";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
 import { WIPE_PHRASE, SEED_SPEC, type SeedKey } from "@/lib/data-zone";
@@ -566,6 +568,45 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     sessions++;
   }
   summary.sessions = sessions;
+
+  // --- draw the packages down against real sessions ---
+  //
+  // Packages used to be created and then never touched again: nothing was ever
+  // linked to one, so `hoursUsed` stayed 0 and the price sat on the student's
+  // balance as a charge for hours nobody ever consumed. A 20-hour package is
+  // 3,000, which is how a freshly seeded student showed 3,937.5 owing against
+  // 937.5 of visible lessons — the arithmetic was right (balances count
+  // package price plus un-packaged sessions) and the data was nonsense.
+  //
+  // Attaching sessions is what makes a package behave the way the billing rules
+  // already describe: covered sessions stop being charged individually, the
+  // package price is the charge, and the hours run down.
+  let packagedSessions = 0;
+  for (const pkg of await db.package.findMany({ orderBy: { purchasedAt: "asc" } })) {
+    const capacity = toNumber(pkg.totalHours);
+    // Oldest first, so the hours are consumed in the order they were taught.
+    const candidates = await db.session.findMany({
+      where: { studentId: pkg.studentId, packageId: null, status: { not: "DRAFT" } },
+      orderBy: { date: "asc" },
+    });
+    let used = 0;
+    for (const s of candidates) {
+      const h = toNumber(s.hours);
+      if (used + h > capacity) continue; // leave it billed separately
+      await db.session.update({
+        where: { id: s.id },
+        // Covered by the package, so it is settled and draws hours down.
+        data: { packageId: pkg.id, packageApplied: true, paymentStatus: "PAID" },
+      });
+      used += h;
+      packagedSessions++;
+    }
+    await db.package.update({
+      where: { id: pkg.id },
+      data: { hoursUsed: used, status: packageStatusFor(capacity, used, pkg.expiresAt) },
+    });
+  }
+  summary.packagedSessions = packagedSessions;
 
   // --- today's roster: confirmed sessions around "now" in live check-in
   // states, so the attendance screens demo without anyone scanning a card ---
