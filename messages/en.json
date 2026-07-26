@@ -1244,7 +1244,12 @@
       "NONE": "The scan is refused outright."
     },
     "graceHours": "Auto-complete grace (hours)",
-    "graceHoursHint": "A session left unmarked this long after it ends is completed by the system and flagged for review."
+    "graceHoursHint": "A session left unmarked this long after it ends is completed by the system and flagged for review.",
+    "noShow": "If the student does not attend",
+    "noShowHints": {
+      "CANCELLED": "The session counts as cancelled: the student is not charged and the teacher earns nothing on it.",
+      "TAUGHT": "The session counts as taught: the student is charged in full and the teacher takes their percentage."
+    }
   },
   "years": {
     "title": "Academic years",
@@ -2502,5 +2507,9 @@
   "commissionBases": {
     "COLLECTED": "Collected",
     "EXPECTED": "Expected (billed)"
+  },
+  "noShowPolicies": {
+    "CANCELLED": "Cancelled — no charge",
+    "TAUGHT": "Taught — charged in full"
   }
 }

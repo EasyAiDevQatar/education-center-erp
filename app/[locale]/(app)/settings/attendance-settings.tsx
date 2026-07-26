@@ -8,6 +8,7 @@ import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { NO_SHOW_POLICIES, DEFAULT_NO_SHOW_POLICY } from "@/lib/attendance-policy";
 import { saveAttendanceSettings } from "./attendance-actions";
 
 /** What to do when a scanned student has nothing booked today. */
@@ -21,10 +22,12 @@ export function AttendanceSettings({
     walkIn: string;
     pickSession: boolean;
     graceHours: string;
+    noShow: string;
   };
 }) {
   const t = useTranslations("attendanceSettings");
   const tc = useTranslations("common");
+  const tn = useTranslations("noShowPolicies");
   const locale = useLocale();
   const router = useRouter();
 
@@ -35,6 +38,11 @@ export function AttendanceSettings({
   );
   const [pickSession, setPickSession] = useState(values.pickSession);
   const [graceHours, setGraceHours] = useState(values.graceHours);
+  const [noShow, setNoShow] = useState(
+    (NO_SHOW_POLICIES as readonly string[]).includes(values.noShow)
+      ? values.noShow
+      : DEFAULT_NO_SHOW_POLICY,
+  );
   const [pending, start] = useTransition();
   const [saved, setSaved] = useState(false);
 
@@ -45,6 +53,7 @@ export function AttendanceSettings({
         walkIn,
         pickSession,
         graceHours: parseInt(graceHours, 10) || 6,
+        noShow: noShow as "CANCELLED" | "TAUGHT",
       });
       if (res.ok) {
         setSaved(true);
@@ -87,6 +96,19 @@ export function AttendanceSettings({
           value={graceHours}
           onChange={(e) => setGraceHours(e.target.value)}
         />
+      </FormField>
+
+      {/* What an absence costs. Its own field rather than a line in the
+          walk-in box: that one is about who a stray student belongs to, this
+          one is about whether a parent is charged. */}
+      <FormField label={t("noShow")} htmlFor="no-show" hint={t(`noShowHints.${noShow}`)}>
+        <Select id="no-show" value={noShow} onChange={(e) => setNoShow(e.target.value)}>
+          {NO_SHOW_POLICIES.map((p) => (
+            <option key={p} value={p}>
+              {tn(p)}
+            </option>
+          ))}
+        </Select>
       </FormField>
 
       <div className="flex items-center gap-2">

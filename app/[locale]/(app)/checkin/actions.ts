@@ -111,10 +111,21 @@ export async function checkOutSession(locale: string, id: string): Promise<Check
   return { ok: true };
 }
 
-/** Mark a scheduled session as a no-show. */
+/**
+ * Mark a scheduled session as a no-show.
+ *
+ * The student did not attend, so any package hours it had drawn go back and the
+ * payment status is recomputed under the centre's no-show rule. This used to be
+ * a bare status write, which left drawn hours consumed and the parent still
+ * shown as owing for a lesson nobody gave.
+ */
 export async function markNoShow(locale: string, id: string): Promise<CheckinResult> {
   if (await guard()) return { error: "forbidden" };
-  await db.session.update({ where: { id }, data: { status: "NO_SHOW" } });
+  await db.$transaction(async (tx) => {
+    await revertPackageHours(tx, id);
+    await tx.session.update({ where: { id }, data: { status: "NO_SHOW" } });
+    await syncSessionPaymentStatus(tx, id);
+  });
   await writeAudit("Session", id, "UPDATE", { after: { status: "NO_SHOW" } });
   revalidate(locale);
   return { ok: true };
@@ -190,7 +201,10 @@ async function applyMark(sessionId: string, mark: Mark, auto = false) {
     });
 
     if (willComplete && !wasCompleted) await applyPackageHours(tx, sessionId);
-    else if (!willComplete && wasCompleted) await revertPackageHours(tx, sessionId);
+    // Not just from COMPLETED: `packageApplied` is the record of what is held,
+    // and revert is a no-op when nothing is, so releasing on any move out of a
+    // billable state is both correct and cheap.
+    else if (!willComplete) await revertPackageHours(tx, sessionId);
     await syncSessionPaymentStatus(tx, sessionId);
   });
   return true;

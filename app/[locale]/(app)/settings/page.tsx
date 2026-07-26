@@ -6,6 +6,7 @@ import { currentPriceMatrix } from "@/lib/pricing";
 import { PageHeader } from "@/components/page-header";
 import { SettingsShell, type SettingsGroup } from "./settings-shell";
 import { AttendanceSettings } from "./attendance-settings";
+import { DEFAULT_NO_SHOW_POLICY } from "@/lib/attendance-policy";
 import { YearsManager } from "./years-manager";
 import { PROVIDERS, maskSecret } from "@/lib/integrations/registry";
 import { CenterProfileForm } from "./center-profile-form";
@@ -333,6 +334,7 @@ export default async function SettingsPage({
               values={{
                 walkIn: settings.attendanceWalkIn ?? "FLAG",
                 pickSession: settings.attendancePickSession === "true",
+                noShow: settings.noShowPolicy ?? DEFAULT_NO_SHOW_POLICY,
                 graceHours: settings.autoCompleteGraceHours ?? "6",
               }}
             />

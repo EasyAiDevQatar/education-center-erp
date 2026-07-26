@@ -13,6 +13,8 @@ const schema = z.object({
   walkIn: z.enum(["FLAG", "ASSIGN", "ASK", "NONE"]),
   pickSession: z.coerce.boolean(),
   graceHours: z.coerce.number().int().min(0).max(168),
+  /** CANCELLED | TAUGHT — whether an absence still bills. */
+  noShow: z.enum(["CANCELLED", "TAUGHT"]),
 });
 
 export async function saveAttendanceSettings(
@@ -30,6 +32,7 @@ export async function saveAttendanceSettings(
     ["attendanceWalkIn", d.walkIn],
     ["attendancePickSession", String(d.pickSession)],
     ["autoCompleteGraceHours", String(d.graceHours)],
+    ["noShowPolicy", d.noShow],
   ] as const) {
     await db.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
   }
@@ -37,6 +40,11 @@ export async function saveAttendanceSettings(
   await writeAudit("Setting", "attendance", "UPDATE", { after: d });
   revalidatePath(`/${locale}/settings`);
   revalidatePath(`/${locale}/checkin`);
+  // The no-show rule moves money, so every screen quoting a balance or a
+  // payout has to be rebuilt too, not only the kiosk that sets the status.
+  revalidatePath(`/${locale}/payments`);
+  revalidatePath(`/${locale}/payroll`);
+  revalidatePath(`/${locale}/students`);
   return { ok: true };
 }
 

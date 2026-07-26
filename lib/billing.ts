@@ -6,6 +6,16 @@ import { paymentStatusFor, packageStatusFor } from "./billing-rules";
 
 // Re-exported so callers have one billing entry point on the server.
 export { paymentStatusFor, packageStatusFor, autoAllocate } from "./billing-rules";
+import { resolveNoShowPolicy, noShowIsChargeable, unbilledStatuses } from "./attendance-policy";
+
+/**
+ * The centre's no-show rule. One settings row, read where money is decided
+ * rather than passed down from a UI that might be showing something stale.
+ */
+export async function noShowPolicy() {
+  const row = await db.setting.findUnique({ where: { key: "noShowPolicy" } });
+  return resolveNoShowPolicy(row?.value);
+}
 
 /* --------------------------- package application ---------------------------- */
 
@@ -64,9 +74,18 @@ export async function revertPackageHours(tx: Tx, sessionId: string): Promise<voi
 export async function syncSessionPaymentStatus(tx: Tx, sessionId: string): Promise<void> {
   const session = await tx.session.findUnique({
     where: { id: sessionId },
-    select: { id: true, total: true, packageId: true },
+    select: { id: true, total: true, packageId: true, status: true },
   });
   if (!session) return;
+
+  // A no-show the centre does not charge for owes nothing, so it is settled the
+  // same way a package-covered session is: there is no payment to wait for.
+  // Leaving it UNPAID would put a debt on the parent's statement for a lesson
+  // the centre has decided not to bill, and chasing that is worse than the bug.
+  if (session.status === "NO_SHOW" && !noShowIsChargeable(await noShowPolicy())) {
+    await tx.session.update({ where: { id: sessionId }, data: { paymentStatus: "PAID" } });
+    return;
+  }
 
   // Package-covered sessions are paid for by the package purchase, not per session.
   if (session.packageId) {
@@ -92,7 +111,7 @@ export async function outstandingSessions(studentId: string) {
     where: {
       studentId,
       packageId: null, // package-covered sessions aren't separately payable
-      status: { notIn: ["DRAFT", "CANCELLED"] },
+      status: { notIn: unbilledStatuses(await noShowPolicy(), ["DRAFT", "CANCELLED"]) },
     },
     orderBy: { date: "asc" },
     include: { allocations: true, teacher: true },

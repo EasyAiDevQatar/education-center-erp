@@ -1,5 +1,7 @@
 import "server-only";
 import { db } from "./db";
+import { noShowPolicy } from "./billing";
+import { unbilledStatuses } from "./attendance-policy";
 import { toNumber } from "./money";
 import {
   commissionOn,
@@ -120,18 +122,25 @@ export async function getAllTeacherEarnings(
   to?: Date,
 ): Promise<TeacherEarnings[]> {
   const dateRange = rangeWhere(from, to);
-  const [teachers, centreDefault, basis] = await Promise.all([
+  const [teachers, centreDefault, basis, nsPolicy] = await Promise.all([
     db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     centreEarningsMode(),
     centreCommissionBasis(),
+    noShowPolicy(),
   ]);
 
   const [sessionsGrouped, paymentsGrouped] = await Promise.all([
     db.session.groupBy({
       by: ["teacherId"],
       _sum: { total: true, hours: true },
-      // Planner drafts are unconfirmed — never earn commission.
-      where: { status: { not: "DRAFT" }, ...(dateRange ? { date: dateRange } : {}) },
+      // Planner drafts are unconfirmed — never earn commission. Nor does a
+      // no-show the centre does not bill: there is no revenue to take a
+      // percentage of. CANCELLED is deliberately left as it was — it is a
+      // separate rule and changing it here would move money quietly.
+      where: {
+        status: { notIn: unbilledStatuses(nsPolicy, ["DRAFT"]) },
+        ...(dateRange ? { date: dateRange } : {}),
+      },
     }),
     db.payment.groupBy({
       by: ["teacherId"],
@@ -161,17 +170,22 @@ export async function getTeacherEarnings(
   from: Date,
   to: Date,
 ): Promise<TeacherEarnings | null> {
-  const [teacher, centreDefault, basis] = await Promise.all([
+  const [teacher, centreDefault, basis, nsPolicy] = await Promise.all([
     db.teacher.findUnique({ where: { id: teacherId } }),
     centreEarningsMode(),
     centreCommissionBasis(),
+    noShowPolicy(),
   ]);
   if (!teacher) return null;
   const dateRange = rangeWhere(from, to);
   const [s, p] = await Promise.all([
     db.session.aggregate({
       _sum: { total: true, hours: true },
-      where: { teacherId, date: dateRange, status: { not: "DRAFT" } },
+      where: {
+        teacherId,
+        date: dateRange,
+        status: { notIn: unbilledStatuses(nsPolicy, ["DRAFT"]) },
+      },
     }),
     db.payment.aggregate({
       _sum: { amount: true },
