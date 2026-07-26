@@ -2377,6 +2377,7 @@
     "legendCentre": "حصة بالمركز",
     "legendTravel": "تنقل",
     "legendWaiting": "انتظار",
+    "legendOwnCar": "سيارة خاصة",
     "layerHome": "منزلية",
     "layerCentre": "المركز",
     "layerTrips": "الرحلات",
@@ -2386,6 +2387,7 @@
     "gapsHint": "{n} فترات تحتاج انتباهاً",
     "gapKind": {
       "TRAVEL_NOT_PLANNED": "{from}–{to}: تنقّل مطلوب دون رحلة مخططة ({n} د)",
+      "TRAVEL_OWN_CAR": "{from}–{to}: تنقّل بسيارته الخاصة ({n} د)",
       "WAITING": "{from}–{to}: انتظار ({n} د)",
       "FREE": "{from}–{to}: فراغ ({n} د)"
     },

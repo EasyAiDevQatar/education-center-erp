@@ -119,6 +119,15 @@ export type MasterLane = {
    */
   centreBands: { startMin: number; endMin: number }[];
   /**
+   * This lane's person drives themselves, so the fleet owes them nothing.
+   *
+   * Read from `Teacher.transportMode`, the same field the leg engine already
+   * honours — which is why their journeys never reach the pool. The board was
+   * deciding separately, from location alone, and so contradicted the planner:
+   * zero journeys required, five red "no ride planned" marks.
+   */
+  selfDriven: boolean;
+  /**
    * Every uncovered stretch, classified. Nothing on a row is left blank
    * without a reason — that is how a missing ride hid as empty space.
    */
@@ -358,7 +367,13 @@ export async function masterBoard(
   const laneFor = (id: string, name: string, subtitle: string | null): MasterLane => {
     let l = lanes.get(id);
     if (!l) {
-      l = { id, kind: laneKind, name, subtitle, sessions: [], trips: [], centreBands: [], gaps: [], uncoveredMin: 0 };
+      l = {
+        id, kind: laneKind, name, subtitle,
+        sessions: [], trips: [], centreBands: [], gaps: [],
+        uncoveredMin: 0,
+        // Only a teacher lane can be self-driven; set from the teacher below.
+        selfDriven: false,
+      };
       lanes.set(id, l);
     }
     return l;
@@ -367,6 +382,7 @@ export async function masterBoard(
   for (const s of sessions) {
     if (laneKind !== "TEACHER" || !s.teacher) continue;
     const lane = laneFor(s.teacher.id, displayName(s.teacher, locale), s.teacher.phone ?? null);
+    lane.selfDriven = s.teacher.transportMode === "OWN_CAR";
     const startMin = minutesOf(s.date);
     lane.sessions.push({
       id: s.id,
@@ -546,6 +562,7 @@ export async function masterBoard(
     lane.gaps = classifyGaps(commitments, {
       maxWaitMin: config.rules.maxStudentWaitMin,
       subject: laneKind === "TEACHER" ? "PASSENGER" : "DRIVER",
+      selfDriven: lane.selfDriven,
     });
 
     lane.sessions.sort((a, b) => a.startMin - b.startMin);

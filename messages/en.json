@@ -2377,6 +2377,7 @@
     "legendCentre": "Centre lesson",
     "legendTravel": "Travel",
     "legendWaiting": "Waiting",
+    "legendOwnCar": "Own car",
     "layerHome": "Home",
     "layerCentre": "Centre",
     "layerTrips": "Trips",
@@ -2386,6 +2387,7 @@
     "gapsHint": "{n} stretches need attention",
     "gapKind": {
       "TRAVEL_NOT_PLANNED": "{from}–{to}: must travel, no ride planned ({n} min)",
+      "TRAVEL_OWN_CAR": "{from}–{to}: travels in own car ({n} min)",
       "WAITING": "{from}–{to}: waiting ({n} min)",
       "FREE": "{from}–{to}: free ({n} min)"
     },

@@ -185,3 +185,38 @@ describe("classifyGaps — a driver's row means something different", () => {
     expect(gaps[0].problem).toBe(false);
   });
 });
+
+describe("classifyGaps — a teacher who drives herself", () => {
+  // The same shape that produced five red marks for حنان on 2026-08-01: home
+  // lesson, then centre lessons, with nothing booked between them. She is
+  // OWN_CAR, so the leg engine never generated a journey — and the board said
+  // one was missing anyway.
+  const day: Commitment[] = [lessonHome(H(14), H(15)), lessonCentre(H(16), H(17))];
+
+  it("calls the move own-car travel, not a missing ride", () => {
+    const gaps = classifyGaps(day, { ...opts, selfDriven: true });
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0].kind).toBe("TRAVEL_OWN_CAR");
+  });
+
+  it("never flags it as a problem, however long", () => {
+    const long = [lessonHome(H(9), H(10)), lessonCentre(H(17), H(18))];
+    for (const d of [day, long]) {
+      const [gap] = classifyGaps(d, { ...opts, selfDriven: true });
+      expect(gap.problem).toBe(false);
+    }
+  });
+
+  it("still reports the same move for a teacher the fleet drives", () => {
+    const gaps = classifyGaps(day, opts);
+    expect(gaps[0].kind).toBe("TRAVEL_NOT_PLANNED");
+    expect(gaps[0].problem).toBe(true);
+  });
+
+  it("leaves waiting alone — driving yourself says nothing about idle time", () => {
+    const samePlace = [lessonCentre(H(14), H(15)), lessonCentre(H(16), H(17))];
+    const [gap] = classifyGaps(samePlace, { ...opts, selfDriven: true });
+    expect(gap.kind).toBe("WAITING");
+    expect(gap.problem).toBe(true); // 60 min, past the 20-minute limit
+  });
+});

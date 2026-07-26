@@ -26,6 +26,13 @@ export type CommitmentKind = "LESSON_HOME" | "LESSON_CENTRE" | "TRIP";
 export type GapKind =
   /** Between two lessons in different places, with no ride booked. */
   | "TRAVEL_NOT_PLANNED"
+  /**
+   * The same move, by someone who drives themselves. Shown so the row still
+   * reads as a continuous day, but never a problem: there is no ride to plan,
+   * so calling it "no ride planned" reported a defect against a person who
+   * was never the fleet's job.
+   */
+  | "TRAVEL_OWN_CAR"
   /** Idle at the centre between commitments there. */
   | "WAITING"
   /** Genuinely nothing on — before the day starts or after it ends. */
@@ -79,6 +86,14 @@ export function classifyGaps(
      * as intended rather than something to flag. Same gap, opposite meaning.
      */
     subject?: "PASSENGER" | "DRIVER";
+    /**
+     * This person arranges their own travel (`transportMode = OWN_CAR`).
+     *
+     * Orthogonal to `subject`: they are still a passenger row — they have
+     * lessons, not a fleet shift — but moving between two places is simply
+     * something they do, not work waiting to be handed out.
+     */
+    selfDriven?: boolean;
   },
 ): ClassifiedGap[] {
   const subject = opts.subject ?? "PASSENGER";
@@ -119,7 +134,9 @@ export function classifyGaps(
         subject === "DRIVER"
           ? "FREE"
           : mustMove
-            ? "TRAVEL_NOT_PLANNED"
+            ? opts.selfDriven
+              ? "TRAVEL_OWN_CAR"
+              : "TRAVEL_NOT_PLANNED"
             : touchesRide || from === "CENTRE" || to === "CENTRE"
               ? "WAITING"
               : "FREE";

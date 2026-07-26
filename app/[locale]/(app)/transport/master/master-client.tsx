@@ -58,6 +58,9 @@ const BLOCK = {
  */
 const GAP = {
   TRAVEL_NOT_PLANNED: "bg-destructive/20 ring-1 ring-inset ring-destructive/50",
+  // Same violet as a ride, because it IS travel — dashed and hollow because it
+  // is not ours to plan. Red would say "fix me" about someone already sorted.
+  TRAVEL_OWN_CAR: "bg-violet-500/10 border border-dashed border-violet-500/60",
   WAITING_PROBLEM: "bg-amber-400/30 ring-1 ring-inset ring-amber-500/40",
   WAITING: "bg-amber-400/15",
   FREE: "bg-transparent",
@@ -611,6 +614,13 @@ export function MasterClient({
               <Hourglass className="size-3.5 text-amber-600" />
               {t("legendWaiting")}
             </span>
+            {/* Not a chip: you cannot hand somebody their own car. It appears
+                by itself on the rows of teachers who drive, which is the whole
+                point — nobody should have to know why that row has no red. */}
+            <span className="inline-flex items-center gap-1">
+              <CarFront className="size-3.5 text-violet-600" />
+              {t("legendOwnCar")}
+            </span>
             {board.canDrag && byPerson && (
               <span className="inline-flex items-center gap-1">
                 <MoveHorizontal className="size-3.5" />
@@ -1096,19 +1106,17 @@ function LaneRow({
                 g.kind === "TRAVEL_NOT_PLANNED" && onAssignGap
                   ? "cursor-pointer hover:brightness-110"
                   : "cursor-help"
-              } ${
-                g.kind === "TRAVEL_NOT_PLANNED"
-                  ? GAP.TRAVEL_NOT_PLANNED
-                  : g.kind === "WAITING"
-                    ? g.problem
-                      ? GAP.WAITING_PROBLEM
-                      : GAP.WAITING
-                    : GAP.FREE
-              }`}
+              } ${GAP[g.kind === "WAITING" && g.problem ? "WAITING_PROBLEM" : g.kind]}`}
               style={span(g.startMin, g.endMin)}
             >
-              {g.kind === "TRAVEL_NOT_PLANNED" && (
-                <CarFront className="absolute inset-0 m-auto size-3 text-destructive" />
+              {(g.kind === "TRAVEL_NOT_PLANNED" || g.kind === "TRAVEL_OWN_CAR") && (
+                <CarFront
+                  className={`absolute inset-0 m-auto size-3 ${
+                    g.kind === "TRAVEL_OWN_CAR"
+                      ? "text-violet-600 dark:text-violet-400"
+                      : "text-destructive"
+                  }`}
+                />
               )}
             </span>
           ))}
