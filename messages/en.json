@@ -1040,6 +1040,7 @@
     "wipeKeeps": "Kept: administrator accounts, centre profile and logo, integration settings.",
     "wipeConfirmLabel": "Type {phrase} to confirm",
     "wipeMismatch": "Text does not match",
+    "wipeFailed": "The wipe failed and nothing was deleted — it is all-or-nothing so you are never left with half-removed data. The database's own message is below.",
     "wipeConfirm": "Delete permanently",
     "seedFields": {
       "teachers": "Teachers",

@@ -318,9 +318,24 @@ export function DangerZone() {
               />
             </FormField>
             {res?.error && (
-              <p className="text-sm text-destructive">
-                {res.error === "confirmMismatch" ? t("wipeMismatch") : res.error}
-              </p>
+              <div className="space-y-1 text-sm text-destructive">
+                <p>
+                  {res.error === "confirmMismatch"
+                    ? t("wipeMismatch")
+                    : res.error === "wipeFailed"
+                      ? t("wipeFailed")
+                      : res.error}
+                </p>
+                {/* The database's own words. A wipe that fails is nearly always
+                    a constraint or a timeout, and neither is guessable from a
+                    one-word code — this is the line that turns "it errored" into
+                    something actionable. */}
+                {res.detail && (
+                  <p className="rounded-md bg-destructive/10 p-2 font-mono text-xs" dir="ltr">
+                    {res.detail}
+                  </p>
+                )}
+              </div>
             )}
           </div>
           <DialogFooter>

@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
@@ -18,6 +19,9 @@ export type DataState = {
   field?: string;
   max?: number;
   summary?: Record<string, number>;
+  /** Set with error "wipeFailed": the database's own words, so a failed wipe
+      says what stopped it instead of leaving the office to guess. */
+  detail?: string;
 };
 
 async function guardAdmin() {
@@ -36,8 +40,9 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
   if (confirm !== WIPE_PHRASE) return { error: "confirmMismatch" };
 
   const summary: Record<string, number> = {};
-  await db.$transaction(async (tx) => {
+  const wipe = async (tx: Prisma.TransactionClient) => {
     summary.notificationLogs = (await tx.notificationLog.deleteMany()).count;
+    summary.inAppNotifications = (await tx.inAppNotification.deleteMany()).count;
     summary.loginAttempts = (await tx.loginAttempt.deleteMany()).count;
     summary.auditLogs = (await tx.auditLog.deleteMany()).count;
     // Accounting: entries (lines cascade) before accounts; the accounts row
@@ -57,6 +62,10 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.tripEvents = (await tx.tripEvent.deleteMany()).count;
     summary.tripStops = (await tx.tripStop.deleteMany()).count;
     summary.trips = (await tx.trip.deleteMany()).count;
+    // Allocations cascade from both payment and session, but they are the link
+    // between a parent's money and a lesson — deleting them explicitly is what
+    // makes the summary say the dues went, rather than leaving it to be assumed.
+    summary.paymentAllocations = (await tx.paymentAllocation.deleteMany()).count;
     summary.payments = (await tx.payment.deleteMany()).count;
     summary.sessions = (await tx.session.deleteMany()).count;
     // Leads are business records and must go too. Their links to student /
@@ -82,6 +91,10 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     // grades (SetNull); clear members then the groups before students go.
     summary.groupMembers = (await tx.groupMember.deleteMany()).count;
     summary.studentGroups = (await tx.studentGroup.deleteMany()).count;
+    // Per-year student/teacher assignments cascade from the student, but they
+    // also point at an academic year that is deleted further down, so they go
+    // first rather than relying on cascade order.
+    summary.studentTeachers = (await tx.studentTeacher.deleteMany()).count;
     summary.students = (await tx.student.deleteMany()).count;
     summary.guardians = (await tx.guardian.deleteMany()).count;
     // Transport, innermost first. Fleet cost logs point at vehicles, suppliers
@@ -116,7 +129,32 @@ export async function wipeAllData(locale: string, confirm: string): Promise<Data
     summary.rooms = (await tx.room.deleteMany()).count;
     summary.floors = (await tx.floor.deleteMany()).count;
     summary.buildings = (await tx.building.deleteMany()).count;
-  });
+    // Academic years belong with the other reference data the seeder restores.
+    // Leaving them behind meant every wipe-and-seed cycle stacked another year
+    // on the pile, which is exactly the "some data is still there" complaint.
+    summary.academicYears = (await tx.academicYear.deleteMany()).count;
+    // Routes cached against coordinates that no longer exist. Not business
+    // data, but keeping it would answer future lookups from a deleted world.
+    summary.routingCache = (await tx.routingCache.deleteMany()).count;
+  };
+
+  // Prisma's default interactive-transaction cap is five seconds. This runs
+  // ~50 sequential deleteMany statements, and the seeder can create 500
+  // students, 2000 sessions and 1000 payments — so on any realistic dataset the
+  // five seconds ran out part-way, Prisma raised P2028, Postgres rolled the
+  // whole thing back, and the office was told "error" while every record was
+  // still there. The wipe was never wrong about WHAT to delete; it was never
+  // given long enough to finish.
+  //
+  // Caught rather than thrown, too: an unhandled throw reaches the browser as a
+  // blank server error, which is how this stayed a mystery instead of saying
+  // "timed out".
+  const failure = await db
+    .$transaction(wipe, { timeout: 120_000, maxWait: 20_000 })
+    .then(() => null)
+    .catch((e: unknown) => (e instanceof Error ? e.message : String(e)));
+
+  if (failure) return { error: "wipeFailed", detail: failure };
 
   await writeAudit("System", "wipe-all", "DELETE", { after: summary });
   revalidatePath(`/${locale}`, "layout");
