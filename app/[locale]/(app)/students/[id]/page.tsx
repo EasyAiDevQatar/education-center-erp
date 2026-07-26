@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TrendingUp, TrendingDown, Wallet, CalendarDays, Phone, MapPin, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, PEOPLE_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getStudentBalance, getStudentLedger } from "@/lib/balances";
 import { loadSessionLines, loadPaymentLines, getCurrency } from "@/lib/profile";
@@ -26,7 +26,7 @@ export default async function StudentProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, PEOPLE_ROLES);
 
   const t = await getTranslations("students");
   const tc = await getTranslations("common");

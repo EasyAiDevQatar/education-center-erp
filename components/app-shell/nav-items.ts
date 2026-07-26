@@ -42,18 +42,27 @@ export type NavItem = {
 const ALL: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST", "TEACHER", "PARENT"];
 const STAFF: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST"];
 const FINANCE: Role[] = ["ADMIN", "ACCOUNTANT"];
+// Menu lists mirror the capability sets in lib/rbac.ts. They are UX; the route
+// guards are the enforcement. Keeping the two in step is what stops a role
+// seeing a link it cannot open.
+const ACADEMIC: Role[] = [...STAFF, "ACADEMIC_SUPERVISOR"];
+const PEOPLE: Role[] = [...STAFF, "ACADEMIC_SUPERVISOR", "CASHIER"];
+const BILLING: Role[] = [...STAFF, "CASHIER"];
+const PAYROLL: Role[] = ["ADMIN", "ACCOUNTANT", "HR_OFFICER"];
+const TRANSPORT: Role[] = [...STAFF, "TRANSPORT_COORDINATOR"];
+const HR: Role[] = ["ADMIN", "HR_OFFICER"];
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard, roles: ALL, section: "operations" },
   { href: "/portal/teacher", key: "teacherPortal", icon: GraduationCap, roles: ["TEACHER"], section: "operations" },
   { href: "/portal/parent", key: "parentPortal", icon: UserRound, roles: ["PARENT"], section: "operations" },
-  { href: "/calendar", key: "calendar", icon: CalendarRange, roles: STAFF, section: "operations" },
-  { href: "/planner", key: "planner", icon: ClipboardList, roles: STAFF, section: "operations" },
+  { href: "/calendar", key: "calendar", icon: CalendarRange, roles: ACADEMIC, section: "operations" },
+  { href: "/planner", key: "planner", icon: ClipboardList, roles: ACADEMIC, section: "operations" },
   {
     href: "/checkin",
     key: "checkin",
     icon: ScanLine,
-    roles: STAFF,
+    roles: ACADEMIC,
     section: "operations",
     children: [
       { href: "/checkin", key: "roster" },
@@ -61,21 +70,21 @@ export const NAV_ITEMS: NavItem[] = [
       { href: "/checkin/cards", key: "qrCards" },
     ],
   },
-  { href: "/sessions", key: "sessions", icon: CalendarDays, roles: STAFF, section: "operations" },
+  { href: "/sessions", key: "sessions", icon: CalendarDays, roles: ACADEMIC, section: "operations" },
   { href: "/assistant", key: "assistant", icon: Sparkles, roles: STAFF, section: "operations", flag: "ai" },
-  { href: "/students", key: "students", icon: Users, roles: STAFF, section: "people" },
-  { href: "/teachers", key: "teachers", icon: GraduationCap, roles: STAFF, section: "people" },
-  { href: "/guardians", key: "guardians", icon: UserRound, roles: STAFF, section: "people" },
-  { href: "/leads", key: "leads", icon: UserPlus, roles: STAFF, section: "people", flag: "leads" },
-  { href: "/groups", key: "groups", icon: Users2, roles: STAFF, section: "people" },
-  { href: "/payments", key: "payments", icon: Receipt, roles: STAFF, section: "finance" },
-  { href: "/packages", key: "packages", icon: Package, roles: STAFF, section: "finance" },
+  { href: "/students", key: "students", icon: Users, roles: PEOPLE, section: "people" },
+  { href: "/teachers", key: "teachers", icon: GraduationCap, roles: PEOPLE, section: "people" },
+  { href: "/guardians", key: "guardians", icon: UserRound, roles: PEOPLE, section: "people" },
+  { href: "/leads", key: "leads", icon: UserPlus, roles: ACADEMIC, section: "people", flag: "leads" },
+  { href: "/groups", key: "groups", icon: Users2, roles: ACADEMIC, section: "people" },
+  { href: "/payments", key: "payments", icon: Receipt, roles: BILLING, section: "finance" },
+  { href: "/packages", key: "packages", icon: Package, roles: BILLING, section: "finance" },
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },
   {
     href: "/payroll",
     key: "payroll",
     icon: BadgeDollarSign,
-    roles: FINANCE,
+    roles: PAYROLL,
     section: "finance",
     children: [
       { href: "/payroll", key: "payrollDues" },
@@ -102,7 +111,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/transport",
     key: "transport",
     icon: Truck,
-    roles: STAFF,
+    roles: TRANSPORT,
     // Transport lives with the other daily-operations screens: the planner and
     // the driver board are used on the same rhythm as the calendar, not as a
     // back-office register.
@@ -126,7 +135,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/hr",
     key: "hr",
     icon: BriefcaseBusiness,
-    roles: ["ADMIN"],
+    roles: HR,
     section: "hr",
     flag: "hr",
     children: [

@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, PEOPLE_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { TranslateNamesButton } from "@/components/translate-names-button";
@@ -14,7 +14,7 @@ export default async function StudentsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, PEOPLE_ROLES);
 
   const t = await getTranslations("students");
 

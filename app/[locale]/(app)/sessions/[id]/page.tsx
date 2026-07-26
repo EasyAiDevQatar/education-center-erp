@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { requireRole } from "@/lib/rbac";
-import { STAFF_ROLES } from "@/lib/rbac";
+import { ACADEMIC_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { transportEnabled } from "@/lib/transport/settings";
 import { displayName } from "@/lib/names";
@@ -34,7 +34,7 @@ export default async function SessionProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, ACADEMIC_ROLES);
   const t = await getTranslations("session360");
   const ts = await getTranslations("sessions");
   const te = await getTranslations("enums");

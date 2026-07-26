@@ -6,8 +6,21 @@ import type { Role } from "@/lib/enums";
  *  the module's own role list. */
 export type RolePerms = Record<string, Record<string, boolean>>;
 
-/** Staff roles an admin may narrow in the matrix. */
-export const EDITABLE_ROLES = ["ACCOUNTANT", "RECEPTIONIST"] as const;
+/**
+ * Staff roles an admin may narrow in the matrix.
+ *
+ * ADMIN is absent on purpose — narrowing the only role that can widen roles
+ * again is a door that locks from the inside. The portal roles (TEACHER,
+ * PARENT, DRIVER) are absent because their surface is a portal, not a menu.
+ */
+export const EDITABLE_ROLES = [
+  "ACCOUNTANT",
+  "RECEPTIONIST",
+  "TRANSPORT_COORDINATOR",
+  "HR_OFFICER",
+  "ACADEMIC_SUPERVISOR",
+  "CASHIER",
+] as const;
 
 /** The fixed built-in roles (the capability set the route guards understand). */
 export const BUILTIN_ROLES = [
@@ -17,6 +30,10 @@ export const BUILTIN_ROLES = [
   "TEACHER",
   "PARENT",
   "DRIVER",
+  "TRANSPORT_COORDINATOR",
+  "HR_OFFICER",
+  "ACADEMIC_SUPERVISOR",
+  "CASHIER",
 ] as const;
 
 export type CustomRoleRow = {

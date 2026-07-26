@@ -11,6 +11,19 @@ export const ROLES = [
   /// Drives the centre's vehicles. Sees only the driver app: today's trips and
   /// the stops on them — never students, money or anyone else's schedule.
   "DRIVER",
+  /// Runs the fleet: the master planner, trips, drivers, vehicles and running
+  /// costs. Sees passengers inside a trip, never the student register, and no
+  /// money beyond fuel and maintenance.
+  "TRANSPORT_COORDINATOR",
+  /// Employee records, documents and their expiry, leave, payroll runs and WPS.
+  /// Staff pay, not centre profit: no expenses, no P&L, no student money.
+  "HR_OFFICER",
+  /// Teaching operations: the timetable, attendance, teachers and students.
+  /// Sees no money at all — not a price, not a balance, not a payout.
+  "ACADEMIC_SUPERVISOR",
+  /// Takes money in at the desk: payments, receipts, packages and what a
+  /// family owes. Never the centre's own books.
+  "CASHIER",
 ] as const;
 export type Role = (typeof ROLES)[number];
 

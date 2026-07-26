@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES } from "@/lib/rbac";
 import { requireModule } from "@/lib/modules";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
@@ -13,7 +13,7 @@ export default async function LeadsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, ACADEMIC_ROLES);
   await requireModule(locale, "leads");
 
   const t = await getTranslations("leads");

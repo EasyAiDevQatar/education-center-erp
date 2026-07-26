@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, BILLING_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -13,7 +13,7 @@ export default async function PackagesPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, BILLING_ROLES);
 
   const t = await getTranslations("packages");
   const [packages, students, settingsRow] = await Promise.all([

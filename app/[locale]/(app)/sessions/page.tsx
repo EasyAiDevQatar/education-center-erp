@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadGroupOpts } from "@/lib/groups";
 import { toNumber } from "@/lib/money";
@@ -19,7 +19,7 @@ export default async function SessionsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, ACADEMIC_ROLES);
 
   const t = await getTranslations("sessions");
   const sp = await searchParams;

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TrendingUp, TrendingDown, Wallet, Clock, Phone, Percent, FileText } from "lucide-react";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES, PAYROLL_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getTeacherEarnings } from "@/lib/payroll";
 import { loadSessionLines, loadPaymentLines, loadPayoutLines, getCurrency } from "@/lib/profile";
@@ -26,7 +26,7 @@ export default async function TeacherProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, ACADEMIC_ROLES);
 
   const t = await getTranslations("teachers");
   const tc = await getTranslations("common");
@@ -38,8 +38,17 @@ export default async function TeacherProfilePage({
   if (!teacher) notFound();
 
   // Only an admin can mint portal logins, so only they see the control.
-  const session = await requireRole(locale, STAFF_ROLES);
+  const session = await requireRole(locale, ACADEMIC_ROLES);
   const isAdmin = session.role === "ADMIN";
+  /**
+   * Whether this viewer may see what the teacher is paid.
+   *
+   * An academic supervisor runs the timetable and needs the hours, the lessons
+   * and the availability — not the commission, the salary or the payout
+   * history. Gating the page would take the schedule away with the money, so
+   * the money is gated inside it instead.
+   */
+  const canSeePay = (PAYROLL_ROLES as readonly string[]).includes(session.role);
   const linkedUser = isAdmin
     ? await db.user.findUnique({ where: { teacherId: id }, select: { id: true } })
     : null;
@@ -70,9 +79,15 @@ export default async function TeacherProfilePage({
   const tabs = [
     { key: "overview", label: tp("overview") },
     { key: "sessions", label: tp("sessions"), count: sessions.length },
-    { key: "payments", label: tp("payments"), count: payments.length },
-    { key: "payouts", label: tp("payouts"), count: payouts.length },
-    { key: "statement", label: tp("statement") },
+    // The money tabs only exist for someone allowed to read them; the bodies
+    // below re-check, so a typed ?tab=payouts gets nothing either.
+    ...(canSeePay
+      ? [
+          { key: "payments", label: tp("payments"), count: payments.length },
+          { key: "payouts", label: tp("payouts"), count: payouts.length },
+          { key: "statement", label: tp("statement") },
+        ]
+      : []),
     { key: "availability", label: ta("tab"), count: availability.length },
   ];
 
@@ -87,12 +102,18 @@ export default async function TeacherProfilePage({
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={t("hoursTaught")} value={formatHours(earnings?.hours ?? 0)} icon={Clock} />
-        <StatCard label={t("expectedIncome")} value={formatMoney(earnings?.expected ?? 0)} suffix={currency} icon={TrendingUp} />
-        <StatCard label={t("collectedIncome")} value={formatMoney(earnings?.collected ?? 0)} suffix={currency} icon={TrendingDown} tone="success" />
+        {canSeePay && (
+          <>
+            <StatCard label={t("expectedIncome")} value={formatMoney(earnings?.expected ?? 0)} suffix={currency} icon={TrendingUp} />
+            <StatCard label={t("collectedIncome")} value={formatMoney(earnings?.collected ?? 0)} suffix={currency} icon={TrendingDown} tone="success" />
+          </>
+        )}
         {/* What we owe, on whichever basis the centre pays on. Reading
             dueCommission here would contradict the payroll run the moment a
             centre switches to Expected. */}
-        <StatCard label={t("commissionDue")} value={formatMoney(earnings?.payableCommission ?? 0)} suffix={currency} icon={Wallet} tone="primary" />
+        {canSeePay && (
+          <StatCard label={t("commissionDue")} value={formatMoney(earnings?.payableCommission ?? 0)} suffix={currency} icon={Wallet} tone="primary" />
+        )}
       </div>
 
       <ProfileTabs tabs={tabs} active={tab} basePath={`/teachers/${id}`} />
@@ -122,6 +143,7 @@ export default async function TeacherProfilePage({
             </CardContent>
           </Card>
 
+          {canSeePay && (
           <Card>
             <CardHeader>
               <CardTitle>{tp("earningsSummary")}</CardTitle>
@@ -136,12 +158,13 @@ export default async function TeacherProfilePage({
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
       )}
 
       {tab === "sessions" && <SessionsTable rows={sessions} currency={currency} hideTeacher />}
-      {tab === "payments" && <PaymentsTable rows={payments} currency={currency} />}
-      {tab === "payouts" && <PayoutsTable rows={payouts} currency={currency} />}
+      {canSeePay && tab === "payments" && <PaymentsTable rows={payments} currency={currency} />}
+      {canSeePay && tab === "payouts" && <PayoutsTable rows={payouts} currency={currency} />}
       {tab === "statement" && (
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-2">

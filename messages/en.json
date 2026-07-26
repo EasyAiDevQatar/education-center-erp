@@ -215,7 +215,11 @@
     "RECEPTIONIST": "Receptionist",
     "TEACHER": "Teacher",
     "PARENT": "Parent",
-    "DRIVER": "Driver"
+    "DRIVER": "Driver",
+    "TRANSPORT_COORDINATOR": "Transport coordinator",
+    "HR_OFFICER": "HR officer",
+    "ACADEMIC_SUPERVISOR": "Academic supervisor",
+    "CASHIER": "Cashier"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2512,5 +2516,34 @@
   "noShowPolicies": {
     "CANCELLED": "Cancelled — no charge",
     "TAUGHT": "Taught — charged in full"
+  },
+  "roleDash": {
+    "sessionsToday": "Sessions today",
+    "checkedIn": "Checked in",
+    "stillExpected": "Still expected",
+    "absent": "Absent",
+    "completedToday": "Completed today",
+    "newLeads": "New leads",
+    "familiesOwing": "Families owing",
+    "collectedToday": "Collected today",
+    "collectedMonth": "Collected this month",
+    "receiptsToday": "Receipts today",
+    "outstanding": "Outstanding",
+    "sessionsWeek": "Sessions this week",
+    "attendanceRate": "Attendance rate",
+    "activeTeachers": "Active teachers",
+    "unassignedSessions": "Sessions with no teacher",
+    "absencesWeek": "Absences this week",
+    "tripsToday": "Trips today",
+    "undriven": "No driver",
+    "blockedTrips": "Blocked trips",
+    "kmToday": "Km today",
+    "vehicles": "Vehicles",
+    "drivers": "Drivers",
+    "headcount": "Headcount",
+    "onLeave": "On leave",
+    "docsExpiring": "Documents expiring soon",
+    "docsExpired": "Documents expired",
+    "pendingLeave": "Leave requests pending"
   }
 }

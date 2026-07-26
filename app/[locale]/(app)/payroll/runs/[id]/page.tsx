@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, FINANCE_ROLES } from "@/lib/rbac";
+import { requireRole, PAYROLL_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { displayName, fullName } from "@/lib/names";
@@ -14,7 +14,7 @@ export default async function RunDetailPage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, FINANCE_ROLES);
+  await requireRole(locale, PAYROLL_ROLES);
 
   const t = await getTranslations("runs");
 

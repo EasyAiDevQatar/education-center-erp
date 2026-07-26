@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { formatMoney, toNumber } from "@/lib/money";
 import { displayName } from "@/lib/names";
@@ -31,7 +31,7 @@ export default async function GroupProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, STAFF_ROLES);
+  await requireRole(locale, ACADEMIC_ROLES);
 
   const t = await getTranslations("groups");
   const tc = await getTranslations("common");

@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
@@ -24,7 +24,7 @@ export default async function PlannerPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const auth = await requireRole(locale, STAFF_ROLES);
+  const auth = await requireRole(locale, ACADEMIC_ROLES);
 
   const t = await getTranslations("planner");
   const sp = await searchParams;

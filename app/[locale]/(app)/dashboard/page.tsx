@@ -23,6 +23,13 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthlyTrendChart } from "@/components/charts/monthly-trend-chart";
+import {
+  ReceptionDashboard,
+  CashierDashboard,
+  AcademicDashboard,
+  TransportDashboard,
+  HrDashboard,
+} from "@/components/dashboard/role-dashboards";
 
 /** Resolve a period key to a concrete range (UTC, matching the data). */
 function resolvePeriod(period: string): { from?: Date; to?: Date } {
@@ -70,6 +77,28 @@ export default async function DashboardPage({
 
   const t = await getTranslations("dashboard");
   const tc = await getTranslations("common");
+
+  // One dashboard per job. Everything below this block is the finance view, and
+  // only the two roles that own the centre's books ever reach it — the others
+  // return here with a panel that queried only what their role may see.
+  if (session.role !== "ADMIN" && session.role !== "ACCOUNTANT") {
+    const Panel =
+      session.role === "CASHIER"
+        ? <CashierDashboard currency={tc("currency")} />
+        : session.role === "ACADEMIC_SUPERVISOR"
+          ? <AcademicDashboard />
+          : session.role === "TRANSPORT_COORDINATOR"
+            ? <TransportDashboard />
+            : session.role === "HR_OFFICER"
+              ? <HrDashboard />
+              : <ReceptionDashboard />;
+    return (
+      <div>
+        <PageHeader title={t("title")} description={t("welcome", { name: session.name })} />
+        {Panel}
+      </div>
+    );
+  }
 
   const sp = await searchParams;
   const periodRaw = Array.isArray(sp.period) ? sp.period[0] : sp.period;

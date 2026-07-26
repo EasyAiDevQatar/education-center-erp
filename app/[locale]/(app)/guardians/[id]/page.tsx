@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TrendingUp, TrendingDown, Wallet, Users, Phone, Mail } from "lucide-react";
-import { requireRole, STAFF_ROLES } from "@/lib/rbac";
+import { requireRole, PEOPLE_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadSessionLines, loadPaymentLines, getCurrency } from "@/lib/profile";
 import { formatMoney } from "@/lib/money";
@@ -24,7 +24,7 @@ export default async function GuardianProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  const session = await requireRole(locale, STAFF_ROLES);
+  const session = await requireRole(locale, PEOPLE_ROLES);
   const isAdmin = session.role === "ADMIN";
 
   const t = await getTranslations("guardians");

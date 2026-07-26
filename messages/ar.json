@@ -215,7 +215,11 @@
     "RECEPTIONIST": "موظف استقبال",
     "TEACHER": "معلم",
     "PARENT": "ولي أمر",
-    "DRIVER": "سائق"
+    "DRIVER": "سائق",
+    "TRANSPORT_COORDINATOR": "منسق النقل",
+    "HR_OFFICER": "مسؤول الموارد البشرية",
+    "ACADEMIC_SUPERVISOR": "مشرف أكاديمي",
+    "CASHIER": "أمين الصندوق"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -2512,5 +2516,34 @@
   "noShowPolicies": {
     "CANCELLED": "تُحتسب ملغاة — بدون رسوم",
     "TAUGHT": "تُحتسب مُعطاة — تُحمَّل كاملة"
+  },
+  "roleDash": {
+    "sessionsToday": "حصص اليوم",
+    "checkedIn": "حضروا",
+    "stillExpected": "لم يصلوا بعد",
+    "absent": "غياب",
+    "completedToday": "مكتملة اليوم",
+    "newLeads": "عملاء محتملون جدد",
+    "familiesOwing": "أسر عليها مستحقات",
+    "collectedToday": "المحصل اليوم",
+    "collectedMonth": "المحصل هذا الشهر",
+    "receiptsToday": "إيصالات اليوم",
+    "outstanding": "إجمالي المستحق",
+    "sessionsWeek": "حصص الأسبوع",
+    "attendanceRate": "نسبة الحضور",
+    "activeTeachers": "معلمون نشطون",
+    "unassignedSessions": "حصص بلا معلم",
+    "absencesWeek": "غياب هذا الأسبوع",
+    "tripsToday": "رحلات اليوم",
+    "undriven": "بلا سائق",
+    "blockedTrips": "رحلات محظورة",
+    "kmToday": "كيلومترات اليوم",
+    "vehicles": "مركبات",
+    "drivers": "سائقون",
+    "headcount": "عدد الموظفين",
+    "onLeave": "في إجازة",
+    "docsExpiring": "وثائق تنتهي قريباً",
+    "docsExpired": "وثائق منتهية",
+    "pendingLeave": "طلبات إجازة معلقة"
   }
 }
