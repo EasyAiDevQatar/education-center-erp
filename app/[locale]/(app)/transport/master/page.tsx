@@ -4,6 +4,7 @@ import { displayName } from "@/lib/names";
 import { currentPriceMatrix } from "@/lib/pricing";
 import type { PriceMatrix } from "../../sessions/session-dialog";
 import { requireTransport } from "@/lib/transport/guard";
+import { ACADEMIC_ROLES } from "@/lib/rbac";
 import { masterBoard, type LaneKind } from "@/lib/transport/master";
 import { PageHeader } from "@/components/page-header";
 import { MasterClient } from "./master-client";
@@ -31,7 +32,7 @@ export default async function TransportMasterPage({
   // this narrows further to the roles that actually schedule. An accountant
   // reads the day, they do not re-time it. Enforced again on the save path in
   // the next step — this only decides what the board offers.
-  const canDrag = auth.role === "ADMIN" || auth.role === "RECEPTIONIST";
+  const canDrag = (ACADEMIC_ROLES as readonly string[]).includes(auth.role);
   const t = await getTranslations("transportMaster");
 
   const sp = await searchParams;

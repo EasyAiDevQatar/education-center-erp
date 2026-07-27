@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { flagTripsForSession } from "@/lib/transport/trip-data";
+import { findBlockingOverlap } from "@/lib/session-overlap";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -19,6 +20,8 @@ export type ActionState = {
   error?: string;
   /** A HOME session was booked with no trip serving it yet. */
   homeNeedsTrip?: { count: number; date: string } | null;
+  /** Who is already booked, so a refusal names the clash instead of just saying no. */
+  detail?: string;
 };
 
 const schema = z.object({
@@ -70,6 +73,24 @@ export async function saveSession(
   const priorSession = id ? await db.session.findUnique({ where: { id } }) : null;
   const frozen = await guardArchived(date, priorSession?.date);
   if (frozen) return { error: frozen };
+
+  // The clash check the screens only ever warned about. Group rows are exempt
+  // from the teacher rule — see findBlockingOverlap.
+  const clash = await findBlockingOverlap({
+    id,
+    teacherId: d.teacherId,
+    studentId: d.studentId,
+    date,
+    hours: d.hours,
+    groupId: (formData.get("groupId") as string) || priorSession?.groupId || null,
+  });
+  if (clash) {
+    const t = clash.startsAt.toISOString().slice(11, 16);
+    return {
+      error: clash.kind === "STUDENT" ? "studentBusy" : "teacherBusy",
+      detail: `${clash.kind === "STUDENT" ? clash.studentName : clash.teacherName} — ${clash.studentName} ${t}`,
+    };
+  }
   // Authoritative price resolution from the matrix (client preview is advisory).
   const pricePerHour = await resolvePricePerHour(d.gradeLevelId, d.location, date);
   const total = pricePerHour * d.hours;

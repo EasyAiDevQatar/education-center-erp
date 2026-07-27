@@ -96,7 +96,9 @@
       "notfound": "That record no longer exists.",
       "notADriver": "This employee is not registered as a driver yet — add them to the drivers register first.",
       "notRunning": "That trip is not running, so a location cannot be recorded for it.",
-      "alreadyLinked": "That record already has a login."
+      "alreadyLinked": "That record already has a login.",
+      "teacherBusy": "That teacher already has a lesson at this time — pick another time or teacher.",
+      "studentBusy": "That student already has a lesson at this time — nobody can attend two at once."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",

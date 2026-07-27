@@ -524,6 +524,25 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     return (location === "HOME" ? l.home ?? l.center : l.center) ?? 150;
   };
   let sessions = 0;
+  let clashes = 0;
+  // What each teacher and student is already booked for, so the seeder stops
+  // inventing a person who is in two rooms at once. Kept in memory: these rows
+  // are being created in this loop and are not all in the database yet.
+  const booked: { who: string; from: number; to: number }[] = [];
+  // Seeding on top of existing data must respect the diary already in the
+  // database, not just the rows this loop creates. Without this a second seed
+  // clashes with the first and the guard looks like it does nothing.
+  for (const ex of await db.session.findMany({
+    where: { status: { notIn: ["CANCELLED", "DRAFT"] } },
+    select: { studentId: true, teacherId: true, date: true, hours: true },
+  })) {
+    const from = ex.date.getTime();
+    const to = from + toNumber(ex.hours) * 3_600_000;
+    booked.push({ who: "s:" + ex.studentId, from, to });
+    if (ex.teacherId) booked.push({ who: "t:" + ex.teacherId, from, to });
+  }
+  const isFree = (who: string, from: number, hrs: number) =>
+    !booked.some((b) => b.who === who && from < b.to && b.from < from + hrs * 3_600_000);
   const today = new Date();
   for (let i = 0; i < n.sessions && students.length && teacherIds.length; i++) {
     const st = pick(students);
@@ -535,6 +554,17 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const location = rand() < 0.3 ? "HOME" : "CENTER";
     const hours = pick([1, 1, 1.5, 2]);
     const price = priceOf(st.gradeLevelId, location);
+
+    // Nobody is in two rooms at once. The teacher is chosen below, so both
+    // diaries are checked once it is known.
+    const teacherId = pick(teacherIds);
+    if (!isFree("s:" + st.id, date.getTime(), hours) || !isFree("t:" + teacherId, date.getTime(), hours)) {
+      clashes++;
+      continue;
+    }
+    booked.push({ who: "s:" + st.id, from: date.getTime(), to: date.getTime() + hours * 3_600_000 });
+    booked.push({ who: "t:" + teacherId, from: date.getTime(), to: date.getTime() + hours * 3_600_000 });
+
     const status =
       dayOffset < 0 ? (rand() < 0.85 ? "COMPLETED" : "NO_SHOW") : dayOffset === 0 ? "DRAFT" : "SCHEDULED";
     // Completed sessions carry attendance stamps so the check-in history and
@@ -543,7 +573,9 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const checkOut = new Date(date.getTime() + hours * 3600_000);
     // Most lessons carry a subject drawn from the teacher's own list, so the
     // booking card demos with subjects; some stay blank (subject is optional).
-    const sTeacherId = pick(teacherIds);
+    // The teacher whose diary was just reserved above, not a fresh draw —
+    // picking twice is what let the reservation guard the wrong person.
+    const sTeacherId = teacherId;
     const sTeacherSubs = teacherSubjectMap[sTeacherId] ?? [];
     await db.session.create({
       data: {
@@ -568,6 +600,8 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     sessions++;
   }
   summary.sessions = sessions;
+  // Silently making fewer sessions than asked for reads as a bug; say so.
+  if (clashes) summary.sessionsSkippedAsClashing = clashes;
 
   // --- draw the packages down against real sessions ---
   //

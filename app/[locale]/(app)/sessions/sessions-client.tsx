@@ -57,6 +57,18 @@ function statusBadge(status: string) {
   return "muted" as const;
 }
 
+/**
+ * "16:00" alone cannot be read. Two back-to-back lessons look like a clash and
+ * a real clash looks like a coincidence; the end time settles both at a glance.
+ */
+function endTime(start: string, hours: number): string {
+  const [h, m] = start.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return "";
+  const total = h * 60 + m + Math.round(hours * 60);
+  const hh = Math.floor(total / 60) % 24;
+  return `${String(hh).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export function SessionsClient({
   sessions,
   students,
@@ -106,7 +118,11 @@ export function SessionsClient({
   const columns = useMemo<ColumnDef<SessionRow>[]>(
     () => [
       { key: "date", label: tc("date"), type: "date", value: (s) => s.date },
-      { key: "time", label: t("time"), value: (s) => s.time ?? "" },
+      {
+        key: "time",
+        label: t("time"),
+        value: (s) => (s.time ? `${s.time}-${endTime(s.time, s.hours)}` : ""),
+      },
       { key: "student", label: t("student"), value: (s) => s.studentName, filterable: true },
       { key: "teacher", label: t("teacher"), value: (s) => s.teacherName, filterable: true },
       { key: "level", label: t("gradeLevel"), value: (s) => s.levelLabel, filterable: true },
@@ -269,7 +285,12 @@ export function SessionsClient({
             {pg.pageItems.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
-                <TableCell className="tabular-nums"><span dir="ltr">{s.time ?? "—"}</span></TableCell>
+                {/* Start and end, not just the start: "16:00" alone made two
+                    back-to-back lessons look like a clash and a real clash look
+                    like a coincidence. */}
+                <TableCell className="tabular-nums">
+                  <span dir="ltr">{s.time ? `${s.time}–${endTime(s.time, s.hours)}` : "—"}</span>
+                </TableCell>
                 <TableCell className="font-medium">{s.studentName}</TableCell>
                 <TableCell>{s.teacherName}</TableCell>
                 <TableCell>{s.levelLabel}</TableCell>
