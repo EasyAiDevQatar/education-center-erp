@@ -152,6 +152,7 @@ export function CalendarClient({
   locationFilter,
   centre = null,
   centerName,
+  canEdit = true,
 }: {
   view: CalendarView;
   anchor: string;
@@ -170,6 +171,8 @@ export function CalendarClient({
   locationFilter: string;
   centre?: { lat: number; lng: number } | null;
   centerName: string;
+  /** False for a read-only viewer: no booking, no dragging, no resizing. */
+  canEdit?: boolean;
 }) {
   const t = useTranslations("calendar");
   const tg = useTranslations("group");
@@ -431,14 +434,16 @@ export function CalendarClient({
         {/* Today at the current time — not the first day of whatever week is
             on screen, which is what made a Friday booking open on the 18th.
             Clicking a specific grid slot still passes that slot instead. */}
-        <Button
-          size="sm"
-          className="gap-1"
-          onClick={() => setCreateAt({ date: localToday(), time: localNowTime() })}
-        >
-          <Plus className="size-4" />
-          {t("add")}
-        </Button>
+        {canEdit && (
+          <Button
+            size="sm"
+            className="gap-1"
+            onClick={() => setCreateAt({ date: localToday(), time: localNowTime() })}
+          >
+            <Plus className="size-4" />
+            {t("add")}
+          </Button>
+        )}
       </div>
 
       {/* Legend */}
@@ -517,6 +522,7 @@ export function CalendarClient({
                     ref={(el) => { colRefs.current[ci] = el; }}
                     className="relative flex-1 border-s border-border"
                     onClick={(e) => {
+                      if (!canEdit) return;
                       const top = (e.currentTarget as HTMLElement).getBoundingClientRect().top;
                       const min = Math.max(GRID_MIN, Math.min(GRID_MAX - 60, snap(GRID_MIN + ((e.clientY - top) / hourPx) * 60)));
                       setCreateAt({ date: day, time: fmtTime(min) });
@@ -556,10 +562,15 @@ export function CalendarClient({
                             trip: ev.trip,
                             mapDate: ev.day,
                           })}
-                          onPointerDown={(e) => { hover.hide(); onPointerDownEvent(e, ev, "move"); }}
+                          onPointerDown={
+                            canEdit
+                              ? (e) => { hover.hide(); onPointerDownEvent(e, ev, "move"); }
+                              : undefined
+                          }
                           onClick={(e) => e.stopPropagation()}
                           className={cn(
-                            "absolute z-10 cursor-grab touch-none overflow-hidden rounded-md border-s-4 px-1.5 py-1 text-[11px] shadow-sm active:cursor-grabbing",
+                            "absolute z-10 touch-none overflow-hidden rounded-md border-s-4 px-1.5 py-1 text-[11px] shadow-sm",
+                            canEdit && "cursor-grab active:cursor-grabbing",
                             STATUS_STYLES[ev.status] ?? STATUS_STYLES.SCHEDULED,
                             isGhost && "opacity-70 ring-2 ring-ring",
                           )}
@@ -596,10 +607,12 @@ export function CalendarClient({
                             </>
                           )}
                           {/* resize handle */}
-                          <div
-                            onPointerDown={(e) => onPointerDownEvent(e, ev, "resize")}
-                            className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize"
-                          />
+                          {canEdit && (
+                            <div
+                              onPointerDown={(e) => onPointerDownEvent(e, ev, "resize")}
+                              className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize"
+                            />
+                          )}
                         </div>
                       );
                     })}

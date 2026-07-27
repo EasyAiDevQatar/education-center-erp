@@ -50,13 +50,15 @@ const PEOPLE: Role[] = [...STAFF, "ACADEMIC_SUPERVISOR", "CASHIER"];
 const BILLING: Role[] = [...STAFF, "CASHIER"];
 const PAYROLL: Role[] = ["ADMIN", "ACCOUNTANT", "HR_OFFICER"];
 const TRANSPORT: Role[] = [...STAFF, "TRANSPORT_COORDINATOR"];
+// Reading the week is wider than owning it — see CALENDAR_VIEW_ROLES.
+const CALENDAR: Role[] = [...ACADEMIC, "CASHIER"];
 const HR: Role[] = ["ADMIN", "HR_OFFICER"];
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard, roles: ALL, section: "operations" },
   { href: "/portal/teacher", key: "teacherPortal", icon: GraduationCap, roles: ["TEACHER"], section: "operations" },
   { href: "/portal/parent", key: "parentPortal", icon: UserRound, roles: ["PARENT"], section: "operations" },
-  { href: "/calendar", key: "calendar", icon: CalendarRange, roles: ACADEMIC, section: "operations" },
+  { href: "/calendar", key: "calendar", icon: CalendarRange, roles: CALENDAR, section: "operations" },
   { href: "/planner", key: "planner", icon: ClipboardList, roles: ACADEMIC, section: "operations" },
   {
     href: "/checkin",

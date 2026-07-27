@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { STAFF_ROLES } from "@/lib/rbac";
+import { ACADEMIC_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { guardArchived } from "@/lib/academic-year";
 import { toNumber } from "@/lib/money";
@@ -14,7 +14,9 @@ export type ActionState = { ok?: boolean; error?: string };
 
 async function guard() {
   const s = await getSession();
-  return !s || !STAFF_ROLES.includes(s.role);
+  // The write side of the timetable. A cashier reaches the page but not this:
+  // CALENDAR_VIEW_ROLES is deliberately the wider, read-only set.
+  return !s || !ACADEMIC_ROLES.includes(s.role);
 }
 
 const rescheduleSchema = z.object({

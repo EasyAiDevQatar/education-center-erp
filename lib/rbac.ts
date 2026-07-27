@@ -49,6 +49,16 @@ export const PAYROLL_ROLES: Role[] = ["ADMIN", "ACCOUNTANT", "HR_OFFICER"];
 /** The fleet: planner, trips, drivers, vehicles, running costs. */
 export const TRANSPORT_ROLES: Role[] = [...STAFF_ROLES, "TRANSPORT_COORDINATOR"];
 
+/**
+ * Who may LOOK at the timetable — wider than who may change it.
+ *
+ * A cashier is asked "when is my son's next lesson?" across the desk all day,
+ * and had to answer from memory. Reading the calendar is not the same permission
+ * as moving a lesson, so this set is the read side and ACADEMIC_ROLES stays the
+ * write side; the calendar's own actions still guard on the latter.
+ */
+export const CALENDAR_VIEW_ROLES: Role[] = [...ACADEMIC_ROLES, "CASHIER"];
+
 /** Require an authenticated session or redirect to the login page. */
 export async function requireAuth(locale: string): Promise<SessionPayload> {
   const session = await getSession();

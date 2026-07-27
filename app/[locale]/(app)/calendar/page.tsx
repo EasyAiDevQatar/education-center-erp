@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, ACADEMIC_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES, CALENDAR_VIEW_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadGroupOpts } from "@/lib/groups";
 import { tripsBySession } from "@/lib/session-trips";
@@ -36,7 +36,10 @@ export default async function CalendarPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, ACADEMIC_ROLES);
+  const session = await requireRole(locale, CALENDAR_VIEW_ROLES);
+  // Read is wider than write. Everyone here can see the week; only the roles
+  // that own the timetable get the affordances that change it.
+  const canEdit = (ACADEMIC_ROLES as readonly string[]).includes(session.role);
 
   const t = await getTranslations("calendar");
   const sp = await searchParams;
@@ -166,6 +169,7 @@ export default async function CalendarPage({
     <div>
       <PageHeader title={t("title")} description={t("subtitle")} />
       <CalendarClient
+        canEdit={canEdit}
         view={view}
         anchor={anchorStr}
         days={days}
