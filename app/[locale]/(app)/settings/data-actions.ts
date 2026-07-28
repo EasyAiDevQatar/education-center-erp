@@ -201,6 +201,20 @@ const GUARDIAN_NAMES = [
   "أبو خالد", "أبو محمد", "أم فهد", "أبو سلطان", "أم سارة", "أبو راشد",
   "أم ريان", "أبو نايف", "أم شهد", "أبو عبدالعزيز",
 ];
+/**
+ * Family names, combined with the first names above.
+ *
+ * Twenty firsts against twenty-five families is five hundred distinct people —
+ * enough that a 500-student seed never has to fall back on "محمد 9", which is
+ * what the old sequential naming produced the moment a pool ran out.
+ */
+const FAMILY_NAMES = [
+  "الكواري", "المري", "الهاجري", "النعيمي", "المهندي", "العطية", "الدوسري",
+  "السليطي", "الكعبي", "المسند", "الخليفي", "البوعينين", "الشمري", "المالكي",
+  "الحمادي", "الأنصاري", "الجابر", "الرميحي", "السويدي", "المناعي",
+  "العبيدلي", "الفهيد", "الخاطر", "المرزوقي", "الصايغ",
+];
+
 const EXPENSE_DESCRIPTIONS = [
   "بترول سيارة", "ورق طباعة", "انترنت المركز", "صيانة مكيفات", "ضيافة",
   "كهرباء", "إيجار", "أدوات مكتبية", "دعاية انستغرام", "رسوم ترخيص",
@@ -239,7 +253,16 @@ export type SeedCounts = z.infer<typeof countsSchema>;
 
 /** Deterministic-ish PRNG so repeated seeds don't look identical but stay stable per run. */
 function rng(seed: number) {
-  let s = seed;
+  // Scramble the seed before the LCG touches it.
+  //
+  // A bare LCG seeded straight from the clock correlates across nearby seeds:
+  // two seeds ninety seconds apart drew the SAME first teacher, which is how a
+  // "random" roster kept opening with the same name. splitmix32 mixing makes
+  // adjacent seeds produce unrelated streams.
+  let s = seed >>> 0;
+  s = Math.imul(s ^ (s >>> 16), 0x21f0aaad);
+  s = Math.imul(s ^ (s >>> 15), 0x735a2d97);
+  s = (s ^ (s >>> 15)) >>> 0;
   return () => {
     s = (s * 1103515245 + 12345) % 2147483648;
     return s / 2147483648;
@@ -266,8 +289,43 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
       : { error: "invalid" };
   }
   const n = parsed.data;
-  const rand = rng(Date.now() % 2147483647);
+  // Clock XOR a fresh random draw: two seeds in the same minute must not share
+  // a starting point.
+  const rand = rng((Date.now() ^ Math.floor(Math.random() * 2147483647)) % 2147483647);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+
+  /**
+   * A fresh roster of distinct names for this seed.
+   *
+   * `nameAt` walked each pool in order, so every seed produced the same people
+   * in the same sequence and any overflow became "محمد 9". Shuffling the full
+   * cross-product with the seeded rng — which is seeded from the clock — means
+   * two seeds in a row are populated by different families.
+   */
+  const roster = (firsts: string[], count: number, prefix = "") => {
+    const combos: string[] = [];
+    for (const f of firsts) {
+      for (const fam of FAMILY_NAMES) combos.push(`${prefix}${f} ${fam}`);
+    }
+    // Fisher-Yates, so the draw is uniform rather than "first N of a sort".
+    for (let i = combos.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [combos[i], combos[j]] = [combos[j], combos[i]];
+    }
+    // Only if somebody asks for more people than the pools can spell.
+    while (combos.length < count) combos.push(`${prefix}${pick(firsts)} ${pick(FAMILY_NAMES)} ${combos.length}`);
+    return combos.slice(0, count);
+  };
+
+  const teacherRoster = roster(TEACHER_NAMES, n.teachers);
+
+  const guardianRoster = roster(GUARDIAN_NAMES, n.guardians);
+  // Leads are people the centre has not enrolled yet, so they must not reuse a
+  // student's name and look like a duplicate record. Two independent shuffles of
+  // the same pool collide, so this takes the TAIL of the students' own draw.
+  const withLeads = roster(STUDENT_NAMES, n.students + Math.max(1, n.leads));
+  const studentRoster = withLeads.slice(0, n.students);
+  const leadRoster = withLeads.slice(n.students);
   // A realistic Doha home: pick a district, jitter ~±1 km, label the plot. Feeds
   // the transport module's coordinates so ETA/allocation demos on real geography.
   const geoPoint = () => {
@@ -366,7 +424,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   for (let i = 0; i < n.teachers; i++) {
     const t = await db.teacher.create({
       data: {
-        name: nameAt(TEACHER_NAMES, i),
+        name: teacherRoster[i],
         commissionPct: 50,
         phone: `5555${String(1000 + i)}`,
         // Home pickup point for the transport module (house-to-house legs).
@@ -390,7 +448,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   const guardianIds: string[] = [];
   for (let i = 0; i < n.guardians; i++) {
     const g = await db.guardian.create({
-      data: { name: nameAt(GUARDIAN_NAMES, i), phone: `6666${String(1000 + i)}` },
+      data: { name: guardianRoster[i], phone: `6666${String(1000 + i)}` },
     });
     guardianIds.push(g.id);
   }
@@ -401,7 +459,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const level = pick(levels);
     const s = await db.student.create({
       data: {
-        name: nameAt(STUDENT_NAMES, i),
+        name: studentRoster[i],
         gradeLevelId: level.id,
         guardianId: guardianIds.length ? guardianIds[i % guardianIds.length] : null,
         phone: `7777${String(1000 + i)}`,
@@ -664,11 +722,26 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const started = frac < 0.7;
     const finished = frac < 0.4;
     const price = priceOf(st.gradeLevelId, "CENTER");
+
+    // Today's roster writes sessions too. Guarding only the main loop left this
+    // one free to double-book — two teachers were at two places at once in the
+    // seed that was supposed to prove the guard worked.
+    const rosterTeacherId = pick(teacherIds);
+    if (
+      !isFree("s:" + st.id, start.getTime(), hours) ||
+      !isFree("t:" + rosterTeacherId, start.getTime(), hours)
+    ) {
+      clashes++;
+      continue;
+    }
+    booked.push({ who: "s:" + st.id, from: start.getTime(), to: start.getTime() + hours * 3_600_000 });
+    booked.push({ who: "t:" + rosterTeacherId, from: start.getTime(), to: start.getTime() + hours * 3_600_000 });
+
     await db.session.create({
       data: {
         date: start,
         studentId: st.id,
-        teacherId: pick(teacherIds),
+        teacherId: rosterTeacherId,
         gradeLevelId: st.gradeLevelId,
         location: "CENTER",
         hours,
@@ -763,7 +836,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     follow.setUTCDate(follow.getUTCDate() + (i % 3 === 0 ? -Math.ceil(rand() * 5) : Math.ceil(rand() * 10)));
     const lead = await db.lead.create({
       data: {
-        name: nameAt(STUDENT_NAMES, i + 100),
+        name: leadRoster[i % leadRoster.length],
         phone: `3333${String(1000 + i).slice(-4)}`,
         source: pick(["زيارة", "توصية", "إنستغرام", "إعلان"]),
         status,
