@@ -938,6 +938,13 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     { email: "accountant@demo.qa", role: "ACCOUNTANT", name: locale === "ar" ? "محاسب تجريبي" : "Demo Accountant", employeeId: null as string | null },
     { email: "reception@demo.qa", role: "RECEPTIONIST", name: locale === "ar" ? "موظف استقبال تجريبي" : "Demo Receptionist", employeeId: null as string | null },
     { email: "driver@demo.qa", role: "DRIVER", name: locale === "ar" ? "سائق تجريبي" : "Demo Driver", employeeId: empTaken ? null : drvEmp },
+    // The four roles added with the per-role dashboards. They were created by
+    // hand, and a wipe deletes every non-admin user, so every wipe silently
+    // removed four of the ten logins and only the seeded five came back.
+    { email: "transport@demo.qa", role: "TRANSPORT_COORDINATOR", name: locale === "ar" ? "منسق نقل تجريبي" : "Demo Transport Coordinator", employeeId: null as string | null },
+    { email: "hr@demo.qa", role: "HR_OFFICER", name: locale === "ar" ? "موظف موارد بشرية تجريبي" : "Demo HR Officer", employeeId: null as string | null },
+    { email: "academic@demo.qa", role: "ACADEMIC_SUPERVISOR", name: locale === "ar" ? "مشرف أكاديمي تجريبي" : "Demo Academic Supervisor", employeeId: null as string | null },
+    { email: "cashier@demo.qa", role: "CASHIER", name: locale === "ar" ? "أمين صندوق تجريبي" : "Demo Cashier", employeeId: null as string | null },
   ];
   let staffUsers = 0;
   for (const u of staffDemo) {
