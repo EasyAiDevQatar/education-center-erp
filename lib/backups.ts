@@ -9,8 +9,11 @@ import path from "node:path";
  */
 export const BACKUP_DIR = process.env.BACKUP_DIR || "/var/backups/education";
 
-/** daily = edu_erp-*, weekly-/monthly- = tier promotions, predeploy- = manual. */
-export type BackupTier = "daily" | "weekly" | "monthly" | "predeploy" | "other";
+/**
+ * daily = edu_erp-*, weekly-/monthly- = tier promotions, predeploy- = manual,
+ * prerestore- = the safety copy taken immediately before a restore.
+ */
+export type BackupTier = "daily" | "weekly" | "monthly" | "predeploy" | "prerestore" | "other";
 
 export type BackupFile = {
   name: string;
@@ -27,6 +30,7 @@ export function tierOf(name: string): BackupTier {
   if (name.startsWith("weekly-")) return "weekly";
   if (name.startsWith("monthly-")) return "monthly";
   if (name.startsWith("predeploy-")) return "predeploy";
+  if (name.startsWith("prerestore-")) return "prerestore";
   return "other";
 }
 
@@ -56,6 +60,14 @@ export async function listBackups(): Promise<BackupFile[]> {
   }
   return out.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
 }
+
+/**
+ * How many pre-restore safety copies to keep.
+ *
+ * The nightly script prunes the tiers it creates; it knows nothing about this
+ * one, so the restore action prunes its own or they accumulate forever.
+ */
+export const PRERESTORE_KEEP = 10;
 
 /** Absolute path for a validated backup name; null when the name is not ours. */
 export function backupPath(name: string): string | null {

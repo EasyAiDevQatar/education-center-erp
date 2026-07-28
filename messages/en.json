@@ -783,6 +783,7 @@
       "weekly": "Weekly",
       "monthly": "Monthly",
       "predeploy": "Pre-deploy",
+      "prerestore": "Pre-restore",
       "other": "Other"
     },
     "accountType": {
@@ -1609,7 +1610,25 @@
     "saJson": "Service-account key (JSON)",
     "saJsonHint": "Stored in the database and never shown again. Leave empty to keep the current key, or clear both fields to disable.",
     "testUpload": "Test upload now",
-    "testOk": "Upload succeeded — look for an edu-erp-test file in the folder."
+    "testOk": "Upload succeeded — look for an edu-erp-test file in the folder.",
+    "restore": "Restore",
+    "restoreTitle": "Restore a backup",
+    "restoreWarning": "Everything currently in the system will be replaced by the contents of this file. Anything recorded after the backup was taken — sessions, payments, expenses, students, users — will be gone.",
+    "restoreSafety": "A copy of the current state is taken first, named prerestore-, and appears in this table — so a restore made by mistake can itself be undone.",
+    "restoreConfirmLabel": "Type {phrase} to confirm",
+    "restoreRunning": "Restoring…",
+    "restoreOk": "Restored from {file}.",
+    "restoreCounts": "Now in the system: {students} students, {sessions} sessions, {payments} payments.",
+    "restoreErrors": {
+      "confirmMismatch": "The phrase does not match — nothing was done.",
+      "notFound": "That file is not on the server.",
+      "corruptArchive": "The archive will not decompress — the database was not touched.",
+      "safetyFailed": "The safety copy could not be taken, so the restore was cancelled.",
+      "restoreFailed": "The restore failed and was rolled back in full — the database is as it was.",
+      "restoreBusy": "A restore is already running.",
+      "noDatabaseUrl": "The server has no database connection setting.",
+      "forbidden": "Only a system administrator may do this."
+    }
   },
   "accounting": {
     "moduleTitle": "Accounting module",

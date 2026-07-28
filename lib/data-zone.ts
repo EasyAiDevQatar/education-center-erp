@@ -5,6 +5,15 @@
 export const WIPE_PHRASE = "DELETE-ALL";
 
 /**
+ * Typed confirmation for restoring a backup.
+ *
+ * A restore is as destructive as a wipe — it replaces everything recorded
+ * since the backup was taken — so it asks the same way, and a mistyped phrase
+ * is refused by the server, not merely by a disabled button.
+ */
+export const RESTORE_PHRASE = "RESTORE";
+
+/**
  * The demo seeder's editable counts, in the order the modal shows them.
  *
  * Single source of truth: the zod schema builds its defaults/limits from this
