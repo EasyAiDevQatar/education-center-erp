@@ -1,4 +1,5 @@
 import "server-only";
+import { decryptSecret } from "./secret-crypto";
 import { db } from "@/lib/db";
 import type { Provider, IntegrationConfig, IntegrationEvent, Audience } from "./types";
 import { INTEGRATION_EVENTS, AUDIENCES } from "./types";
@@ -28,7 +29,9 @@ export async function loadConfig(provider: string): Promise<IntegrationConfig | 
     provider: row.provider,
     enabled: row.enabled,
     baseUrl: row.baseUrl,
-    apiKey: row.apiKey,
+    // Stored encrypted; a value written before that was true reads back as the
+    // clear text it is, and is re-encrypted the next time settings are saved.
+    apiKey: row.apiKey ? decryptSecret(row.apiKey) : null,
     config: parseJson<Record<string, string>>(row.config, {}),
     events: parseJson<IntegrationEvent[]>(row.events, []).filter((e) =>
       (INTEGRATION_EVENTS as readonly string[]).includes(e),

@@ -8,12 +8,14 @@ import { SettingsShell, type SettingsGroup } from "./settings-shell";
 import { AttendanceSettings } from "./attendance-settings";
 import { DEFAULT_NO_SHOW_POLICY } from "@/lib/attendance-policy";
 import { YearsManager } from "./years-manager";
+import { headers } from "next/headers";
 import { PROVIDERS, maskSecret } from "@/lib/integrations/registry";
 import { CenterProfileForm } from "./center-profile-form";
 import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
 import { CategoriesManager, type CategoryRow } from "./categories-manager";
 import { SubjectsManager, type SubjectRow } from "./subjects-manager";
-import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
+import { IntegrationsManager, type IntegrationView, type InboundRow } from "./integrations-manager";
+import { gateIsSet, gateIsOpen } from "@/lib/integrations/gate";
 import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
 import { ModulesSettings } from "./modules-settings";
@@ -118,7 +120,7 @@ export default async function SettingsPage({
     orderBy: { role: "asc" },
   });
 
-  const [settingsRows, years, matrix, categories, subjects, integrationRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
+  const [settingsRows, years, matrix, categories, subjects, integrationRows, inboundRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
     listAcademicYears(),
     currentPriceMatrix(),
@@ -128,6 +130,16 @@ export default async function SettingsPage({
       include: { _count: { select: { teachers: true } } },
     }),
     db.integration.findMany(),
+    db.inboundMessage.findMany({
+      orderBy: { receivedAt: "desc" },
+      take: 100,
+      include: {
+        student: { select: { name: true } },
+        guardian: { select: { name: true } },
+        teacher: { select: { name: true } },
+        driver: { select: { employee: { select: { name: true } } } },
+      },
+    }),
     db.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 300 }),
     db.term.findMany({ orderBy: { startDate: "desc" } }),
     db.user.findMany({
@@ -167,8 +179,34 @@ export default async function SettingsPage({
       lastTestAt: row?.lastTestAt ? row.lastTestAt.toISOString() : null,
       lastTestOk: row?.lastTestOk ?? null,
       lastTestMsg: row?.lastTestMsg ?? null,
+      webhookSecret: row?.webhookSecret ?? null,
     };
   });
+
+  // The webhook URL the provider must call. Built from the request's own host
+  // so a staging copy shows its own URL rather than production's.
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "";
+  const proto = hdrs.get("x-forwarded-proto") ?? "https";
+  const origin = host ? `${proto}://${host}` : "";
+
+  const connectGate = { isSet: await gateIsSet(), isOpen: await gateIsOpen() };
+
+  const inbound: InboundRow[] = inboundRows.map((m) => ({
+    id: m.id,
+    at: m.receivedAt.toISOString().slice(0, 16).replace("T", " "),
+    phone: m.phone,
+    body: m.body,
+    // Whoever the number matched. Unmatched stays null and shows as such —
+    // "we do not know who this is" is information, not a blank.
+    who:
+      m.student?.name ??
+      m.guardian?.name ??
+      m.teacher?.name ??
+      m.driver?.employee.name ??
+      m.contactName ??
+      null,
+  }));
 
   const logRows: LogRow[] = logs.map((l) => ({
     id: l.id,
@@ -525,7 +563,12 @@ export default async function SettingsPage({
           ),
         },
         { key: "demoUsers", label: t("demoUsers"), node: <DemoUsersSettings users={demoUsers} password="demo1234" /> },
-        { key: "integrations", label: t("integrations"), node: <IntegrationsManager integrations={integrations} /> },
+        { key: "integrations", label: t("integrations"), node: <IntegrationsManager
+              integrations={integrations}
+              gate={connectGate}
+              inbound={inbound}
+              origin={origin}
+            /> },
       ],
     },
     {

@@ -659,8 +659,6 @@
     "apiKey": "API key",
     "apiKeyPlaceholder": "Paste your API key",
     "keepKeyHint": "A key is already saved. Leave blank to keep it.",
-    "advanced": "Advanced (endpoint mapping)",
-    "advancedHelp": "Adjust these to match your provider's API docs — no code change needed.",
     "events": "Send on these events",
     "audiences": "Notify",
     "enable": "Enable",
@@ -678,16 +676,23 @@
     "audienceLabels": {
       "TEACHER": "Teacher",
       "PARENT": "Parent",
-      "STUDENT": "Student"
+      "STUDENT": "Student",
+      "DRIVER": "Driver"
     },
     "fields": {
-      "sendPath": "Send message path",
-      "testPath": "Test/verify path",
-      "authScheme": "Auth scheme",
-      "toField": "Recipient field name",
-      "textField": "Message field name",
-      "endpointHelp": "Relative to the base URL"
-    }
+      "channelId": "Channel ID",
+      "channelIdHelp": "The WhatsApp channel's ID in your provider account (a GUID)."
+    },
+    "webhookTitle": "Incoming messages",
+    "webhookIntro": "Give this link to the messaging provider so replies from parents, teachers and drivers reach you. The link is the password — do not share it.",
+    "webhookNone": "No link issued yet.",
+    "webhookIssue": "Issue link",
+    "webhookRotate": "Replace link",
+    "webhookRotateHint": "Replacing the link revokes the old one immediately; incoming messages stop until the new link is saved at the provider.",
+    "inboundTitle": "What came in",
+    "inboundIntro": "A record of what people send the centre. Stored only — no auto-reply, and no session is changed.",
+    "inboundEmpty": "Nothing received yet.",
+    "inboundUnknown": "Unknown number"
   },
   "integrationEvents": {
     "SESSION_BOOKED": "Session booked",
@@ -2567,5 +2572,26 @@
     "docsExpiring": "Documents expiring soon",
     "docsExpired": "Documents expired",
     "pendingLeave": "Leave requests pending"
+  },
+  "connectGate": {
+    "lockedTitle": "This module is locked",
+    "lockedIntro": "Enter the module password to view or change these settings.",
+    "setTitle": "Choose a password for this module",
+    "setIntro": "It is asked for whenever the module is opened, even for an administrator. It is not your sign-in password.",
+    "password": "Password",
+    "confirm": "Confirm password",
+    "unlock": "Unlock",
+    "setAction": "Save and unlock",
+    "unlockedNote": "Unlocked for this browser for 30 minutes.",
+    "lockNow": "Lock now",
+    "errors": {
+      "wrongPassword": "That password is not right.",
+      "mismatch": "The two passwords do not match.",
+      "tooShort": "Too short — use at least 8 characters.",
+      "tooManyAttempts": "Too many attempts. Wait a little and try again.",
+      "notSet": "No module password has been set yet.",
+      "locked": "This module is locked.",
+      "forbidden": "Only a system administrator may do this."
+    }
   }
 }

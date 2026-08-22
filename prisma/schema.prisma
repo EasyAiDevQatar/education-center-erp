@@ -98,6 +98,7 @@ model Teacher {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  inboundMessages InboundMessage[]
 }
 
 model Guardian {
@@ -115,6 +116,7 @@ model Guardian {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  inboundMessages InboundMessage[]
 }
 
 model GradeLevel {
@@ -205,6 +207,7 @@ model Student {
   updatedAt DateTime @updatedAt
 
   @@index([name])
+  inboundMessages InboundMessage[]
 }
 
 /// A teacher's recurring weekly working window. Several rows per weekday are
@@ -638,6 +641,11 @@ model Integration {
   /// JSON array of audiences to notify: ["TEACHER","PARENT","STUDENT"].
   audiences String?
 
+  /// Shared secret in the inbound webhook path. Unguessable and rotatable —
+  /// the URL is the only credential the provider presents when calling back,
+  /// so rotating it is how an exposed URL is revoked.
+  webhookSecret String? @unique
+
   lastTestAt  DateTime?
   lastTestOk  Boolean?
   lastTestMsg String?
@@ -663,6 +671,51 @@ model NotificationLog {
 
   @@index([createdAt])
   @@index([event])
+}
+
+/// A message someone sent TO the centre, recorded but not acted on.
+///
+/// The centre could already talk to families; it could not hear them, so a
+/// parent replying "he is sick today" was answering into nothing. This is the
+/// record of what arrived and who it was from.
+///
+/// Nothing here triggers behaviour. No auto-reply, no bot, no status change —
+/// that boundary is deliberate, because a message that silently cancels a
+/// lesson is worse than one nobody read.
+model InboundMessage {
+  id       String @id @default(cuid())
+  provider String
+
+  /// The provider's own event id. Unique because a webhook is retried on any
+  /// non-2xx, and a retry must not become a second copy of the same message.
+  externalId String @unique
+  /// The provider's conversation handle, kept so a reply can be threaded later.
+  threadId    String?
+  contactName String?
+  /// E.164 where the provider gave us one; null when the contact lookup failed.
+  phone String?
+  body  String
+
+  /// The payload exactly as received. When a message does not match anybody,
+  /// this is the only way to find out why without asking for it to be resent.
+  raw String?
+
+  /// Best-effort match by phone number. All optional and all SetNull: an
+  /// unrecognised number is still worth keeping, and deleting a student must
+  /// not erase the fact that somebody wrote in.
+  studentId  String?
+  student    Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  guardianId String?
+  guardian   Guardian? @relation(fields: [guardianId], references: [id], onDelete: SetNull)
+  teacherId  String?
+  teacher    Teacher?  @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  driverId   String?
+  driver     Driver?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
+  @@index([phone])
 }
 
 /// A prospective student before they enrol. Converting a lead creates the real
@@ -1234,6 +1287,7 @@ model Driver {
   updatedAt DateTime @updatedAt
 
   @@index([active])
+  inboundMessages InboundMessage[]
 }
 
 /* -------------------------- Transport: trips ------------------------------ */

@@ -16,10 +16,10 @@ export const INTEGRATION_EVENTS = [
 export type IntegrationEvent = (typeof INTEGRATION_EVENTS)[number];
 
 /** Who receives a notification. */
-export const AUDIENCES = ["TEACHER", "PARENT", "STUDENT"] as const;
+export const AUDIENCES = ["TEACHER", "PARENT", "STUDENT", "DRIVER"] as const;
 export type Audience = (typeof AUDIENCES)[number];
 
-/** Stored, decrypted configuration for one provider. */
+/** One provider's stored configuration, with its secret decrypted for use. */
 export type IntegrationConfig = {
   provider: string;
   enabled: boolean;
@@ -63,4 +63,14 @@ export type Provider = {
   testConnection: (cfg: IntegrationConfig) => Promise<ProviderResult>;
   /** Deliver one message. */
   send: (cfg: IntegrationConfig, input: SendInput) => Promise<ProviderResult>;
+  /**
+   * Who is on the other end of a conversation, if the provider can say.
+   *
+   * Optional: a provider that only sends is still a usable provider, and the
+   * inbound log records an unmatched message rather than refusing it.
+   */
+  lookupContact?: (
+    cfg: IntegrationConfig,
+    threadId: string,
+  ) => Promise<{ phone: string | null; name: string | null }>;
 };

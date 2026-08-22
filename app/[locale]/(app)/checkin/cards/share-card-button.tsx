@@ -14,7 +14,7 @@ function waNumber(phone: string): string {
 /**
  * Send a student's check-in code to their guardian on WhatsApp.
  *
- * Uses wa.me rather than the Anychat integration on purpose: this is a one-off
+ * Uses wa.me rather than the EasyAiConnect integration on purpose: this is a one-off
  * human action from a staff device, so it should open the sender's own WhatsApp
  * with a drafted message and let them press send, not fire automatically.
  */

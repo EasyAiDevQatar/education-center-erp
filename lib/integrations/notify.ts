@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney } from "@/lib/money";
 import { getProvider, activeConfigsFor } from "./registry";
+import { normalizePhone } from "./phone";
 import type { Audience, IntegrationEvent } from "./types";
 
 /** Values available to message templates. */
@@ -17,6 +18,26 @@ type Vars = {
 };
 
 type Tpl = (v: Vars) => string;
+
+/**
+ * Driver wording for the two events that change a driver's day.
+ *
+ * The default templates are written for the family — "your session moved" —
+ * and reach whoever is subscribed. A driver does not have a session; they have
+ * a run to make, and the useful sentence is a different one. Events not listed
+ * here fall back to the shared text, which is why a driver never receives, say,
+ * a payment receipt worded as though it were theirs.
+ */
+const DRIVER_TEMPLATES: Partial<Record<IntegrationEvent, Record<"ar" | "en", Tpl>>> = {
+  SESSION_RESCHEDULED: {
+    ar: (v) => `${v.center}: تغيّر موعد توصيلة ${v.student} — الحصة الآن يوم ${v.date} الساعة ${v.time}.`,
+    en: (v) => `${v.center}: ${v.student}'s ride has moved — the session is now ${v.date} at ${v.time}.`,
+  },
+  SESSION_CANCELLED: {
+    ar: (v) => `${v.center}: أُلغيت حصة ${v.student} يوم ${v.date} — لا حاجة للتوصيلة.`,
+    en: (v) => `${v.center}: ${v.student}'s session on ${v.date} was cancelled — no ride needed.`,
+  },
+};
 
 /** Bilingual templates, keyed by event then audience. */
 const TEMPLATES: Record<IntegrationEvent, Record<"ar" | "en", Tpl>> = {
@@ -93,6 +114,7 @@ export async function dispatch(
     if (configs.length === 0) return;
     const { lang } = await centerSettings();
     const text = TEMPLATES[event][lang](vars);
+    const driverText = DRIVER_TEMPLATES[event]?.[lang](vars) ?? text;
 
     for (const cfg of configs) {
       const provider = getProvider(cfg.provider);
@@ -101,24 +123,30 @@ export async function dispatch(
       for (const r of recipients) {
         if (!cfg.audiences.includes(r.audience)) continue;
 
+        const body = r.audience === "DRIVER" ? driverText : text;
+        // Checked here rather than at the provider so the log records the
+        // number that was actually dialled, and so an unusable one is a
+        // SKIPPED row instead of a wasted call that comes back FAILED.
+        const phone = normalizePhone(r.phone);
+
         const base = {
           provider: cfg.provider,
           event,
           audience: r.audience,
-          recipient: r.phone ?? "",
-          message: text,
+          recipient: phone ?? r.phone ?? "",
+          message: body,
           entityType: entity?.type ?? null,
           entityId: entity?.id ?? null,
         };
 
-        if (!r.phone) {
+        if (!phone) {
           await db.notificationLog.create({
-            data: { ...base, status: "SKIPPED", error: "noPhone" },
+            data: { ...base, status: "SKIPPED", error: r.phone ? "badPhone" : "noPhone" },
           });
           continue;
         }
 
-        const res = await provider.send(cfg, { to: r.phone, text });
+        const res = await provider.send(cfg, { to: phone, text: body });
         await db.notificationLog.create({
           data: {
             ...base,
@@ -158,12 +186,28 @@ export async function notifySession(
     if (!s) return;
     const { center, currency } = await centerSettings();
 
+    // Whoever is driving this lesson, via the stop that serves it. Distinct
+    // because a session can have both a pickup and a drop-off on the same
+    // trip, and one driver should not be messaged twice about one change.
+    const stops = await db.tripStop.findMany({
+      where: { sessionId, trip: { driverId: { not: null }, status: { notIn: ["CANCELLED"] } } },
+      select: { trip: { select: { driverId: true, driver: { select: { employee: { select: { phone: true } } } } } } },
+    });
+    const driverPhones = [
+      ...new Map(
+        stops
+          .filter((st) => st.trip.driver?.employee.phone)
+          .map((st) => [st.trip.driverId, st.trip.driver!.employee.phone!]),
+      ).values(),
+    ];
+
     await dispatch(
       event,
       [
         { audience: "TEACHER", phone: s.teacher?.phone ?? null },
         { audience: "STUDENT", phone: s.student.phone },
         { audience: "PARENT", phone: s.student.guardian?.phone ?? null },
+        ...driverPhones.map((phone) => ({ audience: "DRIVER" as const, phone })),
       ],
       {
         student: s.student.name,
