@@ -2,13 +2,14 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 
 /**
- * A link to one statement, for somebody who cannot sign in.
+ * A link to one document, for somebody who cannot sign in.
  *
  * The messaging provider fetches attachments itself, from its own servers, so
- * a statement PDF has to be reachable without a session — and a statement is
- * somebody's finances. The token is therefore the whole credential: signed so
- * it cannot be forged, scoped to one document so it opens nothing else, and
- * short-lived so a URL that ends up in a screenshot stops working.
+ * a statement PDF or a card image has to be reachable without a session — and
+ * a statement is somebody's finances. The token is therefore the whole
+ * credential: signed so it cannot be forged, scoped to one document so it
+ * opens nothing else, and short-lived so a URL that ends up in a screenshot
+ * stops working.
  *
  * A day is deliberate. The provider fetches within seconds, so the window only
  * needs to cover a queue or a retry; anything longer is exposure bought for a
@@ -20,7 +21,7 @@ const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET ?? "dev-only-change-me-please-32chars-minimum-secret",
 );
 
-export const STATEMENT_KINDS = ["student", "guardian", "teacher"] as const;
+export const STATEMENT_KINDS = ["student", "guardian", "teacher", "checkin-code"] as const;
 export type StatementKind = (typeof STATEMENT_KINDS)[number];
 export type StatementRef = { kind: StatementKind; id: string; locale: string };
 

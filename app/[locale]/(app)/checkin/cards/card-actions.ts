@@ -5,9 +5,38 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
+import { headers } from "next/headers";
 import { sendDirect } from "@/lib/integrations/notify";
+import { signStatementToken } from "@/lib/statement-token";
 
 export type ShareState = { ok?: boolean; error?: string };
+
+/** The origin this instance answers on — staging attaches its own, not production's. */
+async function origin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return host ? `${proto}://${host}` : "";
+}
+
+/**
+ * The student's card as a scannable image, on a signed link.
+ *
+ * Returns nothing when the origin is unknown rather than guessing at a URL:
+ * an attachment the provider cannot fetch fails the whole message, and a code
+ * that arrives as text alone is still useful.
+ */
+async function cardImage(studentId: string, locale: string, base: string) {
+  if (!base) return undefined;
+  const token = await signStatementToken({ kind: "checkin-code", id: studentId, locale });
+  return [
+    {
+      url: `${base}/api/qr/${token}`,
+      mimetype: "image/png",
+      filename: "checkin-code.png",
+    },
+  ];
+}
 
 /**
  * Send one student's check-in code to their guardian, from the centre's own
@@ -48,6 +77,7 @@ export async function sendCheckinCode(locale: string, studentId: string): Promis
     event: "CHECKIN_CODE",
     audience: student.guardian?.phone ? "PARENT" : "STUDENT",
     entity: { type: "Student", id: student.id },
+    attachments: await cardImage(student.id, locale, await origin()),
   });
   if (res.ok) await writeAudit("Student", student.id, "UPDATE", { after: { checkinCodeSent: true } });
   return res.ok ? { ok: true } : { error: res.error ?? "failed" };
@@ -97,6 +127,7 @@ export async function sendAllCheckinCodes(locale: string): Promise<ShareState & 
   ]);
   const center = centre?.value ?? "";
 
+  const base = await origin();
   const run: CodeRun = { sent: 0, skippedRecent: 0, unreachable: 0, noCode: 0 };
 
   for (const student of students) {
@@ -129,6 +160,7 @@ export async function sendAllCheckinCodes(locale: string): Promise<ShareState & 
       event: "CHECKIN_CODE",
       audience: student.guardian?.phone ? "PARENT" : "STUDENT",
       entity: { type: "Student", id: student.id },
+      attachments: await cardImage(student.id, locale, base),
     });
     if (res.ok) run.sent++;
     else run.unreachable++;
