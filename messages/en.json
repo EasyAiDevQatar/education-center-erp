@@ -2652,6 +2652,13 @@
     "none": "None",
     "selfNumbers": "The centre's own numbers — never messaged",
     "selfNumbersHint": "The WhatsApp sender and any line the office answers. Messages addressed to these are skipped, so the centre stops writing to itself. Separate with commas.",
-    "fallbackCopy": "Fallback"
+    "fallbackCopy": "Fallback",
+    "sendStatement": "Send statement",
+    "remindDues": "Remind about dues",
+    "sending": "Sending…",
+    "sent": "Sent",
+    "notSent": "Not sent",
+    "duesResult": "{sent} sent · {skipped} skipped (reminded recently) · {unreachable} with no number",
+    "statementMessage": "{center}: statement for {student} — charged {charges} {currency}, paid {paid} {currency}, outstanding {balance} {currency}."
   }
 }

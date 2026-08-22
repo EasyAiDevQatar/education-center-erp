@@ -10,6 +10,7 @@ import { formatMoney, toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { ProfileTabs } from "@/components/profile-tabs";
+import { SendStatementButton } from "@/components/whatsapp-button";
 import { SessionsTable, PaymentsTable } from "@/components/tables/relation-tables";
 import { StudentSessionsTable } from "./student-sessions-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -160,7 +161,8 @@ export default async function StudentProfilePage({
       {tab === "payments" && <PaymentsTable rows={payments} currency={currency} hideStudent />}
       {tab === "statement" && (
         <div className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <SendStatementButton studentId={id} />
             <a href={`/${locale}/statement/student/${id}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="gap-1">
                 <Printer className="size-4" />

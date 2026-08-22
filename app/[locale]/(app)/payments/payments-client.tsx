@@ -33,6 +33,7 @@ import { PAYMENT_METHODS } from "@/lib/enums";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { savePayment, deletePayment } from "./actions";
 import { VoidPaymentButton } from "./void-payment-button";
+import { SendDuesRemindersButton } from "@/components/whatsapp-button";
 import { getStudentOutstanding, type OutstandingInfo } from "./balance-actions";
 
 export type Opt = { id: string; label: string };
@@ -341,6 +342,9 @@ export function PaymentsClient({
           resultCount={search.filtered.length}
           placeholder={t("searchPlaceholder")}
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <SendDuesRemindersButton />
+        </div>
         <EntityDialog
           title={t("add")}
           wide

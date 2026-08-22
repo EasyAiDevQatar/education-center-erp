@@ -2652,6 +2652,13 @@
     "none": "لا أحد",
     "selfNumbers": "أرقام المركز — لا تُرسل إليها",
     "selfNumbersHint": "رقم الواتساب المُرسِل وأي خط يرد عليه المكتب. الرسائل الموجهة إلى هذه الأرقام تُتجاهل، فلا يراسل المركز نفسه. افصل بينها بفاصلة.",
-    "fallbackCopy": "نص احتياطي"
+    "fallbackCopy": "نص احتياطي",
+    "sendStatement": "إرسال كشف الحساب",
+    "remindDues": "تذكير بالمستحقات",
+    "sending": "جارٍ الإرسال…",
+    "sent": "أُرسل",
+    "notSent": "تعذّر الإرسال",
+    "duesResult": "أُرسل {sent} · تخطّي {skipped} (ذُكّروا مؤخراً) · بلا رقم {unreachable}",
+    "statementMessage": "{center}: كشف حساب {student} — إجمالي المستحق {charges} {currency}، المدفوع {paid} {currency}، المتبقي {balance} {currency}."
   }
 }

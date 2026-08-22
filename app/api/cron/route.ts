@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toNumber, formatMoney } from "@/lib/money";
-import { getStudentBalance } from "@/lib/balances";
+import { toNumber } from "@/lib/money";
 import { packageStatusFor } from "@/lib/billing-rules";
 import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { dispatch, centerSettings } from "@/lib/integrations/notify";
+import { remindOutstandingBalances } from "@/lib/dues-reminder";
 import { OPEN_LEAD_STATUSES } from "@/lib/leads";
 import { transportEnabled, loadTransportConfig } from "@/lib/transport/settings";
 import { pingCutoff } from "@/lib/transport/tracking";
@@ -24,7 +24,6 @@ import { buildDayPlan, generateDayTrips } from "@/lib/transport/trip-data";
  */
 
 /** Don't re-send a balance reminder to the same student within this window. */
-const BALANCE_COOLDOWN_DAYS = 7;
 /** Warn when a package drops to this many hours or fewer. */
 const PACKAGE_LOW_HOURS = 2;
 
@@ -81,47 +80,12 @@ export async function GET(request: Request) {
 
   /* 2. Outstanding balances ------------------------------------------------ */
   try {
-    const threshold = toNumber(
-      (await db.setting.findUnique({ where: { key: "balanceReminderThreshold" } }))?.value ?? "1",
-    );
-    const cooldownSince = new Date();
-    cooldownSince.setUTCDate(cooldownSince.getUTCDate() - BALANCE_COOLDOWN_DAYS);
-
-    const students = await db.student.findMany({
-      where: { active: true },
-      include: { guardian: true },
-    });
-    let sent = 0;
-    let skippedCooldown = 0;
-    for (const st of students) {
-      const { balance } = await getStudentBalance(st.id);
-      if (balance <= threshold) continue;
-
-      const recent = await db.notificationLog.findFirst({
-        where: {
-          event: "BALANCE_REMINDER",
-          entityId: st.id,
-          status: "SENT",
-          createdAt: { gte: cooldownSince },
-        },
-      });
-      if (recent) { skippedCooldown++; continue; }
-
-      sent++;
-      if (!dry) {
-        await dispatch(
-          "BALANCE_REMINDER",
-          [
-            { audience: "STUDENT", phone: st.phone },
-            { audience: "PARENT", phone: st.guardian?.phone ?? null },
-          ],
-          { student: st.name, amount: formatMoney(balance), currency, center },
-          { type: "Student", id: st.id },
-        );
-      }
-    }
-    report.balanceReminders = sent;
-    report.balanceSkippedByCooldown = skippedCooldown;
+    // Shared with the button on the payments screen — one set of rules for
+    // who gets chased, whether it is 07:00 or somebody pressing it.
+    const run = await remindOutstandingBalances({ dry });
+    report.balanceReminders = run.sent;
+    report.balanceSkippedByCooldown = run.skippedByCooldown;
+    report.balanceUnreachable = run.unreachable;
   } catch (e) {
     report.balanceRemindersError = String(e);
   }
