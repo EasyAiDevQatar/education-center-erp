@@ -17,6 +17,25 @@ export async function noShowPolicy() {
   return resolveNoShowPolicy(row?.value);
 }
 
+/**
+ * The session statuses that are not a charge — the one place that decides it.
+ *
+ * There used to be three answers to this question and they disagreed. The
+ * student's ledger excluded only DRAFT, so a cancelled or unbilled no-show
+ * still appeared as money owed; the allocation screen excluded those statuses,
+ * so nobody could ever pay that money off; and payroll excluded a different set
+ * again, so the teacher was paid commission on a lesson the parent was never
+ * charged for. Every money path now asks this function instead of writing its
+ * own list, which is what stops them drifting apart again.
+ *
+ *  - DRAFT      unconfirmed planner rows; never money.
+ *  - CANCELLED  the lesson did not happen and nobody is charged for it.
+ *  - NO_SHOW    only when the centre's policy says a no-show is not billed.
+ */
+export async function unchargeableStatuses(): Promise<string[]> {
+  return unbilledStatuses(await noShowPolicy(), ["DRAFT", "CANCELLED"]);
+}
+
 /* --------------------------- package application ---------------------------- */
 
 type Tx = Prisma.TransactionClient;
@@ -111,7 +130,7 @@ export async function outstandingSessions(studentId: string) {
     where: {
       studentId,
       packageId: null, // package-covered sessions aren't separately payable
-      status: { notIn: unbilledStatuses(await noShowPolicy(), ["DRAFT", "CANCELLED"]) },
+      status: { notIn: await unchargeableStatuses() },
     },
     orderBy: { date: "asc" },
     include: { allocations: true, teacher: true },

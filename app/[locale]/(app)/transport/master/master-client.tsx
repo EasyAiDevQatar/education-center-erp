@@ -35,7 +35,7 @@ import { RideAssignDialog } from "./ride-assign-dialog";
 import { DaySummary } from "./day-summary";
 import { SessionDialog, type PriceMatrix } from "../../sessions/session-dialog";
 import { saveSession } from "../../sessions/actions";
-import { assignToDriver, previewAssignAll, unassignPassenger } from "../dispatch/actions";
+import { assignToDriver, previewAssignAll, unassignPassenger } from "./ride-actions";
 import { Users, GripVertical, Undo2 as UndoIcon } from "lucide-react";
 
 /**

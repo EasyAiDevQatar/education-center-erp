@@ -1,8 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
-import { noShowPolicy } from "./billing";
-import { unbilledStatuses } from "./attendance-policy";
+import { unchargeableStatuses } from "./billing";
 
 /**
  * What each role needs to see first thing in the morning.
@@ -31,6 +30,9 @@ const monthStart = () => {
 /** The desk's day: who is expected, who arrived, what still needs chasing. */
 export async function receptionToday() {
   const { start, end } = dayBounds();
+  // The counts below are counts of lessons, so they drop only unconfirmed
+  // drafts. The last query is about money and must use the shared rule.
+  const unchargeable = await unchargeableStatuses();
   const [today, checkedIn, completed, noShow, newLeads, unpaidStudents] =
     await Promise.all([
       db.session.count({ where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } } }),
@@ -39,7 +41,9 @@ export async function receptionToday() {
       db.session.count({ where: { date: { gte: start, lt: end }, status: "NO_SHOW" } }),
       db.lead.count({ where: { status: "NEW" } }),
       db.session.findMany({
-        where: { paymentStatus: { not: "PAID" }, status: { notIn: ["DRAFT", "CANCELLED"] } },
+        // Was DRAFT and CANCELLED only, so an unbilled no-show counted as a
+        // family who owes money — the desk chased people for nothing.
+        where: { paymentStatus: { not: "PAID" }, status: { notIn: unchargeable } },
         select: { studentId: true },
         distinct: ["studentId"],
       }),
@@ -61,7 +65,6 @@ export async function receptionToday() {
 /** Money coming in. Never money going out — that is not this desk's job. */
 export async function cashierToday() {
   const { start, end } = dayBounds();
-  const policy = await noShowPolicy();
   const [todaySum, monthSum, todayCount, owing] = await Promise.all([
     db.payment.aggregate({ _sum: { amount: true }, where: { date: { gte: start, lt: end } } }),
     db.payment.aggregate({ _sum: { amount: true }, where: { date: { gte: monthStart() } } }),
@@ -70,7 +73,7 @@ export async function cashierToday() {
       where: {
         paymentStatus: { not: "PAID" },
         packageId: null,
-        status: { notIn: unbilledStatuses(policy, ["DRAFT", "CANCELLED"]) },
+        status: { notIn: await unchargeableStatuses() },
       },
       select: { studentId: true, total: true },
     }),

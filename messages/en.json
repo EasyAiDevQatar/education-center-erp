@@ -419,6 +419,7 @@
     "guardian": "Guardian",
     "balance": "Balance",
     "totalCharges": "Total charges",
+    "chargesBreakdown": "Lessons {lessons} + packages {packages}",
     "totalPaid": "Total paid",
     "ledger": "Student ledger",
     "homeLocation": "Home location (for home-session check-in)",

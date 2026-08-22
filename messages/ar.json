@@ -419,6 +419,7 @@
     "guardian": "ولي الأمر",
     "balance": "الرصيد",
     "totalCharges": "إجمالي المستحق",
+    "chargesBreakdown": "حصص {lessons} + باقات {packages}",
     "totalPaid": "إجمالي المدفوع",
     "ledger": "كشف حساب الطالب",
     "homeLocation": "موقع المنزل (لتسجيل حضور الحصص المنزلية)",

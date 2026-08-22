@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { hhmm } from "@/components/transport/timeline";
 import { driverOptionsFor, type DriverOption, type LegDiagnosis } from "./actions";
-import { assignLegToDriver, legOptionsFor, type LegOption } from "../dispatch/actions";
+import { assignLegToDriver, legOptionsFor, type LegOption } from "./ride-actions";
 
 /**
  * The one gap with an obvious next action.

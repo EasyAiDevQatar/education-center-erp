@@ -1,28 +1,45 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
+import { unchargeableStatuses } from "./billing";
 
 /**
  * Charges − payments = balance owed by the student.
  *
- * Two rules keep this honest:
- *  - Planner DRAFT sessions are unconfirmed plans and never count as charges.
+ * Three rules keep this honest:
+ *  - A lesson that was not delivered is not a charge — see
+ *    `unchargeableStatuses`. This used to exclude DRAFT only, which meant a
+ *    cancelled lesson and an unbilled no-show were both shown to the parent as
+ *    money owed, printed on their statement and chased by the nightly reminder
+ *    — while the allocation screen refused to let anyone pay it, because it
+ *    was already applying the correct rule. The balance was unpayable by
+ *    construction.
  *  - Sessions covered by a package are NOT charged individually; the package's
  *    purchase price is the charge instead (otherwise the student pays twice).
+ *  - The split is returned as well as the total, so a figure that looks wrong
+ *    can be read rather than guessed at.
  */
 export async function getStudentBalance(studentId: string) {
+  const skip = await unchargeableStatuses();
   const [charges, packages, paid] = await Promise.all([
     db.session.aggregate({
       _sum: { total: true },
-      where: { studentId, status: { not: "DRAFT" }, packageId: null },
+      where: { studentId, status: { notIn: skip }, packageId: null },
     }),
     db.package.aggregate({ _sum: { price: true }, where: { studentId } }),
     db.payment.aggregate({ _sum: { amount: true }, where: { studentId } }),
   ]);
-  const totalCharges =
-    toNumber(charges._sum.total) + toNumber(packages._sum.price);
+  const lessonCharges = toNumber(charges._sum.total);
+  const packageCharges = toNumber(packages._sum.price);
+  const totalCharges = lessonCharges + packageCharges;
   const totalPaid = toNumber(paid._sum.amount);
-  return { totalCharges, totalPaid, balance: totalCharges - totalPaid };
+  return {
+    lessonCharges,
+    packageCharges,
+    totalCharges,
+    totalPaid,
+    balance: totalCharges - totalPaid,
+  };
 }
 
 export type LedgerEntry = {
@@ -38,7 +55,9 @@ export type LedgerEntry = {
 export async function getStudentLedger(studentId: string): Promise<LedgerEntry[]> {
   const [sessions, packages, payments] = await Promise.all([
     db.session.findMany({
-      where: { studentId, status: { not: "DRAFT" }, packageId: null },
+      // Same rule as the balance above; a ledger that lists charges the
+      // balance does not count is a ledger nobody can reconcile.
+      where: { studentId, status: { notIn: await unchargeableStatuses() }, packageId: null },
       include: { teacher: true, gradeLevel: true },
     }),
     db.package.findMany({ where: { studentId } }),

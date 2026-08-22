@@ -1,7 +1,6 @@
 import "server-only";
 import { db } from "./db";
-import { noShowPolicy } from "./billing";
-import { unbilledStatuses } from "./attendance-policy";
+import { unchargeableStatuses } from "./billing";
 import { toNumber } from "./money";
 import {
   commissionOn,
@@ -122,23 +121,24 @@ export async function getAllTeacherEarnings(
   to?: Date,
 ): Promise<TeacherEarnings[]> {
   const dateRange = rangeWhere(from, to);
-  const [teachers, centreDefault, basis, nsPolicy] = await Promise.all([
+  const [teachers, centreDefault, basis, unchargeable] = await Promise.all([
     db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     centreEarningsMode(),
     centreCommissionBasis(),
-    noShowPolicy(),
+    unchargeableStatuses(),
   ]);
 
   const [sessionsGrouped, paymentsGrouped] = await Promise.all([
     db.session.groupBy({
       by: ["teacherId"],
       _sum: { total: true, hours: true },
-      // Planner drafts are unconfirmed — never earn commission. Nor does a
-      // no-show the centre does not bill: there is no revenue to take a
-      // percentage of. CANCELLED is deliberately left as it was — it is a
-      // separate rule and changing it here would move money quietly.
+      // The same rule the student's bill uses. Commission is a percentage of
+      // revenue, so a lesson that raised none — an unconfirmed draft, a
+      // cancellation, an unbilled no-show — cannot pay any. Payroll used to
+      // keep its own shorter list and paid commission on cancelled lessons the
+      // parent was never charged for.
       where: {
-        status: { notIn: unbilledStatuses(nsPolicy, ["DRAFT"]) },
+        status: { notIn: unchargeable },
         ...(dateRange ? { date: dateRange } : {}),
       },
     }),
@@ -170,11 +170,10 @@ export async function getTeacherEarnings(
   from: Date,
   to: Date,
 ): Promise<TeacherEarnings | null> {
-  const [teacher, centreDefault, basis, nsPolicy] = await Promise.all([
+  const [teacher, centreDefault, basis] = await Promise.all([
     db.teacher.findUnique({ where: { id: teacherId } }),
     centreEarningsMode(),
     centreCommissionBasis(),
-    noShowPolicy(),
   ]);
   if (!teacher) return null;
   const dateRange = rangeWhere(from, to);
@@ -184,7 +183,7 @@ export async function getTeacherEarnings(
       where: {
         teacherId,
         date: dateRange,
-        status: { notIn: unbilledStatuses(nsPolicy, ["DRAFT"]) },
+        status: { notIn: await unchargeableStatuses() },
       },
     }),
     db.payment.aggregate({

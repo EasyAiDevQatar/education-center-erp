@@ -6,12 +6,15 @@ export function StatCard({
   label,
   value,
   suffix,
+  hint,
   icon: Icon,
   tone = "default",
 }: {
   label: string;
   value: string;
   suffix?: string;
+  /** How the figure is made up — shown small under it, for totals that get queried. */
+  hint?: string;
   icon?: LucideIcon;
   tone?: "default" | "success" | "destructive" | "primary";
 }) {
@@ -35,6 +38,11 @@ export function StatCard({
               </span>
             )}
           </p>
+          {hint && (
+            <p className="mt-1 truncate text-xs text-muted-foreground tabular-nums" title={hint}>
+              {hint}
+            </p>
+          )}
         </div>
         {Icon && (
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">

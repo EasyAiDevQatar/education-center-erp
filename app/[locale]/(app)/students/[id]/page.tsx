@@ -83,7 +83,18 @@ export default async function StudentProfilePage({
       />
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label={t("totalCharges")} value={formatMoney(balance.totalCharges)} suffix={currency} icon={TrendingUp} />
+        <StatCard
+          label={t("totalCharges")}
+          value={formatMoney(balance.totalCharges)}
+          suffix={currency}
+          icon={TrendingUp}
+          // "Why do I owe 3,937.5 when I only see 937.5 of lessons?" was asked
+          // of a figure that silently added the packages. It says so now.
+          hint={t("chargesBreakdown", {
+            lessons: formatMoney(balance.lessonCharges),
+            packages: formatMoney(balance.packageCharges),
+          })}
+        />
         <StatCard label={t("totalPaid")} value={formatMoney(balance.totalPaid)} suffix={currency} icon={TrendingDown} tone="success" />
         <StatCard
           label={t("balance")}

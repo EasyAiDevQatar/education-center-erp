@@ -21,7 +21,7 @@ import { comparePlans, EMPTY_METRICS, type PlanMetrics } from "@/lib/transport/c
 import { buildDayPlan, flagTripsForSession, type DayPlan } from "@/lib/transport/trip-data";
 import { transportEnabled, loadTransportConfig, distanceKm } from "@/lib/transport/settings";
 import { travelMinutes } from "@/lib/transport/eta";
-import { previewAssignAll, type DriverReason } from "../dispatch/actions";
+import { previewAssignAll, type DriverReason } from "./ride-actions";
 import type { Leg } from "@/lib/transport/chain";
 import type { Role, SessionType } from "@/lib/enums";
 
@@ -685,7 +685,6 @@ export async function confirmReschedule(
   await notifySession("SESSION_RESCHEDULED", d.sessionId);
 
   revalidatePath(`/${locale}/transport/master`);
-  revalidatePath(`/${locale}/transport/dispatch`);
   revalidatePath(`/${locale}/sessions`);
   revalidatePath(`/${locale}/calendar`);
   return { ok: true };
