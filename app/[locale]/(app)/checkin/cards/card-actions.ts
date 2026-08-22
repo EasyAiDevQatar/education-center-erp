@@ -52,3 +52,88 @@ export async function sendCheckinCode(locale: string, studentId: string): Promis
   if (res.ok) await writeAudit("Student", student.id, "UPDATE", { after: { checkinCodeSent: true } });
   return res.ok ? { ok: true } : { error: res.error ?? "failed" };
 }
+
+export type CodeRun = {
+  sent: number;
+  /** Already had it recently — a code does not change, so twice is noise. */
+  skippedRecent: number;
+  /** Nobody to send to. These families have to be handed a card by hand. */
+  unreachable: number;
+  /** No code issued yet — generate the cards first. */
+  noCode: number;
+};
+
+/** Days before the same family is sent the same code again. */
+const CODE_COOLDOWN_DAYS = 30;
+
+/**
+ * Send every active student's code to their family.
+ *
+ * The cooldown is the point. A check-in code does not change, so re-sending it
+ * is not new information — it is the centre appearing in fifty chats with
+ * something they already have. A family sent one this month is skipped, and
+ * pressing the button twice does not undo that.
+ *
+ * Reports the families it could not reach, because those are the cards
+ * somebody has to hand over in person.
+ */
+export async function sendAllCheckinCodes(locale: string): Promise<ShareState & { run?: CodeRun }> {
+  const session = await getSession();
+  if (!session || !(STAFF_ROLES as readonly string[]).includes(session.role)) {
+    return { error: "forbidden" };
+  }
+
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - CODE_COOLDOWN_DAYS);
+
+  const students = await db.student.findMany({
+    where: { active: true },
+    include: { guardian: { select: { phone: true } } },
+  });
+
+  const [t, centre] = await Promise.all([
+    getTranslations({ locale, namespace: "checkin" }),
+    db.setting.findUnique({ where: { key: "centerName" } }),
+  ]);
+  const center = centre?.value ?? "";
+
+  const run: CodeRun = { sent: 0, skippedRecent: 0, unreachable: 0, noCode: 0 };
+
+  for (const student of students) {
+    if (!student.qrToken) {
+      run.noCode++;
+      continue;
+    }
+    const to = student.guardian?.phone ?? student.phone;
+    if (!to) {
+      run.unreachable++;
+      continue;
+    }
+
+    const recent = await db.notificationLog.findFirst({
+      where: {
+        event: "CHECKIN_CODE",
+        entityId: student.id,
+        status: "SENT",
+        createdAt: { gte: since },
+      },
+    });
+    if (recent) {
+      run.skippedRecent++;
+      continue;
+    }
+
+    const res = await sendDirect({
+      to,
+      text: t("shareMessage", { name: student.name, code: student.qrToken, center }),
+      event: "CHECKIN_CODE",
+      audience: student.guardian?.phone ? "PARENT" : "STUDENT",
+      entity: { type: "Student", id: student.id },
+    });
+    if (res.ok) run.sent++;
+    else run.unreachable++;
+  }
+
+  await writeAudit("Student", "bulk-checkin-codes", "UPDATE", { after: run });
+  return { ok: true, run };
+}

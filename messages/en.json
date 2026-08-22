@@ -412,7 +412,9 @@
     },
     "fallbackDecoder": "This browser uses a fallback reader — scanning may be a little slower. Hold the card close and steady.",
     "shareSent": "Sent",
-    "shareFailed": "Not sent"
+    "shareFailed": "Not sent",
+    "sendAllCodes": "Send codes to everyone",
+    "codesResult": "{sent} sent · {skipped} skipped (sent recently) · {unreachable} with no number · {noCode} with no code"
   },
   "students": {
     "title": "Students",

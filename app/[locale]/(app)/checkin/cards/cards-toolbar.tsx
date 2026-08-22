@@ -1,12 +1,13 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Printer, KeyRound, ArrowRight, ArrowLeft } from "lucide-react";
+import { Printer, KeyRound, ArrowRight, ArrowLeft, MessageCircle } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { printDoc } from "@/lib/print";
 import { ensureQrTokens } from "../actions";
+import { sendAllCheckinCodes } from "./card-actions";
 
 /** Print / generate controls for the QR card sheet. */
 export function CardsToolbar({ missing }: { missing: number }) {
@@ -15,6 +16,7 @@ export function CardsToolbar({ missing }: { missing: number }) {
   const locale = useLocale();
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [summary, setSummary] = useState<string | null>(null);
 
   return (
     <div className="no-print flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
@@ -30,7 +32,37 @@ export function CardsToolbar({ missing }: { missing: number }) {
         <span className="text-sm text-muted-foreground">{t("missingCards", { n: missing })}</span>
       )}
 
+      {summary && <span className="text-xs text-muted-foreground">{summary}</span>}
+
       <div className="ms-auto flex items-center gap-2">
+        {/* One press instead of fifty. The cooldown lives in the action, so
+            pressing it again tomorrow does not re-send what went today. */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              setSummary(null);
+              const res = await sendAllCheckinCodes(locale);
+              if (res.ok && res.run) {
+                setSummary(
+                  t("codesResult", {
+                    sent: res.run.sent,
+                    skipped: res.run.skippedRecent,
+                    unreachable: res.run.unreachable,
+                    noCode: res.run.noCode,
+                  }),
+                );
+                router.refresh();
+              } else setSummary(res.error ?? "failed");
+            })
+          }
+        >
+          <MessageCircle className="size-4" />
+          {t("sendAllCodes")}
+        </Button>
         <Button
           variant="secondary"
           size="sm"

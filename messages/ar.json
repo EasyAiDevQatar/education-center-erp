@@ -412,7 +412,9 @@
     },
     "fallbackDecoder": "هذا المتصفح يستخدم قارئاً بديلاً — قد يكون المسح أبطأ قليلاً. قرّب البطاقة وثبّتها.",
     "shareSent": "أُرسل",
-    "shareFailed": "تعذّر الإرسال"
+    "shareFailed": "تعذّر الإرسال",
+    "sendAllCodes": "إرسال الأكواد للجميع",
+    "codesResult": "أُرسل {sent} · تخطّي {skipped} (أُرسل لهم مؤخراً) · بلا رقم {unreachable} · بلا كود {noCode}"
   },
   "students": {
     "title": "الطلاب",
