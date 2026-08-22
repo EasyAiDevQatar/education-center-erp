@@ -40,11 +40,20 @@ export type IntegrationConfig = {
   matrix: Record<string, Audience[]>;
 };
 
+/** A file the provider fetches and attaches. Public URL, because it fetches. */
+export type SendAttachment = { url: string; mimetype: string; filename?: string };
+
 export type SendInput = {
   /** Destination — usually an E.164 phone number. */
   to: string;
   /** Rendered message body (already localized). */
   text: string;
+  /**
+   * Documents to send alongside the text. The provider downloads each URL
+   * itself, so they must be reachable without a session — see
+   * lib/statement-token.ts for how that is made safe.
+   */
+  attachments?: SendAttachment[];
 };
 
 export type ProviderResult = { ok: boolean; message?: string; error?: string };

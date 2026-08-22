@@ -134,9 +134,20 @@ export const easyAiConnect: Provider = {
     const phone = normalizePhone(input.to);
     if (!phone) return { ok: false, error: "badRecipient" };
 
+    const attachments = (input.attachments ?? []).map((a) => ({
+      url: a.url,
+      mimetype: a.mimetype,
+      ...(a.filename ? { filename: a.filename } : {}),
+    }));
+
     return request(cfg, SEND_PATH, {
       method: "POST",
-      body: JSON.stringify({ channel, phone, message: input.text }),
+      body: JSON.stringify({
+        channel,
+        phone,
+        message: input.text,
+        ...(attachments.length ? { attachments } : {}),
+      }),
     });
   },
 

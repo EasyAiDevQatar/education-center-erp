@@ -15,10 +15,12 @@ import { sendStatement, sendDuesReminders } from "@/app/[locale]/(app)/messages/
  * things somebody pressing this needs, and a silent green flash is neither.
  */
 export function SendStatementButton({
-  studentId,
+  kind,
+  id,
   size = "sm",
 }: {
-  studentId: string;
+  kind: "student" | "guardian" | "teacher";
+  id: string;
   size?: "sm" | "default";
 }) {
   const t = useTranslations("messages");
@@ -36,7 +38,7 @@ export function SendStatementButton({
       title={reason ?? undefined}
       onClick={() =>
         start(async () => {
-          const res = await sendStatement(locale, studentId);
+          const res = await sendStatement(locale, kind, id);
           setState(res.ok ? "sent" : "failed");
           setReason(res.ok ? null : (res.error ?? null));
         })

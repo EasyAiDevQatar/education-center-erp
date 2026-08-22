@@ -9,6 +9,9 @@ import { Link } from "@/i18n/navigation";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { ProfileTabs } from "@/components/profile-tabs";
+import { SendStatementButton } from "@/components/whatsapp-button";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 import { SessionsTable, PaymentsTable } from "@/components/tables/relation-tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +69,7 @@ export default async function GuardianProfilePage({
     { key: "children", label: t("students"), count: guardian.students.length },
     { key: "sessions", label: tp("sessions"), count: sessions.length },
     { key: "payments", label: tp("payments"), count: payments.length },
+    { key: "statement", label: tp("statement") },
   ];
 
   return (
@@ -131,6 +135,20 @@ export default async function GuardianProfilePage({
 
       {tab === "sessions" && <SessionsTable rows={sessions} currency={currency} />}
       {tab === "payments" && <PaymentsTable rows={payments} currency={currency} />}
+
+      {/* One page for the whole family — the question a parent actually asks
+          is "what do I owe you", not "what does each child owe you". */}
+      {tab === "statement" && (
+        <div className="flex flex-wrap justify-end gap-2">
+          <SendStatementButton kind="guardian" id={id} />
+          <Link href={`/statement/guardian/${id}`}>
+            <Button size="sm" className="gap-1">
+              <FileText className="size-4" />
+              {tp("openStatement")}
+            </Button>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

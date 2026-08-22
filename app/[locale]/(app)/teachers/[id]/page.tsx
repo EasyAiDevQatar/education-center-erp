@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { ProfileTabs } from "@/components/profile-tabs";
+import { SendStatementButton } from "@/components/whatsapp-button";
 import { SessionsTable, PaymentsTable, PayoutsTable } from "@/components/tables/relation-tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AvailabilityEditor } from "./availability-editor";
@@ -169,12 +170,15 @@ export default async function TeacherProfilePage({
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-2">
             <CardTitle>{tp("statement")}</CardTitle>
-            <Link href={`/statement/teacher/${id}`}>
-              <Button size="sm" className="gap-1">
-                <FileText className="size-4" />
-                {tp("openStatement")}
-              </Button>
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <SendStatementButton kind="teacher" id={id} />
+              <Link href={`/statement/teacher/${id}`}>
+                <Button size="sm" className="gap-1">
+                  <FileText className="size-4" />
+                  {tp("openStatement")}
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Row label={t("hoursTaught")} value={formatHours(earnings?.hours ?? 0)} />

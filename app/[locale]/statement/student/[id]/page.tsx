@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireAuth, STAFF_ROLES } from "@/lib/rbac";
+import { tokenOpens } from "@/lib/statement-token";
 import { db } from "@/lib/db";
 import { getStudentBalance, getStudentLedger } from "@/lib/balances";
 import { formatMoney, formatDate } from "@/lib/money";
@@ -10,20 +11,30 @@ import { fullName } from "@/lib/names";
 /** Printable A4 account statement for one student. */
 export default async function StudentStatementPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
+
+  // A signed link opens this one statement without a session — that is how the
+  // PDF gets rendered and how the messaging provider fetches it. It is checked
+  // against THIS document, so a link to one child never opens another's.
+  const sp = await searchParams;
+  const token = Array.isArray(sp.t) ? sp.t[0] : sp.t;
+  const viaLink = await tokenOpens(token, "student", id);
+
   // Staff open any statement; a parent opens only their own children's.
-  const session = await requireAuth(locale);
+  const session = viaLink ? null : await requireAuth(locale);
 
   const [student, settingsRows] = await Promise.all([
     db.student.findUnique({ where: { id }, include: { gradeLevel: true, guardian: true } }),
     db.setting.findMany(),
   ]);
   if (!student) notFound();
-  if (!STAFF_ROLES.includes(session.role)) {
+  if (session && !STAFF_ROLES.includes(session.role)) {
     if (!session.guardianId || student.guardianId !== session.guardianId) notFound();
   }
 

@@ -4,7 +4,7 @@ import { toNumber, formatMoney } from "@/lib/money";
 import { getProvider, activeConfigsFor, loadConfig } from "./registry";
 import { normalizePhone } from "./phone";
 import { templatesFor, bodyFor } from "@/lib/messages/templates";
-import type { Audience, IntegrationEvent } from "./types";
+import type { Audience, IntegrationEvent, SendAttachment } from "./types";
 
 /**
  * Values available to message templates.
@@ -599,6 +599,8 @@ export async function sendDirect(input: {
   event: string;
   audience: Audience;
   entity?: { type: string; id: string };
+  /** Documents to send with it — the provider fetches each URL itself. */
+  attachments?: SendAttachment[];
 }): Promise<{ ok: boolean; error?: string }> {
   const phone = normalizePhone(input.to);
   const base = {
@@ -625,7 +627,11 @@ export async function sendDirect(input: {
     const provider = cfg && getProvider(row.provider);
     if (!cfg || !provider) continue;
 
-    const res = await provider.send(cfg, { to: phone, text: input.text });
+    const res = await provider.send(cfg, {
+      to: phone,
+      text: input.text,
+      attachments: input.attachments,
+    });
     await db.notificationLog.create({
       data: {
         ...base,

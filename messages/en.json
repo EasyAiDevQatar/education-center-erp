@@ -2659,6 +2659,8 @@
     "sent": "Sent",
     "notSent": "Not sent",
     "duesResult": "{sent} sent · {skipped} skipped (reminded recently) · {unreachable} with no number",
-    "statementMessage": "{center}: statement for {student} — charged {charges} {currency}, paid {paid} {currency}, outstanding {balance} {currency}."
+    "statementMessage": "{center}: statement for {student} — charged {charges} {currency}, paid {paid} {currency}, outstanding {balance} {currency}. Details in the attached file.",
+    "familyStatementMessage": "{center}: statement for the {guardian} family ({children} students) — charged {charges} {currency}, paid {paid} {currency}, outstanding {balance} {currency}. Details in the attached file.",
+    "teacherStatementMessage": "{center}: statement for {teacher} — {hours} hours, {due} {currency} payable to you. Details in the attached file."
   }
 }

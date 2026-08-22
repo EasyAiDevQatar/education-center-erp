@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireAuth, FINANCE_ROLES } from "@/lib/rbac";
+import { tokenOpens } from "@/lib/statement-token";
 import { db } from "@/lib/db";
 import { getTeacherEarnings } from "@/lib/payroll";
 import { toNumber, formatMoney, formatHours, formatDate } from "@/lib/money";
@@ -24,12 +25,16 @@ export default async function TeacherStatementPage({
   const { locale, id } = await params;
   setRequestLocale(locale);
 
-  // Finance staff see any statement; a teacher may open only their own.
-  const session = await requireAuth(locale);
-  const isFinance = FINANCE_ROLES.includes(session.role);
-  if (!isFinance && session.teacherId !== id) notFound();
-
   const sp = await searchParams;
+  const token = Array.isArray(sp.t) ? sp.t[0] : sp.t;
+  const viaLink = await tokenOpens(token, "teacher", id);
+
+  // Finance staff see any statement; a teacher may open only their own.
+  const session = viaLink ? null : await requireAuth(locale);
+  if (session) {
+    const isFinance = FINANCE_ROLES.includes(session.role);
+    if (!isFinance && session.teacherId !== id) notFound();
+  }
   const get = (k: string) => {
     const v = sp[k];
     return (Array.isArray(v) ? v[0] : v) ?? "";

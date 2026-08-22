@@ -2659,6 +2659,8 @@
     "sent": "أُرسل",
     "notSent": "تعذّر الإرسال",
     "duesResult": "أُرسل {sent} · تخطّي {skipped} (ذُكّروا مؤخراً) · بلا رقم {unreachable}",
-    "statementMessage": "{center}: كشف حساب {student} — إجمالي المستحق {charges} {currency}، المدفوع {paid} {currency}، المتبقي {balance} {currency}."
+    "statementMessage": "{center}: كشف حساب {student} — إجمالي المستحق {charges} {currency}، المدفوع {paid} {currency}، المتبقي {balance} {currency}. التفاصيل في الملف المرفق.",
+    "familyStatementMessage": "{center}: كشف حساب عائلة {guardian} ({children} طلاب) — إجمالي المستحق {charges} {currency}، المدفوع {paid} {currency}، المتبقي {balance} {currency}. التفاصيل في الملف المرفق.",
+    "teacherStatementMessage": "{center}: كشف حساب {teacher} — {hours} ساعة، المستحق لك {due} {currency}. التفاصيل في الملف المرفق."
   }
 }

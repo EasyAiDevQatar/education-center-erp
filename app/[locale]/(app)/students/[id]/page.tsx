@@ -162,7 +162,7 @@ export default async function StudentProfilePage({
       {tab === "statement" && (
         <div className="space-y-3">
           <div className="flex flex-wrap justify-end gap-2">
-            <SendStatementButton studentId={id} />
+            <SendStatementButton kind="student" id={id} />
             <a href={`/${locale}/statement/student/${id}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="gap-1">
                 <Printer className="size-4" />
