@@ -19,6 +19,7 @@ import {
   Truck,
   Settings,
   Sparkles,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/lib/enums";
@@ -73,6 +74,9 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { href: "/sessions", key: "sessions", icon: CalendarDays, roles: ACADEMIC, section: "operations" },
+  // Open to staff: reading the conversation and wording it are daily work.
+  // The credential that sends it stays in Settings behind its own password.
+  { href: "/messages", key: "messages", icon: MessagesSquare, roles: STAFF, section: "operations" },
   { href: "/assistant", key: "assistant", icon: Sparkles, roles: STAFF, section: "operations", flag: "ai" },
   { href: "/students", key: "students", icon: Users, roles: PEOPLE, section: "people" },
   { href: "/teachers", key: "teachers", icon: GraduationCap, roles: PEOPLE, section: "people" },

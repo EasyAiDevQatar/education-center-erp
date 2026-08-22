@@ -14,7 +14,7 @@ import { CenterProfileForm } from "./center-profile-form";
 import { PriceMatrixEditor, type MatrixRow } from "./price-matrix-editor";
 import { CategoriesManager, type CategoryRow } from "./categories-manager";
 import { SubjectsManager, type SubjectRow } from "./subjects-manager";
-import { IntegrationsManager, type IntegrationView, type InboundRow } from "./integrations-manager";
+import { IntegrationsManager, type IntegrationView } from "./integrations-manager";
 import { gateIsSet, gateIsOpen } from "@/lib/integrations/gate";
 import { TermsManager, type TermRow } from "./terms-manager";
 import { TeacherPaymentsSettings } from "./teacher-payments-settings";
@@ -31,7 +31,6 @@ import { BackupSettings } from "./backup-settings";
 import { listBackups } from "@/lib/backups";
 import { parseServiceAccount } from "@/lib/drive";
 import { DEFAULT_EARNINGS_MODE, DEFAULT_COMMISSION_BASIS, isEarningsMode } from "@/lib/earnings-mode";
-import { NotificationLogTable, type LogRow } from "./notification-log-table";
 import { UsersManager, type UserRow } from "./users-manager";
 import { AuditLogTable, type AuditRow } from "./audit-log-table";
 import { DataManager, DangerZone } from "./data-manager";
@@ -120,7 +119,7 @@ export default async function SettingsPage({
     orderBy: { role: "asc" },
   });
 
-  const [settingsRows, years, matrix, categories, subjects, integrationRows, inboundRows, logs, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
+  const [settingsRows, years, matrix, categories, subjects, integrationRows, termRows, userRows, auditRows, teacherRows, guardianRows] = await Promise.all([
     db.setting.findMany(),
     listAcademicYears(),
     currentPriceMatrix(),
@@ -130,17 +129,6 @@ export default async function SettingsPage({
       include: { _count: { select: { teachers: true } } },
     }),
     db.integration.findMany(),
-    db.inboundMessage.findMany({
-      orderBy: { receivedAt: "desc" },
-      take: 100,
-      include: {
-        student: { select: { name: true } },
-        guardian: { select: { name: true } },
-        teacher: { select: { name: true } },
-        driver: { select: { employee: { select: { name: true } } } },
-      },
-    }),
-    db.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 300 }),
     db.term.findMany({ orderBy: { startDate: "desc" } }),
     db.user.findMany({
       orderBy: { name: "asc" },
@@ -191,32 +179,6 @@ export default async function SettingsPage({
   const origin = host ? `${proto}://${host}` : "";
 
   const connectGate = { isSet: await gateIsSet(), isOpen: await gateIsOpen() };
-
-  const inbound: InboundRow[] = inboundRows.map((m) => ({
-    id: m.id,
-    at: m.receivedAt.toISOString().slice(0, 16).replace("T", " "),
-    phone: m.phone,
-    body: m.body,
-    // Whoever the number matched. Unmatched stays null and shows as such —
-    // "we do not know who this is" is information, not a blank.
-    who:
-      m.student?.name ??
-      m.guardian?.name ??
-      m.teacher?.name ??
-      m.driver?.employee.name ??
-      m.contactName ??
-      null,
-  }));
-
-  const logRows: LogRow[] = logs.map((l) => ({
-    id: l.id,
-    at: l.createdAt.toISOString().slice(0, 16).replace("T", " "),
-    event: l.event,
-    audience: l.audience,
-    recipient: l.recipient,
-    status: l.status,
-    error: l.error,
-  }));
 
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
   const backups = await listBackups();
@@ -566,7 +528,6 @@ export default async function SettingsPage({
         { key: "integrations", label: t("integrations"), node: <IntegrationsManager
               integrations={integrations}
               gate={connectGate}
-              inbound={inbound}
               origin={origin}
             /> },
       ],
@@ -587,7 +548,6 @@ export default async function SettingsPage({
             />
           ),
         },
-        { key: "notifications", label: t("notificationLog"), node: <NotificationLogTable rows={logRows} /> },
         { key: "audit", label: t("auditLog"), node: <AuditLogTable rows={audits} /> },
         // Settings is ADMIN-only, so finance tables are always available.
         { key: "data", label: tdata("title"), node: <DataManager canFinance /> },

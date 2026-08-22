@@ -32,6 +32,12 @@ export type IntegrationConfig = {
   config: Record<string, string>;
   events: IntegrationEvent[];
   audiences: Audience[];
+  /**
+   * Who receives each event. Derived from the two lists above when nothing is
+   * stored, so a configuration written before this existed keeps behaving
+   * exactly as it did — as the cross product it was.
+   */
+  matrix: Record<string, Audience[]>;
 };
 
 export type SendInput = {

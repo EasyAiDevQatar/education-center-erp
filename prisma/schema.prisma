@@ -639,7 +639,15 @@ model Integration {
   /// JSON array of enabled event keys, e.g. ["SESSION_BOOKED","PAYMENT_RECEIVED"].
   events  String?
   /// JSON array of audiences to notify: ["TEACHER","PARENT","STUDENT"].
+  /// Kept as the fallback for a row saved before the matrix existed; the matrix
+  /// is the answer once one is stored.
   audiences String?
+  /// Who hears about what, as {"SESSION_BOOKED":["TEACHER","PARENT"], …}.
+  ///
+  /// The two lists above could only express a cross product: every chosen
+  /// audience heard about every chosen event, so telling teachers about
+  /// bookings meant also telling them about every payment the centre took.
+  deliveryMatrix String?
 
   /// Shared secret in the inbound webhook path. Unguessable and rotatable —
   /// the URL is the only credential the provider presents when calling back,
@@ -670,6 +678,36 @@ model NotificationLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([event])
+}
+
+/// The centre's own wording for one outbound message.
+///
+/// The bodies used to be nine strings compiled into notify.ts, so a centre that
+/// wanted to say something differently — its own name for a lesson, a payment
+/// message carrying the receipt number — needed a deploy. A row here overrides
+/// the built-in for one event, audience and language; delete it and the
+/// built-in comes back, which is what makes editing safe.
+model MessageTemplate {
+  id String @id @default(cuid())
+
+  /// Which notification this rewords, e.g. PAYMENT_RECEIVED.
+  event String
+  /// Null means everyone who gets this event. A row naming an audience wins
+  /// over the null row, so a centre can word the driver's copy differently
+  /// without rewriting the family's.
+  audience String?
+  /// ar or en — a centre running bilingually needs both, and a missing one
+  /// falls back to the built-in rather than sending the wrong language.
+  locale String
+
+  body   String
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([event, audience, locale])
   @@index([event])
 }
 

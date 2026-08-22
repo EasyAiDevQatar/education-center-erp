@@ -197,7 +197,8 @@
     "assistant": "AI Assistant",
     "transportManifest": "Pickups & drop-offs",
     "transportDispatch": "Dispatch board",
-    "transportMaster": "Master planner"
+    "transportMaster": "Master planner",
+    "messages": "Messages"
   },
   "auth": {
     "login": "Log in",
@@ -2594,5 +2595,35 @@
       "locked": "This module is locked.",
       "forbidden": "Only a system administrator may do this."
     }
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "What the centre sent, what it was told, and how it words it.",
+    "tabLog": "Sent",
+    "tabInbound": "Received",
+    "tabTemplates": "Templates",
+    "tabDelivery": "Delivery",
+    "logIntro": "Every message the system tried to send.",
+    "disabled": "Sending is off",
+    "inboundIntro": "What people send the centre. Stored only — no auto-reply, and no session is changed.",
+    "inboundEmpty": "Nothing received yet.",
+    "unknownNumber": "Unknown number",
+    "templatesIntro": "Write your own wording for each notification. Leave a box empty to use the default shown behind it.",
+    "customised": "Customised",
+    "arabic": "Arabic",
+    "english": "English",
+    "preview": "Preview",
+    "reset": "Restore default",
+    "resetHint": "Delete your wording and go back to the default.",
+    "deliveryIntro": "For each event, choose who hears about it. A teacher cares about the booking, not the amount paid.",
+    "notConnected": "No connection is configured yet — Settings → Users & Access → Integrations.",
+    "errors": {
+      "forbidden": "Only centre staff may do this.",
+      "invalid": "Invalid input.",
+      "notConfigured": "No connection is configured yet.",
+      "unknownVariable": "Not a variable this event carries"
+    },
+    "all": "All",
+    "none": "None"
   }
 }

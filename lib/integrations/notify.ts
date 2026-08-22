@@ -3,11 +3,20 @@ import { db } from "@/lib/db";
 import { toNumber, formatMoney } from "@/lib/money";
 import { getProvider, activeConfigsFor } from "./registry";
 import { normalizePhone } from "./phone";
+import { templatesFor, bodyFor } from "@/lib/messages/templates";
 import type { Audience, IntegrationEvent } from "./types";
 
-/** Values available to message templates. */
+/**
+ * Values available to message templates.
+ *
+ * The catalogue a centre sees when editing lives in lib/messages/render.ts and
+ * must agree with what is populated below — a variable offered in the editor
+ * and never set renders as nothing, which reads to the centre as a bug in
+ * their template rather than in ours.
+ */
 type Vars = {
   student?: string;
+  guardian?: string;
   teacher?: string;
   date?: string;
   time?: string;
@@ -15,6 +24,13 @@ type Vars = {
   amount?: string;
   currency?: string;
   center?: string;
+  /** Receipt number on a payment — the centre calls this the invoice number. */
+  invoice?: string;
+  method?: string;
+  balance?: string;
+  location?: string;
+  price?: string;
+  period?: string;
 };
 
 type Tpl = (v: Vars) => string;
@@ -87,6 +103,22 @@ const TEMPLATES: Record<IntegrationEvent, Record<"ar" | "en", Tpl>> = {
   },
 };
 
+/**
+ * The built-in wording with the variable names left in place.
+ *
+ * The template editor shows this as the placeholder, so a centre can see both
+ * what will be sent if it writes nothing and which variables the sentence is
+ * built from — more useful than an empty box beside a list of names.
+ */
+export function builtInBody(event: IntegrationEvent, lang: "ar" | "en"): string {
+  // A proxy that answers every lookup with its own name, so the built-in
+  // function renders itself as a template rather than as a finished message.
+  const echo = new Proxy({} as Vars, {
+    get: (_target, key: string) => `{{${key}}}`,
+  });
+  return TEMPLATES[event][lang](echo);
+}
+
 async function centerSettings() {
   const rows = await db.setting.findMany({
     where: { key: { in: ["centerName", "currency", "language"] } },
@@ -119,15 +151,25 @@ export async function dispatch(
     const { lang } = await centerSettings();
     const text = TEMPLATES[event][lang](vars);
     const driverText = DRIVER_TEMPLATES[event]?.[lang](vars) ?? text;
+    // One query for the whole dispatch rather than one per recipient.
+    const stored = await templatesFor(event);
 
     for (const cfg of configs) {
       const provider = getProvider(cfg.provider);
       if (!provider) continue;
 
       for (const r of recipients) {
-        if (!cfg.audiences.includes(r.audience)) continue;
+        // Per event, not per configuration: the teacher who should hear about
+        // a booking has no business being told what a family paid.
+        if (!(cfg.matrix[event] ?? []).includes(r.audience)) continue;
 
-        const body = r.audience === "DRIVER" ? driverText : text;
+        const body = bodyFor(
+          stored,
+          r.audience,
+          lang,
+          vars as Record<string, string | undefined>,
+          r.audience === "DRIVER" ? driverText : text,
+        );
         // Checked here rather than at the provider so the log records the
         // number that was actually dialled, and so an unusable one is a
         // SKIPPED row instead of a wasted call that comes back FAILED.
@@ -220,10 +262,13 @@ export async function notifySession(
       ],
       {
         student: s.student.name,
+        guardian: s.student.guardian?.name ?? "",
         teacher: s.teacher?.name ?? "",
         date: fmtDate(s.date),
         time: fmtTime(s.date),
         hours: String(toNumber(s.hours)),
+        location: s.location === "HOME" ? "المنزل" : "المركز",
+        price: formatMoney(s.total),
         center,
         currency,
       },
@@ -252,7 +297,13 @@ export async function notifyPayment(paymentId: string): Promise<void> {
       ],
       {
         student: p.student?.name ?? "—",
+        guardian: p.student?.guardian?.name ?? "",
         amount: formatMoney(p.amount),
+        // The receipt number is what the centre calls the invoice number, and
+        // it is the single most useful thing to put in a payment message: it
+        // is what a parent quotes back when they ring about it.
+        invoice: p.receiptNo,
+        method: p.method ?? "",
         currency,
         center,
         date: fmtDate(p.date),

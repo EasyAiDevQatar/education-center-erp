@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { INTEGRATION_EVENTS, AUDIENCES } from "@/lib/integrations/types";
 import { ConnectGate, ConnectUnlockedBar } from "./connect-gate";
 import { Plug, CheckCircle2, XCircle, Send, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,11 +54,6 @@ export type InboundRow = {
   who: string | null;
 };
 
-// Imported, not retyped. This screen used to keep its own copy of both lists,
-// which is how an event could exist on the server and be untickable here — the
-// absence event was added and would have been invisible until somebody noticed.
-const ALL_EVENTS = INTEGRATION_EVENTS;
-const ALL_AUDIENCES = AUDIENCES;
 
 function Toggle({
   on,
@@ -87,12 +81,10 @@ function Toggle({
 export function IntegrationsManager({
   integrations,
   gate,
-  inbound,
   origin,
 }: {
   integrations: IntegrationView[];
   gate: { isSet: boolean; isOpen: boolean };
-  inbound: InboundRow[];
   origin: string;
 }) {
   // Locked is the default view, not a redirect: the person is already an
@@ -106,49 +98,6 @@ export function IntegrationsManager({
       {integrations.map((i) => (
         <IntegrationCard key={i.provider} data={i} origin={origin} />
       ))}
-      <InboundLog rows={inbound} />
-    </div>
-  );
-}
-
-/** Replies from families, drivers and teachers — recorded, never acted on. */
-function InboundLog({ rows }: { rows: InboundRow[] }) {
-  const t = useTranslations("integrations");
-  return (
-    <div className="rounded-lg border border-border p-4">
-      <p className="mb-1 font-semibold">{t("inboundTitle")}</p>
-      <p className="mb-3 text-xs text-muted-foreground">{t("inboundIntro")}</p>
-      {rows.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">{t("inboundEmpty")}</p>
-      ) : (
-        <div className="max-h-80 overflow-y-auto">
-          <table className="w-full text-sm">
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border/60 last:border-0">
-                  <td
-                    className="whitespace-nowrap py-2 pe-3 align-top text-xs text-muted-foreground tabular-nums"
-                    dir="ltr"
-                  >
-                    {r.at}
-                  </td>
-                  <td className="py-2 pe-3 align-top">
-                    <span className="font-medium">{r.who ?? t("inboundUnknown")}</span>
-                    {r.phone && (
-                      <span className="ms-2 text-xs text-muted-foreground" dir="ltr">
-                        {r.phone}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2 align-top" dir="auto">
-                    {r.body}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }
@@ -156,7 +105,6 @@ function InboundLog({ rows }: { rows: InboundRow[] }) {
 function IntegrationCard({ data, origin }: { data: IntegrationView; origin: string }) {
   const t = useTranslations("integrations");
   const tc = useTranslations("common");
-  const te = useTranslations("integrationEvents");
   const locale = useLocale();
 
   const [enabled, setEnabled] = useState(data.enabled);
@@ -165,15 +113,11 @@ function IntegrationCard({ data, origin }: { data: IntegrationView; origin: stri
   const baseUrl = data.baseUrl;
   const [apiKey, setApiKey] = useState("");
   const [config, setConfig] = useState<Record<string, string>>(data.config ?? {});
-  const [events, setEvents] = useState<string[]>(data.events ?? []);
-  const [audiences, setAudiences] = useState<string[]>(data.audiences ?? []);
   const [testTo, setTestTo] = useState("");
 
   const [pending, start] = useTransition();
   const [result, setResult] = useState<IntegrationState | null>(null);
 
-  const toggleIn = (list: string[], set: (v: string[]) => void, key: string) =>
-    set(list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
 
   function run(fn: () => Promise<IntegrationState>) {
     setResult(null);
@@ -188,8 +132,6 @@ function IntegrationCard({ data, origin }: { data: IntegrationView; origin: stri
         baseUrl,
         apiKey,
         config,
-        events: events as never,
-        audiences: audiences as never,
       }),
     );
 
@@ -289,35 +231,6 @@ function IntegrationCard({ data, origin }: { data: IntegrationView; origin: stri
         </div>
       )}
 
-      {/* Events */}
-      <div className="mt-4">
-        <p className="mb-1 text-xs font-semibold text-muted-foreground">{t("events")}</p>
-        <div className="flex flex-wrap gap-1.5">
-          {ALL_EVENTS.map((e) => (
-            <Toggle
-              key={e}
-              on={events.includes(e)}
-              onChange={() => toggleIn(events, setEvents, e)}
-              label={te(e)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Audiences */}
-      <div className="mt-3">
-        <p className="mb-1 text-xs font-semibold text-muted-foreground">{t("audiences")}</p>
-        <div className="flex flex-wrap gap-1.5">
-          {ALL_AUDIENCES.map((a) => (
-            <Toggle
-              key={a}
-              on={audiences.includes(a)}
-              onChange={() => toggleIn(audiences, setAudiences, a)}
-              label={t(`audienceLabels.${a}`)}
-            />
-          ))}
-        </div>
-      </div>
 
       {/* Actions */}
       <div className="mt-4 flex flex-wrap items-end gap-2">

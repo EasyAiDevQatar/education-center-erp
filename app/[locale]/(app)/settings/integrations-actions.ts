@@ -9,7 +9,6 @@ import { writeAudit } from "@/lib/audit";
 import { getProvider, loadConfig } from "@/lib/integrations/registry";
 import { encryptSecret } from "@/lib/integrations/secret-crypto";
 import { requireGate } from "@/lib/integrations/gate";
-import { INTEGRATION_EVENTS, AUDIENCES } from "@/lib/integrations/types";
 
 export type IntegrationState = { ok?: boolean; error?: string; message?: string };
 
@@ -34,8 +33,6 @@ const saveSchema = z.object({
   /** Empty string means "keep the stored key" so the UI never has to echo it. */
   apiKey: z.string().trim().max(500).optional().nullable(),
   config: z.record(z.string(), z.string()).default({}),
-  events: z.array(z.enum(INTEGRATION_EVENTS)).default([]),
-  audiences: z.array(z.enum(AUDIENCES)).default([]),
 });
 
 export async function saveIntegration(
@@ -61,8 +58,6 @@ export async function saveIntegration(
     baseUrl: d.baseUrl || null,
     apiKey,
     config: JSON.stringify(d.config ?? {}),
-    events: JSON.stringify(d.events ?? []),
-    audiences: JSON.stringify(d.audiences ?? []),
   };
 
   await db.integration.upsert({
