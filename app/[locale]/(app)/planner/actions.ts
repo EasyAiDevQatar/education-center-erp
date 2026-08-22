@@ -3,11 +3,11 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { applyMark } from "@/lib/attendance";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { writeAudit } from "@/lib/audit";
-import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { combineDateTime } from "@/lib/session-time";
 import { toNumber } from "@/lib/money";
 import { compactTimes, hhmmToMin, minToHHMM } from "@/lib/planner";
@@ -144,13 +144,11 @@ export async function confirmSession(locale: string, id: string): Promise<Planne
   if (!existing) return { error: "notfound" };
   if (existing.status !== "DRAFT") return { error: "notDraft" };
 
-  // Confirming makes the session billable: draw down its package (if any) and
-  // refresh its payment status inside one transaction.
-  await db.$transaction(async (tx) => {
-    await tx.session.update({ where: { id }, data: { status: "COMPLETED" } });
-    await applyPackageHours(tx, id);
-    await syncSessionPaymentStatus(tx, id);
-  });
+  // Confirming makes the session billable AND tells the family. It used to do
+  // the first half only, with its own copy of the transaction, so a home visit
+  // planned here and confirmed reached the parent as silence — the booking
+  // form messaged them, the planner did not.
+  await applyMark(id, "COMPLETED");
   await writeAudit("Session", id, "UPDATE", { after: { status: "COMPLETED", confirmedFromDraft: true } });
   revalidate(locale);
   const needing = await countHomeNeedingTrip([id]);
@@ -194,12 +192,7 @@ export async function confirmDay(
   });
   const res = { count: 0 };
   for (const { id } of targets) {
-    await db.$transaction(async (tx) => {
-      await tx.session.update({ where: { id }, data: { status: "COMPLETED" } });
-      await applyPackageHours(tx, id);
-      await syncSessionPaymentStatus(tx, id);
-    });
-    res.count++;
+    if (await applyMark(id, "COMPLETED")) res.count++;
   }
   await writeAudit("Session", "bulk-confirm", "UPDATE", {
     after: { date: d.date, teacherId: d.teacherId ?? "all", count: res.count },

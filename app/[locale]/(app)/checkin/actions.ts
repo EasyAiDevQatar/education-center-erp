@@ -10,6 +10,7 @@ import { writeAudit } from "@/lib/audit";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { notifySession } from "@/lib/integrations/notify";
 import { applyPackageHours, revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
+import { applyMark, MARKS } from "@/lib/attendance";
 import { distanceMeters, GEOFENCE_RADIUS_M } from "@/lib/geo";
 import { CHECKIN_METHODS } from "@/lib/enums";
 
@@ -160,8 +161,6 @@ export async function undoCheckin(locale: string, id: string): Promise<CheckinRe
 /* ========================= roster board (fast path) ========================= */
 
 /** Statuses the roster board can move a session to. */
-const MARKS = ["COMPLETED", "NO_SHOW", "SCHEDULED"] as const;
-export type Mark = (typeof MARKS)[number];
 
 export type AttendanceState = {
   ok?: boolean;
@@ -171,64 +170,6 @@ export type AttendanceState = {
   studentName?: string;
 };
 
-/**
- * Apply an attendance mark, keeping billing in step.
- *
- * COMPLETED is the billable state, so it draws down any package and refreshes
- * payment status; moving back out returns those hours. Both happen in one
- * transaction, so a half-applied mark is impossible. Re-marking the same
- * status is a no-op, which makes repeat taps free.
- */
-/**
- * Record an attendance decision — and tell the family about it.
- *
- * There are four ways a student gets marked: the kiosk check-in, a barcode
- * scan, a tap on the roster, and "everyone was here". Only the first told
- * anybody. The other three all funnel through here, which is why the
- * notification belongs here rather than at each call site — the reason the bug
- * existed is that a call site can forget, and three of them did.
- *
- * The early return above it matters too: re-marking a student who is already
- * COMPLETED changes nothing and must not send a second message.
- */
-async function applyMark(sessionId: string, mark: Mark, auto = false) {
-  const existing = await db.session.findUnique({ where: { id: sessionId } });
-  if (!existing) return false;
-  if (existing.status === mark) return true;
-
-  await db.$transaction(async (tx) => {
-    const wasCompleted = existing.status === "COMPLETED";
-    const willComplete = mark === "COMPLETED";
-
-    await tx.session.update({
-      where: { id: sessionId },
-      data: {
-        status: mark,
-        autoCompleted: willComplete ? auto : false,
-        studentCheckInAt:
-          willComplete && !existing.studentCheckInAt && !auto
-            ? new Date()
-            : existing.studentCheckInAt,
-      },
-    });
-
-    if (willComplete && !wasCompleted) await applyPackageHours(tx, sessionId);
-    // Not just from COMPLETED: `packageApplied` is the record of what is held,
-    // and revert is a no-op when nothing is, so releasing on any move out of a
-    // billable state is both correct and cheap.
-    else if (!willComplete) await revertPackageHours(tx, sessionId);
-    await syncSessionPaymentStatus(tx, sessionId);
-  });
-
-  // Auto-completion is the clock deciding, not a person: it runs over every
-  // unclosed session of the day and must not message anybody. SCHEDULED means
-  // somebody undid a mark, which is a correction rather than news.
-  if (!auto) {
-    if (mark === "COMPLETED") await notifySession("CHECKED_IN", sessionId);
-    else if (mark === "NO_SHOW") await notifySession("SESSION_NO_SHOW", sessionId);
-  }
-  return true;
-}
 
 const markSchema = z.object({
   sessionId: z.string().min(1),
@@ -435,6 +376,10 @@ export async function checkInByQr(
     await writeAudit("Session", created.id, "CREATE", {
       after: { via: "qr-walkin", studentId: student.id, teacherId },
     });
+    // A walk-in writes its session straight to COMPLETED rather than going
+    // through applyMark, so it has to say so itself. The family cannot tell a
+    // walk-in from a booked lesson, and should not have to.
+    await notifySession("CHECKED_IN", created.id);
     revalidate(locale);
     return { ok: true, studentName: student.name, walkIn: true };
   }
