@@ -532,7 +532,23 @@
     "partial": "Part paid",
     "errorOverSession": "One lesson has been allocated more than it owes.",
     "errorOverPayment": "The split adds up to more than the payment.",
-    "payThis": "Pay this session"
+    "payThis": "Pay this session",
+    "cancelReceipt": "Cancel receipt",
+    "refundReceipt": "Refund",
+    "cancelWarning": "Cancelling means the receipt was keyed in error and no money was ever taken. Its ledger entry is removed and any sessions it paid for become unpaid again.",
+    "refundWarning": "Refunding means the money arrived and went back. The receipt stays, a reversing entry is added, and any sessions it paid for become unpaid again.",
+    "refundAmount": "Amount refunded",
+    "refundPartHint": "Leave as-is to refund it all, or enter less for a partial refund.",
+    "voidReason": "Reason",
+    "voidReasonHint": "Shown in the log and on the statement. Required.",
+    "errors": {
+      "receiptLocked": "A receipt cannot be edited once saved — cancel or refund it instead.",
+      "reasonRequired": "Give a reason (at least 3 characters).",
+      "alreadyVoided": "This receipt is already cancelled or refunded.",
+      "refundTooLarge": "The refund is larger than the receipt.",
+      "forbidden": "Only finance may do this.",
+      "notfound": "Receipt not found."
+    }
   },
   "packages": {
     "title": "Packages",
@@ -723,9 +739,9 @@
       "CHEQUE": "Cheque"
     },
     "paymentStatus": {
-      "PAID": "Paid",
-      "PARTIAL": "Partial",
-      "UNPAID": "Unpaid"
+      "UNPAID": "Unpaid",
+      "PARTIAL": "Partly paid",
+      "PAID": "Paid"
     },
     "sessionStatus": {
       "DRAFT": "Draft",
@@ -882,6 +898,11 @@
       "GPS": "GPS",
       "QR": "QR",
       "MANUAL": "Manual"
+    },
+    "receiptStatus": {
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "REFUNDED": "Refunded"
     }
   },
   "paymentModes": {

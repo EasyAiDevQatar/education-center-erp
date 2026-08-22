@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
-import { unchargeableStatuses } from "./billing";
+import { unchargeableStatuses, netPaid, LIVE_PAYMENTS } from "./billing";
 
 /**
  * What each role needs to see first thing in the morning.
@@ -66,9 +66,9 @@ export async function receptionToday() {
 export async function cashierToday() {
   const { start, end } = dayBounds();
   const [todaySum, monthSum, todayCount, owing] = await Promise.all([
-    db.payment.aggregate({ _sum: { amount: true }, where: { date: { gte: start, lt: end } } }),
-    db.payment.aggregate({ _sum: { amount: true }, where: { date: { gte: monthStart() } } }),
-    db.payment.count({ where: { date: { gte: start, lt: end } } }),
+    netPaid({ date: { gte: start, lt: end } }),
+    netPaid({ date: { gte: monthStart() } }),
+    db.payment.count({ where: { date: { gte: start, lt: end }, ...LIVE_PAYMENTS } }),
     db.session.findMany({
       where: {
         paymentStatus: { not: "PAID" },
@@ -80,8 +80,8 @@ export async function cashierToday() {
   ]);
   const outstanding = owing.reduce((a, s) => a + toNumber(s.total), 0);
   return {
-    collectedToday: toNumber(todaySum._sum.amount),
-    collectedMonth: toNumber(monthSum._sum.amount),
+    collectedToday: todaySum,
+    collectedMonth: monthSum,
     receiptsToday: todayCount,
     outstanding,
     familiesOwing: new Set(owing.map((s) => s.studentId)).size,

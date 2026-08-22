@@ -75,6 +75,12 @@ export async function savePayment(
 ): Promise<ActionState> {
   if (await guard()) return { error: "forbidden" };
 
+  // A receipt is a record of something that happened. Editing one silently
+  // changes a number the parent already holds a copy of and the drawer was
+  // counted against, and leaves no trace that it ever said anything else.
+  // Wrong receipts are cancelled or refunded, both of which say so.
+  if (id) return { error: "receiptLocked" };
+
   const parsed = schema.safeParse({
     date: formData.get("date"),
     studentId: formData.get("studentId"),

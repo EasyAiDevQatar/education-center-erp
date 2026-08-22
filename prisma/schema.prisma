@@ -377,6 +377,23 @@ model Payment {
   notes     String?
   branchId  String?
 
+  /// COMPLETED | CANCELLED | REFUNDED.
+  ///
+  /// A receipt is a record of something that happened, so it is never edited
+  /// after the fact — a number that quietly changes is a number nobody can
+  /// reconcile against the cash drawer or the copy the parent is holding.
+  /// CANCELLED means it never happened (keyed in error); REFUNDED means the
+  /// money came in and went back out, and both remain visible.
+  status String @default("COMPLETED")
+  /// Why. Required by the action rather than the column, because rows written
+  /// before this existed have no answer to give.
+  voidReason String?
+  voidedAt   DateTime?
+  voidedById String?
+  /// What went back. A partial refund keeps the original amount and records
+  /// only the returned part, so the receipt still says what was collected.
+  refundAmount Decimal?
+
   allocations PaymentAllocation[]
   cheque      Cheque?
 

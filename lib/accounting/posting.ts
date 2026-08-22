@@ -17,7 +17,18 @@ export type DraftLine = {
   memo?: string;
 };
 
-export type JournalSource = "PAYMENT" | "EXPENSE" | "PAYROLL" | "CHEQUE" | "MANUAL";
+/**
+ * PAYMENT_REFUND is its own document rather than an edit of the PAYMENT it
+ * reverses: the money genuinely moved twice, and the ledger has to show both
+ * halves or the cash account stops agreeing with the drawer.
+ */
+export type JournalSource =
+  | "PAYMENT"
+  | "PAYMENT_REFUND"
+  | "EXPENSE"
+  | "PAYROLL"
+  | "CHEQUE"
+  | "MANUAL";
 
 export type DraftEntry = {
   date: Date;

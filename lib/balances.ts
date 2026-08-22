@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
-import { unchargeableStatuses } from "./billing";
+import { unchargeableStatuses, netPaid, LIVE_PAYMENTS } from "./billing";
 
 /**
  * Charges − payments = balance owed by the student.
@@ -27,12 +27,12 @@ export async function getStudentBalance(studentId: string) {
       where: { studentId, status: { notIn: skip }, packageId: null },
     }),
     db.package.aggregate({ _sum: { price: true }, where: { studentId } }),
-    db.payment.aggregate({ _sum: { amount: true }, where: { studentId } }),
+    netPaid({ studentId }),
   ]);
   const lessonCharges = toNumber(charges._sum.total);
   const packageCharges = toNumber(packages._sum.price);
   const totalCharges = lessonCharges + packageCharges;
-  const totalPaid = toNumber(paid._sum.amount);
+  const totalPaid = paid;
   return {
     lessonCharges,
     packageCharges,
@@ -61,7 +61,9 @@ export async function getStudentLedger(studentId: string): Promise<LedgerEntry[]
       include: { teacher: true, gradeLevel: true },
     }),
     db.package.findMany({ where: { studentId } }),
-    db.payment.findMany({ where: { studentId } }),
+    // Cancelled receipts are not entries in anybody's ledger; a refund shows as
+    // its own line below, so the original stays as the collection it was.
+    db.payment.findMany({ where: { studentId, ...LIVE_PAYMENTS } }),
   ]);
 
   const entries: Omit<LedgerEntry, "balance">[] = [

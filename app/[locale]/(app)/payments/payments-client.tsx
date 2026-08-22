@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, Printer } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
 import { RowActions, ViewDialog } from "@/components/crud/row-actions";
@@ -32,11 +32,16 @@ import { formatMoney } from "@/lib/money";
 import { PAYMENT_METHODS } from "@/lib/enums";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { savePayment, deletePayment } from "./actions";
+import { VoidPaymentButton } from "./void-payment-button";
 import { getStudentOutstanding, type OutstandingInfo } from "./balance-actions";
 
 export type Opt = { id: string; label: string };
 export type PaymentRow = {
   id: string;
+  /** COMPLETED | CANCELLED | REFUNDED. */
+  status: string;
+  refundAmount: number | null;
+  voidReason: string | null;
   date: string;
   receiptNo: string;
   studentId: string | null;
@@ -378,6 +383,7 @@ export function PaymentsClient({
                       fields={[
                         { label: tc("date"), value: p.date, ltr: true },
                         { label: t("receiptNo"), value: p.receiptNo, ltr: true },
+                        { label: tc("status"), value: te(`receiptStatus.${p.status}`) },
                         { label: t("student"), value: p.studentName },
                         { label: t("teacher"), value: p.teacherName },
                         { label: t("amount"), value: `${formatMoney(p.amount)} ${currency}`, ltr: true },
@@ -390,17 +396,28 @@ export function PaymentsClient({
                         <Printer className="size-4" />
                       </Button>
                     </a>
-                    <EntityDialog
-                      title={t("edit")}
-                      wide
-                      action={savePayment.bind(null, locale, p.id)}
-                      fields={<PaymentFields payment={p} students={students} teachers={teachers} currency={currency} />}
-                      trigger={
-                        <Button variant="ghost" size="icon" aria-label={tc("edit")}>
-                          <Pencil className="size-4" />
-                        </Button>
-                      }
-                    />
+                    {p.status === "COMPLETED" ? (
+                      <>
+                        <VoidPaymentButton
+                          paymentId={p.id}
+                          amount={p.amount}
+                          currency={currency}
+                          mode="refund"
+                        />
+                        <VoidPaymentButton
+                          paymentId={p.id}
+                          amount={p.amount}
+                          currency={currency}
+                          mode="cancel"
+                        />
+                      </>
+                    ) : (
+                      // Already voided. The reason is the useful thing to show,
+                      // and there is nothing left to do to it.
+                      <span className="text-xs text-muted-foreground" title={p.voidReason ?? ""}>
+                        {p.voidReason ? p.voidReason.slice(0, 24) : ""}
+                      </span>
+                    )}
                     <DeleteButton action={deletePayment.bind(null, locale, p.id)} />
                   </RowActions>
                 </TableCell>

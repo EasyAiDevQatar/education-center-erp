@@ -36,6 +36,36 @@ export async function unchargeableStatuses(): Promise<string[]> {
   return unbilledStatuses(await noShowPolicy(), ["DRAFT", "CANCELLED"]);
 }
 
+/**
+ * Receipts that are still money.
+ *
+ * A cancelled receipt was keyed in error and never represented cash, so it
+ * counts nothing anywhere. A refunded one did represent cash and now
+ * represents less of it, which is why the refund is subtracted rather than the
+ * whole receipt being dropped — the collection still happened and the day it
+ * happened still had it.
+ */
+export const LIVE_PAYMENTS = { status: { not: "CANCELLED" } } as const;
+
+/**
+ * What the centre kept, for any slice of payments.
+ *
+ * Every screen that sums money asks this rather than aggregating `amount`
+ * itself. Eighteen call sites summed the column directly, and a refund would
+ * have been invisible to every one of them — the same shape as the dues bug,
+ * where four readers each had their own idea of what counted.
+ */
+export async function netPaid(where: Prisma.PaymentWhereInput = {}): Promise<number> {
+  const [gross, returned] = await Promise.all([
+    db.payment.aggregate({ _sum: { amount: true }, where: { ...where, ...LIVE_PAYMENTS } }),
+    db.payment.aggregate({
+      _sum: { refundAmount: true },
+      where: { ...where, status: "REFUNDED" },
+    }),
+  ]);
+  return toNumber(gross._sum.amount) - toNumber(returned._sum.refundAmount);
+}
+
 /* --------------------------- package application ---------------------------- */
 
 type Tx = Prisma.TransactionClient;
