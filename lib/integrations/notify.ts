@@ -119,6 +119,32 @@ export function builtInBody(event: IntegrationEvent, lang: "ar" | "en"): string 
   return TEMPLATES[event][lang](echo);
 }
 
+/**
+ * Numbers the centre must never message: its own.
+ *
+ * A message from the centre to the centre is never useful, and it is worse
+ * than useless in the provider's inbox — it arrives looking like a customer
+ * conversation, so the operator sees their own booking confirmations queued
+ * up next to real ones. It happens easily: whoever sets the system up puts
+ * their own line on a test student, and every event comes straight back.
+ *
+ * `centerPhone` is included automatically; `messagingSelfNumbers` is for the
+ * WhatsApp sender itself and any other line the office answers.
+ */
+async function selfNumbers(): Promise<Set<string>> {
+  const rows = await db.setting.findMany({
+    where: { key: { in: ["centerPhone", "messagingSelfNumbers"] } },
+  });
+  const out = new Set<string>();
+  for (const row of rows) {
+    for (const part of (row.value ?? "").split(/[,;\n]/)) {
+      const phone = normalizePhone(part);
+      if (phone) out.add(phone);
+    }
+  }
+  return out;
+}
+
 async function centerSettings() {
   const rows = await db.setting.findMany({
     where: { key: { in: ["centerName", "currency", "language"] } },
@@ -151,8 +177,18 @@ export async function dispatch(
     const { lang } = await centerSettings();
     const text = TEMPLATES[event][lang](vars);
     const driverText = DRIVER_TEMPLATES[event]?.[lang](vars) ?? text;
-    // One query for the whole dispatch rather than one per recipient.
+    // One query each for the whole dispatch rather than one per recipient.
     const stored = await templatesFor(event);
+    const ours = await selfNumbers();
+
+    // One message per handset per event.
+    //
+    // A child's contact number is very often the parent's, and a centre that
+    // notifies both then sends the same sentence to the same phone twice. The
+    // audiences are still separate — they decide WHETHER to send — but two
+    // audiences resolving to one number is one message, to whichever of them
+    // was resolved first.
+    const alreadySent = new Set<string>();
 
     for (const cfg of configs) {
       const provider = getProvider(cfg.provider);
@@ -191,6 +227,24 @@ export async function dispatch(
           });
           continue;
         }
+
+        if (ours.has(phone)) {
+          await db.notificationLog.create({
+            data: { ...base, status: "SKIPPED", error: "ownNumber" },
+          });
+          continue;
+        }
+
+        if (alreadySent.has(phone)) {
+          // Logged rather than dropped silently: "why did the teacher not get
+          // this" is answered by a row saying the parent already had it on the
+          // same number.
+          await db.notificationLog.create({
+            data: { ...base, status: "SKIPPED", error: "duplicateNumber" },
+          });
+          continue;
+        }
+        alreadySent.add(phone);
 
         const res = await provider.send(cfg, { to: phone, text: body });
         await db.notificationLog.create({

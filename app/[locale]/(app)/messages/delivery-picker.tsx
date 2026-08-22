@@ -7,7 +7,8 @@ import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { INTEGRATION_EVENTS, AUDIENCES } from "@/lib/integrations/types";
-import { saveDelivery } from "./delivery-actions";
+import { Input } from "@/components/ui/input";
+import { saveDelivery, saveSelfNumbers } from "./delivery-actions";
 
 /**
  * Who hears about what — one tick per event per person.
@@ -25,11 +26,13 @@ export function DeliveryPicker({
   provider,
   configured,
   initialMatrix,
+  initialSelfNumbers,
 }: {
   provider: string;
   /** False when no credential is saved yet: the choices are meaningless until then. */
   configured: boolean;
   initialMatrix: Record<string, string[]>;
+  initialSelfNumbers: string;
 }) {
   const t = useTranslations("messages");
   const ti = useTranslations("integrations");
@@ -39,6 +42,7 @@ export function DeliveryPicker({
   const router = useRouter();
 
   const [matrix, setMatrix] = useState<Record<string, string[]>>(initialMatrix);
+  const [selfNumbers, setSelfNumbers] = useState(initialSelfNumbers);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -70,6 +74,20 @@ export function DeliveryPicker({
           {t("notConnected")}
         </p>
       )}
+
+      <div className="rounded-lg border border-border p-3">
+        <label className="mb-1 block text-sm font-medium" htmlFor="self-numbers">
+          {t("selfNumbers")}
+        </label>
+        <p className="mb-2 text-xs text-muted-foreground">{t("selfNumbersHint")}</p>
+        <Input
+          id="self-numbers"
+          dir="ltr"
+          placeholder="+97430222761, +97430871010"
+          value={selfNumbers}
+          onChange={(e) => setSelfNumbers(e.target.value)}
+        />
+      </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
@@ -136,6 +154,11 @@ export function DeliveryPicker({
           start(async () => {
             setMsg(null);
             setErr(null);
+            const self = await saveSelfNumbers(locale, selfNumbers);
+            if (!self.ok) {
+              setErr(self.error ?? "invalid");
+              return;
+            }
             const res = await saveDelivery(locale, { provider, matrix: matrix as never });
             if (res.ok) {
               setMsg(tc("saved"));

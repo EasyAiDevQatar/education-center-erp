@@ -2621,9 +2621,13 @@
       "forbidden": "Only centre staff may do this.",
       "invalid": "Invalid input.",
       "notConfigured": "No connection is configured yet.",
-      "unknownVariable": "Not a variable this event carries"
+      "unknownVariable": "Not a variable this event carries",
+      "duplicateNumber": "Same number — sent once",
+      "ownNumber": "The centre's own number"
     },
     "all": "All",
-    "none": "None"
+    "none": "None",
+    "selfNumbers": "The centre's own numbers — never messaged",
+    "selfNumbersHint": "The WhatsApp sender and any line the office answers. Messages addressed to these are skipped, so the centre stops writing to itself. Separate with commas."
   }
 }

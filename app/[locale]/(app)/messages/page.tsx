@@ -38,7 +38,7 @@ export default async function MessagesPage({
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "log";
   const t = await getTranslations("messages");
 
-  const [outbound, inboundRows, integration, stored] = await Promise.all([
+  const [outbound, inboundRows, integration, stored, selfRow] = await Promise.all([
     db.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 300 }),
     db.inboundMessage.findMany({
       orderBy: { receivedAt: "desc" },
@@ -52,6 +52,7 @@ export default async function MessagesPage({
     }),
     db.integration.findFirst({ where: { provider: "EASYAICONNECT" } }),
     db.messageTemplate.findMany({ where: { active: true } }),
+    db.setting.findUnique({ where: { key: "messagingSelfNumbers" } }),
   ]);
 
   const parseJson = <T,>(raw: string | null, fallback: T): T => {
@@ -153,6 +154,7 @@ export default async function MessagesPage({
           <DeliveryPicker
             provider="EASYAICONNECT"
             configured={Boolean(integration?.apiKey)}
+            initialSelfNumbers={selfRow?.value ?? ""}
             // Falls back to the cross product the old two columns described, so
             // an existing setup opens showing exactly what it sends today.
             initialMatrix={

@@ -26,6 +26,29 @@ async function guard() {
   return null;
 }
 
+const SELF_KEY = "messagingSelfNumbers";
+
+/**
+ * The centre's own lines, so the system stops writing to itself.
+ *
+ * Saved as typed rather than normalised, because a person who comes back to
+ * this box should see what they wrote. Matching happens on the normalised
+ * form at send time, so "3087 1010" and "+974 3087 1010" both work.
+ */
+export async function saveSelfNumbers(locale: string, value: string): Promise<DeliveryState> {
+  const denied = await guard();
+  if (denied) return denied;
+  const clean = value.trim().slice(0, 500);
+  await db.setting.upsert({
+    where: { key: SELF_KEY },
+    create: { key: SELF_KEY, value: clean },
+    update: { value: clean },
+  });
+  await writeAudit("Setting", SELF_KEY, "UPDATE", { after: { value: clean } });
+  revalidatePath(`/${locale}/messages`);
+  return { ok: true };
+}
+
 const schema = z.object({
   provider: z.string().min(1),
   /** {event: [audience]}. An event with an empty list is simply not sent. */
