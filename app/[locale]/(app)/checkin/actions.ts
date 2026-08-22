@@ -179,6 +179,18 @@ export type AttendanceState = {
  * transaction, so a half-applied mark is impossible. Re-marking the same
  * status is a no-op, which makes repeat taps free.
  */
+/**
+ * Record an attendance decision — and tell the family about it.
+ *
+ * There are four ways a student gets marked: the kiosk check-in, a barcode
+ * scan, a tap on the roster, and "everyone was here". Only the first told
+ * anybody. The other three all funnel through here, which is why the
+ * notification belongs here rather than at each call site — the reason the bug
+ * existed is that a call site can forget, and three of them did.
+ *
+ * The early return above it matters too: re-marking a student who is already
+ * COMPLETED changes nothing and must not send a second message.
+ */
 async function applyMark(sessionId: string, mark: Mark, auto = false) {
   const existing = await db.session.findUnique({ where: { id: sessionId } });
   if (!existing) return false;
@@ -207,6 +219,14 @@ async function applyMark(sessionId: string, mark: Mark, auto = false) {
     else if (!willComplete) await revertPackageHours(tx, sessionId);
     await syncSessionPaymentStatus(tx, sessionId);
   });
+
+  // Auto-completion is the clock deciding, not a person: it runs over every
+  // unclosed session of the day and must not message anybody. SCHEDULED means
+  // somebody undid a mark, which is a correction rather than news.
+  if (!auto) {
+    if (mark === "COMPLETED") await notifySession("CHECKED_IN", sessionId);
+    else if (mark === "NO_SHOW") await notifySession("SESSION_NO_SHOW", sessionId);
+  }
   return true;
 }
 

@@ -700,6 +700,7 @@
     "SESSION_CANCELLED": "إلغاء حصة",
     "CHECKED_IN": "تسجيل حضور",
     "CHECKED_OUT": "تسجيل انصراف",
+    "SESSION_NO_SHOW": "غياب الطالب",
     "PAYMENT_RECEIVED": "استلام دفعة",
     "PAYOUT_PAID": "صرف مستحقات",
     "BALANCE_REMINDER": "تذكير بالرصيد",

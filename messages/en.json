@@ -700,6 +700,7 @@
     "SESSION_CANCELLED": "Session cancelled",
     "CHECKED_IN": "Checked in",
     "CHECKED_OUT": "Checked out",
+    "SESSION_NO_SHOW": "Student absent",
     "PAYMENT_RECEIVED": "Payment received",
     "PAYOUT_PAID": "Payout paid",
     "BALANCE_REMINDER": "Balance reminder",

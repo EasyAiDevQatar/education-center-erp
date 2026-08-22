@@ -7,6 +7,9 @@ export const INTEGRATION_EVENTS = [
   "SESSION_CANCELLED",
   "CHECKED_IN",
   "CHECKED_OUT",
+  // A child who did not arrive is the message a parent most wants and the one
+  // the system could not send: attendance had no absence event at all.
+  "SESSION_NO_SHOW",
   "PAYMENT_RECEIVED",
   "PAYOUT_PAID",
   "BALANCE_REMINDER",

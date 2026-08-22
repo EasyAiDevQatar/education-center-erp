@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { INTEGRATION_EVENTS, AUDIENCES } from "@/lib/integrations/types";
 import { ConnectGate, ConnectUnlockedBar } from "./connect-gate";
 import { Plug, CheckCircle2, XCircle, Send, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,19 +55,11 @@ export type InboundRow = {
   who: string | null;
 };
 
-const ALL_EVENTS = [
-  "SESSION_BOOKED",
-  "SESSION_RESCHEDULED",
-  "SESSION_CANCELLED",
-  "CHECKED_IN",
-  "CHECKED_OUT",
-  "PAYMENT_RECEIVED",
-  "PAYOUT_PAID",
-  "BALANCE_REMINDER",
-  "SESSION_REMINDER",
-  "PACKAGE_LOW",
-] as const;
-const ALL_AUDIENCES = ["TEACHER", "PARENT", "STUDENT", "DRIVER"] as const;
+// Imported, not retyped. This screen used to keep its own copy of both lists,
+// which is how an event could exist on the server and be untickable here — the
+// absence event was added and would have been invisible until somebody noticed.
+const ALL_EVENTS = INTEGRATION_EVENTS;
+const ALL_AUDIENCES = AUDIENCES;
 
 function Toggle({
   on,

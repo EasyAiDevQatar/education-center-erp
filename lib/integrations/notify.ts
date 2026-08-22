@@ -61,6 +61,10 @@ const TEMPLATES: Record<IntegrationEvent, Record<"ar" | "en", Tpl>> = {
     ar: (v) => `${v.center}: تم تسجيل انصراف ${v.student} الساعة ${v.time}.`,
     en: (v) => `${v.center}: ${v.student} checked out at ${v.time}.`,
   },
+  SESSION_NO_SHOW: {
+    ar: (v) => `${v.center}: لم يحضر ${v.student} حصة ${v.date} الساعة ${v.time}.`,
+    en: (v) => `${v.center}: ${v.student} did not attend the ${v.date} session at ${v.time}.`,
+  },
   PAYMENT_RECEIVED: {
     ar: (v) => `${v.center}: تم استلام دفعة ${v.amount} ${v.currency} من ${v.student}. شكراً لكم.`,
     en: (v) => `${v.center}: Payment of ${v.amount} ${v.currency} received from ${v.student}. Thank you.`,
@@ -174,7 +178,12 @@ export { centerSettings };
 export async function notifySession(
   event: Extract<
     IntegrationEvent,
-    "SESSION_BOOKED" | "SESSION_RESCHEDULED" | "SESSION_CANCELLED" | "CHECKED_IN" | "CHECKED_OUT"
+    | "SESSION_BOOKED"
+    | "SESSION_RESCHEDULED"
+    | "SESSION_CANCELLED"
+    | "CHECKED_IN"
+    | "CHECKED_OUT"
+    | "SESSION_NO_SHOW"
   >,
   sessionId: string,
 ): Promise<void> {
