@@ -1,8 +1,23 @@
 import { getTranslations } from "next-intl/server";
 import {
-  CalendarDays, UserCheck, UserX, Clock, UserPlus, Wallet, Receipt,
-  TrendingUp, GraduationCap, TriangleAlert, Bus, CarFront, Route,
-  Users, FileWarning, CalendarClock, Gauge,
+  Bus,
+  CalendarClock,
+  CalendarDays,
+  CarFront,
+  Clock,
+  FileWarning,
+  Gauge,
+  GraduationCap,
+  Receipt,
+  Route,
+  TrendingUp,
+  TriangleAlert,
+  UserCheck,
+  UserPlus,
+  UserRoundX,
+  UserX,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { StatCard } from "@/components/stat-card";
@@ -179,5 +194,38 @@ export async function HrDashboard() {
         { href: "/payroll/runs", label: tn("payrollRuns") },
       ]} />
     </>
+  );
+}
+
+/**
+ * The dashboard for somebody the system cannot place.
+ *
+ * A teacher, parent or driver whose account is not linked to their record has
+ * no portal to be sent to, and every role that is not named explicitly lands
+ * here. It used to be the reception dashboard, which meant an unlinked driver
+ * opened the centre's morning: how many families owe money, how many new
+ * leads, and shortcuts into payments. None of that was reachable — the page
+ * guards held — but it was all readable, and reading it was never the
+ * intention.
+ *
+ * Least privilege as the default, and a sentence explaining why the screen is
+ * empty. "Nothing here" with no explanation reads as a broken system; the
+ * person needs to know it is an account that has not been finished.
+ */
+export async function UnlinkedDashboard({ role }: { role: string }) {
+  const t = await getTranslations("dashboard");
+  // Role names live in their own top-level namespace, not under enums.
+  const tr = await getTranslations("roles");
+
+  return (
+    <div className="mx-auto max-w-md rounded-lg border border-border p-6 text-center">
+      <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
+        <UserRoundX className="size-6 text-muted-foreground" />
+      </div>
+      <p className="font-semibold">{t("notLinkedTitle")}</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {t("notLinkedBody", { role: tr.has(role) ? tr(role) : role })}
+      </p>
+    </div>
   );
 }

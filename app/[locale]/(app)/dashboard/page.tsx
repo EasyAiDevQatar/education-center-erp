@@ -29,6 +29,7 @@ import {
   AcademicDashboard,
   TransportDashboard,
   HrDashboard,
+  UnlinkedDashboard,
 } from "@/components/dashboard/role-dashboards";
 
 /** Resolve a period key to a concrete range (UTC, matching the data). */
@@ -82,16 +83,21 @@ export default async function DashboardPage({
   // only the two roles that own the centre's books ever reach it — the others
   // return here with a panel that queried only what their role may see.
   if (session.role !== "ADMIN" && session.role !== "ACCOUNTANT") {
+    // Every role that has a dashboard names itself. The fallback is the empty
+    // one, not reception's — an unrecognised role must not inherit the
+    // busiest desk in the building just because it was last in the chain.
     const Panel =
-      session.role === "CASHIER"
-        ? <CashierDashboard currency={tc("currency")} />
-        : session.role === "ACADEMIC_SUPERVISOR"
-          ? <AcademicDashboard />
-          : session.role === "TRANSPORT_COORDINATOR"
-            ? <TransportDashboard />
-            : session.role === "HR_OFFICER"
-              ? <HrDashboard />
-              : <ReceptionDashboard />;
+      session.role === "RECEPTIONIST"
+        ? <ReceptionDashboard />
+        : session.role === "CASHIER"
+          ? <CashierDashboard currency={tc("currency")} />
+          : session.role === "ACADEMIC_SUPERVISOR"
+            ? <AcademicDashboard />
+            : session.role === "TRANSPORT_COORDINATOR"
+              ? <TransportDashboard />
+              : session.role === "HR_OFFICER"
+                ? <HrDashboard />
+                : <UnlinkedDashboard role={session.role} />;
     return (
       <div>
         <PageHeader title={t("title")} description={t("welcome", { name: session.name })} />

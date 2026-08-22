@@ -253,7 +253,9 @@
     "openPlanner": "Open planner",
     "funnel": "Lead funnel",
     "openLeads": "Open leads",
-    "followUpsDue": "Follow-ups due"
+    "followUpsDue": "Follow-ups due",
+    "notLinkedTitle": "No dashboard for this account yet",
+    "notLinkedBody": "Your {role} account is not linked to your record, so there is nothing to show. Ask an administrator to finish setting it up."
   },
   "sessions": {
     "title": "Daily Sessions",
