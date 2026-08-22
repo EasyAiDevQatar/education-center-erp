@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -9,8 +8,9 @@ import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { notifySession } from "@/lib/integrations/notify";
-import { applyPackageHours, revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
-import { applyMark, MARKS } from "@/lib/attendance";
+import { revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
+import { applyMark, MARKS, markCheckedIn, markCheckedOut } from "@/lib/attendance";
+import { uniqueCode, isShortCode } from "@/lib/checkin-code";
 import { distanceMeters, GEOFENCE_RADIUS_M } from "@/lib/geo";
 import { CHECKIN_METHODS } from "@/lib/enums";
 
@@ -67,20 +67,14 @@ export async function checkInSession(
     return { error: "pin" };
   }
 
-  const now = new Date();
+  await markCheckedIn(id, method);
+  // The geofence reading belongs to this path only — it is how the kiosk knows
+  // the phone was at the student's home, and no other caller has one.
   await db.session.update({
     where: { id },
-    data: {
-      status: "CHECKED_IN",
-      studentCheckInAt: now,
-      teacherCheckInAt: now,
-      checkInMethod: method,
-      checkInLat: lat ?? null,
-      checkInLng: lng ?? null,
-    },
+    data: { checkInLat: lat ?? null, checkInLng: lng ?? null },
   });
   await writeAudit("Session", id, "UPDATE", { after: { status: "CHECKED_IN", method } });
-  await notifySession("CHECKED_IN", id);
   revalidate(locale);
   return { ok: true, distance };
 }
@@ -91,23 +85,8 @@ export async function checkOutSession(locale: string, id: string): Promise<Check
   const session = await db.session.findUnique({ where: { id } });
   if (!session) return { error: "notfound" };
 
-  const now = new Date();
-  let actualHours: number | null = null;
-  if (session.studentCheckInAt) {
-    const ms = now.getTime() - session.studentCheckInAt.getTime();
-    actualHours = Math.max(0.25, Math.round((ms / 3_600_000) * 4) / 4); // snap to 15 min
-  }
-  await db.$transaction(async (tx) => {
-    await tx.session.update({
-      where: { id },
-      data: { status: "COMPLETED", studentCheckOutAt: now, actualHours },
-    });
-    // Checking out makes it billable — draw down the package once.
-    await applyPackageHours(tx, id);
-    await syncSessionPaymentStatus(tx, id);
-  });
-  await writeAudit("Session", id, "UPDATE", { after: { status: "COMPLETED", actualHours } });
-  await notifySession("CHECKED_OUT", id);
+  await markCheckedOut(id);
+  await writeAudit("Session", id, "UPDATE", { after: { status: "COMPLETED", via: "checkout" } });
   revalidate(locale);
   return { ok: true };
 }
@@ -256,6 +235,8 @@ export type ScanChoice = {
 };
 
 export type ScanOutcome = AttendanceState & {
+  /** True when this scan was the second one — the student has just left. */
+  checkedOut?: boolean;
   /** Present when the operator must choose which session to credit. */
   choices?: ScanChoice[];
   /** Echoed back so the picker can re-submit without re-scanning. */
@@ -274,6 +255,27 @@ export type ScanOutcome = AttendanceState & {
  *    FLAG (create one with no teacher, for the admin to assign), ASSIGN (use
  *    their assigned teacher), ASK (refuse and let the operator book), or NONE.
  */
+/**
+ * One scan, one step forward.
+ *
+ * Scanning used to jump straight to COMPLETED, so a card was a way of saying
+ * "this lesson happened" rather than "this child is here" — and there was no
+ * way at all to record when they left. The first scan checks in, the second
+ * checks out, which is what a card at a door is for and what makes the
+ * recorded duration mean anything.
+ *
+ * Returns true when this scan was the check-out, so the kiosk can say which
+ * of the two just happened.
+ */
+async function scanStep(sessionId: string, status: string): Promise<boolean> {
+  if (status === "CHECKED_IN") {
+    await markCheckedOut(sessionId);
+    return true;
+  }
+  await markCheckedIn(sessionId, "QR");
+  return false;
+}
+
 export async function checkInByQr(
   locale: string,
   input: z.infer<typeof qrSchema>,
@@ -298,12 +300,9 @@ export async function checkInByQr(
     });
     if (!chosen) return { error: "invalid", studentName: student.name };
     await db.session.update({ where: { id: chosen.id }, data: { checkInMethod: "QR" } });
-    await applyMark(chosen.id, "COMPLETED");
-    await writeAudit("Session", chosen.id, "UPDATE", {
-      after: { status: "COMPLETED", via: "qr-picked", studentId: student.id },
-    });
+    const out = await scanStep(chosen.id, chosen.status);
     revalidate(locale);
-    return { ok: true, studentName: student.name };
+    return { ok: true, studentName: student.name, checkedOut: out };
   }
 
   const settingsRows = await db.setting.findMany({
@@ -405,30 +404,50 @@ export async function checkInByQr(
   );
 
   await db.session.update({ where: { id: closest.id }, data: { checkInMethod: "QR" } });
-  await applyMark(closest.id, "COMPLETED");
+  const out = await scanStep(closest.id, closest.status);
 
   await writeAudit("Session", closest.id, "UPDATE", {
-    after: { status: "COMPLETED", via: "qr", studentId: student.id },
+    after: { via: "qr", step: out ? "checkout" : "checkin", studentId: student.id },
   });
   revalidate(locale);
-  return { ok: true, studentName: student.name };
+  return { ok: true, studentName: student.name, checkedOut: out };
 }
 
 /** Mint QR tokens for active students that don't have one yet. */
 export async function ensureQrTokens(locale: string): Promise<AttendanceState> {
   if (await guard()) return { error: "forbidden" };
-  const missing = await db.student.findMany({
-    where: { qrToken: null, active: true },
-    select: { id: true },
+  // Students with no code, and students still holding one of the old
+  // twelve-character tokens — those cannot be read off a card or said down a
+  // phone, which is the whole point of the change.
+  const candidates = await db.student.findMany({
+    where: { active: true },
+    select: { id: true, qrToken: true },
   });
-  for (const s of missing) {
-    await db.student.update({
-      where: { id: s.id },
-      data: { qrToken: randomBytes(9).toString("base64url") },
-    });
+  let count = 0;
+  for (const s of candidates) {
+    if (isShortCode(s.qrToken)) continue;
+    await db.student.update({ where: { id: s.id }, data: { qrToken: await uniqueCode() } });
+    count++;
   }
   revalidatePath(`/${locale}/checkin/cards`);
-  return { ok: true, count: missing.length };
+  return { ok: true, count };
+}
+
+/**
+ * Give one student a new code.
+ *
+ * A card that has been lost is a card somebody else can present, and the only
+ * way to retire it is to issue another. Kept separate from ensureQrTokens so
+ * that reissuing for one child never sweeps the whole school.
+ */
+export async function regenerateQrToken(locale: string, studentId: string): Promise<AttendanceState> {
+  if (await guard()) return { error: "forbidden" };
+  const student = await db.student.findUnique({ where: { id: studentId }, select: { id: true } });
+  if (!student) return { error: "notfound" };
+  await db.student.update({ where: { id: studentId }, data: { qrToken: await uniqueCode() } });
+  await writeAudit("Student", studentId, "UPDATE", { after: { qrToken: "reissued" } });
+  revalidatePath(`/${locale}/checkin/cards`);
+  return { ok: true, count: 1 };
 }
 
 /* ------------------------- auto-complete review list ----------------------- */

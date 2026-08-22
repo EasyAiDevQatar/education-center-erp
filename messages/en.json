@@ -395,7 +395,7 @@
     "walkInFlagHint": "No session today? One is created without a teacher for you to assign later.",
     "shareWhatsApp": "Send on WhatsApp",
     "noPhone": "No phone number",
-    "shareMessage": "{name}'s check-in card. Code: {code}",
+    "shareMessage": "{center}: {name}'s check-in code is {code}. Show it on arrival to check in and out.",
     "cameraErrors": {
       "insecure": "The camera only works over a secure connection (HTTPS).",
       "unsupported": "This browser cannot open the camera.",
@@ -410,7 +410,9 @@
       "notFound": "Connect a camera or use a device that has one, or type the code below.",
       "failed": "Another app may be using the camera. Close it and reload, or type the code."
     },
-    "fallbackDecoder": "This browser uses a fallback reader — scanning may be a little slower. Hold the card close and steady."
+    "fallbackDecoder": "This browser uses a fallback reader — scanning may be a little slower. Hold the card close and steady.",
+    "shareSent": "Sent",
+    "shareFailed": "Not sent"
   },
   "students": {
     "title": "Students",

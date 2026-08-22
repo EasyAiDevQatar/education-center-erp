@@ -92,7 +92,7 @@ export default async function QrCardsPage({
             <div className="text-[10px] tracking-wider text-muted-foreground" dir="ltr">
               {c.token}
             </div>
-            <ShareCardButton name={c.name} token={c.token} phone={c.phone} />
+            <ShareCardButton studentId={c.id} phone={c.phone} />
           </div>
         ))}
       </div>

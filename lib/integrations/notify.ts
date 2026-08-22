@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney } from "@/lib/money";
-import { getProvider, activeConfigsFor } from "./registry";
+import { getProvider, activeConfigsFor, loadConfig } from "./registry";
 import { normalizePhone } from "./phone";
 import { templatesFor, bodyFor } from "@/lib/messages/templates";
 import type { Audience, IntegrationEvent } from "./types";
@@ -578,4 +578,64 @@ export async function notifyPayout(payoutId: string): Promise<void> {
   } catch {
     /* swallow */
   }
+}
+
+/**
+ * Send one message because somebody pressed a button.
+ *
+ * The delivery matrix deliberately does not apply here. That matrix answers
+ * "which events should the system announce by itself"; a member of staff
+ * choosing to send a statement has already answered the question, and having
+ * the setting silently swallow their click would be baffling.
+ *
+ * Everything else still applies: the number is normalised, the centre's own
+ * lines are refused, and the attempt is logged next to the automatic ones so
+ * there is one place to look when a parent says nothing arrived.
+ */
+export async function sendDirect(input: {
+  to: string | null | undefined;
+  text: string;
+  /** Free-text label for the log, e.g. CHECKIN_CODE or STATEMENT. */
+  event: string;
+  audience: Audience;
+  entity?: { type: string; id: string };
+}): Promise<{ ok: boolean; error?: string }> {
+  const phone = normalizePhone(input.to);
+  const base = {
+    provider: "EASYAICONNECT",
+    event: input.event,
+    audience: input.audience,
+    recipient: phone ?? input.to ?? "",
+    message: input.text,
+    entityType: input.entity?.type ?? null,
+    entityId: input.entity?.id ?? null,
+  };
+
+  const fail = async (error: string) => {
+    await db.notificationLog.create({ data: { ...base, status: "SKIPPED", error } });
+    return { ok: false, error };
+  };
+
+  if (!phone) return fail(input.to ? "badPhone" : "noPhone");
+  if ((await selfNumbers()).has(phone)) return fail("ownNumber");
+
+  const rows = await db.integration.findMany({ where: { enabled: true } });
+  for (const row of rows) {
+    const cfg = await loadConfig(row.provider);
+    const provider = cfg && getProvider(row.provider);
+    if (!cfg || !provider) continue;
+
+    const res = await provider.send(cfg, { to: phone, text: input.text });
+    await db.notificationLog.create({
+      data: {
+        ...base,
+        provider: row.provider,
+        status: res.ok ? "SENT" : "FAILED",
+        error: res.ok ? null : [res.error, res.message].filter(Boolean).join(" — ").slice(0, 500),
+      },
+    });
+    if (res.ok) return { ok: true };
+    return { ok: false, error: res.error ?? "failed" };
+  }
+  return fail("notConfigured");
 }
