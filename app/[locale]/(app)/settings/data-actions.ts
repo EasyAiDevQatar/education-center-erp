@@ -202,6 +202,26 @@ const GUARDIAN_NAMES = [
   "أم ريان", "أبو نايف", "أم شهد", "أبو عبدالعزيز",
 ];
 /**
+ * Seeded people have no telephone number.
+ *
+ * They used to get 5555xxxx, 6666xxxx, 7777xxxx and so on. Those are not
+ * placeholders — they are real, dialable Qatari mobile ranges, and once the
+ * messaging module was connected the seeder was quietly handing the notifier a
+ * list of strangers' numbers. It used them: booking messages reached
+ * +97477771001 and +97477771024 before anybody noticed.
+ *
+ * Blank rather than an obviously-fake number, because a fake number is still a
+ * string, and a string in a phone field is something a person or a program may
+ * eventually decide to dial. The only number that cannot reach somebody is the
+ * one that is not there.
+ *
+ * A demo record with no phone is also honest about itself: notifications log it
+ * as SKIPPED / noPhone, which is exactly what a person who does not exist
+ * should produce.
+ */
+const SEEDED_PHONE = null;
+
+/**
  * Family names, combined with the first names above.
  *
  * Twenty firsts against twenty-five families is five hundred distinct people —
@@ -426,7 +446,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
       data: {
         name: teacherRoster[i],
         commissionPct: 50,
-        phone: `5555${String(1000 + i)}`,
+        phone: SEEDED_PHONE,
         // Home pickup point for the transport module (house-to-house legs).
         ...geoPoint(),
       },
@@ -448,7 +468,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
   const guardianIds: string[] = [];
   for (let i = 0; i < n.guardians; i++) {
     const g = await db.guardian.create({
-      data: { name: guardianRoster[i], phone: `6666${String(1000 + i)}` },
+      data: { name: guardianRoster[i], phone: SEEDED_PHONE },
     });
     guardianIds.push(g.id);
   }
@@ -462,7 +482,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         name: studentRoster[i],
         gradeLevelId: level.id,
         guardianId: guardianIds.length ? guardianIds[i % guardianIds.length] : null,
-        phone: `7777${String(1000 + i)}`,
+        phone: SEEDED_PHONE,
         // Roughly a quarter study at home so location-defaulted pricing and
         // the planner's HOME markers have data to show.
         studyLocation: i % 4 === 3 ? "HOME" : "CENTER",
@@ -837,7 +857,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const lead = await db.lead.create({
       data: {
         name: leadRoster[i % leadRoster.length],
-        phone: `3333${String(1000 + i).slice(-4)}`,
+        phone: SEEDED_PHONE,
         source: pick(["زيارة", "توصية", "إنستغرام", "إعلان"]),
         status,
         gradeLevelId: levels.length ? pick(levels).id : null,
@@ -990,7 +1010,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
     const s = await db.supplier.create({
       data: {
         name: nameAt(SUPPLIER_NAMES, i),
-        phone: `4444${String(1000 + i)}`,
+        phone: SEEDED_PHONE,
       },
     });
     supplierIds.push(s.id);
@@ -1096,7 +1116,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         basicSalary: linkedTeacherId ? pick([2000, 3000, 4000]) : pick([2500, 3500, 4500]),
         allowances: pick([0, 0, 500, 800]),
         hireDate: hire,
-        phone: `5566${String(1000 + i)}`,
+        phone: SEEDED_PHONE,
         contractType: pick(["UNLIMITED", "UNLIMITED", "LIMITED"]),
         // Shift start/end point for a driver; harmless address for the rest.
         ...geoPoint(),
