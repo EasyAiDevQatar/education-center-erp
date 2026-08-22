@@ -34,74 +34,261 @@ type Vars = {
 };
 
 type Tpl = (v: Vars) => string;
+type Lang = "ar" | "en";
 
 /**
- * Driver wording for the two events that change a driver's day.
+ * What each event says, to each person.
  *
- * The default templates are written for the family — "your session moved" —
- * and reach whoever is subscribed. A driver does not have a session; they have
- * a run to make, and the useful sentence is a different one. Events not listed
- * here fall back to the shared text, which is why a driver never receives, say,
- * a payment receipt worded as though it were theirs.
+ * There used to be one sentence per event, sent to everybody, plus a driver
+ * exception for two of them. So a driver was told "your session has been
+ * rescheduled" about a lesson they do not attend, and a teacher was told
+ * "thank you for your payment" about money they did not pay. The wording was
+ * written for the family and everyone else received it by accident.
+ *
+ * DEFAULT is the fallback for an audience with nothing of its own — not a
+ * shortcut, but the sentence that reads correctly to anyone. Where an audience
+ * genuinely wants different words, it has them.
+ *
+ * A centre can override any of these from Messages → القوالب; these are what it
+ * says until somebody does.
  */
-const DRIVER_TEMPLATES: Partial<Record<IntegrationEvent, Record<"ar" | "en", Tpl>>> = {
-  SESSION_RESCHEDULED: {
-    ar: (v) => `${v.center}: تغيّر موعد توصيلة ${v.student} — الحصة الآن يوم ${v.date} الساعة ${v.time}.`,
-    en: (v) => `${v.center}: ${v.student}'s ride has moved — the session is now ${v.date} at ${v.time}.`,
+type AudienceCopy = Partial<Record<Audience, Record<Lang, Tpl>>> & {
+  DEFAULT: Record<Lang, Tpl>;
+};
+
+const TEMPLATES: Record<IntegrationEvent, AudienceCopy> = {
+  SESSION_BOOKED: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تم حجز حصة لـ${v.student} مع ${v.teacher} يوم ${v.date} الساعة ${v.time} (${v.hours} ساعة).`,
+      en: (v) => `${v.center}: Session booked for ${v.student} with ${v.teacher} on ${v.date} at ${v.time} (${v.hours}h).`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: تم حجز حصة لـ${v.student} مع ${v.teacher} يوم ${v.date} الساعة ${v.time} (${v.hours} ساعة) في ${v.location}.`,
+      en: (v) => `${v.center}: A session for ${v.student} with ${v.teacher} is booked for ${v.date} at ${v.time} (${v.hours}h) at ${v.location}.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: عندك حصة مع ${v.teacher} يوم ${v.date} الساعة ${v.time} في ${v.location}. بالتوفيق!`,
+      en: (v) => `${v.center}: You have a session with ${v.teacher} on ${v.date} at ${v.time} at ${v.location}. Good luck!`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: حصة جديدة — ${v.student} يوم ${v.date} الساعة ${v.time} (${v.hours} ساعة) في ${v.location}.`,
+      en: (v) => `${v.center}: New session — ${v.student} on ${v.date} at ${v.time} (${v.hours}h) at ${v.location}.`,
+    },
+    DRIVER: {
+      ar: (v) => `${v.center}: توصيلة جديدة — ${v.student} يوم ${v.date} الساعة ${v.time} إلى ${v.location}.`,
+      en: (v) => `${v.center}: New ride — ${v.student} on ${v.date} at ${v.time} to ${v.location}.`,
+    },
   },
+
+  SESSION_RESCHEDULED: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تم تغيير موعد حصة ${v.student} مع ${v.teacher} إلى ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student}'s session with ${v.teacher} moved to ${v.date} at ${v.time}.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: تغيّر موعد حصة ${v.student} مع ${v.teacher} — أصبحت يوم ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student}'s session with ${v.teacher} has moved — it is now ${v.date} at ${v.time}.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: تغيّر موعد حصتك مع ${v.teacher} — أصبحت يوم ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: Your session with ${v.teacher} has moved to ${v.date} at ${v.time}.`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: تغيّر موعد حصتك مع ${v.student} — أصبحت يوم ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: Your session with ${v.student} has moved to ${v.date} at ${v.time}.`,
+    },
+    DRIVER: {
+      ar: (v) => `${v.center}: تغيّر موعد توصيلة ${v.student} — الحصة الآن يوم ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student}'s ride has moved — the session is now ${v.date} at ${v.time}.`,
+    },
+  },
+
   SESSION_CANCELLED: {
-    ar: (v) => `${v.center}: أُلغيت حصة ${v.student} يوم ${v.date} — لا حاجة للتوصيلة.`,
-    en: (v) => `${v.center}: ${v.student}'s session on ${v.date} was cancelled — no ride needed.`,
+    DEFAULT: {
+      ar: (v) => `${v.center}: تم إلغاء حصة ${v.student} مع ${v.teacher} بتاريخ ${v.date}.`,
+      en: (v) => `${v.center}: ${v.student}'s session with ${v.teacher} on ${v.date} was cancelled.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: أُلغيت حصة ${v.student} مع ${v.teacher} يوم ${v.date}. نعتذر عن أي إزعاج.`,
+      en: (v) => `${v.center}: ${v.student}'s session with ${v.teacher} on ${v.date} has been cancelled. Sorry for the inconvenience.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: أُلغيت حصتك مع ${v.teacher} يوم ${v.date}.`,
+      en: (v) => `${v.center}: Your session with ${v.teacher} on ${v.date} has been cancelled.`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: أُلغيت حصتك مع ${v.student} يوم ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: Your session with ${v.student} on ${v.date} at ${v.time} has been cancelled.`,
+    },
+    DRIVER: {
+      ar: (v) => `${v.center}: أُلغيت حصة ${v.student} يوم ${v.date} — لا حاجة للتوصيلة.`,
+      en: (v) => `${v.center}: ${v.student}'s session on ${v.date} was cancelled — no ride needed.`,
+    },
+  },
+
+  CHECKED_IN: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تم تسجيل حضور ${v.student} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} checked in at ${v.time}.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: وصل ${v.student} وبدأت الحصة الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} has arrived and the session started at ${v.time}.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: تم تسجيل حضورك الساعة ${v.time}. حصة موفقة!`,
+      en: (v) => `${v.center}: You are checked in at ${v.time}. Have a good session!`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: حضر ${v.student} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} arrived at ${v.time}.`,
+    },
+    DRIVER: {
+      ar: (v) => `${v.center}: تم تسليم ${v.student} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} was dropped off at ${v.time}.`,
+    },
+  },
+
+  CHECKED_OUT: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تم تسجيل انصراف ${v.student} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} checked out at ${v.time}.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: انتهت حصة ${v.student} الساعة ${v.time} (${v.hours} ساعة).`,
+      en: (v) => `${v.center}: ${v.student}'s session ended at ${v.time} (${v.hours}h).`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: انتهت حصتك الساعة ${v.time}. إلى اللقاء!`,
+      en: (v) => `${v.center}: Your session ended at ${v.time}. See you next time!`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: انتهت حصتك مع ${v.student} الساعة ${v.time} (${v.hours} ساعة).`,
+      en: (v) => `${v.center}: Your session with ${v.student} ended at ${v.time} (${v.hours}h).`,
+    },
+    DRIVER: {
+      ar: (v) => `${v.center}: ${v.student} جاهز للعودة الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} is ready for the return trip at ${v.time}.`,
+    },
+  },
+
+  SESSION_NO_SHOW: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: لم يحضر ${v.student} حصة ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} did not attend the ${v.date} session at ${v.time}.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: لم يحضر ${v.student} حصة اليوم ${v.date} الساعة ${v.time}. للاستفسار تواصلوا معنا.`,
+      en: (v) => `${v.center}: ${v.student} did not attend the session on ${v.date} at ${v.time}. Please get in touch if this is unexpected.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: سجّلنا غيابك عن حصة ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: You were marked absent for the ${v.date} session at ${v.time}.`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: لم يحضر ${v.student} حصتك يوم ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: ${v.student} did not attend your session on ${v.date} at ${v.time}.`,
+    },
+    DRIVER: {
+      ar: (v) => `${v.center}: لم يحضر ${v.student} يوم ${v.date} — لا حاجة لتوصيلة العودة.`,
+      en: (v) => `${v.center}: ${v.student} did not attend on ${v.date} — no return trip needed.`,
+    },
+  },
+
+  PAYMENT_RECEIVED: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تم استلام دفعة ${v.amount} ${v.currency} من ${v.student}. شكراً لكم.`,
+      en: (v) => `${v.center}: Payment of ${v.amount} ${v.currency} received from ${v.student}. Thank you.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: استلمنا ${v.amount} ${v.currency} عن ${v.student} — فاتورة رقم ${v.invoice}. شكراً لكم.`,
+      en: (v) => `${v.center}: We received ${v.amount} ${v.currency} for ${v.student} — invoice ${v.invoice}. Thank you.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: سُجّلت دفعة ${v.amount} ${v.currency} على حسابك — فاتورة رقم ${v.invoice}.`,
+      en: (v) => `${v.center}: A payment of ${v.amount} ${v.currency} was recorded on your account — invoice ${v.invoice}.`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: تم استلام دفعة عن ${v.student} — فاتورة رقم ${v.invoice}.`,
+      en: (v) => `${v.center}: A payment was received for ${v.student} — invoice ${v.invoice}.`,
+    },
+  },
+
+  PAYOUT_PAID: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تم صرف مستحقاتك بمبلغ ${v.amount} ${v.currency}.`,
+      en: (v) => `${v.center}: Your payout of ${v.amount} ${v.currency} has been paid.`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: تم صرف مستحقاتك عن ${v.period} بمبلغ ${v.amount} ${v.currency}.`,
+      en: (v) => `${v.center}: Your payout for ${v.period} — ${v.amount} ${v.currency} — has been paid.`,
+    },
+  },
+
+  BALANCE_REMINDER: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تذكير — رصيد مستحق على ${v.student} بمبلغ ${v.amount} ${v.currency}.`,
+      en: (v) => `${v.center}: Reminder — outstanding balance for ${v.student}: ${v.amount} ${v.currency}.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: تذكير بالرصيد المستحق على ${v.student} وقدره ${v.amount} ${v.currency}. شكراً لتعاونكم.`,
+      en: (v) => `${v.center}: A reminder that ${v.amount} ${v.currency} is outstanding for ${v.student}. Thank you.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: تذكير — عليك رصيد ${v.amount} ${v.currency}. يرجى مراجعة المكتب.`,
+      en: (v) => `${v.center}: Reminder — ${v.amount} ${v.currency} is outstanding on your account. Please see the office.`,
+    },
+  },
+
+  SESSION_REMINDER: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تذكير بحصة ${v.student} مع ${v.teacher} غداً ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: Reminder — ${v.student} has a session with ${v.teacher} tomorrow ${v.date} at ${v.time}.`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: تذكير — حصة ${v.student} مع ${v.teacher} غداً ${v.date} الساعة ${v.time} في ${v.location}.`,
+      en: (v) => `${v.center}: Reminder — ${v.student} has a session with ${v.teacher} tomorrow, ${v.date} at ${v.time}, at ${v.location}.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: تذكير — حصتك غداً ${v.date} الساعة ${v.time} مع ${v.teacher}. نراك على خير!`,
+      en: (v) => `${v.center}: Reminder — your session is tomorrow, ${v.date} at ${v.time}, with ${v.teacher}. See you then!`,
+    },
+    TEACHER: {
+      ar: (v) => `${v.center}: تذكير — حصتك مع ${v.student} غداً ${v.date} الساعة ${v.time} في ${v.location}.`,
+      en: (v) => `${v.center}: Reminder — your session with ${v.student} is tomorrow, ${v.date} at ${v.time}, at ${v.location}.`,
+    },
+    DRIVER: {
+      ar: (v) => `${v.center}: تذكير — توصيلة ${v.student} غداً ${v.date} الساعة ${v.time}.`,
+      en: (v) => `${v.center}: Reminder — ${v.student}'s ride is tomorrow, ${v.date} at ${v.time}.`,
+    },
+  },
+
+  PACKAGE_LOW: {
+    DEFAULT: {
+      ar: (v) => `${v.center}: تنبيه — باقة ${v.student} على وشك الانتهاء (${v.hours} ساعة متبقية).`,
+      en: (v) => `${v.center}: Heads-up — ${v.student}'s package is running low (${v.hours}h remaining).`,
+    },
+    PARENT: {
+      ar: (v) => `${v.center}: باقة ${v.student} على وشك الانتهاء — بقي ${v.hours} ساعة. يسعدنا تجديدها في أي وقت.`,
+      en: (v) => `${v.center}: ${v.student}'s package is nearly used up — ${v.hours}h remain. We can renew it whenever suits you.`,
+    },
+    STUDENT: {
+      ar: (v) => `${v.center}: باقتك على وشك الانتهاء — بقي ${v.hours} ساعة.`,
+      en: (v) => `${v.center}: Your package is nearly used up — ${v.hours}h remain.`,
+    },
   },
 };
 
-/** Bilingual templates, keyed by event then audience. */
-const TEMPLATES: Record<IntegrationEvent, Record<"ar" | "en", Tpl>> = {
-  SESSION_BOOKED: {
-    ar: (v) => `${v.center}: تم حجز حصة لـ${v.student} مع ${v.teacher} يوم ${v.date} الساعة ${v.time} (${v.hours} ساعة).`,
-    en: (v) => `${v.center}: Session booked for ${v.student} with ${v.teacher} on ${v.date} at ${v.time} (${v.hours}h).`,
-  },
-  SESSION_RESCHEDULED: {
-    ar: (v) => `${v.center}: تم تغيير موعد حصة ${v.student} مع ${v.teacher} إلى ${v.date} الساعة ${v.time}.`,
-    en: (v) => `${v.center}: ${v.student}'s session with ${v.teacher} moved to ${v.date} at ${v.time}.`,
-  },
-  SESSION_CANCELLED: {
-    ar: (v) => `${v.center}: تم إلغاء حصة ${v.student} مع ${v.teacher} بتاريخ ${v.date}.`,
-    en: (v) => `${v.center}: ${v.student}'s session with ${v.teacher} on ${v.date} was cancelled.`,
-  },
-  CHECKED_IN: {
-    ar: (v) => `${v.center}: تم تسجيل حضور ${v.student} الساعة ${v.time}.`,
-    en: (v) => `${v.center}: ${v.student} checked in at ${v.time}.`,
-  },
-  CHECKED_OUT: {
-    ar: (v) => `${v.center}: تم تسجيل انصراف ${v.student} الساعة ${v.time}.`,
-    en: (v) => `${v.center}: ${v.student} checked out at ${v.time}.`,
-  },
-  SESSION_NO_SHOW: {
-    ar: (v) => `${v.center}: لم يحضر ${v.student} حصة ${v.date} الساعة ${v.time}.`,
-    en: (v) => `${v.center}: ${v.student} did not attend the ${v.date} session at ${v.time}.`,
-  },
-  PAYMENT_RECEIVED: {
-    ar: (v) => `${v.center}: تم استلام دفعة ${v.amount} ${v.currency} من ${v.student}. شكراً لكم.`,
-    en: (v) => `${v.center}: Payment of ${v.amount} ${v.currency} received from ${v.student}. Thank you.`,
-  },
-  PAYOUT_PAID: {
-    ar: (v) => `${v.center}: تم صرف مستحقاتك بمبلغ ${v.amount} ${v.currency}.`,
-    en: (v) => `${v.center}: Your payout of ${v.amount} ${v.currency} has been paid.`,
-  },
-  BALANCE_REMINDER: {
-    ar: (v) => `${v.center}: تذكير — رصيد مستحق على ${v.student} بمبلغ ${v.amount} ${v.currency}.`,
-    en: (v) => `${v.center}: Reminder — outstanding balance for ${v.student}: ${v.amount} ${v.currency}.`,
-  },
-  SESSION_REMINDER: {
-    ar: (v) => `${v.center}: تذكير بحصة ${v.student} مع ${v.teacher} غداً ${v.date} الساعة ${v.time}.`,
-    en: (v) => `${v.center}: Reminder — ${v.student} has a session with ${v.teacher} tomorrow ${v.date} at ${v.time}.`,
-  },
-  PACKAGE_LOW: {
-    ar: (v) => `${v.center}: تنبيه — باقة ${v.student} على وشك الانتهاء (${v.hours} ساعة متبقية).`,
-    en: (v) => `${v.center}: Heads-up — ${v.student}'s package is running low (${v.hours}h remaining).`,
-  },
-};
+/** The built-in sentence for one audience, already rendered. */
+export function builtInText(
+  event: IntegrationEvent,
+  audience: Audience,
+  lang: Lang,
+  vars: Vars,
+): string {
+  const copy = TEMPLATES[event];
+  return (copy[audience] ?? copy.DEFAULT)[lang](vars);
+}
 
 /**
  * The built-in wording with the variable names left in place.
@@ -110,13 +297,13 @@ const TEMPLATES: Record<IntegrationEvent, Record<"ar" | "en", Tpl>> = {
  * what will be sent if it writes nothing and which variables the sentence is
  * built from — more useful than an empty box beside a list of names.
  */
-export function builtInBody(event: IntegrationEvent, lang: "ar" | "en"): string {
+export function builtInBody(event: IntegrationEvent, audience: Audience, lang: Lang): string {
   // A proxy that answers every lookup with its own name, so the built-in
   // function renders itself as a template rather than as a finished message.
   const echo = new Proxy({} as Vars, {
     get: (_target, key: string) => `{{${key}}}`,
   });
-  return TEMPLATES[event][lang](echo);
+  return builtInText(event, audience, lang, echo);
 }
 
 /**
@@ -175,8 +362,6 @@ export async function dispatch(
     const configs = await activeConfigsFor(event);
     if (configs.length === 0) return;
     const { lang } = await centerSettings();
-    const text = TEMPLATES[event][lang](vars);
-    const driverText = DRIVER_TEMPLATES[event]?.[lang](vars) ?? text;
     // One query each for the whole dispatch rather than one per recipient.
     const stored = await templatesFor(event);
     const ours = await selfNumbers();
@@ -204,7 +389,7 @@ export async function dispatch(
           r.audience,
           lang,
           vars as Record<string, string | undefined>,
-          r.audience === "DRIVER" ? driverText : text,
+          builtInText(event, r.audience, lang, vars),
         );
         // Checked here rather than at the provider so the log records the
         // number that was actually dialled, and so an unusable one is a

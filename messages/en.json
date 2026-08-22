@@ -2608,7 +2608,7 @@
     "inboundIntro": "What people send the centre. Stored only — no auto-reply, and no session is changed.",
     "inboundEmpty": "Nothing received yet.",
     "unknownNumber": "Unknown number",
-    "templatesIntro": "Write your own wording for each notification. Leave a box empty to use the default shown behind it.",
+    "templatesIntro": "Choose who reads the message, then write your wording. Leave a box empty to use the default shown behind it — each audience has its own.",
     "customised": "Customised",
     "arabic": "Arabic",
     "english": "English",
@@ -2628,6 +2628,7 @@
     "all": "All",
     "none": "None",
     "selfNumbers": "The centre's own numbers — never messaged",
-    "selfNumbersHint": "The WhatsApp sender and any line the office answers. Messages addressed to these are skipped, so the centre stops writing to itself. Separate with commas."
+    "selfNumbersHint": "The WhatsApp sender and any line the office answers. Messages addressed to these are skipped, so the centre stops writing to itself. Separate with commas.",
+    "fallbackCopy": "Fallback"
   }
 }

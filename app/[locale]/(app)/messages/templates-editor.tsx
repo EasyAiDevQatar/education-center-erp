@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Eye, RotateCcw } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { allowedVariables } from "@/lib/messages/render";
@@ -26,18 +27,46 @@ export type TemplateRow = {
  * will be sent and obvious how to get back to it — clearing the box is the
  * undo, and it is easier to find than a reset button would be.
  */
-export function TemplatesEditor({ rows }: { rows: TemplateRow[] }) {
+export function TemplatesEditor({
+  rows,
+  audience,
+}: {
+  rows: TemplateRow[];
+  /** "" is the fallback copy every audience falls back to. */
+  audience: string;
+}) {
   const t = useTranslations("messages");
+  const ti = useTranslations("integrations");
   const te = useTranslations("integrationEvents");
   const events = [...new Set(rows.map((r) => r.event))];
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{t("templatesIntro")}</p>
+
+      {/* Whose wording. A teacher and a driver should never receive the same
+          sentence, so the editor asks which reader before it asks what to say. */}
+      <div className="flex flex-wrap gap-1.5">
+        {["PARENT", "STUDENT", "TEACHER", "DRIVER", ""].map((a) => (
+          <Link
+            key={a || "default"}
+            href={`/messages?tab=templates&audience=${a}`}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs transition",
+              a === audience
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {a ? ti(`audienceLabels.${a}`) : t("fallbackCopy")}
+          </Link>
+        ))}
+      </div>
       {events.map((event) => (
         <EventCard
           key={event}
           event={event}
+          audience={audience}
           label={te.has(event) ? te(event) : event}
           rows={rows.filter((r) => r.event === event)}
         />
@@ -48,10 +77,12 @@ export function TemplatesEditor({ rows }: { rows: TemplateRow[] }) {
 
 function EventCard({
   event,
+  audience,
   label,
   rows,
 }: {
   event: string;
+  audience: string;
   label: string;
   rows: TemplateRow[];
 }) {
@@ -78,14 +109,22 @@ function EventCard({
 
       <div className="grid gap-3 lg:grid-cols-2">
         {rows.map((r) => (
-          <LocaleBox key={r.locale} event={event} row={r} />
+          <LocaleBox key={r.locale} event={event} audience={audience} row={r} />
         ))}
       </div>
     </div>
   );
 }
 
-function LocaleBox({ event, row }: { event: string; row: TemplateRow }) {
+function LocaleBox({
+  event,
+  audience,
+  row,
+}: {
+  event: string;
+  audience: string;
+  row: TemplateRow;
+}) {
   const t = useTranslations("messages");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -139,7 +178,7 @@ function LocaleBox({ event, row }: { event: string; row: TemplateRow }) {
             run(async () => {
               const res = await saveTemplate(locale, {
                 event: event as never,
-                audience: "",
+                audience: audience as never,
                 locale: row.locale as "ar" | "en",
                 body,
               });
@@ -180,7 +219,7 @@ function LocaleBox({ event, row }: { event: string; row: TemplateRow }) {
                 setBody("");
                 await saveTemplate(locale, {
                   event: event as never,
-                  audience: "",
+                  audience: audience as never,
                   locale: row.locale as "ar" | "en",
                   body: "",
                 });

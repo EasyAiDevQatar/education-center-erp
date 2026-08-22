@@ -6,7 +6,7 @@ import { redirect } from "@/i18n/navigation";
 import { PageHeader } from "@/components/page-header";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { Badge } from "@/components/ui/badge";
-import { INTEGRATION_EVENTS } from "@/lib/integrations/types";
+import { INTEGRATION_EVENTS, AUDIENCES } from "@/lib/integrations/types";
 import { builtInBody } from "@/lib/integrations/notify";
 import { NotificationLogTable, type LogRow } from "./outbound-log";
 import { TemplatesEditor, type TemplateRow } from "./templates-editor";
@@ -36,6 +36,10 @@ export default async function MessagesPage({
 
   const sp = await searchParams;
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "log";
+  // Which reader's wording is being edited. "" is the fallback copy, used for
+  // any audience without one of its own.
+  const rawAudience = (Array.isArray(sp.audience) ? sp.audience[0] : sp.audience) ?? "PARENT";
+  const audience = (AUDIENCES as readonly string[]).includes(rawAudience) ? rawAudience : "";
   const t = await getTranslations("messages");
 
   const [outbound, inboundRows, integration, stored, selfRow] = await Promise.all([
@@ -83,8 +87,13 @@ export default async function MessagesPage({
     (["ar", "en"] as const).map((lang) => ({
       event,
       locale: lang,
-      body: stored.find((s) => s.event === event && s.audience === null && s.locale === lang)?.body ?? "",
-      builtIn: builtInBody(event, lang),
+      body:
+        stored.find(
+          (s) => s.event === event && s.audience === (audience || null) && s.locale === lang,
+        )?.body ?? "",
+      // The built-in for THIS reader, so the placeholder shows what they would
+      // actually receive rather than the generic sentence.
+      builtIn: builtInBody(event, (audience || "PARENT") as never, lang),
     })),
   );
 
@@ -148,7 +157,9 @@ export default async function MessagesPage({
           </div>
         )}
 
-        {tab === "templates" && <TemplatesEditor rows={templateRows} />}
+        {tab === "templates" && (
+          <TemplatesEditor rows={templateRows} audience={audience} />
+        )}
 
         {tab === "delivery" && (
           <DeliveryPicker
