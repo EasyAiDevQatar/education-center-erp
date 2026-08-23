@@ -53,7 +53,7 @@ export function QrScanner({
     start(async () => {
       const res = await checkInByQr(locale, { token: token.trim(), date: day });
       if (res.ok) {
-        onResult(t("scanned", { name: res.studentName ?? "" }));
+        onResult(t(res.checkedOut ? "scannedOut" : "scanned", { name: res.studentName ?? "" }));
         setError(null);
       } else {
         setError(res.error ?? "invalid");

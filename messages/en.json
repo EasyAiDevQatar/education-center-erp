@@ -98,7 +98,8 @@
       "notRunning": "That trip is not running, so a location cannot be recorded for it.",
       "alreadyLinked": "That record already has a login.",
       "teacherBusy": "That teacher already has a lesson at this time — pick another time or teacher.",
-      "studentBusy": "That student already has a lesson at this time — nobody can attend two at once."
+      "studentBusy": "That student already has a lesson at this time — nobody can attend two at once.",
+      "badSessionTransition": "Only a draft or scheduled session can be cancelled. Correct attendance first."
     },
     "price": "Price",
     "searchPlaceholder": "Search…",
@@ -280,7 +281,10 @@
     "orBookGroup": "…or book a group",
     "time": "Time",
     "view360": "360 view",
-    "trial": "Trial"
+    "trial": "Trial",
+    "cancelSession": "Cancel session",
+    "cancelConfirm": "Cancel this session?",
+    "cancelHint": "The session stays in history but creates no charge. Any allocated receipt becomes student credit."
   },
   "group": {
     "title": "Group booking",
@@ -330,6 +334,37 @@
   "checkin": {
     "title": "Check-in / Check-out",
     "subtitle": "Record today in one tap — mark all present, then fix the exceptions.",
+    "tabsLabel": "Attendance workspace sections",
+    "tabAttendance": "Check-in / Check-out",
+    "tabNeedsTeacher": "Session needs a teacher",
+    "tabReview": "Auto-completed session needs review",
+    "viewLabel": "View",
+    "listView": "List",
+    "cardView": "Cards",
+    "studentColumn": "Student",
+    "teacherColumn": "Teacher",
+    "locationColumn": "Location",
+    "scheduledColumn": "Scheduled",
+    "checkInColumn": "Check-in",
+    "checkOutColumn": "Check-out",
+    "durationColumn": "Actual duration",
+    "methodColumn": "Method",
+    "actionsColumn": "Actions",
+    "teacherAssignmentColumn": "Teacher assignment",
+    "searchQueue": "Search student, teacher, or date…",
+    "noNeedsTeacher": "No sessions need a teacher.",
+    "noReviewSessions": "No sessions need review.",
+    "noEligibleTeachers": "No eligible teacher recorded a session on this date.",
+    "actionErrors": {
+      "forbidden": "You are not allowed to perform this action.",
+      "invalid": "The submitted data is invalid.",
+      "notfound": "This session no longer exists.",
+      "invalidState": "This action is not allowed from the session's current state.",
+      "tooSoon": "Checkout is too soon after check-in — wait one minute.",
+      "notAuto": "This session is no longer awaiting review.",
+      "notPendingTeacher": "This session no longer needs a teacher.",
+      "notEligibleTeacher": "This teacher cannot be assigned because they recorded no session that day."
+    },
     "kiosk": "Center kiosk",
     "todaySessions": "Today's sessions",
     "searchStudent": "Search student or teacher…",
@@ -363,6 +398,7 @@
     "scan": "Scan QR",
     "scanTitle": "Scan student card",
     "scanned": "{name} checked in",
+    "scannedOut": "{name} checked out",
     "manualCode": "Enter code manually",
     "manualHint": "The code printed under the student card.",
     "scanErrors": {
@@ -371,10 +407,12 @@
       "invalid": "Invalid code",
       "forbidden": "Not allowed",
       "noSessionAsk": "No session — book one first",
-      "noGradeLevel": "Student has no grade level set"
+      "noGradeLevel": "Student has no grade level set",
+      "tooSoon": "Checkout is too soon after check-in — wait one minute",
+      "invalidState": "This session cannot be checked in or out from its current status"
     },
-    "reviewTitle": "{n} session(s) auto-completed — needs review",
-    "reviewHint": "Completed by the system after their end time.",
+    "reviewTitle": "{n} unmarked session(s) need review",
+    "reviewHint": "Their end time passed, but no charge is created until you accept.",
     "accept": "Accept",
     "autoTag": "Auto",
     "cards": "QR cards",

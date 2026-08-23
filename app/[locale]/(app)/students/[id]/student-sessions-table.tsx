@@ -45,12 +45,14 @@ export function StudentSessionsTable({
   studentId,
   studentName,
   teachers,
+  unchargeableStatuses,
 }: {
   rows: SessionLine[];
   currency: string;
   studentId: string;
   studentName: string;
   teachers: { id: string; label: string }[];
+  unchargeableStatuses: string[];
 }) {
   const t = useTranslations("sessions");
   const tc = useTranslations("common");
@@ -61,7 +63,8 @@ export function StudentSessionsTable({
   const search = useTableSearch(rows, (r) => [r.teacherName, r.levelLabel, r.date, r.status]);
   const pg = usePagination(search.filtered);
 
-  const payable = (r: SessionLine) => r.paymentStatus !== "PAID" && r.status !== "DRAFT" && r.status !== "CANCELLED";
+  const chargeable = (r: SessionLine) => !unchargeableStatuses.includes(r.status);
+  const payable = (r: SessionLine) => r.paymentStatus !== "PAID" && chargeable(r);
 
   const selectablePageIds = pg.pageItems.filter(payable).map((r) => r.id);
   const allPageSelected =
@@ -181,9 +184,13 @@ export function StudentSessionsTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={payVariant(r.paymentStatus)}>
-                    {te(`paymentStatus.${r.paymentStatus}`)}
-                  </Badge>
+                  {!chargeable(r) ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <Badge variant={payVariant(r.paymentStatus)}>
+                      {te(`paymentStatus.${r.paymentStatus}`)}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   {payable(r) && (

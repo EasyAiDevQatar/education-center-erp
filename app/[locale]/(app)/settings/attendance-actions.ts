@@ -70,10 +70,34 @@ export async function assignSessionTeacher(
   const parsed = assignSchema.safeParse(input);
   if (!parsed.success) return { error: "invalid" };
 
-  await db.session.update({
+  const target = await db.session.findUnique({
     where: { id: parsed.data.sessionId },
+    select: { date: true, needsTeacher: true },
+  });
+  if (!target?.needsTeacher) return { error: "notPendingTeacher" };
+
+  const start = new Date(target.date);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  // Server-side validation matters here: option values from the browser are
+  // untrusted, and assigning an unrelated teacher would move their payroll.
+  const eligible = await db.session.findFirst({
+    where: {
+      teacherId: parsed.data.teacherId,
+      date: { gte: start, lt: end },
+      status: { in: ["CHECKED_IN", "COMPLETED"] },
+    },
+    select: { id: true },
+  });
+  if (!eligible) return { error: "notEligibleTeacher" };
+
+  const changed = await db.session.updateMany({
+    where: { id: parsed.data.sessionId, needsTeacher: true },
     data: { teacherId: parsed.data.teacherId, needsTeacher: false },
   });
+  if (changed.count === 0) return { error: "notPendingTeacher" };
   await writeAudit("Session", parsed.data.sessionId, "UPDATE", {
     after: { teacherId: parsed.data.teacherId, assignedAfterWalkIn: true },
   });

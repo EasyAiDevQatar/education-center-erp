@@ -2,6 +2,11 @@ import "server-only";
 import { db } from "@/lib/db";
 import { notifySession } from "@/lib/integrations/notify";
 import { applyPackageHours, revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
+import {
+  canApplyAttendanceMark,
+  canCheckIn,
+  canCheckOut,
+} from "@/lib/session-lifecycle";
 
 /**
  * One way to say a lesson happened.
@@ -38,6 +43,7 @@ export async function applyMark(sessionId: string, mark: Mark, auto = false): Pr
   const existing = await db.session.findUnique({ where: { id: sessionId } });
   if (!existing) return false;
   if (existing.status === mark) return true;
+  if (!canApplyAttendanceMark(existing.status, mark)) return false;
 
   await db.$transaction(async (tx) => {
     const wasCompleted = existing.status === "COMPLETED";
@@ -48,10 +54,6 @@ export async function applyMark(sessionId: string, mark: Mark, auto = false): Pr
       data: {
         status: mark,
         autoCompleted: willComplete ? auto : false,
-        studentCheckInAt:
-          willComplete && !existing.studentCheckInAt && !auto
-            ? new Date()
-            : existing.studentCheckInAt,
       },
     });
 
@@ -87,6 +89,7 @@ export async function markCheckedIn(
   const session = await db.session.findUnique({ where: { id: sessionId } });
   if (!session) return false;
   if (session.status === "CHECKED_IN") return true;
+  if (!canCheckIn(session.status)) return false;
 
   await db.session.update({
     where: { id: sessionId },
@@ -97,8 +100,10 @@ export async function markCheckedIn(
       // duration would then run from the first arrival, and check-out bills
       // hours nobody taught.
       studentCheckInAt: at,
-      teacherCheckInAt: at,
       checkInMethod: method,
+      // A real arrival resolves a nightly "no attendance recorded" flag,
+      // whether it came from this list, the kiosk, GPS, or a QR scan.
+      autoCompleted: false,
     },
   });
   await notifySession("CHECKED_IN", sessionId);
@@ -119,6 +124,7 @@ export async function markCheckedOut(
 ): Promise<boolean> {
   const session = await db.session.findUnique({ where: { id: sessionId } });
   if (!session) return false;
+  if (!canCheckOut(session.status, session.studentCheckInAt, at)) return false;
 
   let actualHours: number | null = null;
   if (session.studentCheckInAt) {

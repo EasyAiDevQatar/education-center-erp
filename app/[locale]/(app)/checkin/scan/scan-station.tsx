@@ -34,12 +34,10 @@ type Feed = { ok: boolean; name: string; at: string };
 export function ScanStation({
   day,
   recent,
-  pickSession,
   walkInMode,
 }: {
   day: string;
   recent: ScanRow[];
-  pickSession: boolean;
   walkInMode: string;
 }) {
   const t = useTranslations("checkin");
@@ -77,7 +75,10 @@ export function ScanStation({
           sessionId: sessionId ?? null,
         });
         if (res.ok) {
-          push(true, t("scanned", { name: res.studentName ?? "" }));
+          push(
+            true,
+            t(res.checkedOut ? "scannedOut" : "scanned", { name: res.studentName ?? "" }),
+          );
           setChoice(null);
           router.refresh();
         } else if (res.choices && res.choices.length > 0) {

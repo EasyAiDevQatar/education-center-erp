@@ -23,6 +23,8 @@ describe("one way to mark attendance", () => {
   it("lib/attendance.ts owns it and notifies", () => {
     const src = read("lib/attendance.ts");
     expect(src).toContain("export async function applyMark");
+    expect(src).toContain("export async function markCheckedIn");
+    expect(src).toContain("autoCompleted: false");
     expect(src).toContain('notifySession("CHECKED_IN"');
     expect(src).toContain('notifySession("SESSION_NO_SHOW"');
   });

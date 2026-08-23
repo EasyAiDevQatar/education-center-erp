@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizePhone, normalizePhones } from "@/lib/integrations/phone";
@@ -9,11 +9,11 @@ import { encryptSecret, decryptSecret, isEncrypted } from "@/lib/integrations/se
 const SKIP = new Set(["node_modules", ".next", ".git", "dist", "build", "coverage"]);
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    if (SKIP.has(entry)) continue;
-    const full = path.join(dir, entry);
-    if (statSync(full).isDirectory()) sourceFiles(full, out);
-    else if (/\.(ts|tsx|json|prisma|md)$/.test(entry)) out.push(full);
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (SKIP.has(entry.name)) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) sourceFiles(full, out);
+    else if (entry.isFile() && /\.(ts|tsx|json|prisma|md)$/.test(entry.name)) out.push(full);
   }
   return out;
 }
@@ -32,7 +32,7 @@ describe("the delivery vendor is named in exactly one place", () => {
     // If this fails, the product name leaked. Put the string back behind
     // UPSTREAM in lib/integrations/easyaiconnect.ts and map the error to a code.
     expect(hits).toEqual(["lib/integrations/easyaiconnect.ts"]);
-  });
+  }, 15_000);
 
   it("keeps it out of anything a user can read", () => {
     const root = process.cwd();

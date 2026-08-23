@@ -12,8 +12,9 @@ import { writeAudit } from "@/lib/audit";
 import { guardArchived } from "@/lib/academic-year";
 import { combineDateTime } from "@/lib/session-time";
 import { notifySession } from "@/lib/integrations/notify";
-import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
+import { revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { LOCATIONS, PAYMENT_STATUSES } from "@/lib/enums";
+import { canCancelSession } from "@/lib/session-lifecycle";
 
 export type ActionState = {
   ok?: boolean;
@@ -148,6 +149,42 @@ export async function deleteSession(locale: string, id: string): Promise<ActionS
   await writeAudit("Session", id, "DELETE");
   revalidatePath(`/${locale}/sessions`);
   revalidatePath(`/${locale}/calendar`);
+  return { ok: true };
+}
+
+/** Cancel a lesson without deleting its history or its receipt trail. */
+export async function cancelSession(locale: string, id: string): Promise<ActionState> {
+  if (await guard()) return { error: "forbidden" };
+  const prior = await db.session.findUnique({ where: { id } });
+  if (!prior) return { error: "notfound" };
+  const frozen = await guardArchived(prior.date);
+  if (frozen) return { error: frozen };
+  if (prior.status === "CANCELLED") return { ok: true };
+  if (!canCancelSession(prior.status)) return { error: "badSessionTransition" };
+
+  await db.$transaction(async (tx) => {
+    await revertPackageHours(tx, id);
+    // The receipt remains real money. Removing only its lesson allocation turns
+    // it into unapplied student credit rather than silently deleting cash.
+    await tx.paymentAllocation.deleteMany({ where: { sessionId: id } });
+    await tx.session.update({
+      where: { id },
+      data: {
+        status: "CANCELLED",
+        paymentStatus: "PAID",
+        autoCompleted: false,
+        needsTeacher: false,
+      },
+    });
+  });
+
+  await flagTripsForSession(id, "SESSION_CANCELLED");
+  await writeAudit("Session", id, "UPDATE", { after: { status: "CANCELLED" } });
+  await notifySession("SESSION_CANCELLED", id);
+  revalidatePath(`/${locale}/sessions`);
+  revalidatePath(`/${locale}/calendar`);
+  revalidatePath(`/${locale}/payments`);
+  revalidatePath(`/${locale}/dashboard`);
   return { ok: true };
 }
 

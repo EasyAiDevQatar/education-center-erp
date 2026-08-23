@@ -15,7 +15,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -36,11 +35,14 @@ import {
   type SessionInit,
   type PackageOpt,
 } from "./session-dialog";
-import { saveSession, deleteSession } from "./actions";
+import { saveSession, deleteSession, cancelSession } from "./actions";
+import { CancelSessionButton } from "./cancel-session-button";
 import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 import { useModuleFlags } from "@/components/app-shell/module-flags";
 
 export type SessionRow = SessionInit & {
+  status: string;
+  chargeable: boolean;
   studentName: string;
   teacherName: string;
   levelLabel: string;
@@ -305,13 +307,17 @@ export function SessionsClient({
                 <TableCell className="tabular-nums">{formatHours(s.hours)}</TableCell>
                 <TableCell className="tabular-nums">{formatMoney(s.total)} {currency}</TableCell>
                 <TableCell>
-                  <Badge variant={statusBadge(s.paymentStatus)}>
-                    {te(`paymentStatus.${s.paymentStatus}`)}
-                  </Badge>
+                  {!s.chargeable ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <Badge variant={statusBadge(s.paymentStatus)}>
+                      {te(`paymentStatus.${s.paymentStatus}`)}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-center gap-1">
-                    {s.paymentStatus !== "PAID" && (
+                    {s.paymentStatus !== "PAID" && s.chargeable && (
                       <QuickPayDialog
                         studentId={s.studentId}
                         studentName={s.studentName}
@@ -346,6 +352,9 @@ export function SessionsClient({
                         </Button>
                       }
                     />
+                    {["DRAFT", "SCHEDULED"].includes(s.status) && (
+                      <CancelSessionButton action={cancelSession.bind(null, locale, s.id)} />
+                    )}
                     <DeleteButton action={deleteSession.bind(null, locale, s.id)} />
                   </div>
                 </TableCell>

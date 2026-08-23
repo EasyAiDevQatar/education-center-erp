@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { getStudentBalance } from "@/lib/balances";
 import { toNumber } from "@/lib/money";
+import { unchargeableStatuses } from "@/lib/billing";
 
 export type OutstandingInfo = {
   balance: number;
@@ -33,13 +34,14 @@ export async function getStudentOutstanding(
   const s = await getSession();
   if (!s || !STAFF_ROLES.includes(s.role)) return null;
   if (!studentId) return null;
+  const unchargeable = await unchargeableStatuses();
 
   const [bal, sessions] = await Promise.all([
     getStudentBalance(studentId),
     db.session.findMany({
       where: {
         studentId,
-        status: { not: "DRAFT" },
+        status: { notIn: unchargeable },
         packageId: null,
         paymentStatus: { in: ["UNPAID", "PARTIAL"] },
       },

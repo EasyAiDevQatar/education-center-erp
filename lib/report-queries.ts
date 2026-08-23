@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
 import { getStudentBalance } from "./balances";
+import { unchargeableStatuses } from "./billing";
 import type { DateRange } from "./reports";
 
 /** Sessions that never happened still count as attendance outcomes. */
@@ -98,8 +99,12 @@ export async function getRevenueBreakdown(
   range: DateRange | undefined,
   locale: string,
 ): Promise<RevenueRow[]> {
+  const unchargeable = await unchargeableStatuses();
   const sessions = await db.session.findMany({
-    where: baseWhere(range),
+    where: {
+      ...baseWhere(range),
+      status: { notIn: unchargeable },
+    },
     select: {
       hours: true,
       total: true,

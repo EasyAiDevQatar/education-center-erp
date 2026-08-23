@@ -7,6 +7,7 @@ import { getTeacherEarnings } from "@/lib/payroll";
 import { toNumber, formatMoney, formatHours, formatDate } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
 import { displayName, fullName } from "@/lib/names";
+import { unchargeableStatuses } from "@/lib/billing";
 
 /**
  * Printable A4 account statement for one teacher.
@@ -43,12 +44,13 @@ export default async function TeacherStatementPage({
   const toStr = get("to");
   const from = fromStr ? new Date(`${fromStr}T00:00:00.000Z`) : new Date("2000-01-01T00:00:00.000Z");
   const to = toStr ? new Date(`${toStr}T23:59:59.999Z`) : new Date("2100-01-01T00:00:00.000Z");
+  const unchargeable = await unchargeableStatuses();
 
   const [teacher, settingsRows, sessions, payouts, earnings] = await Promise.all([
     db.teacher.findUnique({ where: { id } }),
     db.setting.findMany(),
     db.session.findMany({
-      where: { teacherId: id, status: { not: "DRAFT" }, date: { gte: from, lte: to } },
+      where: { teacherId: id, status: { notIn: unchargeable }, date: { gte: from, lte: to } },
       include: { student: true },
       orderBy: { date: "asc" },
     }),

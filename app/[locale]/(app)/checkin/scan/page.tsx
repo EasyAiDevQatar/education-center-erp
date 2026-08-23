@@ -5,10 +5,7 @@ import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { ScanStation, type ScanRow } from "./scan-station";
 import { displayName } from "@/lib/names";
-
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+import { centerToday } from "@/lib/session-time";
 
 /**
  * Dedicated scanning screen for the reception device.
@@ -27,7 +24,7 @@ export default async function ScanPage({
   await requireRole(locale, ACADEMIC_ROLES);
 
   const t = await getTranslations("checkin");
-  const day = ymd(new Date());
+  const day = centerToday();
   const start = new Date(`${day}T00:00:00.000Z`);
   const end = new Date(`${day}T00:00:00.000Z`);
   end.setUTCDate(end.getUTCDate() + 1);
@@ -38,7 +35,7 @@ export default async function ScanPage({
       include: { student: true, teacher: true },
       orderBy: { date: "asc" },
     }),
-    db.setting.findMany({ where: { key: { in: ["attendanceWalkIn", "attendancePickSession"] } } }),
+    db.setting.findMany({ where: { key: "attendanceWalkIn" } }),
   ]);
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
 
@@ -57,7 +54,6 @@ export default async function ScanPage({
       <ScanStation
         day={day}
         recent={rows}
-        pickSession={settings.attendancePickSession === "true"}
         walkInMode={settings.attendanceWalkIn ?? "FLAG"}
       />
     </div>

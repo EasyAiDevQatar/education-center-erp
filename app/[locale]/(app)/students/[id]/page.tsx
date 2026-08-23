@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LedgerTable } from "./ledger-table";
 import { displayName, fullName } from "@/lib/names";
+import { unchargeableStatuses } from "@/lib/billing";
 
 export default async function StudentProfilePage({
   params,
@@ -43,6 +44,7 @@ export default async function StudentProfilePage({
 
   const sp = await searchParams;
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
+  const unchargeable = await unchargeableStatuses();
 
   const [balance, ledger, sessions, payments, packages, currency, teacherRows] =
     await Promise.all([
@@ -156,6 +158,7 @@ export default async function StudentProfilePage({
           studentId={id}
           studentName={displayName(student, locale)}
           teachers={teachers}
+          unchargeableStatuses={unchargeable}
         />
       )}
       {tab === "payments" && <PaymentsTable rows={payments} currency={currency} hideStudent />}

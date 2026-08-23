@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { packageStatusFor } from "@/lib/billing-rules";
-import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { dispatch, centerSettings } from "@/lib/integrations/notify";
 import { remindOutstandingBalances } from "@/lib/dues-reminder";
 import { OPEN_LEAD_STATUSES } from "@/lib/leads";
 import { transportEnabled, loadTransportConfig } from "@/lib/transport/settings";
 import { pingCutoff } from "@/lib/transport/tracking";
 import { buildDayPlan, generateDayTrips } from "@/lib/transport/trip-data";
+import { centerWallClockNow } from "@/lib/session-time";
 
 /**
  * Daily maintenance + reminders.
@@ -155,21 +155,21 @@ export async function GET(request: Request) {
     report.leadFollowUpError = String(e);
   }
 
-  /* 5. Auto-complete sessions nobody marked --------------------------------- */
+  /* 5. Flag unmarked sessions for review ------------------------------------ */
   // A scheduled lesson whose end time passed and that nobody touched is almost
-  // always one that simply happened. Completing it makes it billable, so each
-  // one is flagged `autoCompleted` and shows in the check-in review list until
-  // a human accepts or undoes it — fast by default, still auditable.
+  // often one that simply happened, but a clock is not attendance evidence.
+  // Flag it for a human; do not create a charge or consume package hours until
+  // the review is accepted.
   try {
     const graceHours = parseInt(
       (await db.setting.findUnique({ where: { key: "autoCompleteGraceHours" } }))?.value ?? "6",
       10,
     );
-    const cutoff = new Date(Date.now() - graceHours * 60 * 60 * 1000);
+    const cutoff = new Date(centerWallClockNow().getTime() - graceHours * 60 * 60 * 1000);
 
     const stale = await db.session.findMany({
       // DRAFT is excluded deliberately: an unconfirmed plan is not attendance.
-      where: { status: "SCHEDULED", date: { lt: cutoff } },
+      where: { status: "SCHEDULED", autoCompleted: false, date: { lt: cutoff } },
       select: { id: true, date: true, hours: true },
     });
 
@@ -179,13 +179,9 @@ export async function GET(request: Request) {
       const endsAt = new Date(s.date.getTime() + toNumber(s.hours) * 60 * 60 * 1000);
       if (endsAt > cutoff) continue;
       if (!dry) {
-        await db.$transaction(async (tx) => {
-          await tx.session.update({
-            where: { id: s.id },
-            data: { status: "COMPLETED", autoCompleted: true },
-          });
-          await applyPackageHours(tx, s.id);
-          await syncSessionPaymentStatus(tx, s.id);
+        await db.session.update({
+          where: { id: s.id },
+          data: { autoCompleted: true },
         });
       }
       completed++;

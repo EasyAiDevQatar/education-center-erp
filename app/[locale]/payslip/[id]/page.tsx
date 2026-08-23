@@ -5,6 +5,24 @@ import { db } from "@/lib/db";
 import { toNumber, formatMoney, formatDate, formatHours } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
 import { displayName, fullName } from "@/lib/names";
+import { unchargeableStatuses } from "@/lib/billing";
+
+function SummaryRow({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="flex justify-between">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className={strong ? "font-semibold tabular-nums" : "font-medium tabular-nums"}>{value}</dd>
+    </div>
+  );
+}
 
 export default async function PayslipPage({
   params,
@@ -34,6 +52,7 @@ export default async function PayslipPage({
   const tm = await getTranslations("paymentModes");
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
   const currency = settings.currency ?? "QAR";
+  const unchargeable = await unchargeableStatuses();
 
   // SESSION-mode payslips itemise every session in the period.
   const lines =
@@ -42,7 +61,7 @@ export default async function PayslipPage({
           where: {
             teacherId: payout.teacherId,
             date: { gte: payout.periodStart, lte: payout.periodEnd },
-            status: { not: "DRAFT" },
+            status: { notIn: unchargeable },
           },
           include: { student: true },
           orderBy: { date: "asc" },
@@ -51,21 +70,6 @@ export default async function PayslipPage({
 
   // Salary-only payslips have no teacher and therefore no commission rate.
   const pct = payout.teacher ? toNumber(payout.teacher.commissionPct) : 0;
-
-  const Row = ({
-    label,
-    value,
-    strong,
-  }: {
-    label: string;
-    value: string;
-    strong?: boolean;
-  }) => (
-    <div className="flex justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className={strong ? "font-semibold tabular-nums" : "font-medium tabular-nums"}>{value}</dd>
-    </div>
-  );
 
   const money = (n: number) => `${formatMoney(n)} ${currency}`;
 
@@ -85,7 +89,7 @@ export default async function PayslipPage({
         </div>
 
         <dl className="space-y-3 text-sm">
-          <Row
+          <SummaryRow
             label={tc("name")}
             value={
               payout.teacher
@@ -95,11 +99,11 @@ export default async function PayslipPage({
                   : "—"
             }
           />
-          {payout.payMode && <Row label={t("payMode")} value={tm(payout.payMode as "MONTH")} />}
+          {payout.payMode && <SummaryRow label={t("payMode")} value={tm(payout.payMode as "MONTH")} />}
           {payout.term && (
-            <Row label={t("term")} value={locale === "ar" ? payout.term.nameAr : payout.term.nameEn} />
+            <SummaryRow label={t("term")} value={locale === "ar" ? payout.term.nameAr : payout.term.nameEn} />
           )}
-          <Row
+          <SummaryRow
             label={t("period")}
             value={`${formatDate(payout.periodStart, locale)} — ${formatDate(payout.periodEnd, locale)}`}
           />
@@ -135,11 +139,11 @@ export default async function PayslipPage({
 
         {/* Money breakdown */}
         <dl className="mt-5 space-y-3 border-t border-border pt-4 text-sm">
-          <Row label={tt("commissionExpected")} value={money(toNumber(payout.expectedCommission))} />
-          <Row label={tt("commissionDue")} value={money(toNumber(payout.grossCommission))} />
-          <Row label={t("fixedSalary")} value={money(toNumber(payout.fixedSalary))} />
-          <Row label={t("deductions")} value={`− ${money(toNumber(payout.deductions))}`} />
-          <Row label={t("advances")} value={`− ${money(toNumber(payout.advances))}`} />
+          <SummaryRow label={tt("commissionExpected")} value={money(toNumber(payout.expectedCommission))} />
+          <SummaryRow label={tt("commissionDue")} value={money(toNumber(payout.grossCommission))} />
+          <SummaryRow label={t("fixedSalary")} value={money(toNumber(payout.fixedSalary))} />
+          <SummaryRow label={t("deductions")} value={`− ${money(toNumber(payout.deductions))}`} />
+          <SummaryRow label={t("advances")} value={`− ${money(toNumber(payout.advances))}`} />
         </dl>
 
         <div className="mt-6 flex items-center justify-between border-t border-border pt-4">

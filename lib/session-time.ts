@@ -1,4 +1,50 @@
 const pad = (n: number) => String(n).padStart(2, "0");
+export const CENTER_TIME_ZONE = "Asia/Qatar";
+
+/** Current centre date, independent of the deployment server's timezone. */
+export function centerToday(d: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: CENTER_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+/** Current HH:mm at the centre, encoded as the wall-clock UTC convention used
+ * by session rows. */
+export function centerNowTime(d: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: CENTER_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+  return `${value("hour")}:${value("minute")}`;
+}
+
+/** The centre's current wall clock represented with the same UTC components
+ * used by Session.date. Use this when comparing "now" with scheduled rows. */
+export function centerWallClockNow(d: Date = new Date()): Date {
+  return combineDateTime(centerToday(d), centerNowTime(d));
+}
+
+/** Format a real timestamp (such as a door scan) in the centre's timezone.
+ * Session start dates use a separate wall-clock encoding and must continue to
+ * be read from their UTC components instead. */
+export function centerClockTime(d: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: CENTER_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(d);
+}
 
 /**
  * Today as the person at the keyboard would write it.

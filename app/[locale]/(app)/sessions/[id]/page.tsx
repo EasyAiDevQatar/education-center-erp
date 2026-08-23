@@ -6,6 +6,7 @@ import { ACADEMIC_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { transportEnabled } from "@/lib/transport/settings";
 import { displayName } from "@/lib/names";
+import { unchargeableStatuses } from "@/lib/billing";
 import { formatMoney, toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +57,7 @@ export default async function SessionProfilePage({
     },
   });
   if (!s) notFound();
+  const chargeable = !(await unchargeableStatuses()).includes(s.status);
 
   const currencyRow = await db.setting.findUnique({ where: { key: "currency" } });
   const currency = currencyRow?.value ?? "QAR";
@@ -89,9 +91,11 @@ export default async function SessionProfilePage({
 
       <div className="mb-4 flex flex-wrap gap-2">
         <Badge variant={statusTone[s.status] ?? "default"}>{te(`sessionStatus.${s.status as "SCHEDULED"}`)}</Badge>
-        <Badge variant={s.paymentStatus === "PAID" ? "success" : s.paymentStatus === "PARTIAL" ? "warning" : "muted"}>
-          {te(`paymentStatus.${s.paymentStatus as "PAID"}`)}
-        </Badge>
+        {chargeable && (
+          <Badge variant={s.paymentStatus === "PAID" ? "success" : s.paymentStatus === "PARTIAL" ? "warning" : "muted"}>
+            {te(`paymentStatus.${s.paymentStatus as "PAID"}`)}
+          </Badge>
+        )}
         {s.isTrial && <Badge variant="muted">{ts("trial")}</Badge>}
       </div>
 

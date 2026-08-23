@@ -13,6 +13,8 @@ import { applyMark, MARKS, markCheckedIn, markCheckedOut } from "@/lib/attendanc
 import { uniqueCode, isShortCode } from "@/lib/checkin-code";
 import { distanceMeters, GEOFENCE_RADIUS_M } from "@/lib/geo";
 import { CHECKIN_METHODS } from "@/lib/enums";
+import { canCheckIn, canCheckOut, canUndoAttendance } from "@/lib/session-lifecycle";
+import { centerNowTime, centerWallClockNow, combineDateTime } from "@/lib/session-time";
 
 export type CheckinResult = { ok?: boolean; error?: string; distance?: number };
 
@@ -51,6 +53,7 @@ export async function checkInSession(
     include: { student: true },
   });
   if (!session) return { error: "notfound" };
+  if (!canCheckIn(session.status)) return { error: "invalidState" };
 
   let distance: number | undefined;
 
@@ -84,9 +87,33 @@ export async function checkOutSession(locale: string, id: string): Promise<Check
   if (await guard()) return { error: "forbidden" };
   const session = await db.session.findUnique({ where: { id } });
   if (!session) return { error: "notfound" };
+  if (session.status !== "CHECKED_IN" || !session.studentCheckInAt) {
+    return { error: "invalidState" };
+  }
+  if (!canCheckOut(session.status, session.studentCheckInAt)) return { error: "tooSoon" };
 
-  await markCheckedOut(id);
+  if (!(await markCheckedOut(id))) return { error: "invalidState" };
   await writeAudit("Session", id, "UPDATE", { after: { status: "COMPLETED", via: "checkout" } });
+  revalidate(locale);
+  return { ok: true };
+}
+
+/** Staff-operated check-in from the attendance roster. Unlike the kiosk and
+ * home flows this is an authenticated human decision, so it does not ask for
+ * the student's PIN or a GPS reading. */
+export async function manualCheckInSession(
+  locale: string,
+  id: string,
+): Promise<CheckinResult> {
+  if (await guard()) return { error: "forbidden" };
+  const session = await db.session.findUnique({ where: { id }, select: { status: true } });
+  if (!session) return { error: "notfound" };
+  if (!canCheckIn(session.status)) return { error: "invalidState" };
+
+  if (!(await markCheckedIn(id, "MANUAL"))) return { error: "invalidState" };
+  await writeAudit("Session", id, "UPDATE", {
+    after: { status: "CHECKED_IN", method: "MANUAL", via: "roster" },
+  });
   revalidate(locale);
   return { ok: true };
 }
@@ -101,11 +128,7 @@ export async function checkOutSession(locale: string, id: string): Promise<Check
  */
 export async function markNoShow(locale: string, id: string): Promise<CheckinResult> {
   if (await guard()) return { error: "forbidden" };
-  await db.$transaction(async (tx) => {
-    await revertPackageHours(tx, id);
-    await tx.session.update({ where: { id }, data: { status: "NO_SHOW" } });
-    await syncSessionPaymentStatus(tx, id);
-  });
+  if (!(await applyMark(id, "NO_SHOW"))) return { error: "invalidState" };
   await writeAudit("Session", id, "UPDATE", { after: { status: "NO_SHOW" } });
   revalidate(locale);
   return { ok: true };
@@ -114,6 +137,10 @@ export async function markNoShow(locale: string, id: string): Promise<CheckinRes
 /** Revert attendance back to scheduled (undo a mistaken tap). */
 export async function undoCheckin(locale: string, id: string): Promise<CheckinResult> {
   if (await guard()) return { error: "forbidden" };
+  const session = await db.session.findUnique({ where: { id }, select: { status: true } });
+  if (!session) return { error: "notfound" };
+  if (!canUndoAttendance(session.status)) return { error: "invalidState" };
+
   await db.$transaction(async (tx) => {
     // No longer taught → give the package hours back.
     await revertPackageHours(tx, id);
@@ -203,13 +230,28 @@ export async function markAll(
     where: {
       date: { gte: start, lt: end },
       status: { in: ["SCHEDULED", "CHECKED_IN"] },
-      ...(d.teacherId ? { teacherId: d.teacherId } : {}),
+      ...(d.teacherId === null
+        ? { teacherId: null }
+        : d.teacherId
+          ? { teacherId: d.teacherId }
+          : {}),
     },
-    select: { id: true },
+    select: { id: true, date: true, hours: true },
   });
 
   let count = 0;
-  for (const { id } of targets) if (await applyMark(id, d.mark)) count++;
+  const now = centerWallClockNow();
+  for (const target of targets) {
+    // "All present" finalises teaching and money, so it cannot reach forward
+    // into a lesson that has not ended yet.
+    if (
+      d.mark === "COMPLETED" &&
+      target.date.getTime() + Number(target.hours) * 3_600_000 > now.getTime()
+    ) {
+      continue;
+    }
+    if (await applyMark(target.id, d.mark)) count++;
+  }
 
   await writeAudit("Session", "bulk-attendance", "UPDATE", {
     after: { date: d.date, teacherId: d.teacherId ?? "all", mark: d.mark, count },
@@ -267,13 +309,21 @@ export type ScanOutcome = AttendanceState & {
  * Returns true when this scan was the check-out, so the kiosk can say which
  * of the two just happened.
  */
-async function scanStep(sessionId: string, status: string): Promise<boolean> {
+async function scanStep(
+  sessionId: string,
+  status: string,
+): Promise<"checkedIn" | "checkedOut" | "tooSoon" | "invalidState"> {
   if (status === "CHECKED_IN") {
-    await markCheckedOut(sessionId);
-    return true;
+    const row = await db.session.findUnique({
+      where: { id: sessionId },
+      select: { studentCheckInAt: true },
+    });
+    if (!row?.studentCheckInAt) return "invalidState";
+    if (!canCheckOut(status, row.studentCheckInAt)) return "tooSoon";
+    return (await markCheckedOut(sessionId)) ? "checkedOut" : "invalidState";
   }
-  await markCheckedIn(sessionId, "QR");
-  return false;
+  if (!canCheckIn(status)) return "invalidState";
+  return (await markCheckedIn(sessionId, "QR")) ? "checkedIn" : "invalidState";
 }
 
 export async function checkInByQr(
@@ -296,13 +346,20 @@ export async function checkInByQr(
   // so a stale id from another card can't be credited here.
   if (sessionId) {
     const chosen = await db.session.findFirst({
-      where: { id: sessionId, studentId: student.id },
+      where: {
+        id: sessionId,
+        studentId: student.id,
+        date: { gte: start, lt: end },
+        status: { in: ["SCHEDULED", "CHECKED_IN"] },
+      },
     });
     if (!chosen) return { error: "invalid", studentName: student.name };
-    await db.session.update({ where: { id: chosen.id }, data: { checkInMethod: "QR" } });
-    const out = await scanStep(chosen.id, chosen.status);
+    const step = await scanStep(chosen.id, chosen.status);
+    if (step === "tooSoon" || step === "invalidState") {
+      return { error: step, studentName: student.name };
+    }
     revalidate(locale);
-    return { ok: true, studentName: student.name, checkedOut: out };
+    return { ok: true, studentName: student.name, checkedOut: step === "checkedOut" };
   }
 
   const settingsRows = await db.setting.findMany({
@@ -347,10 +404,7 @@ export async function checkInByQr(
       if (assigned.length === 1) teacherId = assigned[0].teacherId;
     }
 
-    const now = new Date();
-    const when = new Date(
-      `${date}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00.000Z`,
-    );
+    const when = combineDateTime(date, centerNowTime());
     const pricePerHour = await resolvePricePerHour(student.gradeLevelId, "CENTER", when);
 
     const created = await db.session.create({
@@ -364,7 +418,7 @@ export async function checkInByQr(
         pricePerHour,
         total: pricePerHour,
         paymentStatus: "UNPAID",
-        status: "COMPLETED",
+        status: "CHECKED_IN",
         checkInMethod: "QR",
         studentCheckInAt: new Date(),
         // Unassigned walk-ins surface in the "needs a teacher" list until an
@@ -397,20 +451,22 @@ export async function checkInByQr(
     };
   }
 
-  const now = new Date();
-  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const [nowHour, nowMinute] = centerNowTime().split(":").map(Number);
+  const nowMin = nowHour * 60 + nowMinute;
   const closest = todays.reduce((best, s) =>
     Math.abs(minOf(s.date) - nowMin) < Math.abs(minOf(best.date) - nowMin) ? s : best,
   );
 
-  await db.session.update({ where: { id: closest.id }, data: { checkInMethod: "QR" } });
-  const out = await scanStep(closest.id, closest.status);
+  const step = await scanStep(closest.id, closest.status);
+  if (step === "tooSoon" || step === "invalidState") {
+    return { error: step, studentName: student.name };
+  }
 
   await writeAudit("Session", closest.id, "UPDATE", {
-    after: { via: "qr", step: out ? "checkout" : "checkin", studentId: student.id },
+    after: { via: "qr", step, studentId: student.id },
   });
   revalidate(locale);
-  return { ok: true, studentName: student.name, checkedOut: out };
+  return { ok: true, studentName: student.name, checkedOut: step === "checkedOut" };
 }
 
 /** Mint QR tokens for active students that don't have one yet. */
@@ -462,7 +518,7 @@ export async function undoAutoComplete(
   if (!s) return { error: "notfound" };
   if (!s.autoCompleted) return { error: "notAuto" };
 
-  await applyMark(sessionId, "SCHEDULED");
+  await db.session.update({ where: { id: sessionId }, data: { autoCompleted: false } });
   await writeAudit("Session", sessionId, "UPDATE", {
     after: { status: "SCHEDULED", undoneAutoComplete: true },
   });
@@ -476,10 +532,13 @@ export async function confirmAutoComplete(
   sessionId: string,
 ): Promise<AttendanceState> {
   if (await guard()) return { error: "forbidden" };
-  await db.session.updateMany({
-    where: { id: sessionId, autoCompleted: true },
-    data: { autoCompleted: false },
+  const pending = await db.session.findFirst({
+    where: { id: sessionId, autoCompleted: true, status: "SCHEDULED" },
+    select: { id: true },
   });
+  if (!pending) return { error: "notAuto" };
+  if (!(await applyMark(sessionId, "COMPLETED", true))) return { error: "invalidState" };
+  await db.session.update({ where: { id: sessionId }, data: { autoCompleted: false } });
   revalidate(locale);
   return { ok: true };
 }
@@ -487,11 +546,17 @@ export async function confirmAutoComplete(
 /** Accept every pending auto-completion at once. */
 export async function confirmAllAutoComplete(locale: string): Promise<AttendanceState> {
   if (await guard()) return { error: "forbidden" };
-  const res = await db.session.updateMany({
-    where: { autoCompleted: true },
-    data: { autoCompleted: false },
+  const pending = await db.session.findMany({
+    where: { autoCompleted: true, status: "SCHEDULED" },
+    select: { id: true },
   });
-  await writeAudit("Session", "bulk-confirm-auto", "UPDATE", { after: { count: res.count } });
+  let count = 0;
+  for (const row of pending) {
+    if (!(await applyMark(row.id, "COMPLETED", true))) continue;
+    await db.session.update({ where: { id: row.id }, data: { autoCompleted: false } });
+    count++;
+  }
+  await writeAudit("Session", "bulk-confirm-auto", "UPDATE", { after: { count } });
   revalidate(locale);
-  return { ok: true, count: res.count };
+  return { ok: true, count };
 }

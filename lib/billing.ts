@@ -6,7 +6,7 @@ import { paymentStatusFor, packageStatusFor } from "./billing-rules";
 
 // Re-exported so callers have one billing entry point on the server.
 export { paymentStatusFor, packageStatusFor, autoAllocate } from "./billing-rules";
-import { resolveNoShowPolicy, noShowIsChargeable, unbilledStatuses } from "./attendance-policy";
+import { resolveNoShowPolicy, unbilledStatuses } from "./attendance-policy";
 
 /**
  * The centre's no-show rule. One settings row, read where money is decided
@@ -127,11 +127,11 @@ export async function syncSessionPaymentStatus(tx: Tx, sessionId: string): Promi
   });
   if (!session) return;
 
-  // A no-show the centre does not charge for owes nothing, so it is settled the
-  // same way a package-covered session is: there is no payment to wait for.
-  // Leaving it UNPAID would put a debt on the parent's statement for a lesson
-  // the centre has decided not to bill, and chasing that is worse than the bug.
-  if (session.status === "NO_SHOW" && !noShowIsChargeable(await noShowPolicy())) {
+  // An unchargeable session has no payment to wait for. Keep the stored flag
+  // non-actionable as well as excluding it from balance queries, otherwise a
+  // cancelled row can still grow a "Pay now" button on screens that display
+  // this denormalised field.
+  if ((await unchargeableStatuses()).includes(session.status)) {
     await tx.session.update({ where: { id: sessionId }, data: { paymentStatus: "PAID" } });
     return;
   }

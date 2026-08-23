@@ -8,6 +8,7 @@ import { combineDateTime } from "@/lib/session-time";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { TABLES, type TableKey } from "@/lib/data-zone";
 import { LEAD_STATUSES } from "@/lib/leads";
+import { unchargeableStatuses } from "@/lib/billing";
 
 export type ImportResult = {
   ok?: boolean;
@@ -119,6 +120,7 @@ async function importRows(
     skipped++;
     if (errors.length < 20) errors.push(`#${r.__row}: ${msg}`);
   };
+  const unchargeable = key === "sessions" ? await unchargeableStatuses() : [];
 
   // Lookup caches shared across rows.
   const levels = await db.gradeLevel.findMany();
@@ -310,6 +312,17 @@ async function importRows(
           const hours = num(r.hours, 1);
           const when = combineDateTime(date, /^\d{2}:\d{2}$/.test(r.time ?? "") ? r.time : null);
           const price = await resolvePricePerHour(gradeLevelId, location, when);
+          const importedStatus = String(r.status ?? "").toUpperCase();
+          const status = ["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED", "NO_SHOW", "CANCELLED"]
+            .includes(importedStatus)
+            ? importedStatus
+            : "COMPLETED";
+          const importedPaymentStatus = String(r.paymentStatus ?? "").toUpperCase();
+          const paymentStatus = unchargeable.includes(status)
+            ? "PAID"
+            : ["PAID", "PARTIAL", "UNPAID"].includes(importedPaymentStatus)
+              ? importedPaymentStatus
+              : "UNPAID";
           await db.session.create({
             data: {
               date: when,
@@ -320,13 +333,8 @@ async function importRows(
               hours,
               pricePerHour: price,
               total: price * hours,
-              status: ["DRAFT", "SCHEDULED", "CHECKED_IN", "COMPLETED", "NO_SHOW", "CANCELLED"]
-                .includes(String(r.status ?? "").toUpperCase())
-                ? String(r.status).toUpperCase()
-                : "COMPLETED",
-              paymentStatus: ["PAID", "PARTIAL", "UNPAID"].includes(String(r.paymentStatus ?? "").toUpperCase())
-                ? String(r.paymentStatus).toUpperCase()
-                : "UNPAID",
+              status,
+              paymentStatus,
             },
           });
           created++;

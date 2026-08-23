@@ -6,6 +6,7 @@ import { STAFF_ROLES } from "@/lib/rbac";
 import { toNumber } from "@/lib/money";
 import { displayName } from "@/lib/names";
 import { suggestAllocation, type PayableSession } from "@/lib/allocation";
+import { unchargeableStatuses } from "@/lib/billing";
 
 export type OutstandingResult = {
   sessions: PayableSession[];
@@ -32,12 +33,13 @@ export async function loadOutstandingSessions(
 ): Promise<OutstandingResult> {
   if (await guard()) return { sessions: [], totalOutstanding: 0 };
   if (!studentId) return { sessions: [], totalOutstanding: 0 };
+  const unchargeable = await unchargeableStatuses();
 
   const rows = await db.session.findMany({
     where: {
       studentId,
       packageId: null,
-      status: { notIn: ["DRAFT", "CANCELLED"] },
+      status: { notIn: unchargeable },
     },
     orderBy: { date: "asc" },
     include: { allocations: true, teacher: true, subject: true },

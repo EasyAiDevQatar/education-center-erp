@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
+import { netPaid, unchargeableStatuses } from "./billing";
 
 export type DateRange = { from?: Date; to?: Date };
 
@@ -15,13 +16,11 @@ function dateFilter(range?: DateRange) {
 /** Headline KPIs for the dashboard (mirrors the Excel `اجماليات` sheet). */
 export async function getDashboardSummary(range?: DateRange) {
   const dateWhere = dateFilter(range);
+  const unchargeable = await unchargeableStatuses();
 
   const [paySum, expSum, sessions, sessionTotal, students, teachers] =
     await Promise.all([
-      db.payment.aggregate({
-        _sum: { amount: true },
-        where: dateWhere ? { date: dateWhere } : undefined,
-      }),
+      netPaid(dateWhere ? { date: dateWhere } : {}),
       db.expense.aggregate({
         _sum: { amount: true },
         where: dateWhere ? { date: dateWhere } : undefined,
@@ -32,13 +31,13 @@ export async function getDashboardSummary(range?: DateRange) {
       }),
       db.session.aggregate({
         _sum: { total: true },
-        where: { status: { not: "DRAFT" }, ...(dateWhere ? { date: dateWhere } : {}) },
+        where: { status: { notIn: unchargeable }, ...(dateWhere ? { date: dateWhere } : {}) },
       }),
       db.student.count({ where: { active: true } }),
       db.teacher.count({ where: { active: true } }),
     ]);
 
-  const income = toNumber(paySum._sum.amount);
+  const income = paySum;
   const expenses = toNumber(expSum._sum.amount);
   const expectedIncome = toNumber(sessionTotal._sum.total);
 
@@ -57,10 +56,11 @@ export async function getDashboardSummary(range?: DateRange) {
 /** Revenue (expected) grouped by teacher — mirrors the `معلمين` pivot. */
 export async function getRevenueByTeacher(range?: DateRange) {
   const dateWhere = dateFilter(range);
+  const unchargeable = await unchargeableStatuses();
   const grouped = await db.session.groupBy({
     by: ["teacherId"],
     _sum: { total: true, hours: true },
-    where: { status: { not: "DRAFT" }, ...(dateWhere ? { date: dateWhere } : {}) },
+    where: { status: { notIn: unchargeable }, ...(dateWhere ? { date: dateWhere } : {}) },
   });
   // Sessions still awaiting a teacher have nothing to attribute revenue to.
   const assigned = grouped.filter(

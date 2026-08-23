@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { displayName, nameSearchText } from "@/lib/names";
 import { getStudentBalance } from "@/lib/balances";
+import { LIVE_PAYMENTS, netPaid, unchargeableStatuses } from "@/lib/billing";
 
 /**
  * The assistant's tool belt: curated, read-only queries over centre data.
@@ -54,21 +55,22 @@ export const AI_TOOLS: AiTool[] = [
     params: '{"period": "today" | "week" | "month" | "year"}',
     async execute(args) {
       const range = periodRange(str(args.period, "month"));
+      const unchargeable = await unchargeableStatuses();
       const [sessions, payments, expenses] = await Promise.all([
         db.session.aggregate({
           _sum: { total: true },
           _count: true,
-          where: { date: range, status: { notIn: ["DRAFT", "CANCELLED"] } },
+          where: { date: range, status: { notIn: unchargeable } },
         }),
-        db.payment.aggregate({ _sum: { amount: true }, _count: true, where: { date: range } }),
+        Promise.all([netPaid({ date: range }), db.payment.count({ where: { date: range, ...LIVE_PAYMENTS } })]),
         db.expense.aggregate({ _sum: { amount: true }, _count: true, where: { date: range } }),
       ]);
       return {
         period: str(args.period, "month"),
         sessionRevenue: toNumber(sessions._sum.total),
         sessionCount: sessions._count,
-        paymentsReceived: toNumber(payments._sum.amount),
-        paymentCount: payments._count,
+        paymentsReceived: payments[0],
+        paymentCount: payments[1],
         expensesTotal: toNumber(expenses._sum.amount),
         expenseCount: expenses._count,
       };
@@ -80,28 +82,19 @@ export const AI_TOOLS: AiTool[] = [
     params: '{"limit": number (default 10, max 25)}',
     async execute(args, locale) {
       const limit = Math.min(Math.max(1, num(args.limit, 10)), 25);
-      const [charges, packages, paid, students] = await Promise.all([
-        db.session.groupBy({
-          by: ["studentId"],
-          _sum: { total: true },
-          where: { status: { not: "DRAFT" }, packageId: null },
-        }),
-        db.package.groupBy({ by: ["studentId"], _sum: { price: true } }),
-        db.payment.groupBy({ by: ["studentId"], _sum: { amount: true }, where: { studentId: { not: null } } }),
-        db.student.findMany({ select: { id: true, name: true, nameEn: true } }),
-      ]);
-      const nameOf = new Map(students.map((s) => [s.id, displayName(s, locale)]));
-      const owes = new Map<string, number>();
-      for (const c of charges) owes.set(c.studentId, (owes.get(c.studentId) ?? 0) + toNumber(c._sum.total));
-      for (const p of packages) owes.set(p.studentId, (owes.get(p.studentId) ?? 0) + toNumber(p._sum.price));
-      for (const p of paid) {
-        if (p.studentId) owes.set(p.studentId, (owes.get(p.studentId) ?? 0) - toNumber(p._sum.amount));
-      }
-      return [...owes.entries()]
-        .filter(([, v]) => v > 0.005)
-        .sort((a, b) => b[1] - a[1])
+      const students = await db.student.findMany({
+        where: { active: true },
+        select: { id: true, name: true, nameEn: true },
+      });
+      const balances = await Promise.all(students.map((student) => getStudentBalance(student.id)));
+      return students
+        .map((student, index) => ({
+          student: displayName(student, locale),
+          owes: Math.round(balances[index].balance * 100) / 100,
+        }))
+        .filter((row) => row.owes > 0.005)
+        .sort((a, b) => b.owes - a.owes)
         .slice(0, limit)
-        .map(([id, balance]) => ({ student: nameOf.get(id) ?? id, owes: Math.round(balance * 100) / 100 }));
     },
   },
   {
@@ -150,10 +143,11 @@ export const AI_TOOLS: AiTool[] = [
       const teachers = await db.teacher.findMany({ where: { active: true } });
       const teacher = teachers.find((t) => nameSearchText(t).toLowerCase().includes(q));
       if (!teacher) return { error: "teacher not found", knownTeachers: teachers.slice(0, 15).map((t) => displayName(t, locale)) };
+      const unchargeable = await unchargeableStatuses();
       const agg = await db.session.aggregate({
         _sum: { total: true, hours: true },
         _count: true,
-        where: { teacherId: teacher.id, date: range, status: { notIn: ["DRAFT", "CANCELLED"] } },
+        where: { teacherId: teacher.id, date: range, status: { notIn: unchargeable } },
       });
       return {
         teacher: displayName(teacher, locale),

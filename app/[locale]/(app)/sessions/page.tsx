@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import { SessionsClient, type SessionRow } from "./sessions-client";
 import type { PriceMatrix } from "./session-dialog";
 import { displayName } from "@/lib/names";
+import { unchargeableStatuses } from "@/lib/billing";
 
 export default async function SessionsPage({
   params,
@@ -24,6 +25,7 @@ export default async function SessionsPage({
   const t = await getTranslations("sessions");
   const sp = await searchParams;
   const filters = readSessionFilters(sp);
+  const unchargeable = await unchargeableStatuses();
 
   // Assignments are per academic year; unscoped until a year exists.
   const currentYear = await db.academicYear.findFirst({
@@ -79,6 +81,8 @@ export default async function SessionsPage({
     subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
     location: s.location as "CENTER" | "HOME",
     hours: toNumber(s.hours),
+    status: s.status,
+    chargeable: !unchargeable.includes(s.status),
     paymentStatus: s.paymentStatus,
     notes: s.notes,
     studentName: displayName(s.student, locale),

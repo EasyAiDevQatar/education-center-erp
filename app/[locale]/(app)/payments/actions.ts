@@ -17,7 +17,7 @@ import {
   unpostSource,
 } from "@/lib/accounting/journal-data";
 import { linesForPayment } from "@/lib/accounting/posting";
-import { syncSessionPaymentStatus } from "@/lib/billing";
+import { syncSessionPaymentStatus, unchargeableStatuses } from "@/lib/billing";
 import { validateAllocation, type SuggestedLine } from "@/lib/allocation";
 
 export type ActionState = { ok?: boolean; error?: string };
@@ -100,6 +100,7 @@ export async function savePayment(
 
   const d = parsed.data;
   const allocation = parseAllocation(formData.get("allocations"));
+  const unchargeable = allocation ? await unchargeableStatuses() : [];
   const priorPayment = id ? await db.payment.findUnique({ where: { id } }) : null;
   const frozen = await guardArchived(new Date(d.date), priorPayment?.date);
   if (frozen) return { error: frozen };
@@ -177,7 +178,12 @@ export async function savePayment(
 
         const touched = new Set(allocation.map((l) => l.sessionId));
         const rows = await tx.session.findMany({
-          where: { id: { in: [...touched] }, studentId: d.studentId },
+          where: {
+            id: { in: [...touched] },
+            studentId: d.studentId,
+            packageId: null,
+            status: { notIn: unchargeable },
+          },
           include: { allocations: { where: { paymentId: { not: paymentId } } } },
         });
         const payable = rows.map((r) => {
