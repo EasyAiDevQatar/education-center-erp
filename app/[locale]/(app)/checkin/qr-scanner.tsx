@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Camera, CameraOff } from "lucide-react";
+import { Camera, CameraOff, Volume2, VolumeX } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { checkInByQr } from "./actions";
 import { createQrDecoder, classifyCameraError, type CameraError } from "@/lib/qr-decode";
+import { useScanSound } from "@/lib/use-scan-sound";
 
 /**
  * Camera check-in for the reception tablet.
@@ -42,17 +43,19 @@ export function QrScanner({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
+  const { enabled: soundEnabled, playSuccess, toggle: toggleSound } = useScanSound();
   const [camera, setCamera] = useState<"starting" | "live" | CameraError>("starting");
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState("");
   const [pending, start] = useTransition();
 
-  function submitToken(token: string) {
+  function submitToken(token: string, source: "camera" | "manual") {
     if (!token.trim() || busyRef.current) return;
     busyRef.current = true;
     start(async () => {
       const res = await checkInByQr(locale, { token: token.trim(), date: day });
       if (res.ok) {
+        if (source === "camera") playSuccess();
         onResult(t(res.checkedOut ? "scannedOut" : "scanned", { name: res.studentName ?? "" }));
         setError(null);
       } else {
@@ -102,7 +105,7 @@ export function QrScanner({
         timer = setInterval(async () => {
           if (!videoRef.current || busyRef.current) return;
           const text = await decoder.scan(videoRef.current);
-          if (text) submitToken(text);
+          if (text) submitToken(text, "camera");
         }, interval);
       } catch (err) {
         if (!cancelled) setCamera(classifyCameraError(err));
@@ -129,6 +132,18 @@ export function QrScanner({
             <div className="relative overflow-hidden rounded-lg bg-black">
               <video ref={videoRef} playsInline muted className="aspect-video w-full object-cover" />
               <div className="pointer-events-none absolute inset-8 rounded-lg border-2 border-white/70" />
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="absolute end-2 top-2 z-10 bg-background/85"
+                aria-label={t(soundEnabled ? "scanSoundDisable" : "scanSoundEnable")}
+                aria-pressed={soundEnabled}
+                title={t(soundEnabled ? "scanSoundDisable" : "scanSoundEnable")}
+                onClick={toggleSound}
+              >
+                {soundEnabled ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+              </Button>
             </div>
           ) : (
             <p className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm">
@@ -158,7 +173,7 @@ export function QrScanner({
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  submitToken(manual);
+                  submitToken(manual, "manual");
                   setManual("");
                 }
               }}
@@ -176,7 +191,7 @@ export function QrScanner({
             type="button"
             disabled={pending || !manual.trim()}
             onClick={() => {
-              submitToken(manual);
+              submitToken(manual, "manual");
               setManual("");
             }}
           >

@@ -425,6 +425,8 @@
     "noCards": "No cards yet — press \"Generate missing cards\".",
     "backToRoster": "Back to roster",
     "scanSubtitle": "Hold the student card up to the camera — attendance records itself.",
+    "scanSoundEnable": "Enable scan sound",
+    "scanSoundDisable": "Mute scan sound",
     "camera": "Camera",
     "scanFeed": "Recent scans",
     "feedEmpty": "No cards scanned yet.",

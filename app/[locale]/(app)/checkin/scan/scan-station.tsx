@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Camera, CameraOff, Check, X, RefreshCw } from "lucide-react";
+import { Camera, CameraOff, Check, X, RefreshCw, Volume2, VolumeX } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { FormField } from "@/components/crud/form-field";
 import { minToHHMM } from "@/lib/planner";
 import { checkInByQr, type ScanOutcome } from "../actions";
 import { createQrDecoder, classifyCameraError, type CameraError } from "@/lib/qr-decode";
+import { useScanSound } from "@/lib/use-scan-sound";
 
 export type ScanRow = {
   id: string;
@@ -23,6 +24,7 @@ export type ScanRow = {
 };
 
 type Feed = { ok: boolean; name: string; at: string };
+type ScanSource = "camera" | "manual";
 
 /**
  * Always-on scanning station for the reception device.
@@ -49,6 +51,8 @@ export function ScanStation({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const busyRef = useRef(false);
+  const choiceSourceRef = useRef<ScanSource>("camera");
+  const { enabled: soundEnabled, playSuccess, toggle: toggleSound } = useScanSound();
 
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
@@ -65,7 +69,7 @@ export function ScanStation({
   }, []);
 
   const submit = useCallback(
-    (token: string, sessionId?: string) => {
+    (token: string, sessionId?: string, source: ScanSource = "camera") => {
       if (!token.trim() || busyRef.current) return;
       busyRef.current = true;
       start(async () => {
@@ -75,6 +79,7 @@ export function ScanStation({
           sessionId: sessionId ?? null,
         });
         if (res.ok) {
+          if (source === "camera") playSuccess();
           push(
             true,
             t(res.checkedOut ? "scannedOut" : "scanned", { name: res.studentName ?? "" }),
@@ -83,6 +88,7 @@ export function ScanStation({
           router.refresh();
         } else if (res.choices && res.choices.length > 0) {
           // More than one candidate and the centre asked to be shown them.
+          choiceSourceRef.current = source;
           setChoice(res);
         } else {
           push(false, t(`scanErrors.${res.error ?? "invalid"}`));
@@ -93,7 +99,7 @@ export function ScanStation({
         }, 2000);
       });
     },
-    [locale, day, push, t, router],
+    [locale, day, playSuccess, push, t, router],
   );
 
   /* ---- camera lifecycle ---- */
@@ -175,6 +181,18 @@ export function ScanStation({
           <div className="relative overflow-hidden rounded-lg bg-black">
             <video ref={videoRef} playsInline muted className="aspect-video w-full object-cover" />
             <div className="pointer-events-none absolute inset-10 rounded-lg border-2 border-white/70" />
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute end-2 top-2 z-10 bg-background/85"
+              aria-label={t(soundEnabled ? "scanSoundDisable" : "scanSoundEnable")}
+              aria-pressed={soundEnabled}
+              title={t(soundEnabled ? "scanSoundDisable" : "scanSoundEnable")}
+              onClick={toggleSound}
+            >
+              {soundEnabled ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+            </Button>
             {pending && (
               <div className="absolute inset-x-0 bottom-0 bg-primary/90 py-1 text-center text-sm text-primary-foreground">
                 {tc("saving")}
@@ -219,7 +237,7 @@ export function ScanStation({
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  submit(manual);
+                  submit(manual, undefined, "manual");
                   setManual("");
                 }
               }}
@@ -227,7 +245,7 @@ export function ScanStation({
             <Button
               disabled={pending || !manual.trim()}
               onClick={() => {
-                submit(manual);
+                submit(manual, undefined, "manual");
                 setManual("");
               }}
             >
@@ -253,7 +271,7 @@ export function ScanStation({
               {choice.choices.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => submit(choice.token ?? "", c.id)}
+                  onClick={() => submit(choice.token ?? "", c.id, choiceSourceRef.current)}
                   disabled={pending}
                   className="flex w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-sm hover:bg-accent"
                 >
