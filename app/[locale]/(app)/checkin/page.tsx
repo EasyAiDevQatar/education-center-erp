@@ -10,7 +10,9 @@ import {
   type RosterItem,
 } from "./roster-board";
 import { displayName } from "@/lib/names";
-import { centerClockTime, centerToday } from "@/lib/session-time";
+import { centerClockTime, centerToday, elapsedMinutes } from "@/lib/session-time";
+import { attendanceBillablePolicy, noShowPolicy } from "@/lib/billing";
+import { calculateBillableMinutes } from "@/lib/attendance-billing";
 
 const ATTENDANCE_TABS = ["attendance", "needs-teacher", "review"] as const;
 const ATTENDANCE_VIEWS = ["list", "cards"] as const;
@@ -51,7 +53,7 @@ export default async function CheckinPage({
     : "list";
   const { start, end } = dayRange(day);
 
-  const [sessions, review, unassigned] = await Promise.all([
+  const [sessions, review, unassigned, billablePolicy, currentNoShowPolicy] = await Promise.all([
     db.session.findMany({
       // Planner drafts are pending confirmation — not attendance records.
       where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } },
@@ -70,6 +72,8 @@ export default async function CheckinPage({
       include: { student: true, teacher: true },
       orderBy: { date: "desc" },
     }),
+    attendanceBillablePolicy(),
+    noShowPolicy(),
   ]);
 
   const queueDays = [...new Set(unassigned.map((s) => s.date.toISOString().slice(0, 10)))];
@@ -107,22 +111,40 @@ export default async function CheckinPage({
   );
 
   type Row = (typeof sessions)[number];
-  const toItem = (s: Row): RosterItem => ({
-    id: s.id,
-    sessionDate: s.date.toISOString().slice(0, 10),
-    teacherId: s.teacherId,
-    teacherName: s.teacher ? displayName(s.teacher, locale) : "",
-    studentName: displayName(s.student, locale),
-    startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
-    hours: toNumber(s.hours),
-    location: s.location as "CENTER" | "HOME",
-    status: s.status,
-    autoCompleted: s.autoCompleted,
-    checkedInAt: s.studentCheckInAt ? centerClockTime(s.studentCheckInAt) : null,
-    checkedOutAt: s.studentCheckOutAt ? centerClockTime(s.studentCheckOutAt) : null,
-    checkInMethod: s.checkInMethod,
-    actualHours: s.actualHours == null ? null : toNumber(s.actualHours),
-  });
+  const toItem = (s: Row): RosterItem => {
+    const plannedHours = toNumber(s.hours);
+    const actualMinutes =
+      s.studentCheckInAt && s.studentCheckOutAt
+        ? elapsedMinutes(s.studentCheckInAt, s.studentCheckOutAt)
+        : null;
+    const billableMinutes = s.billableHours != null
+      ? Math.round(toNumber(s.billableHours) * 60)
+      : s.status === "CANCELLED" || (s.status === "NO_SHOW" && currentNoShowPolicy !== "TAUGHT")
+        ? 0
+        : s.status === "COMPLETED" || s.status === "NO_SHOW"
+          // Legacy finalized rows predate the snapshot column. Their money was
+          // based on the booked duration and must not change with new settings.
+          ? Math.round(plannedHours * 60)
+          : calculateBillableMinutes({ plannedHours, actualMinutes }, billablePolicy);
+
+    return {
+      id: s.id,
+      sessionDate: s.date.toISOString().slice(0, 10),
+      teacherId: s.teacherId,
+      teacherName: s.teacher ? displayName(s.teacher, locale) : "",
+      studentName: displayName(s.student, locale),
+      startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
+      hours: plannedHours,
+      location: s.location as "CENTER" | "HOME",
+      status: s.status,
+      autoCompleted: s.autoCompleted,
+      checkedInAt: s.studentCheckInAt ? centerClockTime(s.studentCheckInAt) : null,
+      checkedOutAt: s.studentCheckOutAt ? centerClockTime(s.studentCheckOutAt) : null,
+      checkInMethod: s.checkInMethod,
+      actualMinutes,
+      billableMinutes,
+    };
+  };
 
   return (
     <div>

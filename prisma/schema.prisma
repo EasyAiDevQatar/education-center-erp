@@ -295,7 +295,8 @@ model Session {
   checkInMethod    String?   // KIOSK | GPS | QR | MANUAL
   checkInLat       Float?
   checkInLng       Float?
-  actualHours      Decimal?  // measured from check-in → check-out
+  actualHours      Decimal?  // exact elapsed hours from check-in → check-out, rounded to one minute
+  billableHours    Decimal?  // financial duration snapshot; null until attendance is finalized
 
   /// What kind of lesson this is. Chosen at booking; drives how much lateness
   /// transport may propose — an exam is never delayed, whatever the settings say.

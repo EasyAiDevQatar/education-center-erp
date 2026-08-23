@@ -7,6 +7,12 @@ import { paymentStatusFor, packageStatusFor } from "./billing-rules";
 // Re-exported so callers have one billing entry point on the server.
 export { paymentStatusFor, packageStatusFor, autoAllocate } from "./billing-rules";
 import { resolveNoShowPolicy, unbilledStatuses } from "./attendance-policy";
+import {
+  BILLABLE_SETTING_KEYS,
+  calculateBillableMinutes,
+  resolveBillablePolicy,
+  type BillablePolicy,
+} from "./attendance-billing";
 
 /**
  * The centre's no-show rule. One settings row, read where money is decided
@@ -70,21 +76,86 @@ export async function netPaid(where: Prisma.PaymentWhereInput = {}): Promise<num
 
 type Tx = Prisma.TransactionClient;
 
+/** Load the centre policy at the moment a lesson becomes financially final. */
+export async function attendanceBillablePolicy(): Promise<BillablePolicy> {
+  const rows = await db.setting.findMany({
+    where: { key: { in: [...BILLABLE_SETTING_KEYS] } },
+    select: { key: true, value: true },
+  });
+  return resolveBillablePolicy(
+    Object.fromEntries(rows.map((row) => [row.key, row.value])),
+  );
+}
+
 /**
- * Deduct a session's hours from its package the first time it becomes billable
- * (COMPLETED). Idempotent via `Session.packageApplied`.
+ * Freeze the policy result on the session and make its monetary total match.
+ * Historical sessions therefore do not change when an admin edits the policy.
+ */
+export async function snapshotBillableSession(
+  tx: Tx,
+  sessionId: string,
+  policy: BillablePolicy,
+  options: { actualMinutes?: number | null; forcePlanned?: boolean } = {},
+): Promise<number | null> {
+  const session = await tx.session.findUnique({
+    where: { id: sessionId },
+    select: { hours: true, actualHours: true, pricePerHour: true },
+  });
+  if (!session) return null;
+
+  const actualMinutes = options.actualMinutes !== undefined
+    ? options.actualMinutes
+    : session.actualHours == null
+      ? null
+      : Math.round(toNumber(session.actualHours) * 60);
+  const effectivePolicy = options.forcePlanned ? { ...policy, basis: "PLANNED" as const } : policy;
+  const billableMinutes = calculateBillableMinutes(
+    { plannedHours: toNumber(session.hours), actualMinutes },
+    effectivePolicy,
+  );
+  const billableHours = billableMinutes / 60;
+  await tx.session.update({
+    where: { id: sessionId },
+    data: {
+      billableHours,
+      total: toNumber(session.pricePerHour) * billableHours,
+    },
+  });
+  return billableMinutes;
+}
+
+/** Return a corrected/reopened lesson to its planned financial estimate. */
+export async function clearBillableSessionSnapshot(tx: Tx, sessionId: string): Promise<void> {
+  const session = await tx.session.findUnique({
+    where: { id: sessionId },
+    select: { hours: true, pricePerHour: true },
+  });
+  if (!session) return;
+  await tx.session.update({
+    where: { id: sessionId },
+    data: {
+      billableHours: null,
+      total: toNumber(session.hours) * toNumber(session.pricePerHour),
+    },
+  });
+}
+
+/**
+ * Deduct a session's billable hours from its package the first time it becomes
+ * chargeable (completed, or a taught-policy no-show). Idempotent via
+ * `Session.packageApplied`.
  */
 export async function applyPackageHours(tx: Tx, sessionId: string): Promise<void> {
   const s = await tx.session.findUnique({
     where: { id: sessionId },
-    select: { id: true, packageId: true, hours: true, packageApplied: true },
+    select: { id: true, packageId: true, hours: true, billableHours: true, packageApplied: true },
   });
   if (!s || !s.packageId || s.packageApplied) return;
 
   const pkg = await tx.package.findUnique({ where: { id: s.packageId } });
   if (!pkg) return;
 
-  const used = toNumber(pkg.hoursUsed) + toNumber(s.hours);
+  const used = toNumber(pkg.hoursUsed) + toNumber(s.billableHours ?? s.hours);
   await tx.package.update({
     where: { id: pkg.id },
     data: {
@@ -99,14 +170,14 @@ export async function applyPackageHours(tx: Tx, sessionId: string): Promise<void
 export async function revertPackageHours(tx: Tx, sessionId: string): Promise<void> {
   const s = await tx.session.findUnique({
     where: { id: sessionId },
-    select: { id: true, packageId: true, hours: true, packageApplied: true },
+    select: { id: true, packageId: true, hours: true, billableHours: true, packageApplied: true },
   });
   if (!s || !s.packageId || !s.packageApplied) return;
 
   const pkg = await tx.package.findUnique({ where: { id: s.packageId } });
   if (!pkg) return;
 
-  const used = Math.max(0, toNumber(pkg.hoursUsed) - toNumber(s.hours));
+  const used = Math.max(0, toNumber(pkg.hoursUsed) - toNumber(s.billableHours ?? s.hours));
   await tx.package.update({
     where: { id: pkg.id },
     data: {

@@ -8,7 +8,11 @@ import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { resolvePricePerHour } from "@/lib/pricing";
 import { notifySession } from "@/lib/integrations/notify";
-import { revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
+import {
+  clearBillableSessionSnapshot,
+  revertPackageHours,
+  syncSessionPaymentStatus,
+} from "@/lib/billing";
 import { applyMark, MARKS, markCheckedIn, markCheckedOut } from "@/lib/attendance";
 import { uniqueCode, isShortCode } from "@/lib/checkin-code";
 import { distanceMeters, GEOFENCE_RADIUS_M } from "@/lib/geo";
@@ -157,6 +161,7 @@ export async function undoCheckin(locale: string, id: string): Promise<CheckinRe
         actualHours: null,
       },
     });
+    await clearBillableSessionSnapshot(tx, id);
     await syncSessionPaymentStatus(tx, id);
   });
   await writeAudit("Session", id, "UPDATE", { after: { status: "SCHEDULED" } });

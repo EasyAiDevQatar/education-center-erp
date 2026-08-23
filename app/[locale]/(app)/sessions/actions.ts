@@ -94,7 +94,12 @@ export async function saveSession(
   }
   // Authoritative price resolution from the matrix (client preview is advisory).
   const pricePerHour = await resolvePricePerHour(d.gradeLevelId, d.location, date);
-  const total = pricePerHour * d.hours;
+  // Editing a finalized session may change its planned timetable details, but
+  // its historical billable snapshot remains the financial source of truth.
+  const financialHours = priorSession?.billableHours == null
+    ? d.hours
+    : Number(priorSession.billableHours);
+  const total = pricePerHour * financialHours;
 
   const data = {
     date,

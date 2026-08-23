@@ -77,7 +77,10 @@ export async function resizeSession(
 
   const existing = await db.session.findUnique({ where: { id } });
   if (!existing) return { error: "notfound" };
-  const total = toNumber(existing.pricePerHour) * hours;
+  const financialHours = existing.billableHours == null
+    ? hours
+    : toNumber(existing.billableHours);
+  const total = toNumber(existing.pricePerHour) * financialHours;
 
   await db.session.update({ where: { id }, data: { hours, total } });
   await writeAudit("Session", id, "UPDATE", { after: { hours, total } });

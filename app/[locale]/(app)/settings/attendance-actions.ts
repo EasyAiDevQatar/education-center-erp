@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
+import {
+  BILLABLE_BASES,
+  BILLABLE_ROUNDING_MINUTES,
+  BILLABLE_ROUNDING_MODES,
+} from "@/lib/attendance-billing";
 
 export type AttendanceSettingsState = { ok?: boolean; error?: string };
 
@@ -15,6 +20,13 @@ const schema = z.object({
   graceHours: z.coerce.number().int().min(0).max(168),
   /** CANCELLED | TAUGHT — whether an absence still bills. */
   noShow: z.enum(["CANCELLED", "TAUGHT"]),
+  billableBasis: z.enum(BILLABLE_BASES),
+  billableRoundingMinutes: z.coerce.number().refine(
+    (value) => (BILLABLE_ROUNDING_MINUTES as readonly number[]).includes(value),
+  ),
+  billableRoundingMode: z.enum(BILLABLE_ROUNDING_MODES),
+  minimumBillableMinutes: z.coerce.number().int().min(0).max(1440),
+  capBillableAtPlanned: z.boolean(),
 });
 
 export async function saveAttendanceSettings(
@@ -33,6 +45,11 @@ export async function saveAttendanceSettings(
     ["attendancePickSession", String(d.pickSession)],
     ["autoCompleteGraceHours", String(d.graceHours)],
     ["noShowPolicy", d.noShow],
+    ["attendanceBillableBasis", d.billableBasis],
+    ["attendanceBillableRoundingMinutes", String(d.billableRoundingMinutes)],
+    ["attendanceBillableRoundingMode", d.billableRoundingMode],
+    ["attendanceMinimumBillableMinutes", String(d.minimumBillableMinutes)],
+    ["attendanceCapBillableAtPlanned", String(d.capBillableAtPlanned)],
   ] as const) {
     await db.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
   }

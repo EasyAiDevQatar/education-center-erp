@@ -1,12 +1,21 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { notifySession } from "@/lib/integrations/notify";
-import { applyPackageHours, revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
+import {
+  applyPackageHours,
+  attendanceBillablePolicy,
+  clearBillableSessionSnapshot,
+  noShowPolicy,
+  revertPackageHours,
+  snapshotBillableSession,
+  syncSessionPaymentStatus,
+} from "@/lib/billing";
 import {
   canApplyAttendanceMark,
   canCheckIn,
   canCheckOut,
 } from "@/lib/session-lifecycle";
+import { elapsedMinutes } from "@/lib/session-time";
 
 /**
  * One way to say a lesson happened.
@@ -45,23 +54,42 @@ export async function applyMark(sessionId: string, mark: Mark, auto = false): Pr
   if (existing.status === mark) return true;
   if (!canApplyAttendanceMark(existing.status, mark)) return false;
 
+  const policy = mark === "SCHEDULED" ? null : await attendanceBillablePolicy();
+  const chargeNoShow = mark === "NO_SHOW" && (await noShowPolicy()) === "TAUGHT";
+
   await db.$transaction(async (tx) => {
-    const wasCompleted = existing.status === "COMPLETED";
-    const willComplete = mark === "COMPLETED";
+    const becomesBillable = mark === "COMPLETED" || chargeNoShow;
 
     await tx.session.update({
       where: { id: sessionId },
       data: {
         status: mark,
-        autoCompleted: willComplete ? auto : false,
+        autoCompleted: mark === "COMPLETED" ? auto : false,
+        ...(mark === "SCHEDULED"
+          ? {
+              studentCheckInAt: null,
+              studentCheckOutAt: null,
+              teacherCheckInAt: null,
+              checkInMethod: null,
+              checkInLat: null,
+              checkInLng: null,
+              actualHours: null,
+            }
+          : {}),
       },
     });
 
-    if (willComplete && !wasCompleted) await applyPackageHours(tx, sessionId);
-    // Not just from COMPLETED: `packageApplied` is the record of what is held,
-    // and revert is a no-op when nothing is, so releasing on any move out of a
-    // billable state is both correct and cheap.
-    else if (!willComplete) await revertPackageHours(tx, sessionId);
+    if (becomesBillable && policy) {
+      // A no-show billed as taught is always the booked duration; there is no
+      // arrival/departure measurement to apply an actual-time policy to.
+      await snapshotBillableSession(tx, sessionId, policy, { forcePlanned: chargeNoShow });
+      await applyPackageHours(tx, sessionId);
+    } else {
+      // Revert before clearing the snapshot: package drawdown must subtract
+      // the same duration that was originally added.
+      await revertPackageHours(tx, sessionId);
+      await clearBillableSessionSnapshot(tx, sessionId);
+    }
     await syncSessionPaymentStatus(tx, sessionId);
   });
 
@@ -113,10 +141,8 @@ export async function markCheckedIn(
 /**
  * The student has left, and the lesson is now billable.
  *
- * The measured duration is snapped to a quarter hour: a centre bills in
- * quarters and a raw millisecond difference would put 57 minutes on an
- * invoice. Package drawdown happens here rather than at check-in because a
- * lesson that was started and abandoned should not consume hours.
+ * The measured duration is stored to the nearest minute. A separate billable
+ * snapshot applies the centre's financial policy without changing that fact.
  */
 export async function markCheckedOut(
   sessionId: string,
@@ -125,17 +151,22 @@ export async function markCheckedOut(
   const session = await db.session.findUnique({ where: { id: sessionId } });
   if (!session) return false;
   if (!canCheckOut(session.status, session.studentCheckInAt, at)) return false;
+  const policy = await attendanceBillablePolicy();
 
   let actualHours: number | null = null;
   if (session.studentCheckInAt) {
-    const ms = at.getTime() - session.studentCheckInAt.getTime();
-    actualHours = Math.max(0.25, Math.round((ms / 3_600_000) * 4) / 4);
+    actualHours = elapsedMinutes(session.studentCheckInAt, at) / 60;
   }
 
   await db.$transaction(async (tx) => {
     await tx.session.update({
       where: { id: sessionId },
       data: { status: "COMPLETED", studentCheckOutAt: at, actualHours },
+    });
+    await snapshotBillableSession(tx, sessionId, policy, {
+      actualMinutes: session.studentCheckInAt
+        ? elapsedMinutes(session.studentCheckInAt, at)
+        : null,
     });
     await applyPackageHours(tx, sessionId);
     await syncSessionPaymentStatus(tx, sessionId);

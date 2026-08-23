@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bus, CalendarClock, CreditCard, UserCheck } from "lucide-react";
+import { centerClockTime, elapsedMinutes, formatDurationClock } from "@/lib/session-time";
 
 const hhmm = (d: Date) => d.toISOString().slice(11, 16);
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -65,6 +66,14 @@ export default async function SessionProfilePage({
 
   const paid = s.allocations.reduce((a, x) => a + toNumber(x.amount), 0);
   const showTransport = await transportEnabled();
+  const actualMinutes = s.studentCheckInAt && s.studentCheckOutAt
+    ? elapsedMinutes(s.studentCheckInAt, s.studentCheckOutAt)
+    : null;
+  const billableMinutes = s.billableHours != null
+    ? Math.round(toNumber(s.billableHours) * 60)
+    : s.status === "COMPLETED" || s.status === "NO_SHOW"
+      ? Math.round(toNumber(s.hours) * 60)
+      : null;
   const trips = showTransport
     ? [...new Map(s.tripStops.map((st) => [st.trip.id, st.trip])).values()]
     : [];
@@ -144,11 +153,12 @@ export default async function SessionProfilePage({
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
-            <Row label={t("studentCheckIn")}>{s.studentCheckInAt ? <span dir="ltr">{hhmm(s.studentCheckInAt)}</span> : "—"}</Row>
-            <Row label={t("studentCheckOut")}>{s.studentCheckOutAt ? <span dir="ltr">{hhmm(s.studentCheckOutAt)}</span> : "—"}</Row>
-            <Row label={t("teacherCheckIn")}>{s.teacherCheckInAt ? <span dir="ltr">{hhmm(s.teacherCheckInAt)}</span> : "—"}</Row>
+            <Row label={t("studentCheckIn")}>{s.studentCheckInAt ? <span dir="ltr">{centerClockTime(s.studentCheckInAt)}</span> : "—"}</Row>
+            <Row label={t("studentCheckOut")}>{s.studentCheckOutAt ? <span dir="ltr">{centerClockTime(s.studentCheckOutAt)}</span> : "—"}</Row>
+            <Row label={t("teacherCheckIn")}>{s.teacherCheckInAt ? <span dir="ltr">{centerClockTime(s.teacherCheckInAt)}</span> : "—"}</Row>
             <Row label={t("method")}>{s.checkInMethod ? te(`checkinMethod.${s.checkInMethod as "KIOSK"}`) : "—"}</Row>
-            <Row label={t("actualHours")}>{s.actualHours != null ? <span dir="ltr">{toNumber(s.actualHours)}</span> : "—"}</Row>
+            <Row label={t("actualHours")}>{actualMinutes != null ? <span dir="ltr">{formatDurationClock(actualMinutes)}</span> : "—"}</Row>
+            <Row label={t("billableHours")}>{billableMinutes != null ? <span dir="ltr">{formatDurationClock(billableMinutes)}</span> : "—"}</Row>
           </CardContent>
         </Card>
 

@@ -348,6 +348,8 @@
     "checkInColumn": "Check-in",
     "checkOutColumn": "Check-out",
     "durationColumn": "Actual duration",
+    "actualColumn": "Actual",
+    "billableColumn": "Billable",
     "methodColumn": "Method",
     "actionsColumn": "Actions",
     "teacherAssignmentColumn": "Teacher assignment",
@@ -1330,7 +1332,31 @@
     "noShowHints": {
       "CANCELLED": "The session counts as cancelled: the student is not charged and the teacher earns nothing on it.",
       "TAUGHT": "The session counts as taught: the student is charged in full and the teacher takes their percentage."
-    }
+    },
+    "billingTitle": "Actual and billable duration",
+    "billingHint": "Actual duration always remains the exact check-in to check-out time. These rules control only the duration charged to the student and deducted from a package.",
+    "billableBasis": "Billable duration basis",
+    "billableBasisHint": "Planned preserves the booked duration. Actual uses the measured attendance time when check-in and check-out exist.",
+    "billableBases": {
+      "PLANNED": "Planned session duration",
+      "ACTUAL": "Actual attendance duration"
+    },
+    "roundingMinutes": "Rounding interval",
+    "roundingMinutesHint": "Choose the billing increment. One minute keeps the result minute-accurate.",
+    "minutesOption": "{n} minute(s)",
+    "roundingMode": "Rounding direction",
+    "roundingModeHint": "Applied to the selected duration before the minimum and cap.",
+    "roundingModes": {
+      "NEAREST": "Nearest interval",
+      "UP": "Always up",
+      "DOWN": "Always down"
+    },
+    "minimumBillableMinutes": "Minimum billable minutes",
+    "minimumBillableMinutesHint": "Use 0 for no minimum. This never changes the recorded actual duration.",
+    "capAtPlanned": "Maximum duration",
+    "capAtPlannedLabel": "Never bill more than the planned session duration",
+    "capAtPlannedHint": "Useful when actual checkout happens late but overtime should not be charged.",
+    "billingPreview": "Example — planned {planned}, actual {actual}, billable {billable}"
   },
   "years": {
     "title": "Academic years",
@@ -2365,7 +2391,8 @@
     "studentCheckOut": "Student check-out",
     "teacherCheckIn": "Teacher check-in",
     "method": "Method",
-    "actualHours": "Actual hours",
+    "actualHours": "Actual duration",
+    "billableHours": "Billable duration",
     "payments": "Payments",
     "noPayments": "No payments allocated yet.",
     "transport": "Transport",

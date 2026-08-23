@@ -12,6 +12,8 @@ import {
   centerNowTime,
   centerToday,
   centerWallClockNow,
+  elapsedMinutes,
+  formatDurationClock,
 } from "@/lib/session-time";
 
 describe("session attendance lifecycle", () => {
@@ -64,5 +66,12 @@ describe("centre wall clock", () => {
     expect(centerNowTime(instant)).toBe("01:30");
     expect(centerWallClockNow(instant).toISOString()).toBe("2026-08-23T01:30:00.000Z");
     expect(centerClockTime(instant)).toBe("01:30");
+  });
+
+  it("records a 12:55 to 12:59 attendance interval as four minutes", () => {
+    const start = new Date("2026-08-23T09:55:00.000Z");
+    const end = new Date("2026-08-23T09:59:00.000Z");
+    expect(elapsedMinutes(start, end)).toBe(4);
+    expect(formatDurationClock(elapsedMinutes(start, end))).toBe("00:04");
   });
 });

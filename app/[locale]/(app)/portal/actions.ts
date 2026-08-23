@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
-import { applyPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
+import { applyMark } from "@/lib/attendance";
 
 export type PortalState = { ok?: boolean; error?: string };
 
@@ -31,11 +31,7 @@ export async function confirmOwnSession(
   if (target.teacherId !== s.teacherId) return { error: "forbidden" };
   if (target.status !== "DRAFT") return { error: "notDraft" };
 
-  await db.$transaction(async (tx) => {
-    await tx.session.update({ where: { id: sessionId }, data: { status: "COMPLETED" } });
-    await applyPackageHours(tx, sessionId);
-    await syncSessionPaymentStatus(tx, sessionId);
-  });
+  if (!(await applyMark(sessionId, "COMPLETED"))) return { error: "notDraft" };
 
   await writeAudit("Session", sessionId, "UPDATE", {
     after: { status: "COMPLETED", confirmedBy: "teacherPortal" },

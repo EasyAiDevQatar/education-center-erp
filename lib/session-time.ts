@@ -46,6 +46,19 @@ export function centerClockTime(d: Date): string {
   }).format(d);
 }
 
+/** Exact elapsed attendance time, rounded only to the nearest displayed
+ * minute. Financial rules must use the planned session hours separately. */
+export function elapsedMinutes(start: Date, end: Date): number {
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60_000));
+}
+
+/** Render elapsed minutes as an unambiguous duration rather than a decimal
+ * hour that can be mistaken for a clock time (for example, 4 min = 00:04). */
+export function formatDurationClock(minutes: number): string {
+  const wholeMinutes = Math.max(0, Math.round(minutes));
+  return `${pad(Math.floor(wholeMinutes / 60))}:${pad(wholeMinutes % 60)}`;
+}
+
 /**
  * Today as the person at the keyboard would write it.
  *

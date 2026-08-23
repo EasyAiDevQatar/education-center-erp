@@ -335,6 +335,10 @@ async function importRows(
               total: price * hours,
               status,
               paymentStatus,
+              billableHours:
+                !unchargeable.includes(status) && ["COMPLETED", "NO_SHOW"].includes(status)
+                  ? hours
+                  : null,
             },
           });
           created++;

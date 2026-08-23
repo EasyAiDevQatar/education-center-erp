@@ -336,6 +336,11 @@ export default async function SettingsPage({
                 pickSession: settings.attendancePickSession === "true",
                 noShow: settings.noShowPolicy ?? DEFAULT_NO_SHOW_POLICY,
                 graceHours: settings.autoCompleteGraceHours ?? "6",
+                billableBasis: settings.attendanceBillableBasis ?? "PLANNED",
+                billableRoundingMinutes: settings.attendanceBillableRoundingMinutes ?? "1",
+                billableRoundingMode: settings.attendanceBillableRoundingMode ?? "NEAREST",
+                minimumBillableMinutes: settings.attendanceMinimumBillableMinutes ?? "0",
+                capBillableAtPlanned: settings.attendanceCapBillableAtPlanned === "true",
               }}
             />
           ),

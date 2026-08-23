@@ -31,6 +31,16 @@ describe("three-tab attendance workspace", () => {
     expect(board).toContain("undoCheckin(locale, item.id)");
   });
 
+  it("shows separate actual and billable durations", () => {
+    const page = read("app/[locale]/(app)/checkin/page.tsx");
+    const board = read("app/[locale]/(app)/checkin/roster-board.tsx");
+    expect(page).toContain("elapsedMinutes(s.studentCheckInAt, s.studentCheckOutAt)");
+    expect(board).toContain('t("actualColumn")');
+    expect(board).toContain('t("billableColumn")');
+    expect(board).toContain("formatDurationClock(item.actualMinutes)");
+    expect(board).toContain("formatDurationClock(item.billableMinutes)");
+  });
+
   it("validates teacher assignment against work on the walk-in date", () => {
     const action = read("app/[locale]/(app)/settings/attendance-actions.ts");
     expect(action).toContain("target.date");

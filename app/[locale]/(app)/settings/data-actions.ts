@@ -673,6 +673,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         teacherCheckInAt: attended ? date : null,
         checkInMethod: attended ? pick(["KIOSK", "KIOSK", "QR", "MANUAL"]) : null,
         actualHours: attended ? hours : null,
+        billableHours: attended ? hours : null,
       },
     });
     sessions++;
@@ -774,6 +775,7 @@ export async function seedDemoData(locale: string, input: SeedCounts): Promise<D
         teacherCheckInAt: started ? start : null,
         checkInMethod: started ? pick(["KIOSK", "KIOSK", "QR"]) : null,
         actualHours: finished ? hours : null,
+        billableHours: finished ? hours : null,
       },
     });
     checkins++;

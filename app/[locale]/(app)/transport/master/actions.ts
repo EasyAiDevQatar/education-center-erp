@@ -644,6 +644,11 @@ export async function confirmReschedule(
     // has.
     const hours = d.toHours!;
     const rate = toNumber(gate.session.pricePerHour);
+    // A finalized session owns a historical billable snapshot. Moving or
+    // resizing it must not recalculate that snapshot under today's settings.
+    const financialHours = gate.session.billableHours == null
+      ? hours
+      : toNumber(gate.session.billableHours);
     await db.$transaction(async (tx) => {
       // Give the package back its old hours BEFORE the new length is written —
       // revert reads the session's current hours to know what to return.
@@ -654,7 +659,7 @@ export async function confirmReschedule(
         // The rate is NOT re-resolved. A resize changes how long, not what an
         // hour costs, and re-reading the matrix would overwrite a group
         // booking's negotiated price exactly as it would on a move.
-        data: { date, hours, total: rate * hours },
+        data: { date, hours, total: rate * financialHours },
       });
 
       if (gate.session.packageId) await applyPackageHours(tx, d.sessionId);

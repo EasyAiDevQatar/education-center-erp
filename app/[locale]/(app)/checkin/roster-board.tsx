@@ -36,7 +36,7 @@ import { TablePagination, usePagination } from "@/components/ui/table-pagination
 import { cn } from "@/lib/utils";
 import { formatHours } from "@/lib/money";
 import { minToHHMM } from "@/lib/planner";
-import { centerToday } from "@/lib/session-time";
+import { centerToday, formatDurationClock } from "@/lib/session-time";
 import { Select } from "@/components/ui/select";
 import {
   checkOutSession,
@@ -67,7 +67,8 @@ export type RosterItem = {
   checkedInAt: string | null;
   checkedOutAt: string | null;
   checkInMethod: string | null;
-  actualHours: number | null;
+  actualMinutes: number | null;
+  billableMinutes: number;
 };
 
 type ActionResult = { ok?: boolean; error?: string; count?: number };
@@ -219,7 +220,8 @@ function AttendanceList({
               <TableHead>{t("scheduledColumn")}</TableHead>
               <TableHead>{t("checkInColumn")}</TableHead>
               <TableHead>{t("checkOutColumn")}</TableHead>
-              <TableHead>{t("durationColumn")}</TableHead>
+              <TableHead>{t("actualColumn")}</TableHead>
+              <TableHead>{t("billableColumn")}</TableHead>
               <TableHead>{t("methodColumn")}</TableHead>
               <TableHead>{tc("status")}</TableHead>
               <TableHead>{t("actionsColumn")}</TableHead>
@@ -228,7 +230,7 @@ function AttendanceList({
           <TableBody>
             {pg.pageItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-muted-foreground">
+                <TableCell colSpan={11} className="py-10 text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -244,7 +246,10 @@ function AttendanceList({
                 <TableCell className="tabular-nums" dir="ltr">{item.checkedInAt ?? "—"}</TableCell>
                 <TableCell className="tabular-nums" dir="ltr">{item.checkedOutAt ?? "—"}</TableCell>
                 <TableCell className="tabular-nums" dir="ltr">
-                  {item.actualHours == null ? "—" : formatHours(item.actualHours)}
+                  {item.actualMinutes == null ? "—" : formatDurationClock(item.actualMinutes)}
+                </TableCell>
+                <TableCell className="tabular-nums" dir="ltr">
+                  {formatDurationClock(item.billableMinutes)}
                 </TableCell>
                 <TableCell>
                   {item.checkInMethod ? te(`checkinMethod.${item.checkInMethod}`) : "—"}
@@ -281,9 +286,13 @@ function AttendanceList({
               <span className="text-end tabular-nums" dir="ltr">{item.checkedInAt ?? "—"}</span>
               <span className="text-muted-foreground">{t("checkOutColumn")}</span>
               <span className="text-end tabular-nums" dir="ltr">{item.checkedOutAt ?? "—"}</span>
-              <span className="text-muted-foreground">{t("durationColumn")}</span>
+              <span className="text-muted-foreground">{t("actualColumn")}</span>
               <span className="text-end">
-                {item.actualHours == null ? "—" : formatHours(item.actualHours)}
+                {item.actualMinutes == null ? "—" : formatDurationClock(item.actualMinutes)}
+              </span>
+              <span className="text-muted-foreground">{t("billableColumn")}</span>
+              <span className="text-end tabular-nums" dir="ltr">
+                {formatDurationClock(item.billableMinutes)}
               </span>
               <span className="text-muted-foreground">{t("methodColumn")}</span>
               <span className="text-end">
@@ -357,7 +366,7 @@ export function RosterBoard({
   const awaiting = items.filter((i) => i.status === "SCHEDULED" || i.status === "CHECKED_IN");
   const hoursDone = decided
     .filter((i) => i.status === "COMPLETED")
-    .reduce((sum, i) => sum + (i.actualHours ?? i.hours), 0);
+    .reduce((sum, i) => sum + (i.actualMinutes == null ? i.hours : i.actualMinutes / 60), 0);
 
   function navigate(next: Partial<{ date: string; tab: AttendanceTab; view: AttendanceView }>) {
     const params = new URLSearchParams({
@@ -582,6 +591,16 @@ export function RosterBoard({
                               {item.checkedOutAt && <span>{t("checkedOutAt", { time: item.checkedOutAt })}</span>}
                             </div>
                           )}
+                          <div className="mt-1 grid grid-cols-2 gap-1 text-[11px]">
+                            <span className="text-muted-foreground">{t("actualColumn")}</span>
+                            <span className="text-end tabular-nums" dir="ltr">
+                              {item.actualMinutes == null ? "—" : formatDurationClock(item.actualMinutes)}
+                            </span>
+                            <span className="text-muted-foreground">{t("billableColumn")}</span>
+                            <span className="text-end tabular-nums" dir="ltr">
+                              {formatDurationClock(item.billableMinutes)}
+                            </span>
+                          </div>
                           <div className="mt-2">
                             <SessionActions item={item} pending={pending} run={run} />
                           </div>
