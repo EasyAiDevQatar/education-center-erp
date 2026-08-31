@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ModuleFlagsProvider } from "./module-flags";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Menu, GraduationCap, LogOut, ChevronDown } from "lucide-react";
 import { ProfileMenu, type RoleOption } from "./profile-menu";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -73,6 +73,12 @@ export function AppShell({
 }) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
+  const locale = useLocale();
+  const pageDirection = locale === "ar" ? "rtl" : "ltr";
+  // Put each vertical scrollbar on the outside edge of the region it controls:
+  // beside the page content for the main panel and at the browser edge for the
+  // sidebar. The inner wrapper restores the document's reading direction.
+  const scrollbarDirection = locale === "ar" ? "ltr" : "rtl";
   const pathname = usePathname();
   const day = useSearchParams().get("date");
   /** The same href, still pointed at the day you are already looking at. */
@@ -206,11 +212,16 @@ export function AppShell({
   );
 
   return (
-    <div className="flex min-h-svh">
+    <div className="flex h-svh overflow-hidden print:h-auto print:overflow-visible">
       {/* Desktop sidebar */}
-      <aside className="no-print sticky top-0 hidden h-svh w-64 shrink-0 flex-col overflow-y-auto border-e border-border bg-card md:flex">
-        {brand}
-        {nav}
+      <aside
+        dir={scrollbarDirection}
+        className="no-print hidden h-svh w-64 shrink-0 overflow-y-auto overscroll-contain border-e border-border bg-card md:block"
+      >
+        <div dir={pageDirection} className="flex min-h-full flex-col">
+          {brand}
+          {nav}
+        </div>
       </aside>
 
       {/* Mobile drawer */}
@@ -220,15 +231,20 @@ export function AppShell({
             className="absolute inset-0 bg-black/40"
             onClick={() => setOpen(false)}
           />
-          <aside className="absolute inset-y-0 start-0 z-50 flex w-64 flex-col overflow-y-auto border-e border-border bg-card">
-            {brand}
-            {nav}
+          <aside
+            dir={scrollbarDirection}
+            className="absolute inset-y-0 start-0 z-50 w-64 overflow-y-auto overscroll-contain border-e border-border bg-card"
+          >
+            <div dir={pageDirection} className="flex min-h-full flex-col">
+              {brand}
+              {nav}
+            </div>
           </aside>
         </div>
       )}
 
       {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex h-svh min-h-0 min-w-0 flex-1 flex-col print:h-auto">
         <header className="no-print sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/80 px-4 backdrop-blur">
           <div className="flex items-center gap-2">
             <Button
@@ -260,21 +276,26 @@ export function AppShell({
         {/* The same flags the nav filters on, published to everything below.
             A module that is off should be off on every screen, not just absent
             from the menu. */}
-        <main className="flex-1 p-4 print:p-0 sm:p-6">
-          <ModuleFlagsProvider
-            value={{
-              accounting: !!flags?.accounting,
-              transport: !!flags?.transport,
-              ai: !!flags?.ai,
-              // `!== false` not `!!`: undefined means the layout did not say,
-              // and for an on-by-default module that is on.
-              hr: flags?.hr !== false,
-              reports: flags?.reports !== false,
-              leads: flags?.leads !== false,
-            }}
-          >
-            {children}
-          </ModuleFlagsProvider>
+        <main
+          dir={scrollbarDirection}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain print:overflow-visible"
+        >
+          <div dir={pageDirection} className="min-h-full p-4 print:p-0 sm:p-6">
+            <ModuleFlagsProvider
+              value={{
+                accounting: !!flags?.accounting,
+                transport: !!flags?.transport,
+                ai: !!flags?.ai,
+                // `!== false` not `!!`: undefined means the layout did not say,
+                // and for an on-by-default module that is on.
+                hr: flags?.hr !== false,
+                reports: flags?.reports !== false,
+                leads: flags?.leads !== false,
+              }}
+            >
+              {children}
+            </ModuleFlagsProvider>
+          </div>
         </main>
       </div>
     </div>
