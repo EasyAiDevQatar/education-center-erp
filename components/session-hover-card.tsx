@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useModuleFlags } from "@/components/app-shell/module-flags";
-import { Route, Phone, MapPin, ExternalLink } from "lucide-react";
+import { Route, Phone, MapPin, ExternalLink, Users } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
 import { TimeRange } from "@/components/time-range";
@@ -40,10 +40,19 @@ export type HoverSessionData = {
   trip: SessionTripLite | null;
   /** Day for the "open transport map" link (YYYY-MM-DD). */
   mapDate: string | null;
+  /** Present when several per-student accounting rows share one group lesson. */
+  group?: {
+    name: string | null;
+    members: {
+      id: string;
+      studentName: string;
+      levelLabel: string;
+      status: string;
+      paymentStatus: string;
+      total: number;
+    }[];
+  } | null;
 };
-
-const minToHHMM = (n: number) =>
-  `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 
 /** Render a pre-formatted "HH:MM–HH:MM · Xh" label so the range flows with the
  *  ambient direction (Arabic: start on the right), each clock staying LTR. */
@@ -105,6 +114,16 @@ export function useSessionHover(currency: string) {
     clearHide();
   }, []);
 
+  const reveal = (data: HoverSessionData, x: number, y: number) => {
+    const W = 300;
+    const H = 420;
+    setActive({
+      data,
+      x: Math.max(8, Math.min(x + 14, window.innerWidth - W - 8)),
+      y: Math.max(8, Math.min(y + 14, window.innerHeight - H - 8)),
+    });
+  };
+
   const bind = (data: HoverSessionData) => ({
     onMouseEnter: (e: React.MouseEvent) => {
       // Touch devices synthesise hover; a tap should act, not preview.
@@ -113,13 +132,7 @@ export function useSessionHover(currency: string) {
       clear();
       clearHide();
       timer.current = setTimeout(() => {
-        const W = 300;
-        const H = 420;
-        setActive({
-          data,
-          x: Math.max(8, Math.min(x + 14, window.innerWidth - W - 8)),
-          y: Math.max(8, Math.min(y + 14, window.innerHeight - H - 8)),
-        });
+        reveal(data, x, y);
       }, 350);
     },
     onMouseLeave: () => {
@@ -132,6 +145,13 @@ export function useSessionHover(currency: string) {
       clearHide();
       setActive(null);
     },
+    onFocus: (e: React.FocusEvent<HTMLElement>) => {
+      clear();
+      clearHide();
+      const rect = e.currentTarget.getBoundingClientRect();
+      reveal(data, rect.right, rect.top);
+    },
+    onBlur: scheduleHide,
   });
 
   const portal =
@@ -197,18 +217,27 @@ function HoverCard({
       onMouseLeave={onMouseLeave}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-sm font-semibold">{d.studentName}</span>
-        <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium">
-          {te(`sessionStatus.${d.status as "SCHEDULED"}`)}
+        <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold">
+          {d.group && <Users className="size-4 shrink-0 text-primary" />}
+          <span className="truncate">{d.group?.name || d.studentName}</span>
         </span>
+        {d.group ? (
+          <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+            {t("studentsCount", { n: d.group.members.length })}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium">
+            {te(`sessionStatus.${d.status as "SCHEDULED"}`)}
+          </span>
+        )}
       </div>
 
       <Row label={t("teacher")} value={d.teacherName} />
       <Row label={t("subject")} value={d.subjectLabel} />
-      <Row label={t("grade")} value={d.levelLabel} />
+      {!d.group && <Row label={t("grade")} value={d.levelLabel} />}
       <Row label={t("time")} value={flipTimeLabel(d.timeLabel)} />
-      <Row label={t("total")} value={`${formatMoney(d.total)} ${currency}`} ltr />
-      {d.paymentStatus && (
+      {!d.group && <Row label={t("total")} value={`${formatMoney(d.total)} ${currency}`} ltr />}
+      {!d.group && d.paymentStatus && (
         <Row label={t("payment")} value={te(`paymentStatus.${d.paymentStatus as "PAID"}`)} />
       )}
       <Row
@@ -219,7 +248,7 @@ function HoverCard({
             : te(`location.${d.location}`)
         }
       />
-      {d.guardianPhone && (
+      {!d.group && d.guardianPhone && (
         <Row
           label={t("guardian")}
           value={
@@ -231,12 +260,34 @@ function HoverCard({
         />
       )}
 
+      {d.group && (
+        <div className="mt-1 border-t border-border pt-1.5">
+          <div className="mb-1 flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{t("roster")}</span>
+            <span>{t("individualAccounting")}</span>
+          </div>
+          <div className="max-h-64 space-y-1 overflow-y-auto pe-1">
+            {d.group.members.map((member) => (
+              <div key={member.id} className="flex items-center gap-2 rounded bg-accent/50 px-2 py-1.5">
+                <span className="min-w-0 flex-1 truncate font-medium">{member.studentName}</span>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {te(`sessionStatus.${member.status as "SCHEDULED"}`)}
+                </span>
+                <span className="shrink-0 tabular-nums" dir="ltr">
+                  {formatMoney(member.total)} {currency}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Everything below is the transport module talking: the ride, who is
           driving it, the little map, the link into the live map. With the
           module off none of it has a meaning, so none of it is drawn — not
           even the "no trip yet" line, which otherwise reports a gap in a
           system the centre does not run. */}
-      {transport && d.location === "HOME" && (
+      {transport && !d.group && d.location === "HOME" && (
         <div className="mt-1 space-y-1 border-t border-border pt-1.5">
           <div className="flex items-center gap-1.5 font-semibold">
             <Route className={`size-3.5 ${tripTint(d.trip)}`} />
@@ -272,7 +323,7 @@ function HoverCard({
           )}
         </div>
       )}
-      {transport && d.location === "HOME" && !d.home && (
+      {transport && !d.group && d.location === "HOME" && !d.home && (
         <p className="flex items-center gap-1 text-muted-foreground">
           <MapPin className="size-3" />
           {t("noPin")}

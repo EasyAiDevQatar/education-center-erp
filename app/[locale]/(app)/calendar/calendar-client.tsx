@@ -33,6 +33,7 @@ import { useSessionHover, tripTint, type SessionTripLite } from "@/components/se
 import { useModuleFlags } from "@/components/app-shell/module-flags";
 import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 import { rescheduleSession, resizeSession } from "./actions";
+import { GroupOccurrenceDialog } from "./group-occurrence-dialog";
 
 export type CalEvent = {
   id: string;
@@ -55,6 +56,19 @@ export type CalEvent = {
   addressLabel: string | null;
   home: { lat: number; lng: number } | null;
   trip: SessionTripLite | null;
+  group: {
+    key: string;
+    name: string | null;
+    members: {
+      id: string;
+      studentId: string;
+      studentName: string;
+      levelLabel: string;
+      status: string;
+      paymentStatus: string;
+      total: number;
+    }[];
+  } | null;
 };
 
 const START_HOUR = 7;
@@ -72,6 +86,7 @@ const STATUS_STYLES: Record<string, string> = {
   COMPLETED: "border-s-success bg-success/20",
   NO_SHOW: "border-s-destructive bg-destructive/15",
   CANCELLED: "border-s-muted-foreground bg-muted text-muted-foreground line-through",
+  MIXED: "border-s-primary bg-gradient-to-br from-primary/15 to-accent",
 };
 
 function pad(n: number) {
@@ -185,6 +200,8 @@ export function CalendarClient({
 
   const hover = useSessionHover(currency);
   const [events, setEvents] = useState<CalEvent[]>(eventsProp);
+  // Server refreshes replace the authoritative calendar after optimistic moves.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setEvents(eventsProp), [eventsProp]);
 
   const [ghost, setGhost] = useState<Ghost | null>(null);
@@ -211,6 +228,7 @@ export function CalendarClient({
   const [handoffGroup, setHandoffGroup] = useState<string | null>(null);
   const [tripPrompt, setTripPrompt] = useState<TripPromptInfo | null>(null);
   const [editEv, setEditEv] = useState<CalEvent | null>(null);
+  const [groupEv, setGroupEv] = useState<CalEvent | null>(null);
 
   // Compact is the same grid at half row height; list bypasses the grid entirely.
   const compact = view === "compact";
@@ -464,6 +482,7 @@ export function CalendarClient({
           rangeLabel={rangeLabel}
           centerName={centerName}
           onEdit={setEditEv}
+          onGroupOpen={setGroupEv}
         />
       )}
 
@@ -539,6 +558,14 @@ export function CalendarClient({
                     {/* events */}
                     {placed.map(({ ev, lane, lanes }) => {
                       const isGhost = ghost?.id === ev.id;
+                      const isGroup = ev.group !== null;
+                      const activeGroupMembers = ev.group?.members.filter(
+                        (member) => member.status !== "CANCELLED",
+                      );
+                      const displayedGroupMembers =
+                        activeGroupMembers && activeGroupMembers.length > 0
+                          ? activeGroupMembers
+                          : ev.group?.members ?? [];
                       const width = 100 / lanes;
                       const top = ((ev.startMinutes - GRID_MIN) / 60) * hourPx;
                       const height = Math.max(compact ? 12 : 18, (ev.hours * 60) / 60 * hourPx);
@@ -561,16 +588,31 @@ export function CalendarClient({
                             centre,
                             trip: ev.trip,
                             mapDate: ev.day,
+                            group: ev.group
+                              ? { name: ev.group.name, members: displayedGroupMembers }
+                              : null,
                           })}
+                          tabIndex={isGroup ? 0 : undefined}
                           onPointerDown={
-                            canEdit
+                            canEdit && !isGroup
                               ? (e) => { hover.hide(); onPointerDownEvent(e, ev, "move"); }
-                              : undefined
+                              : (e) => e.stopPropagation()
                           }
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isGroup) setGroupEv(ev);
+                          }}
+                          onKeyDown={(e) => {
+                            if (isGroup && (e.key === "Enter" || e.key === " ")) {
+                              e.preventDefault();
+                              hover.hide();
+                              setGroupEv(ev);
+                            }
+                          }}
                           className={cn(
                             "absolute z-10 touch-none overflow-hidden rounded-md border-s-4 px-1.5 py-1 text-[11px] shadow-sm",
-                            canEdit && "cursor-grab active:cursor-grabbing",
+                            canEdit && !isGroup && "cursor-grab active:cursor-grabbing",
+                            isGroup && "cursor-pointer ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                             STATUS_STYLES[ev.status] ?? STATUS_STYLES.SCHEDULED,
                             isGhost && "opacity-70 ring-2 ring-ring",
                           )}
@@ -582,7 +624,17 @@ export function CalendarClient({
                           }}
                         >
                           <div className="flex items-center justify-between gap-1">
-                            <span className="truncate font-semibold">{ev.studentName}</span>
+                            <span className="flex min-w-0 items-center gap-1 truncate font-semibold">
+                              {isGroup && <Users className="size-3 shrink-0" />}
+                              <span className="truncate">
+                                {isGroup ? ev.group?.name || t("groupSession") : ev.studentName}
+                              </span>
+                            </span>
+                            {isGroup && (
+                              <span className="shrink-0 rounded bg-primary px-1 text-[9px] font-semibold text-primary-foreground">
+                                {displayedGroupMembers.length}
+                              </span>
+                            )}
                             {ev.location === "HOME" ? (
                               <span className="flex shrink-0 items-center gap-0.5">
                                 {transport && (
@@ -594,7 +646,18 @@ export function CalendarClient({
                               <Building2 className="size-3 shrink-0 opacity-60" />
                             )}
                           </div>
-                          {!compact && (
+                          {isGroup ? (
+                            <div className="mt-0.5 space-y-0.5 leading-tight">
+                              {displayedGroupMembers.slice(0, 2).map((member) => (
+                                <div key={member.id} className="truncate">{member.studentName}</div>
+                              ))}
+                              {displayedGroupMembers.length > 2 && (
+                                <div className="font-medium text-primary">
+                                  {t("moreStudents", { n: displayedGroupMembers.length - 2 })}
+                                </div>
+                              )}
+                            </div>
+                          ) : !compact && (
                             <>
                               <div className="truncate opacity-80">{ev.teacherName}</div>
                               {ev.subjectLabel && (
@@ -607,7 +670,7 @@ export function CalendarClient({
                             </>
                           )}
                           {/* resize handle */}
-                          {canEdit && (
+                          {canEdit && !isGroup && (
                             <div
                               onPointerDown={(e) => onPointerDownEvent(e, ev, "resize")}
                               className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize"
@@ -682,6 +745,15 @@ export function CalendarClient({
           onSaved={() => { setEditEv(null); router.refresh(); }}
         />
       )}
+
+      {groupEv?.group && (
+        <GroupOccurrenceDialog
+          event={groupEv}
+          currency={currency}
+          students={students}
+          onClose={() => setGroupEv(null)}
+        />
+      )}
     </div>
   );
 }
@@ -699,12 +771,14 @@ function ListView({
   rangeLabel,
   centerName,
   onEdit,
+  onGroupOpen,
 }: {
   events: CalEvent[];
   days: string[];
   rangeLabel: string;
   centerName: string;
   onEdit: (ev: CalEvent) => void;
+  onGroupOpen: (ev: CalEvent) => void;
 }) {
   const t = useTranslations("calendar");
   const ts = useTranslations("sessions");
@@ -752,11 +826,32 @@ function ListView({
             <TableRow
               key={ev.id}
               className="cursor-pointer"
-              onClick={() => onEdit(ev)}
+              onClick={() => ev.group ? onGroupOpen(ev) : onEdit(ev)}
             >
               <TableCell className="tabular-nums"><span dir="ltr">{ev.day}</span></TableCell>
               <TableCell className="tabular-nums"><span dir="ltr">{fmtTime(ev.startMinutes)}</span></TableCell>
-              <TableCell className="font-medium">{ev.studentName}</TableCell>
+              <TableCell className="font-medium">
+                {ev.group ? (
+                  <span className="space-y-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <Badge variant="default">{t("groupSession")}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {t("studentsCount", { n: ev.group.members.filter((member) => member.status !== "CANCELLED").length })}
+                      </span>
+                    </span>
+                    <span className="block text-xs font-normal">
+                      {ev.group.members
+                        .filter((member) => member.status !== "CANCELLED")
+                        .slice(0, 2)
+                        .map((member) => member.studentName)
+                        .join(" · ")}
+                      {ev.group.members.filter((member) => member.status !== "CANCELLED").length > 2
+                        ? ` · ${t("moreStudents", { n: ev.group.members.filter((member) => member.status !== "CANCELLED").length - 2 })}`
+                        : ""}
+                    </span>
+                  </span>
+                ) : ev.studentName}
+              </TableCell>
               <TableCell>
                 {ev.teacherName}
                 {ev.subjectLabel && (

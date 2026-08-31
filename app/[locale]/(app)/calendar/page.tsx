@@ -83,10 +83,15 @@ export default async function CalendarPage({
         where: {
           date: { gte: rangeStart, lt: rangeEnd },
           ...(teacherFilter ? { teacherId: teacherFilter } : {}),
-          ...(studentFilter ? { studentId: studentFilter } : {}),
           ...(locationFilter ? { location: locationFilter } : {}),
         },
-        include: { student: { include: { guardian: true } }, teacher: true, gradeLevel: true, subject: true },
+        include: {
+          student: { include: { guardian: true } },
+          teacher: true,
+          gradeLevel: true,
+          subject: true,
+          group: { select: { name: true } },
+        },
         orderBy: { date: "asc" },
       }),
       db.student.findMany({
@@ -119,9 +124,9 @@ export default async function CalendarPage({
       : null;
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
-  const events: CalEvent[] = sessions.map((s) => {
+  const individualEvents = sessions.map((s) => {
     const start = s.date; // stored as UTC wall-clock
-    return {
+    const event: CalEvent = {
       id: s.id,
       day: start.toISOString().slice(0, 10),
       startMinutes: start.getUTCHours() * 60 + start.getUTCMinutes(),
@@ -145,8 +150,70 @@ export default async function CalendarPage({
       trip: tripMap[s.id] ?? null,
       subjectId: s.subjectId,
       subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
+      group: null,
     };
+    // New rows use bookingBatchId. Saved-group bookings made before that field
+    // existed still group safely when every scheduling dimension is identical.
+    const groupKey = s.bookingBatchId
+      ? `batch:${s.bookingBatchId}`
+      : s.groupId
+        ? `legacy:${s.groupId}:${s.date.toISOString()}:${s.teacherId ?? ""}:${s.hours}:${s.location}`
+        // Old ad-hoc group bookings have no saved group id, but every row from
+        // their transaction has the exact same createdAt and schedule. This is
+        // intentionally stricter than grouping by time alone.
+        : `legacy-batch:${s.createdAt.getTime()}:${s.date.toISOString()}:${s.teacherId ?? ""}:${s.hours}:${s.location}`;
+    return { event, groupKey, groupName: s.group?.name ?? null };
   });
+
+  const grouped = new Map<string, typeof individualEvents>();
+  const events: CalEvent[] = [];
+  for (const item of individualEvents) {
+    if (!item.groupKey) events.push(item.event);
+    else {
+      const bucket = grouped.get(item.groupKey);
+      if (bucket) bucket.push(item);
+      else grouped.set(item.groupKey, [item]);
+    }
+  }
+  for (const [key, items] of grouped) {
+    if (items.length < 2) {
+      events.push(items[0].event);
+      continue;
+    }
+    const first = items[0].event;
+    const activeItems = items.filter((item) => item.event.status !== "CANCELLED");
+    const displayedItems = activeItems.length > 0 ? activeItems : items;
+    const statuses = new Set(displayedItems.map((item) => item.event.status));
+    const paymentStatuses = new Set(displayedItems.map((item) => item.event.paymentStatus));
+    events.push({
+      ...first,
+      id: `group:${key}`,
+      studentName: items.map((item) => item.event.studentName).join(", "),
+      status: statuses.size === 1 ? first.status : "MIXED",
+      paymentStatus: paymentStatuses.size === 1 ? first.paymentStatus : "MIXED",
+      total: displayedItems.reduce((sum, item) => sum + item.event.total, 0),
+      group: {
+        key,
+        name: items[0].groupName,
+        members: items.map(({ event }) => ({
+          id: event.id,
+          studentId: event.studentId,
+          studentName: event.studentName,
+          levelLabel: event.levelLabel,
+          status: event.status,
+          paymentStatus: event.paymentStatus,
+          total: event.total,
+        })),
+      },
+    });
+  }
+  const visibleEvents = studentFilter
+    ? events.filter(
+        (event) =>
+          event.studentId === studentFilter ||
+          event.group?.members.some((member) => member.studentId === studentFilter),
+      )
+    : events;
 
   const matrixMap: PriceMatrix = Object.fromEntries(
     matrix.map((m) => [m.gradeLevel.id, { CENTER: m.CENTER, HOME: m.HOME }]),
@@ -173,7 +240,7 @@ export default async function CalendarPage({
         view={view}
         anchor={anchorStr}
         days={days}
-        events={events}
+        events={visibleEvents}
         currency={currency}
         students={studentOpts}
         teachers={teacherOpts}

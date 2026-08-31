@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { flagTripsForSession } from "@/lib/transport/trip-data";
 import { findBlockingOverlap } from "@/lib/session-overlap";
@@ -84,6 +85,7 @@ export async function saveSession(
     date,
     hours: d.hours,
     groupId: (formData.get("groupId") as string) || priorSession?.groupId || null,
+    bookingBatchId: priorSession?.bookingBatchId ?? null,
   });
   if (clash) {
     const t = clash.startsAt.toISOString().slice(11, 16);
@@ -193,6 +195,300 @@ export async function cancelSession(locale: string, id: string): Promise<ActionS
   return { ok: true };
 }
 
+const bulkCancelSchema = z.object({
+  sessionIds: z.array(z.string().min(1)).min(2).max(200),
+});
+
+export type BulkCancelResult = ActionState & { cancelled?: number };
+
+type GroupOccurrenceIdentity = {
+  bookingBatchId: string | null;
+  groupId: string | null;
+  date: Date;
+  teacherId: string | null;
+  location: string;
+  hours: { toString(): string };
+  createdAt: Date;
+};
+
+/** Prove that client-supplied rows are one real group occurrence, never merely simultaneous. */
+function isOneGroupOccurrence(rows: GroupOccurrenceIdentity[]): boolean {
+  if (rows.length < 2) return false;
+  const first = rows[0];
+  const sameSchedule = (row: GroupOccurrenceIdentity) =>
+    row.date.getTime() === first.date.getTime() &&
+    row.teacherId === first.teacherId &&
+    row.location === first.location &&
+    row.hours.toString() === first.hours.toString();
+  if (first.bookingBatchId) {
+    return rows.every(
+      (row) => row.bookingBatchId === first.bookingBatchId && sameSchedule(row),
+    );
+  }
+  if (first.groupId) {
+    return rows.every(
+      (row) => !row.bookingBatchId && row.groupId === first.groupId && sameSchedule(row),
+    );
+  }
+  return rows.every(
+    (row) =>
+      !row.groupId &&
+      row.createdAt.getTime() === first.createdAt.getTime() &&
+      sameSchedule(row),
+  );
+}
+
+/** Cancel every per-student row belonging to one group-booking occurrence. */
+export async function cancelGroupOccurrence(
+  locale: string,
+  input: z.infer<typeof bulkCancelSchema>,
+): Promise<BulkCancelResult> {
+  if (await guard()) return { error: "forbidden" };
+  const parsed = bulkCancelSchema.safeParse(input);
+  if (!parsed.success) return { error: "invalid" };
+
+  const ids = [...new Set(parsed.data.sessionIds)];
+  if (ids.length !== parsed.data.sessionIds.length) return { error: "invalid" };
+  const rows = await db.session.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      date: true,
+      hours: true,
+      teacherId: true,
+      location: true,
+      groupId: true,
+      bookingBatchId: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+  if (rows.length !== ids.length) return { error: "notfound" };
+
+  const first = rows[0];
+  if (!isOneGroupOccurrence(rows)) return { error: "invalidGroupOccurrence" };
+
+  const active = rows.filter((row) => row.status !== "CANCELLED");
+  if (active.some((row) => !canCancelSession(row.status))) {
+    return { error: "badSessionTransition" };
+  }
+  if (active.length === 0) return { ok: true, cancelled: 0 };
+
+  const frozen = await guardArchived(first.date);
+  if (frozen) return { error: frozen };
+
+  await db.$transaction(async (tx) => {
+    for (const row of active) {
+      await revertPackageHours(tx, row.id);
+      await tx.paymentAllocation.deleteMany({ where: { sessionId: row.id } });
+      await tx.session.update({
+        where: { id: row.id },
+        data: {
+          status: "CANCELLED",
+          paymentStatus: "PAID",
+          autoCompleted: false,
+          needsTeacher: false,
+        },
+      });
+    }
+  });
+
+  for (const row of active) {
+    await flagTripsForSession(row.id, "SESSION_CANCELLED");
+    await writeAudit("Session", row.id, "UPDATE", {
+      after: { status: "CANCELLED", bulkGroupCancellation: true },
+    });
+    await notifySession("SESSION_CANCELLED", row.id);
+  }
+
+  for (const path of ["sessions", "calendar", "payments", "accounting", "dashboard"]) {
+    revalidatePath(`/${locale}/${path}`);
+  }
+  return { ok: true, cancelled: active.length };
+}
+
+const updateGroupRosterSchema = z.object({
+  sessionIds: z.array(z.string().min(1)).min(2).max(200),
+  studentIds: z.array(z.string().min(1)).min(1).max(200),
+});
+
+export type UpdateGroupRosterResult = ActionState & { added?: number; removed?: number };
+
+/** Replace the active roster for one group-session occurrence. */
+export async function updateGroupOccurrenceRoster(
+  locale: string,
+  input: z.infer<typeof updateGroupRosterSchema>,
+): Promise<UpdateGroupRosterResult> {
+  if (await guard()) return { error: "forbidden" };
+  const parsed = updateGroupRosterSchema.safeParse(input);
+  if (!parsed.success) return { error: "invalid" };
+  const sessionIds = [...new Set(parsed.data.sessionIds)];
+  const desiredStudentIds = [...new Set(parsed.data.studentIds)];
+  if (sessionIds.length !== parsed.data.sessionIds.length) return { error: "invalid" };
+
+  const rows = await db.session.findMany({
+    where: { id: { in: sessionIds } },
+    select: {
+      id: true,
+      studentId: true,
+      status: true,
+      date: true,
+      hours: true,
+      teacherId: true,
+      location: true,
+      groupId: true,
+      bookingBatchId: true,
+      createdAt: true,
+      subjectId: true,
+      sessionType: true,
+    },
+  });
+  if (rows.length !== sessionIds.length) return { error: "notfound" };
+  if (!isOneGroupOccurrence(rows)) return { error: "invalidGroupOccurrence" };
+  const first = rows[0];
+  if (!first.teacherId) return { error: "invalid" };
+  const frozen = await guardArchived(first.date);
+  if (frozen) return { error: frozen };
+
+  const activeRows = rows.filter((row) => row.status !== "CANCELLED");
+  const activeByStudent = new Map(activeRows.map((row) => [row.studentId, row]));
+  const desired = new Set(desiredStudentIds);
+  const removals = activeRows.filter((row) => !desired.has(row.studentId));
+  const additionIds = desiredStudentIds.filter((studentId) => !activeByStudent.has(studentId));
+  if (
+    (removals.length > 0 || additionIds.length > 0) &&
+    activeRows.some((row) => !canCancelSession(row.status))
+  ) {
+    return { error: "badSessionTransition" };
+  }
+
+  const students = await db.student.findMany({
+    where: { id: { in: additionIds }, active: true },
+    select: { id: true, gradeLevelId: true },
+  });
+  if (students.length !== additionIds.length) return { error: "notfound" };
+  if (students.some((student) => !student.gradeLevelId)) return { error: "noGrade" };
+
+  const batchId = first.bookingBatchId ?? randomUUID();
+  const savedGroup = first.groupId
+    ? await db.studentGroup.findUnique({
+        where: { id: first.groupId },
+        select: {
+          defaultPricePerHour: true,
+          members: {
+            where: { studentId: { in: additionIds } },
+            select: { studentId: true, pricePerHour: true },
+          },
+        },
+      })
+    : null;
+  const memberPrices = new Map(
+    (savedGroup?.members ?? []).map((member) => [member.studentId, member.pricePerHour]),
+  );
+
+  const additions: {
+    date: Date;
+    studentId: string;
+    teacherId: string;
+    gradeLevelId: string;
+    location: string;
+    hours: number;
+    pricePerHour: number;
+    total: number;
+    paymentStatus: string;
+    groupId: string | null;
+    bookingBatchId: string;
+    subjectId: string | null;
+    sessionType: string;
+  }[] = [];
+  for (const student of students) {
+    const clash = await findBlockingOverlap({
+      id: null,
+      teacherId: first.teacherId,
+      studentId: student.id,
+      date: first.date,
+      hours: Number(first.hours),
+      groupId: first.groupId,
+      bookingBatchId: batchId,
+      ignoreTeacherConflicts: true,
+    });
+    if (clash) {
+      return {
+        error: "studentBusy",
+        detail: `${clash.studentName} — ${clash.startsAt.toISOString().slice(11, 16)}`,
+      };
+    }
+    const agreed = memberPrices.get(student.id) ?? savedGroup?.defaultPricePerHour ?? null;
+    const pricePerHour =
+      agreed === null
+        ? await resolvePricePerHour(
+            student.gradeLevelId!,
+            first.location as "CENTER" | "HOME",
+            first.date,
+          )
+        : Number(agreed);
+    additions.push({
+      date: first.date,
+      studentId: student.id,
+      teacherId: first.teacherId,
+      gradeLevelId: student.gradeLevelId!,
+      location: first.location,
+      hours: Number(first.hours),
+      pricePerHour,
+      total: pricePerHour * Number(first.hours),
+      paymentStatus: "UNPAID",
+      groupId: first.groupId,
+      bookingBatchId: batchId,
+      subjectId: first.subjectId,
+      sessionType: first.sessionType,
+    });
+  }
+
+  const created = await db.$transaction(async (tx) => {
+    await tx.session.updateMany({
+      where: { id: { in: sessionIds } },
+      data: { bookingBatchId: batchId },
+    });
+    for (const row of removals) {
+      await revertPackageHours(tx, row.id);
+      await tx.paymentAllocation.deleteMany({ where: { sessionId: row.id } });
+      await tx.session.update({
+        where: { id: row.id },
+        data: {
+          status: "CANCELLED",
+          paymentStatus: "PAID",
+          autoCompleted: false,
+          needsTeacher: false,
+        },
+      });
+    }
+    const newRows = [];
+    for (const data of additions) newRows.push(await tx.session.create({ data }));
+    return newRows;
+  });
+
+  for (const row of removals) {
+    await flagTripsForSession(row.id, "SESSION_CANCELLED");
+    await writeAudit("Session", row.id, "UPDATE", {
+      after: { status: "CANCELLED", removedFromGroupOccurrence: batchId },
+    });
+    await notifySession("SESSION_CANCELLED", row.id);
+  }
+  for (const row of created) {
+    await writeAudit("Session", row.id, "CREATE", {
+      after: { addedToGroupOccurrence: batchId },
+    });
+    await notifySession("SESSION_BOOKED", row.id);
+  }
+  await writeAudit("GroupOccurrence", batchId, "UPDATE", {
+    after: { added: created.length, removed: removals.length, students: desiredStudentIds.length },
+  });
+  for (const path of ["sessions", "calendar", "payments", "accounting", "dashboard"]) {
+    revalidatePath(`/${locale}/${path}`);
+  }
+  return { ok: true, added: created.length, removed: removals.length };
+}
+
 /* -------- Group booking: register many students to one teacher at once -------- */
 
 const groupSchema = z.object({
@@ -256,12 +552,15 @@ export async function createGroupSessions(
   const rows: {
     date: Date; studentId: string; teacherId: string; gradeLevelId: string;
     location: string; hours: number; pricePerHour: number; total: number; paymentStatus: string;
-    groupId: string | null;
+    groupId: string | null; bookingBatchId: string;
   }[] = [];
   const skippedStudents = new Set<string>();
 
   for (const dateStr of dates) {
     const date = combineDateTime(dateStr, d.time);
+    // Recurrences are separate teaching occurrences even though they were
+    // submitted together, so each date gets its own calendar/cancellation key.
+    const bookingBatchId = randomUUID();
     for (const s of students) {
       const gradeLevelId = d.gradeLevelId || s.gradeLevelId;
       if (!gradeLevelId) { skippedStudents.add(s.id); continue; }
@@ -278,6 +577,7 @@ export async function createGroupSessions(
         total: pricePerHour * d.hours,
         paymentStatus: d.paymentStatus,
         groupId: d.groupId ?? null,
+        bookingBatchId,
       });
     }
   }

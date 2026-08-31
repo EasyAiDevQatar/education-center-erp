@@ -152,12 +152,18 @@ function MembersDialog({
     () => Object.fromEntries(group.members.map((m) => [m.studentId, m.pricePerHour === null ? "" : String(m.pricePerHour)])),
   );
   const [q, setQ] = useState("");
+  const [gradeFilter, setGradeFilter] = useState("");
 
   const selected = useMemo(() => new Set(Object.keys(rows)), [rows]);
   const available = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return students.filter((x) => !selected.has(x.id) && (!s || x.name.toLowerCase().includes(s)));
-  }, [students, selected, q]);
+    return students.filter(
+      (x) =>
+        !selected.has(x.id) &&
+        (!gradeFilter || String(x.gradeYear ?? "") === gradeFilter) &&
+        (!s || x.name.toLowerCase().includes(s)),
+    );
+  }, [students, selected, q, gradeFilter]);
 
   const add = (id: string) => setRows((p) => ({ ...p, [id]: "" }));
   const remove = (id: string) =>
@@ -224,8 +230,19 @@ function MembersDialog({
 
           {/* Add students. */}
           <div className="rounded-md border border-border">
-            <div className="border-b border-border p-1.5">
+            <div className="grid grid-cols-[1fr_auto] gap-1.5 border-b border-border p-1.5">
               <Input placeholder={t("searchStudents")} value={q} onChange={(e) => setQ(e.target.value)} className="h-7" />
+              <Select
+                aria-label={t("filterByGrade")}
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="h-7 w-28"
+              >
+                <option value="">{t("allGrades")}</option>
+                {Array.from({ length: 12 }, (_, index) => index + 1).map((grade) => (
+                  <option key={grade} value={grade}>{t("gradeYearN", { n: grade })}</option>
+                ))}
+              </Select>
             </div>
             <ul className="max-h-72 divide-y divide-border overflow-y-auto">
               {available.map((s) => (
