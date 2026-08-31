@@ -14,6 +14,7 @@ import type { PriceMatrix } from "../sessions/session-dialog";
 import { displayName } from "@/lib/names";
 import { tripsBySession } from "@/lib/session-trips";
 import { transportEnabled } from "@/lib/transport/settings";
+import { groupOccurrenceKeys, sessionOccurrenceKey } from "@/lib/session-grouping";
 
 export default async function PlannerPage({
   params,
@@ -41,8 +42,13 @@ export default async function PlannerPage({
   const [sessions, teachers, students, levels, matrix, settingsRows, availability, templates] =
     await Promise.all([
       db.session.findMany({
-        where: { date: { gte: start, lt: end } },
-        include: { student: { include: { guardian: true } }, gradeLevel: true, subject: true },
+        where: { date: { gte: start, lt: end }, status: { not: "CANCELLED" } },
+        include: {
+          student: { include: { guardian: true } },
+          gradeLevel: true,
+          subject: true,
+          group: { select: { name: true } },
+        },
         orderBy: { date: "asc" },
       }),
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -75,33 +81,84 @@ export default async function PlannerPage({
       : null;
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
-  const rows: PlannerSession[] = sessions
+  const plannerSessions = sessions
     // The planner is teacher-row based, so an unassigned walk-in has nowhere
     // to sit; it shows on the calendar and the check-in board instead.
-    .filter((s): s is typeof s & { teacherId: string } => s.teacherId !== null)
-    .map((s) => ({
-    id: s.id,
-    teacherId: s.teacherId,
-    studentId: s.studentId,
-    startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
-    hours: toNumber(s.hours),
-    studentName: displayName(s.student, locale),
-    levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
-    location: s.location as "CENTER" | "HOME",
-    status: s.status,
-    total: toNumber(s.total),
-    homeCode: s.student.homeCode,
-    subjectLabel: s.subject ? (locale === "ar" ? s.subject.nameAr : s.subject.nameEn) : null,
-    isTrial: s.isTrial,
-    paymentStatus: s.paymentStatus,
-    guardianPhone: s.student.guardian?.phone ?? null,
-    addressLabel: s.student.homeCode ?? s.student.address ?? null,
-    home:
-      s.student.homeLat != null && s.student.homeLng != null
-        ? { lat: s.student.homeLat, lng: s.student.homeLng }
-        : null,
-    trip: tripMap[s.id] ?? null,
+    .filter((s): s is typeof s & { teacherId: string } => s.teacherId !== null);
+  const realGroupKeys = groupOccurrenceKeys(plannerSessions);
+  const keyedRows = plannerSessions.map((s) => ({
+    source: s,
+    key: sessionOccurrenceKey(s),
+    row: {
+      id: s.id,
+      teacherId: s.teacherId,
+      studentId: s.studentId,
+      startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
+      hours: toNumber(s.hours),
+      studentName: displayName(s.student, locale),
+      levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
+      location: s.location as "CENTER" | "HOME",
+      status: s.status,
+      total: toNumber(s.total),
+      homeCode: s.student.homeCode,
+      subjectLabel: s.subject ? (locale === "ar" ? s.subject.nameAr : s.subject.nameEn) : null,
+      isTrial: s.isTrial,
+      paymentStatus: s.paymentStatus,
+      guardianPhone: s.student.guardian?.phone ?? null,
+      addressLabel: s.student.homeCode ?? s.student.address ?? null,
+      home:
+        s.student.homeLat != null && s.student.homeLng != null
+          ? { lat: s.student.homeLat, lng: s.student.homeLng }
+          : null,
+      trip: tripMap[s.id] ?? null,
+      group: null,
+    } satisfies PlannerSession,
   }));
+
+  const buckets = new Map<string, typeof keyedRows>();
+  const rows: PlannerSession[] = [];
+  for (const item of keyedRows) {
+    if (!realGroupKeys.has(item.key)) {
+      rows.push(item.row);
+      continue;
+    }
+    const bucket = buckets.get(item.key);
+    if (bucket) bucket.push(item);
+    else buckets.set(item.key, [item]);
+  }
+  for (const [key, items] of buckets) {
+    const first = items[0].row;
+    const statuses = new Set(items.map((item) => item.row.status));
+    const payments = new Set(items.map((item) => item.row.paymentStatus));
+    const members = items.map(({ row }) => ({
+      id: row.id,
+      studentId: row.studentId,
+      studentName: row.studentName,
+      levelLabel: row.levelLabel,
+      status: row.status,
+      paymentStatus: row.paymentStatus,
+      total: row.total,
+    }));
+    rows.push({
+      ...first,
+      id: `group:${key}`,
+      studentName: members.map((member) => member.studentName).join(", "),
+      levelLabel: [...new Set(members.map((member) => member.levelLabel))].join(", "),
+      status: statuses.size === 1 ? first.status : "MIXED",
+      paymentStatus: payments.size === 1 ? first.paymentStatus : "MIXED",
+      total: members.reduce((sum, member) => sum + member.total, 0),
+      homeCode: null,
+      guardianPhone: null,
+      addressLabel: null,
+      home: null,
+      trip: null,
+      group: {
+        key,
+        name: items[0].source.group?.name ?? null,
+        members,
+      },
+    });
+  }
 
   const templateRows: PlannerTemplateRow[] = templates.map((x) => ({
     id: x.id,

@@ -284,7 +284,15 @@
     "trial": "Trial",
     "cancelSession": "Cancel session",
     "cancelConfirm": "Cancel this session?",
-    "cancelHint": "The session stays in history but creates no charge. Any allocated receipt becomes student credit."
+    "cancelHint": "The session stays in history but creates no charge. Any allocated receipt becomes student credit.",
+    "bookingType": "Session type",
+    "allSessions": "All sessions",
+    "groupSessionsOnly": "Group sessions",
+    "individualSessionsOnly": "Individual sessions",
+    "groupSession": "Group session",
+    "studentsCount": "{n} students",
+    "childRecords": "{n} student records",
+    "mixedPayments": "Mixed"
   },
   "group": {
     "title": "Group booking",
@@ -1063,6 +1071,9 @@
     "printHideCancelled": "Hide cancelled sessions",
     "printShowAmounts": "Show amounts",
     "printShowLevel": "Show grade level",
+    "groupSession": "Group session",
+    "studentsCount": "{n} students",
+    "moreStudents": "+{n} more",
     "printSummary": "{teachers} teachers across {columns} columns will be printed.",
     "printCounts": "{teachers} teachers · {sessions} sessions",
     "printShowHomeCode": "Show home code",

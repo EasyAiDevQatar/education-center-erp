@@ -6,6 +6,7 @@ import { STAFF_ROLES, FINANCE_ROLES } from "@/lib/rbac";
 import { toNumber } from "@/lib/money";
 import { TABLES, type TableKey } from "@/lib/data-zone";
 import { readSessionFilters, sessionWhere, type SessionFilters } from "@/lib/session-query";
+import { groupOccurrenceKeys, sessionOccurrenceKey } from "@/lib/session-grouping";
 
 /**
  * Generic XLSX export: /api/export/<table>[?template=1]
@@ -217,7 +218,13 @@ async function loadRows(
         orderBy: { date: "desc" },
         take: 10000,
       });
-      return rows.map((s) => ({
+      const groupKeys = groupOccurrenceKeys(rows);
+      const visibleRows = filters.bookingType === "group"
+        ? rows.filter((row) => groupKeys.has(sessionOccurrenceKey(row)))
+        : filters.bookingType === "individual"
+          ? rows.filter((row) => !groupKeys.has(sessionOccurrenceKey(row)))
+          : rows;
+      return visibleRows.map((s) => ({
         date: ymd(s.date),
         time: hm(s.date),
         studentName: s.student.name,

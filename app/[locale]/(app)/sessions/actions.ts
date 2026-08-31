@@ -45,6 +45,21 @@ async function guard() {
   return !s || !STAFF_ROLES.includes(s.role);
 }
 
+/** Every operational surface that projects sessions onto a day or calendar. */
+function revalidateSessionViews(locale: string) {
+  for (const path of [
+    "sessions",
+    "calendar",
+    "planner",
+    "checkin",
+    "transport/planner",
+    "transport/master",
+    "transport/manifest",
+  ]) {
+    revalidatePath(`/${locale}/${path}`);
+  }
+}
+
 export async function saveSession(
   locale: string,
   id: string | null,
@@ -134,16 +149,14 @@ export async function saveSession(
     }
     await writeAudit("Session", created.id, "CREATE", { after: data });
     await notifySession("SESSION_BOOKED", created.id);
-    revalidatePath(`/${locale}/sessions`);
-    revalidatePath(`/${locale}/calendar`);
+    revalidateSessionViews(locale);
     // A freshly booked home lesson has no ride yet by definition — prompt.
     if (data.location === "HOME") {
       return { ok: true, homeNeedsTrip: { count: 1, date: d.date } };
     }
     return { ok: true };
   }
-  revalidatePath(`/${locale}/sessions`);
-  revalidatePath(`/${locale}/calendar`);
+  revalidateSessionViews(locale);
   return { ok: true };
 }
 
@@ -154,8 +167,7 @@ export async function deleteSession(locale: string, id: string): Promise<ActionS
   if (frozen) return { error: frozen };
   await db.session.delete({ where: { id } });
   await writeAudit("Session", id, "DELETE");
-  revalidatePath(`/${locale}/sessions`);
-  revalidatePath(`/${locale}/calendar`);
+  revalidateSessionViews(locale);
   return { ok: true };
 }
 
@@ -188,8 +200,7 @@ export async function cancelSession(locale: string, id: string): Promise<ActionS
   await flagTripsForSession(id, "SESSION_CANCELLED");
   await writeAudit("Session", id, "UPDATE", { after: { status: "CANCELLED" } });
   await notifySession("SESSION_CANCELLED", id);
-  revalidatePath(`/${locale}/sessions`);
-  revalidatePath(`/${locale}/calendar`);
+  revalidateSessionViews(locale);
   revalidatePath(`/${locale}/payments`);
   revalidatePath(`/${locale}/dashboard`);
   return { ok: true };
@@ -301,7 +312,8 @@ export async function cancelGroupOccurrence(
     await notifySession("SESSION_CANCELLED", row.id);
   }
 
-  for (const path of ["sessions", "calendar", "payments", "accounting", "dashboard"]) {
+  revalidateSessionViews(locale);
+  for (const path of ["payments", "accounting", "dashboard"]) {
     revalidatePath(`/${locale}/${path}`);
   }
   return { ok: true, cancelled: active.length };
@@ -483,7 +495,8 @@ export async function updateGroupOccurrenceRoster(
   await writeAudit("GroupOccurrence", batchId, "UPDATE", {
     after: { added: created.length, removed: removals.length, students: desiredStudentIds.length },
   });
-  for (const path of ["sessions", "calendar", "payments", "accounting", "dashboard"]) {
+  revalidateSessionViews(locale);
+  for (const path of ["payments", "accounting", "dashboard"]) {
     revalidatePath(`/${locale}/${path}`);
   }
   return { ok: true, added: created.length, removed: removals.length };
@@ -596,7 +609,6 @@ export async function createGroupSessions(
   // Notify each booked student/parent/teacher (best-effort, never blocking).
   for (const c of created) await notifySession("SESSION_BOOKED", c.id);
 
-  revalidatePath(`/${locale}/sessions`);
-  revalidatePath(`/${locale}/calendar`);
+  revalidateSessionViews(locale);
   return { ok: true, created: created.length, skipped };
 }

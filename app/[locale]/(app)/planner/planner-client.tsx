@@ -23,6 +23,7 @@ import {
   MapPin,
   CalendarRange,
   Route,
+  Users,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import {
@@ -45,7 +46,7 @@ import { printDoc } from "@/lib/print";
 import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
 import { TimeRange } from "@/components/time-range";
 import { findConflicts, weekdayOf, WEEKDAY_ORDER, type Conflict } from "@/lib/conflicts";
-import { localNowTime, localToday } from "@/lib/session-time";
+import { localToday } from "@/lib/session-time";
 import {
   ConflictWarnings,
   SpacingWarning,
@@ -106,6 +107,20 @@ export type PlannerSession = {
   addressLabel: string | null;
   home: { lat: number; lng: number } | null;
   trip: SessionTripLite | null;
+  /** One visible lesson backed by one accounting/session row per student. */
+  group?: {
+    key: string;
+    name: string | null;
+    members: {
+      id: string;
+      studentId: string;
+      studentName: string;
+      levelLabel: string;
+      status: string;
+      paymentStatus: string;
+      total: number;
+    }[];
+  } | null;
 };
 
 export type PlannerTemplateRow = {
@@ -141,6 +156,7 @@ const CELL_STYLES: Record<string, string> = {
   COMPLETED: "border-[var(--success)]/50 bg-success/10",
   NO_SHOW: "border-destructive/50 bg-destructive/10",
   CANCELLED: "border-border bg-muted text-muted-foreground line-through",
+  MIXED: "border-primary/40 bg-primary/5",
 };
 
 function addDaysStr(s: string, n: number) {
@@ -323,16 +339,31 @@ export function PlannerClient({
    */
   const busy = useMemo(
     () =>
-      sessions.map((s) => ({
-        id: s.id,
-        teacherId: s.teacherId,
-        studentId: s.studentId,
-        startMin: s.startMin,
-        hours: s.hours,
-        status: s.status,
-        studentName: s.studentName,
-        teacherName: teachers.find((x) => x.id === s.teacherId)?.label,
-      })),
+      sessions.flatMap((s) => {
+        const teacherName = teachers.find((x) => x.id === s.teacherId)?.label;
+        if (s.group) {
+          return s.group.members.map((member) => ({
+            id: member.id,
+            teacherId: s.teacherId,
+            studentId: member.studentId,
+            startMin: s.startMin,
+            hours: s.hours,
+            status: member.status,
+            studentName: member.studentName,
+            teacherName,
+          }));
+        }
+        return [{
+          id: s.id,
+          teacherId: s.teacherId,
+          studentId: s.studentId,
+          startMin: s.startMin,
+          hours: s.hours,
+          status: s.status,
+          studentName: s.studentName,
+          teacherName,
+        }];
+      }),
     [sessions, teachers],
   );
 
@@ -357,10 +388,28 @@ export function PlannerClient({
     const ids = new Set<string>();
     for (const s of sessions) {
       if (s.status === "CANCELLED" || s.status === "NO_SHOW") continue;
-      if (conflictsFor(s).length > 0) ids.add(s.id);
+      if (s.group) {
+        const ownIds = new Set(s.group.members.map((member) => member.id));
+        const outsideBusy = busy.filter((candidate) => !ownIds.has(candidate.id));
+        const clashes = s.group.members.some((member) =>
+          findConflicts({
+            candidate: {
+              id: member.id,
+              teacherId: s.teacherId,
+              studentId: member.studentId,
+              startMin: s.startMin,
+              hours: s.hours,
+              weekday,
+            },
+            existing: outsideBusy,
+            availability: availability.filter((a) => a.teacherId === s.teacherId),
+          }).length > 0,
+        );
+        if (clashes) ids.add(s.id);
+      } else if (conflictsFor(s).length > 0) ids.add(s.id);
     }
     return ids;
-  }, [sessions, conflictsFor]);
+  }, [sessions, conflictsFor, busy, availability, weekday]);
 
   const dayTemplates = templates.filter((x) => x.weekday === weekday);
   const [banner, setBanner] = useState<string | null>(null);
@@ -635,6 +684,9 @@ export function PlannerClient({
                             centre,
                             trip: s.trip,
                             mapDate: day,
+                            group: s.group
+                              ? { name: s.group.name, members: s.group.members }
+                              : null,
                           })}
                           draggable={s.status === "DRAFT"}
                           onDragStart={(e) => {
@@ -677,13 +729,33 @@ export function PlannerClient({
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <span className="truncate font-medium">{s.studentName}</span>
-                            {s.isTrial && (
+                            {s.group ? (
+                              <>
+                                <Users className="size-3.5 shrink-0 text-primary" />
+                                <span className="truncate font-medium">
+                                  {s.group.members.slice(0, 2).map((member) => member.studentName).join(", ")}
+                                </span>
+                                <Badge variant="default" className="shrink-0 px-1 py-0 text-[10px]">
+                                  {s.group.members.length}
+                                </Badge>
+                              </>
+                            ) : (
+                              <span className="truncate font-medium">{s.studentName}</span>
+                            )}
+                            {!s.group && s.isTrial && (
                               <Badge variant="success" className="shrink-0 px-1 py-0 text-[10px]">
                                 {te("trial")}
                               </Badge>
                             )}
                           </div>
+                          {s.group && (
+                            <div className="mt-0.5 truncate text-[10px] font-medium text-primary">
+                              {t("groupSession")}
+                              {s.group.members.length > 2
+                                ? ` · ${t("moreStudents", { n: s.group.members.length - 2 })}`
+                                : ""}
+                            </div>
+                          )}
                           {s.subjectLabel && (
                             <div className="truncate text-xs font-medium opacity-90">
                               {s.subjectLabel}
@@ -701,7 +773,7 @@ export function PlannerClient({
                             </div>
                           )}
                           <div className="flex items-center justify-between text-xs opacity-80">
-                            <span>{s.levelLabel}</span>
+                            <span>{s.group ? t("studentsCount", { n: s.group.members.length }) : s.levelLabel}</span>
                             <span className="tabular-nums">{formatMoney(s.total)}</span>
                           </div>
                           {s.status === "DRAFT" && (

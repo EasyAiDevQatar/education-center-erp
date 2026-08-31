@@ -51,7 +51,12 @@ export async function buildManifest(locale: string, dayIso: string): Promise<Man
   end.setUTCDate(end.getUTCDate() + 1);
 
   const homeSessions = await db.session.findMany({
-    where: { date: { gte: start, lt: end }, location: "HOME", teacherId: { not: null } },
+    where: {
+      date: { gte: start, lt: end },
+      location: "HOME",
+      teacherId: { not: null },
+      status: { not: "CANCELLED" },
+    },
     include: { teacher: true, student: true },
   });
 

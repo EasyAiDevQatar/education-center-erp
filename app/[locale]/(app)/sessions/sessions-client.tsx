@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, Download, Users, Eye } from "lucide-react";
+import { Plus, Pencil, Download, Users, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import { useRouter, usePathname, Link } from "@/i18n/navigation";
 import { GroupBookingDialog, type GroupOpt } from "./group-booking-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
@@ -49,9 +49,21 @@ export type SessionRow = SessionInit & {
   subjectLabel: string | null;
   pricePerHour: number;
   total: number;
+  groupKey: string | null;
+  groupName: string | null;
 };
 
-export type Filters = { from: string; to: string; teacherId: string; status: string };
+export type Filters = {
+  from: string;
+  to: string;
+  teacherId: string;
+  status: string;
+  bookingType: "" | "group" | "individual";
+};
+
+type SessionListItem =
+  | { kind: "session"; row: SessionRow }
+  | { kind: "group"; key: string; rows: SessionRow[] };
 
 function statusBadge(status: string) {
   if (status === "PAID") return "success" as const;
@@ -108,6 +120,7 @@ export function SessionsClient({
   // Group picked inside the add-session dialog; opens group booking preloaded.
   const [handoffGroup, setHandoffGroup] = useState<string | null>(null);
   const [tripPrompt, setTripPrompt] = useState<TripPromptInfo | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const pathname = usePathname();
   const search = useTableSearch(sessions, (x) => [
     x.studentName,
@@ -154,17 +167,117 @@ export function SessionsClient({
     [t, tc, te],
   );
   const sf = useTableSortFilter(search.filtered, columns);
-  const pg = usePagination(sf.rows, 20, sf.version);
+  const listItems = useMemo<SessionListItem[]>(() => {
+    if (filters.bookingType !== "group") {
+      return sf.rows.map((row) => ({ kind: "session", row }));
+    }
+    const buckets = new Map<string, SessionRow[]>();
+    for (const row of sf.rows) {
+      if (!row.groupKey) continue;
+      const bucket = buckets.get(row.groupKey);
+      if (bucket) bucket.push(row);
+      else buckets.set(row.groupKey, [row]);
+    }
+    return [...buckets].map(([key, rows]) => ({ kind: "group", key, rows }));
+  }, [sf.rows, filters.bookingType]);
+  const pg = usePagination(listItems, 20, sf.version);
 
   function applyFilters(form: HTMLFormElement) {
     const fd = new FormData(form);
     const params = new URLSearchParams();
-    for (const key of ["from", "to", "teacherId", "status"]) {
+    for (const key of ["from", "to", "teacherId", "status", "bookingType"]) {
       const v = String(fd.get(key) ?? "");
       if (v) params.set(key, v);
     }
     router.push(`${pathname}?${params.toString()}`);
   }
+
+  const toggleGroup = (key: string) =>
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const renderSessionRow = (s: SessionRow, child = false) => (
+    <TableRow key={s.id} className={child ? "bg-muted/15" : undefined}>
+      <TableCell className="tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
+      <TableCell className="tabular-nums">
+        <span dir="ltr">{s.time ? `${s.time}–${endTime(s.time, s.hours)}` : "—"}</span>
+      </TableCell>
+      <TableCell className="font-medium">
+        <span className={child ? "inline-flex items-center gap-2 ps-5" : undefined}>
+          {child && <span className="text-muted-foreground" aria-hidden>↳</span>}
+          {s.studentName}
+        </span>
+      </TableCell>
+      <TableCell>{s.teacherName}</TableCell>
+      <TableCell>{s.levelLabel}</TableCell>
+      <TableCell>
+        {s.subjectLabel ? (
+          <Badge variant="default">{s.subjectLabel}</Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell>{te(`location.${s.location}`)}</TableCell>
+      <TableCell className="tabular-nums">{formatHours(s.hours)}</TableCell>
+      <TableCell className="tabular-nums">{formatMoney(s.total)} {currency}</TableCell>
+      <TableCell>
+        {!s.chargeable ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <Badge variant={statusBadge(s.paymentStatus)}>
+            {te(`paymentStatus.${s.paymentStatus}`)}
+          </Badge>
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-center gap-1">
+          {s.paymentStatus !== "PAID" && s.chargeable && (
+            <QuickPayDialog
+              studentId={s.studentId}
+              studentName={s.studentName}
+              amount={s.total}
+              currency={currency}
+              teachers={teachers}
+            />
+          )}
+          <Link
+            href={`/sessions/${s.id}`}
+            aria-label={t("view360")}
+            title={t("view360")}
+            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+          >
+            <Eye className="size-4" />
+          </Link>
+          <SessionDialog
+            title={t("edit")}
+            action={saveSession.bind(null, locale, s.id)}
+            students={students}
+            teachers={teachers}
+            levels={levels}
+            matrix={matrix}
+            currency={currency}
+            packages={packages}
+            subjects={subjects}
+            teacherSubjectIds={teacherSubjectIds}
+            session={s}
+            trigger={
+              <Button variant="ghost" size="icon" aria-label={tc("edit")}>
+                <Pencil className="size-4" />
+              </Button>
+            }
+          />
+          {["DRAFT", "SCHEDULED"].includes(s.status) && (
+            <CancelSessionButton action={cancelSession.bind(null, locale, s.id)} />
+          )}
+          <DeleteButton action={deleteSession.bind(null, locale, s.id)} />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
 
   return (
     <>
@@ -172,7 +285,7 @@ export function SessionsClient({
         <TableSearch
           value={search.query}
           onChange={search.setQuery}
-          resultCount={search.filtered.length}
+          resultCount={listItems.length}
           placeholder={t("searchPlaceholder")}
         />
       </div>
@@ -209,6 +322,14 @@ export function SessionsClient({
             <option value="PAID">{te("paymentStatus.PAID")}</option>
             <option value="PARTIAL">{te("paymentStatus.PARTIAL")}</option>
             <option value="UNPAID">{te("paymentStatus.UNPAID")}</option>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">{t("bookingType")}</label>
+          <Select name="bookingType" defaultValue={filters.bookingType} className="w-40">
+            <option value="">{t("allSessions")}</option>
+            <option value="group">{t("groupSessionsOnly")}</option>
+            <option value="individual">{t("individualSessionsOnly")}</option>
           </Select>
         </div>
         <Button type="submit" variant="secondary">{tc("filter")}</Button>
@@ -284,82 +405,58 @@ export function SessionsClient({
                 </TableCell>
               </TableRow>
             )}
-            {pg.pageItems.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell className="tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
-                {/* Start and end, not just the start: "16:00" alone made two
-                    back-to-back lessons look like a clash and a real clash look
-                    like a coincidence. */}
-                <TableCell className="tabular-nums">
-                  <span dir="ltr">{s.time ? `${s.time}–${endTime(s.time, s.hours)}` : "—"}</span>
-                </TableCell>
-                <TableCell className="font-medium">{s.studentName}</TableCell>
-                <TableCell>{s.teacherName}</TableCell>
-                <TableCell>{s.levelLabel}</TableCell>
-                <TableCell>
-                  {s.subjectLabel ? (
-                    <Badge variant="default">{s.subjectLabel}</Badge>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>{te(`location.${s.location}`)}</TableCell>
-                <TableCell className="tabular-nums">{formatHours(s.hours)}</TableCell>
-                <TableCell className="tabular-nums">{formatMoney(s.total)} {currency}</TableCell>
-                <TableCell>
-                  {!s.chargeable ? (
-                    <span className="text-muted-foreground">—</span>
-                  ) : (
-                    <Badge variant={statusBadge(s.paymentStatus)}>
-                      {te(`paymentStatus.${s.paymentStatus}`)}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-center gap-1">
-                    {s.paymentStatus !== "PAID" && s.chargeable && (
-                      <QuickPayDialog
-                        studentId={s.studentId}
-                        studentName={s.studentName}
-                        amount={s.total}
-                        currency={currency}
-                        teachers={teachers}
-                      />
-                    )}
-                    <Link
-                      href={`/sessions/${s.id}`}
-                      aria-label={t("view360")}
-                      title={t("view360")}
-                      className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
-                    >
-                      <Eye className="size-4" />
-                    </Link>
-                    <SessionDialog
-                      title={t("edit")}
-                      action={saveSession.bind(null, locale, s.id)}
-                      students={students}
-                      teachers={teachers}
-                      levels={levels}
-                      matrix={matrix}
-                      currency={currency}
-                      packages={packages}
-                      subjects={subjects}
-                      teacherSubjectIds={teacherSubjectIds}
-                      session={s}
-                      trigger={
-                        <Button variant="ghost" size="icon" aria-label={tc("edit")}>
-                          <Pencil className="size-4" />
-                        </Button>
-                      }
-                    />
-                    {["DRAFT", "SCHEDULED"].includes(s.status) && (
-                      <CancelSessionButton action={cancelSession.bind(null, locale, s.id)} />
-                    )}
-                    <DeleteButton action={deleteSession.bind(null, locale, s.id)} />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {pg.pageItems.map((item) => {
+              if (item.kind === "session") return renderSessionRow(item.row);
+              const first = item.rows[0];
+              const collapsed = collapsedGroups.has(item.key);
+              const total = item.rows.reduce((sum, row) => sum + row.total, 0);
+              const levelsLabel = [...new Set(item.rows.map((row) => row.levelLabel))].join(", ");
+              const subjectsLabel = [...new Set(item.rows.map((row) => row.subjectLabel).filter(Boolean))].join(", ");
+              const payments = new Set(item.rows.filter((row) => row.chargeable).map((row) => row.paymentStatus));
+              const payment = payments.size === 1 ? [...payments][0] : null;
+              return (
+                <Fragment key={item.key}>
+                  <TableRow className="bg-primary/5 hover:bg-primary/10">
+                    <TableCell className="tabular-nums"><span dir="ltr">{first.date}</span></TableCell>
+                    <TableCell className="tabular-nums">
+                      <span dir="ltr">{first.time ? `${first.time}–${endTime(first.time, first.hours)}` : "—"}</span>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 font-semibold text-primary"
+                        onClick={() => toggleGroup(item.key)}
+                        aria-expanded={!collapsed}
+                      >
+                        {collapsed ? <ChevronRight className="size-4 rtl:rotate-180" /> : <ChevronDown className="size-4" />}
+                        <Users className="size-4" />
+                        <span>{first.groupName || t("groupSession")}</span>
+                        <Badge variant="default">{t("studentsCount", { n: item.rows.length })}</Badge>
+                      </button>
+                    </TableCell>
+                    <TableCell>{first.teacherName}</TableCell>
+                    <TableCell>{levelsLabel}</TableCell>
+                    <TableCell>
+                      {subjectsLabel ? <Badge variant="default">{subjectsLabel}</Badge> : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell>{te(`location.${first.location}`)}</TableCell>
+                    <TableCell className="tabular-nums">{formatHours(first.hours)}</TableCell>
+                    <TableCell className="tabular-nums font-semibold">{formatMoney(total)} {currency}</TableCell>
+                    <TableCell>
+                      {payment ? (
+                        <Badge variant={statusBadge(payment)}>{te(`paymentStatus.${payment}`)}</Badge>
+                      ) : (
+                        <Badge variant="warning">{t("mixedPayments")}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="muted">{t("childRecords", { n: item.rows.length })}</Badge>
+                    </TableCell>
+                  </TableRow>
+                  {!collapsed && item.rows.map((row) => renderSessionRow(row, true))}
+                </Fragment>
+              );
+            })}
           </TableBody>
         </Table>
         <TablePagination {...pg} />

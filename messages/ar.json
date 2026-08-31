@@ -284,7 +284,15 @@
     "trial": "تجريبية",
     "cancelSession": "إلغاء الحصة",
     "cancelConfirm": "إلغاء هذه الحصة؟",
-    "cancelHint": "تبقى الحصة في السجل دون رسوم، وتتحول أي دفعة مخصصة لها إلى رصيد للطالب."
+    "cancelHint": "تبقى الحصة في السجل دون رسوم، وتتحول أي دفعة مخصصة لها إلى رصيد للطالب.",
+    "bookingType": "نوع الحصة",
+    "allSessions": "كل الحصص",
+    "groupSessionsOnly": "الحصص الجماعية",
+    "individualSessionsOnly": "الحصص الفردية",
+    "groupSession": "حصة جماعية",
+    "studentsCount": "{n} طلاب",
+    "childRecords": "{n} سجلات طلاب",
+    "mixedPayments": "متنوعة"
   },
   "group": {
     "title": "حجز جماعي",
@@ -1063,6 +1071,9 @@
     "printHideCancelled": "إخفاء الحصص الملغاة",
     "printShowAmounts": "إظهار المبالغ",
     "printShowLevel": "إظهار المرحلة الدراسية",
+    "groupSession": "حصة جماعية",
+    "studentsCount": "{n} طلاب",
+    "moreStudents": "+{n} آخرين",
     "printSummary": "ستُطبع {teachers} معلم/ة في {columns} عمود.",
     "printCounts": "{teachers} معلم/ة · {sessions} حصة",
     "printShowHomeCode": "إظهار كود المنزل",

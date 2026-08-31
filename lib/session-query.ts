@@ -5,6 +5,7 @@ export type SessionFilters = {
   to: string;
   teacherId: string;
   status: string;
+  bookingType: "" | "group" | "individual";
 };
 
 export function readSessionFilters(
@@ -14,11 +15,13 @@ export function readSessionFilters(
     const v = sp[k];
     return (Array.isArray(v) ? v[0] : v) ?? "";
   };
+  const bookingType = get("bookingType");
   return {
     from: get("from"),
     to: get("to"),
     teacherId: get("teacherId"),
     status: get("status"),
+    bookingType: bookingType === "group" || bookingType === "individual" ? bookingType : "",
   };
 }
 

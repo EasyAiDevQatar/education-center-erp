@@ -10,6 +10,7 @@ import { SessionsClient, type SessionRow } from "./sessions-client";
 import type { PriceMatrix } from "./session-dialog";
 import { displayName } from "@/lib/names";
 import { unchargeableStatuses } from "@/lib/billing";
+import { groupOccurrenceKeys, sessionOccurrenceKey } from "@/lib/session-grouping";
 
 export default async function SessionsPage({
   params,
@@ -39,7 +40,13 @@ export default async function SessionsPage({
         where: sessionWhere(filters),
         orderBy: { date: "desc" },
         take: 500,
-        include: { student: true, teacher: true, gradeLevel: true, subject: true },
+        include: {
+          student: true,
+          teacher: true,
+          gradeLevel: true,
+          subject: true,
+          group: { select: { name: true } },
+        },
       }),
       db.student.findMany({
       where: { active: true },
@@ -70,27 +77,38 @@ export default async function SessionsPage({
     matrix.map((m) => [m.gradeLevel.id, { CENTER: m.CENTER, HOME: m.HOME }]),
   );
 
-  const rows: SessionRow[] = sessions.map((s) => ({
-    id: s.id,
-    date: s.date.toISOString().slice(0, 10),
-    time: s.date.toISOString().slice(11, 16),
-    studentId: s.studentId,
-    teacherId: s.teacherId ?? "",
-    gradeLevelId: s.gradeLevelId,
-    subjectId: s.subjectId,
-    subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
-    location: s.location as "CENTER" | "HOME",
-    hours: toNumber(s.hours),
-    status: s.status,
-    chargeable: !unchargeable.includes(s.status),
-    paymentStatus: s.paymentStatus,
-    notes: s.notes,
-    studentName: displayName(s.student, locale),
-    teacherName: s.teacher ? displayName(s.teacher, locale) : "",
-    levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
-    pricePerHour: toNumber(s.pricePerHour),
-    total: toNumber(s.total),
-  }));
+  const realGroupKeys = groupOccurrenceKeys(sessions);
+  const allRows: SessionRow[] = sessions.map((s) => {
+    const occurrenceKey = sessionOccurrenceKey(s);
+    return {
+      id: s.id,
+      date: s.date.toISOString().slice(0, 10),
+      time: s.date.toISOString().slice(11, 16),
+      studentId: s.studentId,
+      teacherId: s.teacherId ?? "",
+      gradeLevelId: s.gradeLevelId,
+      subjectId: s.subjectId,
+      subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
+      location: s.location as "CENTER" | "HOME",
+      hours: toNumber(s.hours),
+      status: s.status,
+      chargeable: !unchargeable.includes(s.status),
+      paymentStatus: s.paymentStatus,
+      notes: s.notes,
+      studentName: displayName(s.student, locale),
+      teacherName: s.teacher ? displayName(s.teacher, locale) : "",
+      levelLabel: label(s.gradeLevel.nameAr, s.gradeLevel.nameEn),
+      pricePerHour: toNumber(s.pricePerHour),
+      total: toNumber(s.total),
+      groupKey: realGroupKeys.has(occurrenceKey) ? occurrenceKey : null,
+      groupName: s.group?.name ?? null,
+    };
+  });
+  const rows = filters.bookingType === "group"
+    ? allRows.filter((row) => row.groupKey)
+    : filters.bookingType === "individual"
+      ? allRows.filter((row) => !row.groupKey)
+      : allRows;
 
   const studentOpts = students.map((s) => ({
     id: s.id,

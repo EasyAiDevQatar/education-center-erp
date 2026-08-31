@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { CalendarClient, type CalEvent, type CalendarView } from "./calendar-client";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { displayName } from "@/lib/names";
+import { sessionOccurrenceKey } from "@/lib/session-grouping";
 
 /** Gulf week starts on Saturday. */
 const WEEK_START_DOW = 6;
@@ -82,6 +83,7 @@ export default async function CalendarPage({
       db.session.findMany({
         where: {
           date: { gte: rangeStart, lt: rangeEnd },
+          status: { not: "CANCELLED" },
           ...(teacherFilter ? { teacherId: teacherFilter } : {}),
           ...(locationFilter ? { location: locationFilter } : {}),
         },
@@ -152,16 +154,7 @@ export default async function CalendarPage({
       subjectLabel: s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
       group: null,
     };
-    // New rows use bookingBatchId. Saved-group bookings made before that field
-    // existed still group safely when every scheduling dimension is identical.
-    const groupKey = s.bookingBatchId
-      ? `batch:${s.bookingBatchId}`
-      : s.groupId
-        ? `legacy:${s.groupId}:${s.date.toISOString()}:${s.teacherId ?? ""}:${s.hours}:${s.location}`
-        // Old ad-hoc group bookings have no saved group id, but every row from
-        // their transaction has the exact same createdAt and schedule. This is
-        // intentionally stricter than grouping by time alone.
-        : `legacy-batch:${s.createdAt.getTime()}:${s.date.toISOString()}:${s.teacherId ?? ""}:${s.hours}:${s.location}`;
+    const groupKey = sessionOccurrenceKey(s);
     return { event, groupKey, groupName: s.group?.name ?? null };
   });
 
@@ -181,17 +174,15 @@ export default async function CalendarPage({
       continue;
     }
     const first = items[0].event;
-    const activeItems = items.filter((item) => item.event.status !== "CANCELLED");
-    const displayedItems = activeItems.length > 0 ? activeItems : items;
-    const statuses = new Set(displayedItems.map((item) => item.event.status));
-    const paymentStatuses = new Set(displayedItems.map((item) => item.event.paymentStatus));
+    const statuses = new Set(items.map((item) => item.event.status));
+    const paymentStatuses = new Set(items.map((item) => item.event.paymentStatus));
     events.push({
       ...first,
       id: `group:${key}`,
       studentName: items.map((item) => item.event.studentName).join(", "),
       status: statuses.size === 1 ? first.status : "MIXED",
       paymentStatus: paymentStatuses.size === 1 ? first.paymentStatus : "MIXED",
-      total: displayedItems.reduce((sum, item) => sum + item.event.total, 0),
+      total: items.reduce((sum, item) => sum + item.event.total, 0),
       group: {
         key,
         name: items[0].groupName,
