@@ -2838,6 +2838,10 @@
         "intro": "The Transport module plans pickups and drop-offs for teachers and students, assigns available drivers and vehicles, and makes each journey visible to the operations team. Follow this guide to activate it safely and prepare the required data.",
         "beforeTitle": "Before you begin",
         "beforeText": "Only an administrator can activate optional modules. Have the centre map location ready, and decide whether the centre transports teachers, students, or both.",
+        "realScreenshotTitle": "What you will see in Settings",
+        "realScreenshotIntro": "This is a real capture of the current Transport settings screen. Activation uses a checkbox labelled Enable the transport module — it is not a switch control.",
+        "overviewScreenshotAlt": "Real Transport settings screen showing the Enable the transport module checkbox",
+        "overviewScreenshotCaption": "Real live interface captured on 1 September 2026. Select the checkbox beside Enable the transport module, complete the required settings, then save.",
         "walkthroughTitle": "Interactive activation walkthrough",
         "stepsTitle": "Activation steps",
         "steps": {
@@ -2876,6 +2880,75 @@
         "openSettings": "Open Transport settings",
         "askAdminTitle": "Administrator access is required",
         "askAdminText": "Send this guide to an administrator and ask them to complete the activation steps.",
+        "settingsGuideTitle": "Understand every Transport setting",
+        "settingsGuideIntro": "Open each section below for a plain-language explanation of the controls on the same Transport page. Start with the recommended defaults and adjust only when your operating rules require it.",
+        "advancedScreenshotAlt": "Real advanced Transport settings showing passenger selection and session timing validation",
+        "advancedScreenshotCaption": "The lower part of the real Settings page contains passenger selection, timing limits, approval rules and the live planning explanation.",
+        "featureSections": {
+          "0": {
+            "title": "Driver model and pickup window",
+            "description": "Choose whether a driver becomes available after drop-off or remains with the passenger, and limit how early a passenger may be collected.",
+            "items": {
+              "0": "Drop and return is the efficient default when drivers should handle other journeys during a lesson.",
+              "1": "Stay with passenger reserves the same driver for the complete visit and reduces fleet availability.",
+              "2": "Max advance pickup prevents the planner from collecting a passenger unreasonably early."
+            }
+          },
+          "1": {
+            "title": "Booking-time travel and conflict protection",
+            "description": "These rules stop staff from creating lessons that leave no practical time for the required journey.",
+            "items": {
+              "0": "The home-visit buffer reserves travel time before and after lessons away from the centre.",
+              "1": "Back-to-back centre lessons can remain allowed because no vehicle journey is required between rooms.",
+              "2": "Conflict rejection, planner locking and past-day editing control whether clashes are blocked and how long completed days remain editable."
+            }
+          },
+          "2": {
+            "title": "Centre location and travel-time estimates",
+            "description": "The centre pin is the usual start or end point. Local distance estimates use your speed, rush-hour and detour values when a routed travel time is unavailable.",
+            "items": {
+              "0": "Place the centre pin accurately using latitude, longitude or Pick on map.",
+              "1": "Set normal and rush speeds for local traffic, then enter rush windows in 24-hour time.",
+              "2": "The detour factor and minimum trip time prevent straight-line distances from producing unrealistic journey times."
+            }
+          },
+          "3": {
+            "title": "Allocation, tracking and privacy",
+            "description": "These controls define how the planner chooses journeys, retains live-location data and exposes it to staff.",
+            "items": {
+              "0": "Arrival and empty-distance limits help avoid late pickups and excessive driving without a passenger.",
+              "1": "Tracking retention automatically removes old location points after the selected number of days.",
+              "2": "Keep driver locations limited to administrators unless office staff genuinely need live access."
+            }
+          },
+          "4": {
+            "title": "Who receives transport",
+            "description": "Select the passenger groups the planner should include. A person still needs the correct home pin and transport preference on their own record.",
+            "items": {
+              "0": "Teachers covers travel connected with home visits.",
+              "1": "Student pickup covers home-to-centre journeys before a centre lesson.",
+              "2": "Student return covers centre-to-home journeys after a centre lesson."
+            }
+          },
+          "5": {
+            "title": "Session timing, waiting and turnaround",
+            "description": "Timing validation protects arrivals, dismissals, boarding, drop-off, waiting and the reuse of drivers and vehicles.",
+            "items": {
+              "0": "Arrival buffers define the preferred, minimum and earliest acceptable arrival times.",
+              "1": "Boarding, drop-off, centre waiting and maximum-journey values make the plan realistic for passengers.",
+              "2": "Driver and vehicle turnaround prevent the same resource from being assigned again too quickly; invalid-route approval should require a recorded reason."
+            }
+          },
+          "6": {
+            "title": "Live logic, warnings and route simulation",
+            "description": "The bottom of the page translates your values into the rules the planner will actually apply and shows the effect on a sample journey.",
+            "items": {
+              "0": "Current logic explains the active planning behaviour in plain language and can be regenerated from saved settings.",
+              "1": "Warnings identify combinations likely to create poor or impossible journeys; recommended values can be restored safely.",
+              "2": "The live demo shows pickup, arrival, return and driver availability before you use the configuration operationally."
+            }
+          }
+        },
         "checklistTitle": "Complete the setup after activation",
         "checklistIntro": "Activation makes the module available. These four checks make it operational.",
         "checklist": {

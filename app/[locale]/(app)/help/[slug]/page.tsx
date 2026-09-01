@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import {
   ArrowLeft,
   ArrowRight,
   Bus,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   Clock3,
@@ -15,7 +17,6 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { TransportActivationWalkthrough } from "@/components/help/transport-activation-walkthrough";
 import { ArticleFeedback } from "@/components/help/article-feedback";
 import { HELP_ARTICLES, findHelpArticle } from "@/lib/help-catalog";
 import { requireAuth } from "@/lib/rbac";
@@ -42,9 +43,19 @@ export default async function HelpArticlePage({
   const isAdmin = session.role === "ADMIN";
   const steps = [0, 1, 2, 3].map((index) => ({
     title: ta(`steps.${index}.title`),
-    shortTitle: ta(`steps.${index}.shortTitle`),
     description: ta(`steps.${index}.description`),
   }));
+  const featureSections = [0, 1, 2, 3, 4, 5, 6].map((index) => ({
+    title: ta(`featureSections.${index}.title`),
+    description: ta(`featureSections.${index}.description`),
+    items: [0, 1, 2].map((itemIndex) => ta(`featureSections.${index}.items.${itemIndex}`)),
+  }));
+  const overviewScreenshot = locale === "ar"
+    ? "/help/transport/settings-overview-ar.png"
+    : "/help/transport/settings-overview-en.png";
+  const advancedScreenshot = locale === "ar"
+    ? "/help/transport/settings-advanced-ar.png"
+    : "/help/transport/settings-advanced-en.png";
   const updated = new Intl.DateTimeFormat(locale === "ar" ? "ar-QA" : "en-GB", {
     dateStyle: "long",
     timeZone: "Asia/Qatar",
@@ -69,7 +80,7 @@ export default async function HelpArticlePage({
               </span>
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Clock3 className="size-3.5" />
-                {t("readTime", { minutes: 4 })}
+                {t("readTime", { minutes: 8 })}
               </span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{ta("title")}</h1>
@@ -91,23 +102,25 @@ export default async function HelpArticlePage({
             </div>
           </section>
 
-          <TransportActivationWalkthrough
-            steps={steps}
-            labels={{
-              title: ta("walkthroughTitle"),
-              play: t("play"),
-              pause: t("pause"),
-              previous: t("previousStep"),
-              next: t("nextStep"),
-              settings: ta("visual.settings"),
-              transport: ta("visual.transport"),
-              enable: ta("visual.enable"),
-              centreLocation: ta("visual.centreLocation"),
-              save: ta("visual.save"),
-              active: ta("visual.active"),
-              moduleIntro: ta("visual.moduleIntro"),
-            }}
-          />
+          <section id="real-screen" className="scroll-mt-20 pb-2">
+            <h2 className="text-2xl font-bold">{ta("realScreenshotTitle")}</h2>
+            <p className="mt-2 leading-7 text-muted-foreground">{ta("realScreenshotIntro")}</p>
+            <figure className="mt-5 overflow-hidden rounded-xl border border-border bg-muted/30 p-2 sm:p-3">
+              <a href={overviewScreenshot} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg">
+                <Image
+                  src={overviewScreenshot}
+                  alt={ta("overviewScreenshotAlt")}
+                  width={753}
+                  height={912}
+                  priority
+                  className="h-auto w-full"
+                />
+              </a>
+              <figcaption className="px-2 pb-1 pt-3 text-sm leading-6 text-muted-foreground">
+                {ta("overviewScreenshotCaption")}
+              </figcaption>
+            </figure>
+          </section>
 
           <section id="steps" className="scroll-mt-20 py-9">
             <h2 className="text-2xl font-bold">{ta("stepsTitle")}</h2>
@@ -142,6 +155,52 @@ export default async function HelpArticlePage({
                   </Button>
                 )}
               </div>
+            </div>
+          </section>
+
+          <section id="settings-guide" className="scroll-mt-20 border-t border-border py-9">
+            <h2 className="text-2xl font-bold">{ta("settingsGuideTitle")}</h2>
+            <p className="mt-2 leading-7 text-muted-foreground">{ta("settingsGuideIntro")}</p>
+
+            <figure className="mt-5 overflow-hidden rounded-xl border border-border bg-muted/30 p-2 sm:p-3">
+              <a href={advancedScreenshot} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg">
+                <Image
+                  src={advancedScreenshot}
+                  alt={ta("advancedScreenshotAlt")}
+                  width={753}
+                  height={912}
+                  className="h-auto w-full"
+                />
+              </a>
+              <figcaption className="px-2 pb-1 pt-3 text-sm leading-6 text-muted-foreground">
+                {ta("advancedScreenshotCaption")}
+              </figcaption>
+            </figure>
+
+            <div className="mt-6 space-y-3">
+              {featureSections.map((section, index) => (
+                <details
+                  key={section.title}
+                  open={index === 0}
+                  className="group rounded-xl border border-border bg-card open:bg-muted/25"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 font-semibold marker:content-none">
+                    <span>{section.title}</span>
+                    <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="border-t border-border px-4 pb-5 pt-4">
+                    <p className="leading-7 text-muted-foreground">{section.description}</p>
+                    <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                      {section.items.map((item) => (
+                        <li key={item} className="flex gap-2">
+                          <CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </details>
+              ))}
             </div>
           </section>
 
@@ -205,7 +264,9 @@ export default async function HelpArticlePage({
             <p className="mb-3 text-sm font-semibold">{t("onThisPage")}</p>
             <div className="flex flex-col gap-1 text-sm text-muted-foreground">
               <a href="#before" className="rounded-md px-2 py-1.5 hover:bg-accent hover:text-foreground">{ta("beforeTitle")}</a>
+              <a href="#real-screen" className="rounded-md px-2 py-1.5 hover:bg-accent hover:text-foreground">{ta("realScreenshotTitle")}</a>
               <a href="#steps" className="rounded-md px-2 py-1.5 hover:bg-accent hover:text-foreground">{ta("stepsTitle")}</a>
+              <a href="#settings-guide" className="rounded-md px-2 py-1.5 hover:bg-accent hover:text-foreground">{ta("settingsGuideTitle")}</a>
               <a href="#checklist" className="rounded-md px-2 py-1.5 hover:bg-accent hover:text-foreground">{ta("checklistTitle")}</a>
               <a href="#troubleshooting" className="rounded-md px-2 py-1.5 hover:bg-accent hover:text-foreground">{ta("troubleshootingTitle")}</a>
             </div>
