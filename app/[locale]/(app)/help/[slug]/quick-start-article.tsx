@@ -225,10 +225,12 @@ export async function QuickStartArticle({
                 {t("backToHelp")}
               </Link>
             </Button>
-            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-              {ta("nextArticle")}
-              <ArrowRight className="size-4 rtl:rotate-180" />
-            </span>
+            <Button asChild variant="ghost">
+              <Link href="/help/dashboard-navigation">
+                {ta("nextArticle")}
+                <ArrowRight className="size-4 rtl:rotate-180" />
+              </Link>
+            </Button>
           </div>
         </article>
 

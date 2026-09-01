@@ -140,14 +140,15 @@ export function HelpCenterClient({
           {visibleCategories.map((category) => {
             const Icon = ICONS[category.key] ?? BookOpen;
             const live = category.publishedCount > 0;
-            const matchingArticle = articles.find(
+            const matchingArticles = articles.filter(
               (article) => article.category === category.key,
             );
-            const content = (
+            return (
               <Card
+                key={category.key}
                 className={cn(
                   "h-full p-5 transition",
-                  live && "hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md",
+                  live && "border-primary/20",
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -169,17 +170,21 @@ export function HelpCenterClient({
                 <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
                   {category.description}
                 </p>
-                {matchingArticle && (
-                  <p className="mt-4 text-sm font-medium text-primary">{matchingArticle.title}</p>
+                {matchingArticles.length > 0 && (
+                  <div className="mt-4 space-y-1 border-t border-border pt-3">
+                    {matchingArticles.map((article) => (
+                      <Link
+                        key={article.slug}
+                        href={`/help/${article.slug}`}
+                        className="group flex items-center justify-between gap-2 rounded-md px-2 py-2 text-sm font-medium text-primary hover:bg-accent"
+                      >
+                        <span>{article.title}</span>
+                        <ArrowRight className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
+                      </Link>
+                    ))}
+                  </div>
                 )}
               </Card>
-            );
-            return matchingArticle ? (
-              <Link key={category.key} href={`/help/${matchingArticle.slug}`}>
-                {content}
-              </Link>
-            ) : (
-              <div key={category.key}>{content}</div>
             );
           })}
         </div>

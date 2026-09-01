@@ -22,6 +22,15 @@ export const HELP_ARTICLES = [
     category: "gettingStarted",
     titleKey: "quickStart",
     descriptionKey: "quickStartDescription",
+    readTime: 7,
+    published: true,
+  },
+  {
+    slug: "dashboard-navigation",
+    category: "gettingStarted",
+    titleKey: "dashboardNavigation",
+    descriptionKey: "dashboardNavigationDescription",
+    readTime: 6,
     published: true,
   },
   {
@@ -29,6 +38,7 @@ export const HELP_ARTICLES = [
     category: "transport",
     titleKey: "activateTransport",
     descriptionKey: "activateTransportDescription",
+    readTime: 8,
     published: true,
   },
 ] as const;

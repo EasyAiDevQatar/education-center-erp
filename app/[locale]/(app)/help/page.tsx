@@ -28,7 +28,7 @@ export default async function HelpCenterPage({
     category: article.category,
     title: t(`articles.${article.titleKey}.title`),
     description: t(`articles.${article.descriptionKey}`),
-    readTime: t("readTime", { minutes: 4 }),
+    readTime: t("readTime", { minutes: article.readTime }),
   }));
 
   return (

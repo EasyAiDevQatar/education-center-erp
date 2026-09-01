@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { ArticleFeedback } from "@/components/help/article-feedback";
 import { HELP_ARTICLES, findHelpArticle } from "@/lib/help-catalog";
 import { requireAuth } from "@/lib/rbac";
+import { DashboardNavigationArticle } from "./dashboard-navigation-article";
 import { QuickStartArticle } from "./quick-start-article";
 
 export function generateStaticParams() {
@@ -41,6 +42,9 @@ export default async function HelpArticlePage({
   const session = await requireAuth(locale);
   if (slug === "quick-start-checklist") {
     return <QuickStartArticle locale={locale} isAdmin={session.role === "ADMIN"} />;
+  }
+  if (slug === "dashboard-navigation") {
+    return <DashboardNavigationArticle locale={locale} />;
   }
   if (slug !== "activate-transport") notFound();
   const t = await getTranslations("help");

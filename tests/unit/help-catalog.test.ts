@@ -13,7 +13,7 @@ describe("Help center catalog", () => {
     );
   });
 
-  it("publishes Quick Start first and keeps Transport available", () => {
+  it("publishes the ordered Start Here guides and keeps Transport available", () => {
     expect(HELP_ARTICLES[0]).toMatchObject({
       slug: "quick-start-checklist",
       category: "gettingStarted",
@@ -23,7 +23,12 @@ describe("Help center catalog", () => {
       category: "transport",
       published: true,
     });
-    expect(HELP_ARTICLES.filter((article) => article.published)).toHaveLength(2);
+    expect(HELP_ARTICLES[1]).toMatchObject({
+      slug: "dashboard-navigation",
+      category: "gettingStarted",
+      published: true,
+    });
+    expect(HELP_ARTICLES.filter((article) => article.published)).toHaveLength(3);
   });
 
   it("does not resolve an unknown article", () => {

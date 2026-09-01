@@ -2832,6 +2832,98 @@
       }
     },
     "articles": {
+      "dashboardNavigationDescription": "Learn the Dashboard, sidebar, language control, profile menu and role switching without losing your place.",
+      "dashboardNavigation": {
+        "title": "Understanding the Dashboard and Navigation",
+        "intro": "The Dashboard is the operational home of Education Center. This guide explains what its cards mean, how the sidebar is organised, and how language and active-role controls change the interface you see.",
+        "beforeTitle": "Your navigation may look different",
+        "beforeText": "The sidebar is deliberately filtered. It shows only the sections allowed by your active role and the modules enabled for your centre. A shorter menu is normally a permissions or module choice, not missing data.",
+        "dashboardTitle": "Read the Dashboard at a glance",
+        "dashboardIntro": "Start each day here. The top row surfaces items requiring action, the metric cards summarise operations and finance, and the trend area helps you compare activity over time.",
+        "dashboardScreenshotAlt": "Real Education Center Dashboard showing the sidebar, action cards, metrics and monthly trend",
+        "dashboardScreenshotCaption": "Real live Dashboard captured on 1 September 2026. Values reflect the centre at capture time; your cards and totals update from your own records.",
+        "dashboardCards": {
+          "0": { "title": "Action cards", "text": "Today’s sessions, unconfirmed drafts, expiring packages and debtors lead directly to work that needs attention." },
+          "1": { "title": "Period filters", "text": "All, This month, Last month and This year recalculate the Dashboard for the selected reporting period." },
+          "2": { "title": "Operating and financial totals", "text": "Sessions, students, teachers, income, expenses, expected income and outstanding balances provide a fast health check." },
+          "3": { "title": "Safe shortcuts", "text": "Links such as Open calendar and Open planner take you to the relevant screen without changing any records." }
+        },
+        "sidebarTitle": "Use the sidebar by work area",
+        "sidebarIntro": "Select a section heading to fold or unfold it. The highlighted item is your current screen. On a small screen, open the same navigation from the Menu button in the header.",
+        "sidebarSections": {
+          "0": {
+            "title": "Daily operations",
+            "description": "The screens reception and supervisors use throughout the day.",
+            "items": {
+              "0": "Dashboard summarises the centre; Calendar shows scheduled work across dates.",
+              "1": "Daily planner organises teacher rows, times, conflicts and rapid scheduling.",
+              "2": "Check-in records attendance; Sessions manages booking records; Messages handles communication."
+            }
+          },
+          "1": {
+            "title": "People",
+            "description": "Profiles and relationships for everyone served by or working with the centre.",
+            "items": {
+              "0": "Students stores grade, package, billing, attendance and contact information.",
+              "1": "Teachers stores subjects, grades, availability, payment and transport information.",
+              "2": "Guardians connects families and statements; Groups manages shared teaching arrangements."
+            }
+          },
+          "2": {
+            "title": "Finance",
+            "description": "Money received, amounts owed, packages and staff liabilities.",
+            "items": {
+              "0": "Payments records money received and produces receipts.",
+              "1": "Packages manages prepaid products and student hour balances.",
+              "2": "Expenses and Teacher dues explain outgoing costs and amounts owed to teachers."
+            }
+          },
+          "3": {
+            "title": "Administration",
+            "description": "Configuration and control screens, normally restricted to administrators or specialist roles.",
+            "items": {
+              "0": "Settings controls centre, academic, finance, modules, users, permissions and system data.",
+              "1": "A section disappears when the active role lacks its capability or its optional module is disabled.",
+              "2": "Changing a setting can affect menus and workflows for other users, so review permissions before saving."
+            }
+          },
+          "4": {
+            "title": "Help and optional modules",
+            "description": "Guidance is always available, while operational modules appear only when enabled and permitted.",
+            "items": {
+              "0": "Help Center opens these step-by-step articles from any main application screen.",
+              "1": "Transport, Accounting, HR, Reports, Leads and AI add their own sections when activated.",
+              "2": "Collapsing unused headings keeps the sidebar short; mobile uses the same links in a slide-out drawer."
+            }
+          }
+        },
+        "languageTitle": "Switch Arabic and English without losing the page",
+        "languageText": "Use the language button in the header. The application keeps the current path, changes reading direction, and reloads the same screen in the selected language.",
+        "languageGifAlt": "Animated real interface switching the Dashboard between English and Arabic",
+        "languageGifCaption": "Real animated capture: selecting العربية keeps Dashboard open and changes the interface from left-to-right English to right-to-left Arabic.",
+        "profileTitle": "Use the profile menu and switch active role",
+        "profileIntro": "Select your name in the header to see the current role. If your account holds more than one role, the menu lists only those assigned to you and lets you change the active view.",
+        "roleGifAlt": "Animated real Dashboard showing the profile menu opening and assigned roles",
+        "roleGifCaption": "Real animated capture of the profile menu. This example account has Administrator, Accountant, Receptionist, Teacher and Driver roles; another user may have fewer choices.",
+        "roleRulesTitle": "What role switching does",
+        "roleRules": {
+          "0": "It changes the active capability and refreshes the current interface immediately.",
+          "1": "It does not add, remove or edit the roles permanently assigned to the user.",
+          "2": "The sidebar and protected screens recalculate for the selected active role.",
+          "3": "Switch back to Administrator when configuration work is required; use operational roles to verify what those users can see."
+        },
+        "tipsTitle": "Five navigation habits for new administrators",
+        "tips": {
+          "0": "Begin on Dashboard and follow action-card links instead of searching through every menu.",
+          "1": "Confirm the highlighted sidebar item before entering or changing data.",
+          "2": "Use Calendar for date-oriented review and Daily planner for teacher-and-time scheduling work.",
+          "3": "When a section is absent, check the active role and module settings before reporting a problem.",
+          "4": "Use Help Center from the sidebar and keep a guide open in a separate tab while completing its steps."
+        },
+        "openDashboard": "Open Dashboard",
+        "previousArticle": "Previous: Quick-Start Checklist",
+        "nextArticle": "Next: Setting Up Your Center Profile"
+      },
       "quickStartDescription": "Complete the essential first-day setup in the correct order and open each required screen directly.",
       "quickStart": {
         "title": "Education Center Quick-Start Checklist",
