@@ -162,7 +162,8 @@
       "finance": "Finance",
       "hr": "Human resources",
       "transport": "Transport",
-      "admin": "Administration"
+      "admin": "Administration",
+      "support": "Help & support"
     },
     "planner": "Daily planner",
     "payouts": "Payouts",
@@ -199,7 +200,8 @@
     "transportManifest": "Pickups & drop-offs",
     "transportDispatch": "Dispatch board",
     "transportMaster": "Master planner",
-    "messages": "Messages"
+    "messages": "Messages",
+    "help": "Help Center"
   },
   "auth": {
     "login": "Log in",
@@ -2770,5 +2772,146 @@
     "statementMessage": "{center}: statement for {student} — charged {charges} {currency}, paid {paid} {currency}, outstanding {balance} {currency}. Details in the attached file.",
     "familyStatementMessage": "{center}: statement for the {guardian} family ({children} students) — charged {charges} {currency}, paid {paid} {currency}, outstanding {balance} {currency}. Details in the attached file.",
     "teacherStatementMessage": "{center}: statement for {teacher} — {hours} hours, {due} {currency} payable to you. Details in the attached file."
+  },
+  "help": {
+    "title": "Help Center",
+    "subtitle": "Step-by-step guides for every part of the Education Center system.",
+    "searchPlaceholder": "Search guides and topics...",
+    "available": "Available",
+    "planned": "Planned",
+    "featured": "Featured guide",
+    "openGuide": "Open guide",
+    "noResults": "No matching help found",
+    "noResultsHint": "Try another word or browse the categories below.",
+    "readTime": "{minutes} min read",
+    "breadcrumbs": "Breadcrumbs",
+    "lastUpdated": "Last updated {date}",
+    "play": "Play guide",
+    "pause": "Pause guide",
+    "previousStep": "Previous step",
+    "nextStep": "Next step",
+    "onThisPage": "On this page",
+    "feedbackQuestion": "Was this guide helpful?",
+    "feedbackThanks": "Thank you — your feedback helps us improve the Help Center.",
+    "yes": "Yes",
+    "no": "No",
+    "backToHelp": "Back to Help Center",
+    "nextGuidePlanned": "More Transport guides are planned",
+    "categories": {
+      "gettingStarted": {
+        "title": "Getting started",
+        "description": "Initial setup, centre profile, academic years, users and first-day checks."
+      },
+      "dailyOperations": {
+        "title": "Daily operations",
+        "description": "Calendar, planner, sessions, attendance, check-in and messaging workflows."
+      },
+      "people": {
+        "title": "Students, teachers & groups",
+        "description": "People records, guardians, group bookings, packages and academic details."
+      },
+      "finance": {
+        "title": "Finance & accounting",
+        "description": "Payments, packages, expenses, teacher dues, accounting and financial reports."
+      },
+      "transport": {
+        "title": "Transport",
+        "description": "Activation, vehicles, drivers, passengers, planning, dispatch and live tracking."
+      },
+      "hr": {
+        "title": "Human resources",
+        "description": "Staff records, documents, leave, payroll runs and WPS."
+      },
+      "administration": {
+        "title": "Administration & settings",
+        "description": "Modules, permissions, integrations, backups, branding and data controls."
+      },
+      "reportsAi": {
+        "title": "Reports & AI",
+        "description": "Operational reports, dashboards, the AI assistant and automation."
+      }
+    },
+    "articles": {
+      "activateTransportDescription": "Turn on Transport, set the centre location and prepare the module for its first journey.",
+      "activateTransport": {
+        "title": "Activating the Transport module",
+        "intro": "The Transport module plans pickups and drop-offs for teachers and students, assigns available drivers and vehicles, and makes each journey visible to the operations team. Follow this guide to activate it safely and prepare the required data.",
+        "beforeTitle": "Before you begin",
+        "beforeText": "Only an administrator can activate optional modules. Have the centre map location ready, and decide whether the centre transports teachers, students, or both.",
+        "walkthroughTitle": "Interactive activation walkthrough",
+        "stepsTitle": "Activation steps",
+        "steps": {
+          "0": {
+            "title": "Open Settings",
+            "shortTitle": "Settings",
+            "description": "From the side menu, open Settings. This page is available to administrators only."
+          },
+          "1": {
+            "title": "Choose the Transport tab",
+            "shortTitle": "Transport tab",
+            "description": "Select Transport from the Settings category rail. The Transport module configuration opens without leaving the page."
+          },
+          "2": {
+            "title": "Enable Transport and complete the essentials",
+            "shortTitle": "Enable module",
+            "description": "Select Enable the Transport module, set the centre location on the map, choose who receives transport, and review the default timing and driver rules."
+          },
+          "3": {
+            "title": "Save and verify",
+            "shortTitle": "Save",
+            "description": "Select Save. The Transport section appears in the side menu immediately; existing transport data is retained whenever the module is switched off and on again."
+          }
+        },
+        "visual": {
+          "settings": "Settings",
+          "transport": "Transport module",
+          "enable": "Enable the Transport module",
+          "centreLocation": "Centre location",
+          "save": "Save",
+          "active": "Active",
+          "moduleIntro": "Plan journeys for teachers and students between homes and the centre."
+        },
+        "openSettingsTitle": "Ready to activate it?",
+        "openSettingsText": "Open the correct Settings tab directly. Review the values before saving.",
+        "openSettings": "Open Transport settings",
+        "askAdminTitle": "Administrator access is required",
+        "askAdminText": "Send this guide to an administrator and ask them to complete the activation steps.",
+        "checklistTitle": "Complete the setup after activation",
+        "checklistIntro": "Activation makes the module available. These four checks make it operational.",
+        "checklist": {
+          "centre": {
+            "title": "Confirm the centre pin",
+            "text": "The centre location is the usual start or end point and is required for accurate distance and travel-time estimates."
+          },
+          "vehicles": {
+            "title": "Add vehicles and drivers",
+            "text": "Record capacity, availability and driver assignments before generating the first transport plan."
+          },
+          "people": {
+            "title": "Mark passengers",
+            "text": "Set home locations and transport choices on teacher and student records so the planner knows whom to include."
+          },
+          "test": {
+            "title": "Run a test day",
+            "text": "Open the Transport planner for a future date, generate proposals, and review every unassigned passenger before dispatch."
+          }
+        },
+        "troubleshootingTitle": "Troubleshooting",
+        "troubleshooting": {
+          "0": {
+            "question": "Why can’t I see the Transport tab in Settings?",
+            "answer": "The Settings page and module activation are restricted to administrators. Sign in with an administrator account or ask an administrator to complete the activation."
+          },
+          "1": {
+            "question": "Why didn’t Transport appear in the side menu after saving?",
+            "answer": "Confirm that Enable the Transport module is selected and that the save confirmation appeared. Refresh once if the menu was open during the change; role permissions can also hide Transport for a specific staff role."
+          },
+          "2": {
+            "question": "Why are no passengers appearing in the planner?",
+            "answer": "Check the passenger setting, each person’s transport choice and home pin, and the session date and location. Vehicles and drivers must also be active and available for assignments."
+          }
+        }
+      }
+    }
   }
 }

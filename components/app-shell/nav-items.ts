@@ -20,9 +20,10 @@ import {
   Settings,
   Sparkles,
   MessagesSquare,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
-import type { Role } from "@/lib/enums";
+import { ROLES, type Role } from "@/lib/enums";
 
 export type NavItem = {
   href: string;
@@ -32,7 +33,7 @@ export type NavItem = {
   roles: Role[];
   /** section key under `nav.sections`. A section with no visible items renders
       nothing, so a flagged-off module costs zero pixels. */
-  section: "operations" | "people" | "finance" | "hr" | "admin";
+  section: "operations" | "people" | "finance" | "hr" | "admin" | "support";
   /** Nested links, shown indented while the parent branch is active. */
   children?: { href: string; key: string }[];
   /** Optional-module gate: item renders only when this flag is on. The flag
@@ -150,5 +151,6 @@ export const NAV_ITEMS: NavItem[] = [
       { href: "/hr/leave", key: "hrLeave" },
     ],
   },
+  { href: "/help", key: "help", icon: CircleHelp, roles: [...ROLES], section: "support" },
   { href: "/settings", key: "settings", icon: Settings, roles: ["ADMIN"], section: "admin" },
 ];

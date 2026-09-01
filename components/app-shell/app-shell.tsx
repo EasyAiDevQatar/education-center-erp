@@ -35,7 +35,7 @@ import { ChangePasswordDialog } from "./change-password-dialog";
 import { Button } from "@/components/ui/button";
 
 // Render order. A section with no visible items produces nothing.
-const SECTIONS = ["operations", "people", "finance", "hr", "admin"] as const;
+const SECTIONS = ["operations", "people", "finance", "hr", "admin", "support"] as const;
 
 /** Which groups the user has folded away, remembered between visits. */
 const COLLAPSED_KEY = "ec-nav-collapsed";
