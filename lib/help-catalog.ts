@@ -18,6 +18,13 @@ export type HelpCategoryKey = (typeof HELP_CATEGORIES)[number];
 
 export const HELP_ARTICLES = [
   {
+    slug: "quick-start-checklist",
+    category: "gettingStarted",
+    titleKey: "quickStart",
+    descriptionKey: "quickStartDescription",
+    published: true,
+  },
+  {
     slug: "activate-transport",
     category: "transport",
     titleKey: "activateTransport",

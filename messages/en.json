@@ -2832,6 +2832,128 @@
       }
     },
     "articles": {
+      "quickStartDescription": "Complete the essential first-day setup in the correct order and open each required screen directly.",
+      "quickStart": {
+        "title": "Education Center Quick-Start Checklist",
+        "intro": "Use this checklist to take a new Education Center account from an empty system to its first correctly scheduled and attended lesson. Complete the steps in order: later screens depend on the information entered earlier.",
+        "beforeTitle": "Before you begin",
+        "beforeText": "Set aside 30–45 minutes and prepare the centre contact details, academic calendar, grade and subject list, pricing, and the names of the first staff members and students.",
+        "adminOnlyTitle": "Administrator access is required.",
+        "adminOnlyText": "You can read this guide, but an administrator must complete the Settings steps and create staff users.",
+        "realScreensTitle": "Know the two main starting screens",
+        "realScreensIntro": "The screenshots below were captured from the live Education Center interface on 1 September 2026. Use the Dashboard to understand the current operation, then use Settings to build the foundation in the checklist order.",
+        "dashboardScreenshotAlt": "Real Education Center Dashboard with navigation and daily operating totals",
+        "dashboardScreenshotCaption": "The live Dashboard is your operational starting point. Its side menu opens daily work, people, finance and administration; its cards expose sessions, drafts, balances and activity that need attention.",
+        "settingsScreenshotAlt": "Real Center profile settings screen with logo, contact, currency, receipt and statement fields",
+        "settingsScreenshotCaption": "The live Center profile screen is the first setup destination. Complete identity, contact, currency, receipt and statement information before configuring academic data or billing.",
+        "orderTitle": "Set up the system in three phases",
+        "orderIntro": "This order prevents incomplete records, incorrect prices, and sessions that cannot be assigned or billed.",
+        "phases": {
+          "0": {
+            "title": "Build the foundation",
+            "text": "Enter the centre identity, academic dates, subjects, grades, locations, and prices."
+          },
+          "1": {
+            "title": "Add people and access",
+            "text": "Create staff accounts and permissions, then add teachers, students, and guardians."
+          },
+          "2": {
+            "title": "Test the daily workflow",
+            "text": "Create a package and one test lesson, then check attendance and financial results."
+          }
+        },
+        "checklistTitle": "First-day setup checklist",
+        "progress": "completed of",
+        "markComplete": "Mark complete",
+        "markIncomplete": "Mark incomplete",
+        "resetProgress": "Reset progress",
+        "checklist": {
+          "0": {
+            "title": "Complete the centre profile",
+            "description": "Enter the centre name, logo, address, phone, currency, receipt details, and statement footer. These details appear across documents and customer communication.",
+            "action": "Open centre settings"
+          },
+          "1": {
+            "title": "Create the academic year and terms",
+            "description": "Add the active academic year first, then enter term start and end dates. Confirm that today falls inside the intended active period.",
+            "action": "Open academic years"
+          },
+          "2": {
+            "title": "Add the subjects you teach",
+            "description": "Create the active subject list before configuring teachers or bookings so every later record uses the same subject names.",
+            "action": "Open subjects"
+          },
+          "3": {
+            "title": "Review grades and pricing",
+            "description": "Set the centre and home hourly price for every grade. Confirm the currency and test the combinations used most often.",
+            "action": "Open pricing"
+          },
+          "4": {
+            "title": "Create staff users and permissions",
+            "description": "Give each staff member an individual account and the smallest role needed for their work. Review module visibility for every operational role.",
+            "action": "Open users"
+          },
+          "5": {
+            "title": "Add your first teacher",
+            "description": "Enter the teacher profile, subjects, grades, availability, earnings method, home location, and transport choice where applicable.",
+            "action": "Open teachers"
+          },
+          "6": {
+            "title": "Add students and guardians",
+            "description": "Create the student with the correct grade, link the guardian, add contact details, and set home and transport information when needed.",
+            "action": "Open students"
+          },
+          "7": {
+            "title": "Create packages and opening balances",
+            "description": "Create the packages the centre sells, then confirm hours, price, expiry, and each student’s starting package balance.",
+            "action": "Open packages"
+          },
+          "8": {
+            "title": "Book one test session",
+            "description": "Schedule a future lesson with a real student and teacher. Check the date, time, duration, location, subject, price, and conflict warnings.",
+            "action": "Open sessions"
+          },
+          "9": {
+            "title": "Test attendance and billing",
+            "description": "Use the attendance screen to check in and check out the test session, then confirm actual duration, billable duration, package usage, and teacher dues.",
+            "action": "Open attendance"
+          }
+        },
+        "modulesTitle": "Activate only the modules you are ready to use",
+        "modulesText": "Optional modules can be enabled later without losing data. Start with the centre’s real workflow; if Transport is required now, follow its dedicated activation guide before adding vehicles or passengers.",
+        "openModules": "Open module settings",
+        "transportGuide": "Read the Transport guide",
+        "doneTitle": "Your centre is ready when…",
+        "doneIntro": "Before inviting the full team, confirm all six outcomes below with one complete test journey.",
+        "done": {
+          "0": "Staff can sign in and see only the sections required for their roles.",
+          "1": "A teacher and student can be selected for a valid date and time.",
+          "2": "The session price matches the grade, location, and configured duration.",
+          "3": "Check-in and check-out produce the correct actual and billable duration.",
+          "4": "The student package or balance changes exactly as expected.",
+          "5": "The teacher due and receipt or statement show the same completed lesson."
+        },
+        "mistakesTitle": "Common setup mistakes",
+        "mistakes": {
+          "0": {
+            "title": "Scheduling before academic dates are correct",
+            "text": "An incorrect active year or term makes filters, packages, reporting periods, and future scheduling harder to understand. Set dates before importing or booking lessons."
+          },
+          "1": {
+            "title": "Booking before reviewing the price matrix",
+            "text": "Session prices are calculated from configuration. Review every grade and location first so the initial student balances and teacher calculations are trustworthy."
+          },
+          "2": {
+            "title": "Sharing one administrator login",
+            "text": "Give every staff member a separate account. Individual users make audit history useful and prevent reception, finance, and academic staff from seeing unrelated information."
+          },
+          "3": {
+            "title": "Enabling every optional module immediately",
+            "text": "Turn on modules when their owner, data, and workflow are ready. A shorter menu is easier for new staff and reduces incomplete configuration."
+          }
+        },
+        "nextArticle": "Next: Understanding the Dashboard and Navigation"
+      },
       "activateTransportDescription": "Turn on Transport, set the centre location and prepare the module for its first journey.",
       "activateTransport": {
         "title": "Activating the Transport module",

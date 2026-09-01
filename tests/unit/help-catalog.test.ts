@@ -13,12 +13,17 @@ describe("Help center catalog", () => {
     );
   });
 
-  it("publishes the Transport activation guide first", () => {
+  it("publishes Quick Start first and keeps Transport available", () => {
+    expect(HELP_ARTICLES[0]).toMatchObject({
+      slug: "quick-start-checklist",
+      category: "gettingStarted",
+      published: true,
+    });
     expect(findHelpArticle("activate-transport")).toMatchObject({
       category: "transport",
       published: true,
     });
-    expect(HELP_ARTICLES.filter((article) => article.published)).toHaveLength(1);
+    expect(HELP_ARTICLES.filter((article) => article.published)).toHaveLength(2);
   });
 
   it("does not resolve an unknown article", () => {

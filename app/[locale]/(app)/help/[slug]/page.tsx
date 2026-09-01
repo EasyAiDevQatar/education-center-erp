@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { ArticleFeedback } from "@/components/help/article-feedback";
 import { HELP_ARTICLES, findHelpArticle } from "@/lib/help-catalog";
 import { requireAuth } from "@/lib/rbac";
+import { QuickStartArticle } from "./quick-start-article";
 
 export function generateStaticParams() {
   return HELP_ARTICLES.filter((article) => article.published).map((article) => ({
@@ -35,9 +36,13 @@ export default async function HelpArticlePage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
   const article = findHelpArticle(slug);
-  if (!article?.published || slug !== "activate-transport") notFound();
+  if (!article?.published) notFound();
 
   const session = await requireAuth(locale);
+  if (slug === "quick-start-checklist") {
+    return <QuickStartArticle locale={locale} isAdmin={session.role === "ADMIN"} />;
+  }
+  if (slug !== "activate-transport") notFound();
   const t = await getTranslations("help");
   const ta = await getTranslations("help.articles.activateTransport");
   const isAdmin = session.role === "ADMIN";

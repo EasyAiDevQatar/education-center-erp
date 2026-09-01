@@ -83,6 +83,7 @@ export function HelpCenterClient({
   );
 
   const featured = articles[0];
+  const FeaturedIcon = featured ? (ICONS[featured.category] ?? BookOpen) : BookOpen;
 
   return (
     <div className="space-y-8">
@@ -116,7 +117,7 @@ export function HelpCenterClient({
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-4">
                   <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                    <Bus className="size-5" />
+                    <FeaturedIcon className="size-5" />
                   </div>
                   <div>
                     <h2 className="font-semibold group-hover:text-primary">{featured.title}</h2>
