@@ -41,7 +41,10 @@ export type NavItem = {
   flag?: "accounting" | "transport" | "ai" | "hr" | "reports" | "leads";
 };
 
-const ALL: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST", "TEACHER", "PARENT"];
+// Every authenticated role has a dashboard. Specialist roles were added after
+// this list was first written; deriving it from ROLES prevents their dashboard
+// link from silently disappearing when another role is introduced.
+const ALL: Role[] = [...ROLES];
 const STAFF: Role[] = ["ADMIN", "ACCOUNTANT", "RECEPTIONIST"];
 const FINANCE: Role[] = ["ADMIN", "ACCOUNTANT"];
 // Menu lists mirror the capability sets in lib/rbac.ts. They are UX; the route
