@@ -136,7 +136,7 @@ export default async function GuardianStatementPage({
               <thead>
                 <tr className="border-b border-border bg-muted/40">
                   <th className="p-2">{tc("date")}</th>
-                  <th className="p-2">{tc("actions")}</th>
+                  <th className="p-2">{tc("description")}</th>
                   <th className="p-2">{t("totalCharges")}</th>
                   <th className="p-2">{t("totalPaid")}</th>
                   <th className="p-2">{t("balance")}</th>
