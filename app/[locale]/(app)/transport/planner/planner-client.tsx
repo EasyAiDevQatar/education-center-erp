@@ -20,6 +20,8 @@ import {
   Ruler,
   ArrowDownToLine,
   ArrowUpFromLine,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -169,8 +171,8 @@ export function TransportPlannerClient({
     <>
       {/* Day bar */}
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3">
-        <Button type="button" variant="outline" size="sm" onClick={() => shiftDay(-1)}>
-          ‹
+        <Button type="button" variant="outline" size="icon" aria-label={tc("prev")} onClick={() => shiftDay(-1)}>
+          <ChevronLeft className="size-4 rtl:rotate-180" />
         </Button>
         <Input
           type="date"
@@ -179,8 +181,8 @@ export function TransportPlannerClient({
           onChange={(e) => e.target.value && go(e.target.value)}
           className="w-40"
         />
-        <Button type="button" variant="outline" size="sm" onClick={() => shiftDay(1)}>
-          ›
+        <Button type="button" variant="outline" size="icon" aria-label={tc("next")} onClick={() => shiftDay(1)}>
+          <ChevronRight className="size-4 rtl:rotate-180" />
         </Button>
         <Button type="button" variant="secondary" size="sm" onClick={() => shiftDay(0)}>
           {t("today")}

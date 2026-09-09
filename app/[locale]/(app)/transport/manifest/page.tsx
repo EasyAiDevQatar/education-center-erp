@@ -42,13 +42,11 @@ export default async function ManifestPage({
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link href={`/transport/manifest?date=${shift(day, -1)}`} className="rounded-md border border-border p-2 hover:bg-accent">
-          <ChevronRight className="size-4 rtl:hidden" />
-          <ChevronLeft className="size-4 hidden rtl:block" />
+          <ChevronLeft className="size-4 rtl:rotate-180" />
         </Link>
         <span className="rounded-md border border-border px-3 py-1.5 font-medium tabular-nums" dir="ltr">{day}</span>
         <Link href={`/transport/manifest?date=${shift(day, 1)}`} className="rounded-md border border-border p-2 hover:bg-accent">
-          <ChevronLeft className="size-4 rtl:hidden" />
-          <ChevronRight className="size-4 hidden rtl:block" />
+          <ChevronRight className="size-4 rtl:rotate-180" />
         </Link>
         <Link href="/transport/manifest" className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent">
           {t("today")}

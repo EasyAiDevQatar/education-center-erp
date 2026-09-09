@@ -387,12 +387,10 @@ export function CalendarClient({
         </Button>
         <div className="flex items-center">
           <Button variant="ghost" size="icon" aria-label={t("prev")} onClick={() => go({ date: addDaysStr(anchor, -step) })}>
-            <ChevronRight className="size-4 rtl:hidden" />
-            <ChevronLeft className="hidden size-4 rtl:block" />
+            <ChevronLeft className="size-4 rtl:rotate-180" />
           </Button>
           <Button variant="ghost" size="icon" aria-label={t("next")} onClick={() => go({ date: addDaysStr(anchor, step) })}>
-            <ChevronLeft className="size-4 rtl:hidden" />
-            <ChevronRight className="hidden size-4 rtl:block" />
+            <ChevronRight className="size-4 rtl:rotate-180" />
           </Button>
         </div>
         <span className="min-w-32 text-sm font-semibold tabular-nums">{rangeLabel}</span>

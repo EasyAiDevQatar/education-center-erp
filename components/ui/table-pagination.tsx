@@ -126,8 +126,7 @@ export function TablePagination({
             disabled={page <= 1}
             onClick={() => setPage(page - 1)}
           >
-            <ChevronRight className="size-4 rtl:hidden" />
-            <ChevronLeft className="hidden size-4 rtl:block" />
+            <ChevronLeft className="size-4 rtl:rotate-180" />
           </Button>
 
           {pages.map((p, i) =>
@@ -157,8 +156,7 @@ export function TablePagination({
             disabled={page >= pageCount}
             onClick={() => setPage(page + 1)}
           >
-            <ChevronLeft className="size-4 rtl:hidden" />
-            <ChevronRight className="hidden size-4 rtl:block" />
+            <ChevronRight className="size-4 rtl:rotate-180" />
           </Button>
         </div>
       )}

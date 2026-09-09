@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LocateFixed, RefreshCw, Route, Car } from "lucide-react";
+import { ChevronLeft, ChevronRight, LocateFixed, RefreshCw, Route, Car } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,7 @@ export function LiveMapClient({
   retentionDays: number;
 }) {
   const t = useTranslations("transportMap");
+  const tc = useTranslations("common");
   const te = useTranslations("enums");
   const router = useRouter();
   const pathname = usePathname();
@@ -228,8 +229,8 @@ export function LiveMapClient({
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => shiftDay(-1)}>
-          ‹
+        <Button type="button" variant="outline" size="icon" aria-label={tc("prev")} onClick={() => shiftDay(-1)}>
+          <ChevronLeft className="size-4 rtl:rotate-180" />
         </Button>
         <Input
           type="date"
@@ -238,8 +239,8 @@ export function LiveMapClient({
           onChange={(e) => e.target.value && goDay(e.target.value)}
           className="w-40"
         />
-        <Button type="button" variant="outline" size="sm" onClick={() => shiftDay(1)}>
-          ›
+        <Button type="button" variant="outline" size="icon" aria-label={tc("next")} onClick={() => shiftDay(1)}>
+          <ChevronRight className="size-4 rtl:rotate-180" />
         </Button>
 
         <Badge variant={running.length ? "success" : "muted"}>

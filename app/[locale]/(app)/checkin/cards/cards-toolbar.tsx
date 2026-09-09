@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { KeyRound, ArrowRight, ArrowLeft, MessageCircle } from "lucide-react";
+import { KeyRound, ArrowLeft, MessageCircle } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { PrintButton } from "@/components/print-button";
@@ -22,8 +22,7 @@ export function CardsToolbar({ missing, defaultPrintFormat }: { missing: number;
     <div className="no-print flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
       <Link href="/checkin">
         <Button variant="ghost" size="sm" className="gap-1">
-          <ArrowRight className="size-4 rtl:hidden" />
-          <ArrowLeft className="hidden size-4 rtl:block" />
+          <ArrowLeft className="size-4 rtl:rotate-180" />
           {t("backToRoster")}
         </Button>
       </Link>

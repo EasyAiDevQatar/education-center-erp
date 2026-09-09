@@ -472,12 +472,10 @@ export function RosterBoard({
             </Button>
             <div className="flex items-center">
               <Button variant="ghost" size="icon" aria-label={tc("prev")} onClick={() => navigate({ date: addDaysStr(day, -1) })}>
-                <ChevronRight className="size-4 rtl:hidden" />
-                <ChevronLeft className="hidden size-4 rtl:block" />
+                <ChevronLeft className="size-4 rtl:rotate-180" />
               </Button>
               <Button variant="ghost" size="icon" aria-label={tc("next")} onClick={() => navigate({ date: addDaysStr(day, 1) })}>
-                <ChevronLeft className="size-4 rtl:hidden" />
-                <ChevronRight className="hidden size-4 rtl:block" />
+                <ChevronRight className="size-4 rtl:rotate-180" />
               </Button>
             </div>
             <Input
