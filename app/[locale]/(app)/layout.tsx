@@ -29,7 +29,7 @@ export default async function AppLayout({
     where: { key: { in: ["accountingEnabled", "transportEnabled", "aiEnabled"] } },
   });
   const flagOn = (key: string) => flagRows.some((r) => r.key === key && r.value === "1");
-  // HR, Reports and Leads read the other way round — on unless switched off —
+  // HR, Reports, Leads and Budget read the other way round — on unless switched off —
   // so they cannot share `flagOn`. See lib/modules.ts.
   const optional = await moduleFlags();
   const rolePerms = await loadRolePermissions();

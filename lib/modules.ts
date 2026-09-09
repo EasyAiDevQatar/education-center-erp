@@ -11,8 +11,8 @@ export type { OptionalModule };
  *
  * The distinction from transport, accounting and AI matters. Those three arrived
  * as opt-in extras, so their flag reads `value === "1"` and an absent row means
- * off. HR, Reports and Leads have been in use since before they were optional —
- * reading them the same way would make three working modules vanish from every
+ * off. HR, Reports, Leads and Budget have been in use since before they were
+ * optional — reading them the same way would make working modules vanish from every
  * existing centre the moment this deploys. So absent means ON here, and only an
  * explicit "0" turns one off.
  */
@@ -20,6 +20,7 @@ export const OPTIONAL_MODULE_SETTING = {
   hr: "hrEnabled",
   reports: "reportsEnabled",
   leads: "leadsEnabled",
+  budget: "budgetEnabled",
 } as const;
 
 export async function moduleEnabled(m: OptionalModule): Promise<boolean> {
@@ -27,7 +28,7 @@ export async function moduleEnabled(m: OptionalModule): Promise<boolean> {
   return row?.value !== "0";
 }
 
-/** All three in one query, for the layout that hands them to the shell. */
+/** All on-by-default module flags in one query, for the app shell. */
 export async function moduleFlags(): Promise<Record<OptionalModule, boolean>> {
   const rows = await db.setting.findMany({
     where: { key: { in: Object.values(OPTIONAL_MODULE_SETTING) } },
@@ -37,6 +38,7 @@ export async function moduleFlags(): Promise<Record<OptionalModule, boolean>> {
     hr: !off.has("hrEnabled"),
     reports: !off.has("reportsEnabled"),
     leads: !off.has("leadsEnabled"),
+    budget: !off.has("budgetEnabled"),
   };
 }
 

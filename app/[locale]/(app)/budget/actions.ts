@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { writeAudit } from "@/lib/audit";
 import { getSession } from "@/lib/session";
 import { FINANCE_ROLES } from "@/lib/rbac";
+import { moduleEnabled } from "@/lib/modules";
 
 export type BudgetActionState = { ok?: boolean; error?: string; id?: string };
 
@@ -38,7 +39,8 @@ const monthlySchema = z.object({
 
 async function financeSession() {
   const session = await getSession();
-  return session && FINANCE_ROLES.includes(session.role) ? session : null;
+  if (!session || !FINANCE_ROLES.includes(session.role)) return null;
+  return (await moduleEnabled("budget")) ? session : null;
 }
 
 function dateOnly(value: string): Date {

@@ -257,11 +257,12 @@ export default async function SettingsPage({
           node: (
             <ModulesSettings
               values={{
-                // Absent means on — see lib/modules.ts for why these three read
+                // Absent means on — see lib/modules.ts for why these modules read
                 // the opposite way from transport, accounting and AI.
                 hr: settings.hrEnabled !== "0",
                 reports: settings.reportsEnabled !== "0",
                 leads: settings.leadsEnabled !== "0",
+                budget: settings.budgetEnabled !== "0",
               }}
             />
           ),

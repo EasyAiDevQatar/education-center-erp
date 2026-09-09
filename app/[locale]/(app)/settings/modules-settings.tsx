@@ -11,8 +11,8 @@ import { saveOptionalModules } from "./modules-actions";
 /**
  * Which optional parts of the system this centre runs.
  *
- * One panel for all three because none of them has any other setting; a tab each
- * would be three clicks to reach one checkbox. Off never deletes anything, and
+ * One panel for all simple module switches because none has any other setting;
+ * a tab each would add needless clicks. Off never deletes anything, and
  * the copy says so — the fear with a switch like this is that it throws work
  * away, and a centre that believes that will never touch it.
  */
@@ -31,6 +31,7 @@ export function ModulesSettings({ values }: { values: Record<OptionalModule, boo
     hr: { label: t("moduleHr"), hint: t("moduleHrHint") },
     reports: { label: t("moduleReports"), hint: t("moduleReportsHint") },
     leads: { label: t("moduleLeads"), hint: t("moduleLeadsHint") },
+    budget: { label: t("moduleBudget"), hint: t("moduleBudgetHint") },
   };
 
   const save = () =>

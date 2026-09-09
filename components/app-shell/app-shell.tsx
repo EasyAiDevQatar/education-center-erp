@@ -63,6 +63,7 @@ export function AppShell({
     hr?: boolean;
     reports?: boolean;
     leads?: boolean;
+    budget?: boolean;
   };
   /** Per-role menu narrowing (navKey → allowed). Only `false` entries hide. */
   perms?: Record<string, boolean>;
@@ -291,6 +292,7 @@ export function AppShell({
                 hr: flags?.hr !== false,
                 reports: flags?.reports !== false,
                 leads: flags?.leads !== false,
+                budget: flags?.budget !== false,
               }}
             >
               {children}

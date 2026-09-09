@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Archive,
@@ -9,11 +9,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Download,
+  FileSpreadsheet,
+  Loader2,
   Pencil,
   Plus,
   Receipt,
   Target,
+  TriangleAlert,
   TrendingUp,
+  Upload,
   Wallet,
 } from "lucide-react";
 import { EntityDialog } from "@/components/crud/entity-dialog";
@@ -64,6 +69,15 @@ type CategoryOption = {
 };
 
 type DefaultPlan = { name: string; startDate: string; endDate: string };
+
+type BudgetImportIssue = { row: number; code: string; value?: string };
+type BudgetImportResponse = {
+  ok?: boolean;
+  error?: string;
+  imported?: number;
+  months?: number;
+  issues?: BudgetImportIssue[];
+};
 
 function PlanFields({
   plan,
@@ -380,6 +394,158 @@ function CopyMonthDialog({
             {pending ? tc("saving") : t("copy")}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BudgetImportDialog({
+  planId,
+  children,
+}: {
+  planId: string;
+  children: React.ReactNode;
+}) {
+  const t = useTranslations("budget");
+  const tc = useTranslations("common");
+  const locale = useLocale();
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [pending, setPending] = useState(false);
+  const [result, setResult] = useState<BudgetImportResponse | null>(null);
+
+  function close(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      setFile(null);
+      setResult(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function errorText(code: string, value?: string) {
+    const key = `importIssues.${code}`;
+    return t.has(key) ? t(key, { value: value ?? "" }) : t("errors.invalidRows");
+  }
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setResult(null);
+    if (!file) {
+      setResult({ error: "noFile" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setResult({ error: "fileTooLarge" });
+      return;
+    }
+
+    const form = new FormData();
+    form.set("planId", planId);
+    form.set("file", file);
+    setPending(true);
+    try {
+      const response = await fetch("/api/budget/import", { method: "POST", body: form });
+      const body = (await response.json().catch(() => ({ error: "importFailed" }))) as BudgetImportResponse;
+      setResult(body);
+      if (response.ok && body.ok) {
+        setFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        router.refresh();
+      }
+    } catch {
+      setResult({ error: "importFailed" });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={close}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("importTitle")}</DialogTitle>
+          <p className="text-sm text-muted-foreground">{t("importHint")}</p>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="flex items-start gap-3 rounded-md border border-[var(--warning)]/40 bg-[var(--warning)]/8 p-3 text-sm">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[var(--warning)]" />
+            <p>{t("importReplacesHint")}</p>
+          </div>
+
+          <div className="rounded-md border border-dashed border-border p-4">
+            <label htmlFor="budget-import-file" className="flex cursor-pointer items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <FileSpreadsheet className="size-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-medium">{t("chooseSpreadsheet")}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {file?.name ?? t("spreadsheetRequirements")}
+                </span>
+              </span>
+            </label>
+            <input
+              ref={fileInputRef}
+              id="budget-import-file"
+              type="file"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              className="sr-only"
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setResult(null);
+              }}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/40 p-3 text-sm">
+            <div>
+              <p className="font-medium">{t("downloadSample")}</p>
+              <p className="text-xs text-muted-foreground">{t("sampleHint")}</p>
+            </div>
+            <Button asChild type="button" variant="outline" size="sm">
+              <a href={`/api/budget/sample?planId=${encodeURIComponent(planId)}&locale=${locale}`} download>
+                <Download />{t("downloadSample")}
+              </a>
+            </Button>
+          </div>
+
+          {result?.ok && (
+            <div role="status" className="rounded-md border border-[var(--success)]/30 bg-[var(--success)]/8 p-3 text-sm text-[var(--success)]">
+              {t("importSuccess", { rows: result.imported ?? 0, months: result.months ?? 0 })}
+            </div>
+          )}
+          {result?.error && (
+            <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <p className="font-medium">
+                {t.has(`errors.${result.error}`) ? t(`errors.${result.error}`) : t("errors.importFailed")}
+              </p>
+              {result.issues && result.issues.length > 0 && (
+                <ul className="mt-2 max-h-40 list-disc space-y-1 overflow-y-auto ps-5 text-xs">
+                  {result.issues.map((issue, index) => (
+                    <li key={`${issue.row}-${issue.code}-${index}`}>
+                      {t("importIssueLine", {
+                        row: issue.row || "—",
+                        message: errorText(issue.code, issue.value),
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="outline">{tc("close")}</Button></DialogClose>
+            <Button type="submit" disabled={pending || !file}>
+              {pending ? <Loader2 className="animate-spin" /> : <Upload />}
+              {pending ? t("importing") : t("importBudget")}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -744,6 +910,11 @@ export function BudgetClient({
             <PlanDialog plan={data.plan} defaults={defaultPlan}>
               <Button size="sm" variant="outline"><Pencil />{t("editPlan")}</Button>
             </PlanDialog>
+          )}
+          {editable && (
+            <BudgetImportDialog planId={data.plan.id}>
+              <Button size="sm" variant="outline"><Upload />{t("importBudget")}</Button>
+            </BudgetImportDialog>
           )}
           <PlanDialog defaults={defaultPlan}>
             <Button size="sm" variant="outline"><Plus />{t("newPlan")}</Button>

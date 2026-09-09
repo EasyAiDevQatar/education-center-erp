@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { FINANCE_ROLES, requireRole } from "@/lib/rbac";
 import { centerToday } from "@/lib/session-time";
 import { getBudgetPlanReport } from "@/lib/budget-queries";
+import { requireModule } from "@/lib/modules";
 import { BudgetClient } from "./budget-client";
 
 function first(value: string | string[] | undefined): string {
@@ -20,6 +21,7 @@ export default async function BudgetPage({
   const { locale } = await params;
   setRequestLocale(locale);
   await requireRole(locale, FINANCE_ROLES);
+  await requireModule(locale, "budget");
 
   const t = await getTranslations("budget");
   const sp = await searchParams;

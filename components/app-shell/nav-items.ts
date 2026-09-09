@@ -39,7 +39,7 @@ export type NavItem = {
   children?: { href: string; key: string }[];
   /** Optional-module gate: item renders only when this flag is on. The flag
       value comes from Settings, read server-side in the (app) layout. */
-  flag?: "accounting" | "transport" | "ai" | "hr" | "reports" | "leads";
+  flag?: "accounting" | "transport" | "ai" | "hr" | "reports" | "leads" | "budget";
 };
 
 // Every authenticated role has a dashboard. Specialist roles were added after
@@ -91,7 +91,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/payments", key: "payments", icon: Receipt, roles: BILLING, section: "finance" },
   { href: "/packages", key: "packages", icon: Package, roles: BILLING, section: "finance" },
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },
-  { href: "/budget", key: "budget", icon: Calculator, roles: FINANCE, section: "finance" },
+  { href: "/budget", key: "budget", icon: Calculator, roles: FINANCE, section: "finance", flag: "budget" },
   {
     href: "/payroll",
     key: "payroll",

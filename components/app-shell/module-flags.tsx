@@ -9,6 +9,7 @@ export type ModuleFlags = {
   hr: boolean;
   reports: boolean;
   leads: boolean;
+  budget: boolean;
 };
 
 /**
@@ -29,11 +30,12 @@ const Ctx = createContext<ModuleFlags>({
   accounting: false,
   transport: false,
   ai: false,
-  // On by default, matching `lib/modules.ts`: these three predate being
+  // On by default, matching `lib/modules.ts`: these modules predate being
   // optional, so absent configuration means present, not missing.
   hr: true,
   reports: true,
   leads: true,
+  budget: true,
 });
 
 export const ModuleFlagsProvider = Ctx.Provider;
