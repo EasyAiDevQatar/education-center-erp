@@ -9,11 +9,13 @@ import {
   getPackageReport,
   getPayoutSummary,
   getTopDebtors,
+  getDailySessionReport,
 } from "@/lib/report-queries";
+import { resolveReportDateStrings } from "@/lib/report-range";
 import { PageHeader } from "@/components/page-header";
 import { ReportsClient, type ReportTab } from "./reports-client";
 
-const TABS: ReportTab[] = ["attendance", "revenue", "collections", "packages", "payroll", "debtors"];
+const TABS: ReportTab[] = ["daily-sessions", "attendance", "revenue", "collections", "packages", "payroll", "debtors"];
 
 export default async function ReportsPage({
   params,
@@ -34,7 +36,7 @@ export default async function ReportsPage({
     return (Array.isArray(v) ? v[0] : v) ?? "";
   };
 
-  const tab = (TABS.includes(get("tab") as ReportTab) ? get("tab") : "attendance") as ReportTab;
+  const tab = (TABS.includes(get("tab") as ReportTab) ? get("tab") : "daily-sessions") as ReportTab;
   const groupBy = get("by");
   const termId = get("term");
 
@@ -42,8 +44,13 @@ export default async function ReportsPage({
   const terms = await db.term.findMany({ orderBy: { startDate: "desc" } });
   const term = termId ? terms.find((x) => x.id === termId) : undefined;
 
-  const fromStr = term ? term.startDate.toISOString().slice(0, 10) : get("from");
-  const toStr = term ? term.endDate.toISOString().slice(0, 10) : get("to");
+  const { from: fromStr, to: toStr } = resolveReportDateStrings({
+    report: tab,
+    from: get("from"),
+    to: get("to"),
+    termFrom: term?.startDate.toISOString().slice(0, 10),
+    termTo: term?.endDate.toISOString().slice(0, 10),
+  });
   const range = {
     from: fromStr ? new Date(`${fromStr}T00:00:00.000Z`) : undefined,
     to: toStr ? new Date(`${toStr}T23:59:59.999Z`) : undefined,
@@ -55,6 +62,8 @@ export default async function ReportsPage({
   // Only the visible report is queried — the others cost nothing until opened.
   const data = await (async () => {
     switch (tab) {
+      case "daily-sessions":
+        return { dailySessions: await getDailySessionReport(range) };
       case "attendance":
         return { attendance: await getAttendance(groupBy === "student" ? "student" : "teacher", range) };
       case "revenue":
@@ -82,7 +91,7 @@ export default async function ReportsPage({
       <ReportsClient
         tab={tab}
         groupBy={groupBy}
-        filter={{ from: get("from"), to: get("to"), term: termId }}
+        filter={{ from: fromStr, to: toStr, term: term?.id ?? "" }}
         terms={terms.map((x) => ({
           id: x.id,
           label: locale === "ar" ? x.nameAr : x.nameEn,

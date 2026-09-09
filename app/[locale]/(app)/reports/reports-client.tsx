@@ -1,13 +1,16 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { Download } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Ban, CalendarDays, Download, Users, UsersRound } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PrintButton } from "@/components/print-button";
+import { StatCard } from "@/components/stat-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DailySessionsChart } from "@/components/charts/daily-sessions-chart";
 import { formatMoney, formatHours } from "@/lib/money";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
 import type {
@@ -18,10 +21,11 @@ import type {
   PayoutSummaryRow,
   DebtorRow,
 } from "@/lib/report-queries";
+import type { DailySessionReport } from "@/lib/session-operational-report";
 
-export type ReportTab = "attendance" | "revenue" | "collections" | "packages" | "payroll" | "debtors";
+export type ReportTab = "daily-sessions" | "attendance" | "revenue" | "collections" | "packages" | "payroll" | "debtors";
 
-const TABS: ReportTab[] = ["attendance", "revenue", "collections", "packages", "payroll", "debtors"];
+const TABS: ReportTab[] = ["daily-sessions", "attendance", "revenue", "collections", "packages", "payroll", "debtors"];
 
 /** Which grouping options each report offers, if any. */
 const GROUPINGS: Partial<Record<ReportTab, string[]>> = {
@@ -38,6 +42,7 @@ export function ReportsClient({
   centerName,
   defaultPrintFormat,
   periodLabel,
+  dailySessions,
   attendance,
   revenue,
   collections,
@@ -53,6 +58,7 @@ export function ReportsClient({
   centerName: string;
   defaultPrintFormat: string;
   periodLabel: string;
+  dailySessions?: DailySessionReport;
   attendance?: AttendanceRow[];
   revenue?: RevenueRow[];
   collections?: CollectionsRow[];
@@ -63,6 +69,7 @@ export function ReportsClient({
   const t = useTranslations("reports");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -74,6 +81,7 @@ export function ReportsClient({
 
   const groupings = GROUPINGS[tab];
   const exportUrl = `/api/reports/${tab}?${new URLSearchParams({
+    locale,
     ...(groupBy ? { by: groupBy } : {}),
     ...(filter.from ? { from: filter.from } : {}),
     ...(filter.to ? { to: filter.to } : {}),
@@ -84,9 +92,16 @@ export function ReportsClient({
     <div className="space-y-3">
       {/* Toolbar */}
       <div className="no-print flex flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-2">
-        <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-0.5">
+        <div
+          role="tablist"
+          aria-label={t("reportTabs")}
+          className="flex flex-wrap items-center gap-1 rounded-md border border-border p-0.5"
+        >
           {TABS.map((x) => (
             <button
+              type="button"
+              role="tab"
+              aria-selected={x === tab}
               key={x}
               onClick={() => go({ tab: x, by: "" })}
               className={
@@ -163,6 +178,9 @@ export function ReportsClient({
       </div>
 
       <div data-print="A4" data-print-size-selectable className="rounded-lg border border-border bg-card">
+        {tab === "daily-sessions" && dailySessions && (
+          <DailySessionsReport report={dailySessions} />
+        )}
         {tab === "attendance" && attendance && (
           <AttendanceTable rows={attendance} />
         )}
@@ -179,6 +197,260 @@ export function ReportsClient({
 }
 
 /* ---------------- tables ---------------- */
+
+function DailySessionsReport({ report }: { report: DailySessionReport }) {
+  const t = useTranslations("reports");
+  const tc = useTranslations("common");
+  const te = useTranslations("enums");
+  const locale = useLocale();
+  const days = report.dailyTrend.length;
+  const average = days > 0 ? report.summary.sessions / days : 0;
+  const p = usePagination(report.dailyTrend);
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+  const hasActivity = report.summary.sessions + report.summary.cancelledSessions > 0;
+  const hasActiveActivity = report.summary.sessions > 0;
+
+  return (
+    <div className="space-y-4 p-3 sm:p-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+        <StatCard
+          label={t("teachingSessions")}
+          value={numberFormatter.format(report.summary.sessions)}
+          icon={CalendarDays}
+          tone="primary"
+        />
+        <StatCard
+          label={t("averagePerDay")}
+          value={numberFormatter.format(average)}
+          icon={CalendarDays}
+          hint={t("calendarDays", { count: days })}
+        />
+        <StatCard
+          label={t("studentBookings")}
+          value={numberFormatter.format(report.summary.studentBookings)}
+          icon={Users}
+        />
+        <StatCard
+          label={t("groupSessions")}
+          value={numberFormatter.format(report.summary.groupSessions)}
+          icon={UsersRound}
+          hint={t("individualSessionsHint", { count: report.summary.individualSessions })}
+        />
+        <StatCard
+          label={t("cancelledSessions")}
+          value={numberFormatter.format(report.summary.cancelledSessions)}
+          icon={Ban}
+          tone={report.summary.cancelledSessions > 0 ? "destructive" : "default"}
+          hint={t("cancelledStudentsHint", { count: report.summary.cancelledStudentBookings })}
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("dailySessionTrend")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("dailySessionTrendHint")}</p>
+        </CardHeader>
+        <CardContent>
+          {hasActiveActivity ? (
+            <DailySessionsChart
+              data={report.dailyTrend}
+              labels={{
+                sessions: t("teachingSessions"),
+                studentBookings: t("studentBookings"),
+                ariaLabel: t("dailySessionChartAria"),
+              }}
+            />
+          ) : (
+            <Empty />
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("dailyDetails")}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {!hasActivity ? (
+            <Empty />
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-y border-border bg-muted/40">
+                      <Th>{tc("date")}</Th>
+                      <Th>{t("teachingSessions")}</Th>
+                      <Th>{t("groupSessions")}</Th>
+                      <Th>{t("individualSessions")}</Th>
+                      <Th>{t("studentBookings")}</Th>
+                      <Th>{t("scheduled")}</Th>
+                      <Th>{t("checkedIn")}</Th>
+                      <Th>{t("completed")}</Th>
+                      <Th>{t("noShow")}</Th>
+                      <Th>{t("cancelledSessions")}</Th>
+                      <Th>{t("cancelledStudentBookings")}</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {p.pageItems.map((row) => (
+                      <tr key={row.date} className="border-b border-border/60">
+                        <td className="whitespace-nowrap p-2 text-center tabular-nums" dir="ltr">
+                          {dateFormatter.format(new Date(`${row.date}T00:00:00.000Z`))}
+                        </td>
+                        <td className="p-2 text-center font-medium tabular-nums">{row.sessions}</td>
+                        <td className="p-2 text-center tabular-nums">{row.groupSessions}</td>
+                        <td className="p-2 text-center tabular-nums">{row.individualSessions}</td>
+                        <td className="p-2 text-center tabular-nums">{row.studentBookings}</td>
+                        <td className="p-2 text-center tabular-nums">{row.scheduled}</td>
+                        <td className="p-2 text-center tabular-nums">{row.checkedIn}</td>
+                        <td className="p-2 text-center tabular-nums">{row.completed}</td>
+                        <td className="p-2 text-center tabular-nums">{row.noShow}</td>
+                        <td className="p-2 text-center tabular-nums text-destructive">{row.cancelled}</td>
+                        <td className="p-2 text-center tabular-nums text-destructive">{row.cancelledStudentBookings}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <TablePagination {...p} />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("teacherWorkload")}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {report.teacherWorkload.length === 0 ? (
+              <Empty />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-y border-border bg-muted/40">
+                      <Th>{tc("name")}</Th>
+                      <Th>{t("teachingSessions")}</Th>
+                      <Th>{t("studentBookings")}</Th>
+                      <Th>{t("plannedHours")}</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.teacherWorkload.map((row) => (
+                      <tr key={row.teacherId ?? "unassigned"} className="border-b border-border/60">
+                        <td className="p-2 text-center">{row.teacherName ?? t("unassignedTeacher")}</td>
+                        <td className="p-2 text-center tabular-nums">{row.sessions}</td>
+                        <td className="p-2 text-center tabular-nums">{row.studentBookings}</td>
+                        <td className="p-2 text-center tabular-nums">{formatHours(row.plannedHours)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("statusBreakdown")}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {report.statusBreakdown.length === 0 ? (
+              <Empty />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-y border-border bg-muted/40">
+                      <Th>{tc("status")}</Th>
+                      <Th>{t("teachingOccurrences")}</Th>
+                      <Th>{t("studentOutcomes")}</Th>
+                      <Th>{t("share")}</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.statusBreakdown.map((row) => (
+                      <tr key={row.status} className="border-b border-border/60">
+                        <td className="p-2 text-center">
+                          {te(`sessionStatus.${row.status as "SCHEDULED"}`)}
+                        </td>
+                        <td className="p-2 text-center tabular-nums">{row.sessions}</td>
+                        <td className="p-2 text-center tabular-nums">{row.studentBookings}</td>
+                        <td className="p-2 text-center tabular-nums">{row.studentBookingPercentage}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("sessionMix")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-y border-border bg-muted/40">
+                    <Th>{t("bookingType")}</Th>
+                    <Th>{t("teachingSessions")}</Th>
+                    <Th>{t("studentBookings")}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.bookingTypes.map((row) => (
+                    <tr key={row.type} className="border-b border-border/60">
+                      <td className="p-2 text-center">
+                        {row.type === "GROUP" ? t("groupSessions") : t("individualSessions")}
+                      </td>
+                      <td className="p-2 text-center tabular-nums">{row.sessions}</td>
+                      <td className="p-2 text-center tabular-nums">{row.studentBookings}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="overflow-x-auto pb-4">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-y border-border bg-muted/40">
+                    <Th>{t("location")}</Th>
+                    <Th>{t("teachingSessions")}</Th>
+                    <Th>{t("plannedHours")}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.locations.map((row) => (
+                    <tr key={row.location} className="border-b border-border/60">
+                      <td className="p-2 text-center">
+                        {te(`location.${row.location as "CENTER"}`)}
+                      </td>
+                      <td className="p-2 text-center tabular-nums">{row.sessions}</td>
+                      <td className="p-2 text-center tabular-nums">{formatHours(row.plannedHours)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 function Empty() {
   const tc = useTranslations("common");
@@ -198,8 +470,14 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
   if (rows.length === 0) return <Empty />;
 
   const totals = rows.reduce(
-    (a, r) => ({ count: a.count + r.count, total: a.total + r.total }),
-    { count: 0, total: 0 },
+    (a, r) => ({
+      count: a.count + r.count,
+      refundCount: a.refundCount + r.refundCount,
+      gross: a.gross + r.gross,
+      refunded: a.refunded + r.refunded,
+      total: a.total + r.total,
+    }),
+    { count: 0, refundCount: 0, gross: 0, refunded: 0, total: 0 },
   );
 
   return (
@@ -209,7 +487,9 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
           <tr className="border-b border-border bg-muted/40">
             <Th>{t("method")}</Th>
             <Th>{t("paymentsCount")}</Th>
-            <Th>{tc("amount")}</Th>
+            <Th>{t("grossCollected")}</Th>
+            <Th>{t("refunds")}</Th>
+            <Th>{t("netCollected")}</Th>
             <Th>{t("share")}</Th>
           </tr>
         </thead>
@@ -219,6 +499,16 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
               <td className="p-2 text-center">{te(`method.${r.method as "CASH"}`)}</td>
               <td className="p-2 text-center tabular-nums">{r.count}</td>
               <td className="p-2 text-center tabular-nums">
+                <span dir="ltr">
+                  {formatMoney(r.gross)} {currency}
+                </span>
+              </td>
+              <td className="p-2 text-center tabular-nums text-destructive">
+                <span dir="ltr" title={t("refundsCount", { count: r.refundCount })}>
+                  {formatMoney(r.refunded)} {currency}
+                </span>
+              </td>
+              <td className="p-2 text-center font-medium tabular-nums">
                 <span dir="ltr">
                   {formatMoney(r.total)} {currency}
                 </span>
@@ -233,6 +523,16 @@ function CollectionsTable({ rows, currency }: { rows: CollectionsRow[]; currency
           <tr className="border-t-2 border-border font-semibold">
             <td className="p-2 text-center">{tc("total")}</td>
             <td className="p-2 text-center tabular-nums">{totals.count}</td>
+            <td className="p-2 text-center tabular-nums">
+              <span dir="ltr">
+                {formatMoney(totals.gross)} {currency}
+              </span>
+            </td>
+            <td className="p-2 text-center tabular-nums text-destructive">
+              <span dir="ltr" title={t("refundsCount", { count: totals.refundCount })}>
+                {formatMoney(totals.refunded)} {currency}
+              </span>
+            </td>
             <td className="p-2 text-center tabular-nums">
               <span dir="ltr">
                 {formatMoney(totals.total)} {currency}

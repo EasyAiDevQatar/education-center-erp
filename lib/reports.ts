@@ -1,7 +1,10 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
-import { netPaid, unchargeableStatuses } from "./billing";
+import { unchargeableStatuses } from "./billing";
+import { getPaymentCashFlow } from "./payment-report-queries";
+import { centerToday } from "./session-time";
+import { NON_OPERATIONAL_SESSION_STATUSES } from "./enums";
 
 export type DateRange = { from?: Date; to?: Date };
 
@@ -20,14 +23,15 @@ export async function getDashboardSummary(range?: DateRange) {
 
   const [paySum, expSum, sessions, sessionTotal, students, teachers] =
     await Promise.all([
-      netPaid(dateWhere ? { date: dateWhere } : {}),
+      getPaymentCashFlow(range),
       db.expense.aggregate({
         _sum: { amount: true },
         where: dateWhere ? { date: dateWhere } : undefined,
       }),
-      // Planner drafts are unconfirmed plans — excluded from all KPIs.
+      // Drafts are unconfirmed plans and cancellations never ran, so neither
+      // can inflate the operational session total.
       db.session.count({
-        where: { status: { not: "DRAFT" }, ...(dateWhere ? { date: dateWhere } : {}) },
+        where: { status: { notIn: [...NON_OPERATIONAL_SESSION_STATUSES] }, ...(dateWhere ? { date: dateWhere } : {}) },
       }),
       db.session.aggregate({
         _sum: { total: true },
@@ -37,7 +41,7 @@ export async function getDashboardSummary(range?: DateRange) {
       db.teacher.count({ where: { active: true } }),
     ]);
 
-  const income = paySum;
+  const income = paySum.totals.net;
   const expenses = toNumber(expSum._sum.amount);
   const expectedIncome = toNumber(sessionTotal._sum.total);
 
@@ -83,23 +87,28 @@ export async function getRevenueByTeacher(range?: DateRange) {
 
 /** Income vs expenses per calendar month for the last `months` months. */
 export async function getMonthlyTrend(months = 12) {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  const today = centerToday();
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7)) - 1;
+  const start = new Date(Date.UTC(year, month - (months - 1), 1));
+  const end = new Date(`${today}T23:59:59.999Z`);
 
-  const [payments, expenses] = await Promise.all([
-    db.payment.findMany({ where: { date: { gte: start } }, select: { date: true, amount: true } }),
-    db.expense.findMany({ where: { date: { gte: start } }, select: { date: true, amount: true } }),
+  const [cashFlow, expenses] = await Promise.all([
+    getPaymentCashFlow({ from: start, to: end }),
+    db.expense.findMany({
+      where: { date: { gte: start, lte: end } },
+      select: { date: true, amount: true },
+    }),
   ]);
 
   const buckets = new Map<string, { income: number; expenses: number }>();
   for (let i = 0; i < months; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - (months - 1) + i, 1);
+    const d = new Date(Date.UTC(year, month - (months - 1) + i, 1));
     buckets.set(d.toISOString().slice(0, 7), { income: 0, expenses: 0 });
   }
-  for (const p of payments) {
-    const k = p.date.toISOString().slice(0, 7);
-    const b = buckets.get(k);
-    if (b) b.income += toNumber(p.amount);
+  for (const movement of cashFlow.monthly) {
+    const bucket = buckets.get(movement.month);
+    if (bucket) bucket.income = movement.net;
   }
   for (const e of expenses) {
     const k = e.date.toISOString().slice(0, 7);

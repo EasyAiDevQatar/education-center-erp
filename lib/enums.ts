@@ -49,6 +49,9 @@ export const SESSION_STATUSES = [
 ] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
+/** Drafts are tentative and cancellations never ran; both are non-operational. */
+export const NON_OPERATIONAL_SESSION_STATUSES = ["DRAFT", "CANCELLED"] as const;
+
 /** How an attendance check-in was captured. */
 export const CHECKIN_METHODS = ["KIOSK", "GPS", "QR", "MANUAL"] as const;
 export type CheckinMethod = (typeof CHECKIN_METHODS)[number];

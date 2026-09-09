@@ -1,7 +1,10 @@
 import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
-import { unchargeableStatuses, netPaid, LIVE_PAYMENTS } from "./billing";
+import { unchargeableStatuses, LIVE_PAYMENTS } from "./billing";
+import { getPaymentCashFlow } from "./payment-report-queries";
+import { centerToday } from "./session-time";
+import { NON_OPERATIONAL_SESSION_STATUSES } from "./enums";
 
 /**
  * What each role needs to see first thing in the morning.
@@ -13,7 +16,7 @@ import { unchargeableStatuses, netPaid, LIVE_PAYMENTS } from "./billing";
  */
 
 const dayBounds = (d = new Date()) => {
-  const iso = d.toISOString().slice(0, 10);
+  const iso = centerToday(d);
   const start = new Date(`${iso}T00:00:00.000Z`);
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
@@ -21,8 +24,8 @@ const dayBounds = (d = new Date()) => {
 };
 
 const monthStart = () => {
-  const n = new Date();
-  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1));
+  const today = centerToday();
+  return new Date(`${today.slice(0, 7)}-01T00:00:00.000Z`);
 };
 
 /* ------------------------------------------------------------ reception --- */
@@ -30,12 +33,12 @@ const monthStart = () => {
 /** The desk's day: who is expected, who arrived, what still needs chasing. */
 export async function receptionToday() {
   const { start, end } = dayBounds();
-  // The counts below are counts of lessons, so they drop only unconfirmed
-  // drafts. The last query is about money and must use the shared rule.
+  // Drafts are unconfirmed and cancellations never ran; neither belongs in
+  // the desk's operational session total.
   const unchargeable = await unchargeableStatuses();
   const [today, checkedIn, completed, noShow, newLeads, unpaidStudents] =
     await Promise.all([
-      db.session.count({ where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } } }),
+      db.session.count({ where: { date: { gte: start, lt: end }, status: { notIn: [...NON_OPERATIONAL_SESSION_STATUSES] } } }),
       db.session.count({ where: { date: { gte: start, lt: end }, status: "CHECKED_IN" } }),
       db.session.count({ where: { date: { gte: start, lt: end }, status: "COMPLETED" } }),
       db.session.count({ where: { date: { gte: start, lt: end }, status: "NO_SHOW" } }),
@@ -62,12 +65,13 @@ export async function receptionToday() {
 
 /* -------------------------------------------------------------- cashier --- */
 
-/** Money coming in. Never money going out — that is not this desk's job. */
+/** Net cash collected, with refunds reported on their actual Qatar date. */
 export async function cashierToday() {
   const { start, end } = dayBounds();
+  const todayEnd = new Date(end.getTime() - 1);
   const [todaySum, monthSum, todayCount, owing] = await Promise.all([
-    netPaid({ date: { gte: start, lt: end } }),
-    netPaid({ date: { gte: monthStart() } }),
+    getPaymentCashFlow({ from: start, to: todayEnd }),
+    getPaymentCashFlow({ from: monthStart(), to: todayEnd }),
     db.payment.count({ where: { date: { gte: start, lt: end }, ...LIVE_PAYMENTS } }),
     db.session.findMany({
       where: {
@@ -80,8 +84,8 @@ export async function cashierToday() {
   ]);
   const outstanding = owing.reduce((a, s) => a + toNumber(s.total), 0);
   return {
-    collectedToday: todaySum,
-    collectedMonth: monthSum,
+    collectedToday: todaySum.totals.net,
+    collectedMonth: monthSum.totals.net,
     receiptsToday: todayCount,
     outstanding,
     familiesOwing: new Set(owing.map((s) => s.studentId)).size,
@@ -96,13 +100,13 @@ export async function academicToday() {
   const weekEnd = new Date(start);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
   const [today, week, completed, noShow, teachers, unassigned] = await Promise.all([
-    db.session.count({ where: { date: { gte: start, lt: end }, status: { not: "DRAFT" } } }),
-    db.session.count({ where: { date: { gte: start, lt: weekEnd }, status: { not: "DRAFT" } } }),
+    db.session.count({ where: { date: { gte: start, lt: end }, status: { notIn: [...NON_OPERATIONAL_SESSION_STATUSES] } } }),
+    db.session.count({ where: { date: { gte: start, lt: weekEnd }, status: { notIn: [...NON_OPERATIONAL_SESSION_STATUSES] } } }),
     db.session.count({ where: { date: { gte: start, lt: weekEnd }, status: "COMPLETED" } }),
     db.session.count({ where: { date: { gte: start, lt: weekEnd }, status: "NO_SHOW" } }),
     db.teacher.count({ where: { active: true } }),
     db.session.count({
-      where: { date: { gte: start, lt: weekEnd }, teacherId: null, status: { not: "DRAFT" } },
+      where: { date: { gte: start, lt: weekEnd }, teacherId: null, status: { notIn: [...NON_OPERATIONAL_SESSION_STATUSES] } },
     }),
   ]);
   const settled = completed + noShow;

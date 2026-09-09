@@ -4,6 +4,11 @@ import { toNumber } from "./money";
 import { getStudentBalance } from "./balances";
 import { unchargeableStatuses } from "./billing";
 import type { DateRange } from "./reports";
+import {
+  buildSessionOperationalAnalytics,
+  type DailySessionReport,
+} from "./session-operational-report";
+import { getPaymentCashFlow } from "./payment-report-queries";
 
 /** Sessions that never happened still count as attendance outcomes. */
 const ATTENDANCE_STATUSES = ["COMPLETED", "NO_SHOW", "CANCELLED", "CHECKED_IN", "SCHEDULED"];
@@ -17,6 +22,35 @@ function dateWhere(range?: DateRange) {
 function baseWhere(range?: DateRange) {
   const d = dateWhere(range);
   return { status: { not: "DRAFT" }, ...(d ? { date: d } : {}) };
+}
+
+/**
+ * Daily operational volume. Group bookings are collapsed to one teaching
+ * occurrence while their per-student rows remain available as student volume.
+ */
+export async function getDailySessionReport(
+  range?: DateRange,
+): Promise<DailySessionReport> {
+  const sessions = await db.session.findMany({
+    where: baseWhere(range),
+    select: {
+      id: true,
+      date: true,
+      status: true,
+      bookingBatchId: true,
+      groupId: true,
+      teacherId: true,
+      teacher: { select: { name: true } },
+      hours: true,
+      location: true,
+      createdAt: true,
+    },
+  });
+
+  return buildSessionOperationalAnalytics(sessions, {
+    from: range?.from?.toISOString().slice(0, 10),
+    to: range?.to?.toISOString().slice(0, 10),
+  });
 }
 
 export type AttendanceRow = {
@@ -148,6 +182,10 @@ export async function getRevenueBreakdown(
 export type CollectionsRow = {
   method: string;
   count: number;
+  refundCount: number;
+  gross: number;
+  refunded: number;
+  /** Net cash retained in the selected period. */
   total: number;
   /** Share of the period's collections, 0–100 rounded to one decimal. */
   pct: number;
@@ -159,28 +197,16 @@ export type CollectionsRow = {
  * what actually crossed the counter.
  */
 export async function getCollectionsByMethod(range?: DateRange): Promise<CollectionsRow[]> {
-  const d = dateWhere(range);
-  const payments = await db.payment.findMany({
-    where: d ? { date: d } : {},
-    select: { method: true, amount: true },
-  });
-  const map = new Map<string, { count: number; total: number }>();
-  let grand = 0;
-  for (const p of payments) {
-    const row = map.get(p.method) ?? { count: 0, total: 0 };
-    row.count++;
-    row.total += toNumber(p.amount);
-    grand += toNumber(p.amount);
-    map.set(p.method, row);
-  }
-  return [...map.entries()]
-    .map(([method, r]) => ({
-      method,
-      count: r.count,
-      total: r.total,
-      pct: grand > 0 ? Math.round((r.total / grand) * 1000) / 10 : 0,
-    }))
-    .sort((a, b) => b.total - a.total);
+  const report = await getPaymentCashFlow(range);
+  return report.methods.map((row) => ({
+    method: row.method,
+    count: row.count,
+    refundCount: row.refundCount,
+    gross: row.gross,
+    refunded: row.refunded,
+    total: row.net,
+    pct: row.pct,
+  }));
 }
 
 export type PackageReportRow = {

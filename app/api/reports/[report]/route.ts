@@ -3,7 +3,10 @@ import ExcelJS from "exceljs";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { FINANCE_ROLES } from "@/lib/rbac";
+import { moduleEnabled } from "@/lib/modules";
+import { resolveReportDateStrings } from "@/lib/report-range";
 import {
+  getDailySessionReport,
   getAttendance,
   getRevenueBreakdown,
   getCollectionsByMethod,
@@ -21,6 +24,9 @@ export async function GET(
   if (!session || !FINANCE_ROLES.includes(session.role)) {
     return new NextResponse("Forbidden", { status: 403 });
   }
+  if (!(await moduleEnabled("reports"))) {
+    return new NextResponse("Reports module disabled", { status: 403 });
+  }
 
   const { report } = await ctx.params;
   const url = new URL(request.url);
@@ -29,26 +35,41 @@ export async function GET(
 
   // Mirror the page: a term overrides the loose date inputs.
   const term = termId ? await db.term.findUnique({ where: { id: termId } }) : null;
-  const fromStr = term
-    ? term.startDate.toISOString().slice(0, 10)
-    : url.searchParams.get("from") ?? "";
-  const toStr = term
-    ? term.endDate.toISOString().slice(0, 10)
-    : url.searchParams.get("to") ?? "";
+  const { from: fromStr, to: toStr } = resolveReportDateStrings({
+    report,
+    from: url.searchParams.get("from"),
+    to: url.searchParams.get("to"),
+    termFrom: term?.startDate.toISOString().slice(0, 10),
+    termTo: term?.endDate.toISOString().slice(0, 10),
+  });
   const range = {
     from: fromStr ? new Date(`${fromStr}T00:00:00.000Z`) : undefined,
     to: toStr ? new Date(`${toStr}T23:59:59.999Z`) : undefined,
   };
 
-  const locale = url.searchParams.get("locale") ?? "ar";
+  const locale = url.searchParams.get("locale") === "en" ? "en" : "ar";
+  const en = locale === "en";
 
   let header: string[] = [];
   let rows: (string | number | null)[][] = [];
 
   switch (report) {
+    case "daily-sessions": {
+      const data = await getDailySessionReport(range);
+      header = en
+        ? ["Date", "Teaching sessions", "Group sessions", "Individual sessions", "Student bookings", "Scheduled", "In progress", "Completed", "No-show", "Cancelled sessions", "Cancelled student bookings"]
+        : ["التاريخ", "الحصص التعليمية", "الحصص الجماعية", "الحصص الفردية", "حجوزات الطلاب", "مجدولة", "قيد التنفيذ", "مكتملة", "غياب", "الحصص الملغاة", "حجوزات الطلاب الملغاة"];
+      rows = data.dailyTrend.map((r) => [
+        r.date, r.sessions, r.groupSessions, r.individualSessions, r.studentBookings,
+        r.scheduled, r.checkedIn, r.completed, r.noShow, r.cancelled, r.cancelledStudentBookings,
+      ]);
+      break;
+    }
     case "attendance": {
       const data = await getAttendance(by === "student" ? "student" : "teacher", range);
-      header = ["الاسم", "الحصص", "مكتملة", "غياب", "ملغاة", "الساعات", "نسبة الحضور %"];
+      header = en
+        ? ["Name", "Sessions", "Completed", "No-show", "Cancelled", "Hours", "Attendance rate %"]
+        : ["الاسم", "الحصص", "مكتملة", "غياب", "ملغاة", "الساعات", "نسبة الحضور %"];
       rows = data.map((r) => [r.name, r.total, r.completed, r.noShow, r.cancelled, r.hours, r.attendanceRate]);
       break;
     }
@@ -58,19 +79,27 @@ export async function GET(
         range,
         locale,
       );
-      header = ["البند", "الحصص", "الساعات", "الدخل المتوقع"];
+      header = en
+        ? ["Item", "Sessions", "Hours", "Expected revenue"]
+        : ["البند", "الحصص", "الساعات", "الدخل المتوقع"];
       rows = data.map((r) => [r.label, r.sessions, r.hours, r.expected]);
       break;
     }
     case "collections": {
       const data = await getCollectionsByMethod(range);
-      header = ["طريقة الدفع", "عدد المدفوعات", "المبلغ", "النسبة %"];
-      rows = data.map((r) => [r.method, r.count, r.total, r.pct]);
+      header = en
+        ? ["Payment method", "Payments", "Refunds", "Gross collected", "Refunded", "Net collected", "Share %"]
+        : ["طريقة الدفع", "عدد المدفوعات", "عدد المرتجعات", "إجمالي المحصل", "المرتجع", "صافي المحصل", "النسبة %"];
+      rows = data.map((r) => [
+        r.method, r.count, r.refundCount, r.gross, r.refunded, r.total, r.pct,
+      ]);
       break;
     }
     case "packages": {
       const data = await getPackageReport(range);
-      header = ["الطالب", "إجمالي الساعات", "المستخدمة", "المتبقية", "السعر", "الحالة", "تاريخ الانتهاء"];
+      header = en
+        ? ["Student", "Total hours", "Used", "Remaining", "Price", "Status", "Expires"]
+        : ["الطالب", "إجمالي الساعات", "المستخدمة", "المتبقية", "السعر", "الحالة", "تاريخ الانتهاء"];
       rows = data.map((r) => [
         r.studentName, r.totalHours, r.hoursUsed, r.remaining, r.price, r.status, r.expiresAt,
       ]);
@@ -78,7 +107,9 @@ export async function GET(
     }
     case "payroll": {
       const data = await getPayoutSummary(range);
-      header = ["المعلم", "طريقة الدفع", "من", "إلى", "العمولة", "الراتب الثابت", "الخصومات", "السلف", "الصافي", "الحالة"];
+      header = en
+        ? ["Teacher", "Pay mode", "From", "To", "Commission", "Fixed salary", "Deductions", "Advances", "Net paid", "Status"]
+        : ["المعلم", "طريقة الدفع", "من", "إلى", "العمولة", "الراتب الثابت", "الخصومات", "السلف", "الصافي", "الحالة"];
       rows = data.map((r) => [
         r.teacherName, r.payMode, r.periodStart, r.periodEnd,
         r.grossCommission, r.fixedSalary, r.deductions, r.advances, r.netPaid, r.status,
@@ -87,7 +118,9 @@ export async function GET(
     }
     case "debtors": {
       const data = await getTopDebtors(1000);
-      header = ["الطالب", "ولي الأمر", "الهاتف", "الرسوم", "المدفوع", "الرصيد"];
+      header = en
+        ? ["Student", "Guardian", "Phone", "Charges", "Paid", "Balance"]
+        : ["الطالب", "ولي الأمر", "الهاتف", "الرسوم", "المدفوع", "الرصيد"];
       rows = data.map((r) => [r.name, r.guardianName, r.phone, r.charges, r.paid, r.balance]);
       break;
     }
@@ -98,7 +131,7 @@ export async function GET(
   const wb = new ExcelJS.Workbook();
   wb.creator = "Education Center ERP";
   const ws = wb.addWorksheet(report);
-  ws.views = [{ rightToLeft: true }];
+  ws.views = [{ rightToLeft: !en }];
 
   // A period line above the table, so a printed/emailed file is self-describing.
   ws.addRow([`${fromStr || "—"} → ${toStr || "—"}`]);
