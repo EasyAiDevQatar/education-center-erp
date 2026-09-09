@@ -32,9 +32,11 @@ export function ProfilePricingDialog({
   return (
     <EntityDialog
       title={t("pricingAndTeachers")}
+      extraWide
       action={saveStudentPricingAndTeachers.bind(null, locale, studentId)}
       fields={
         <div className="space-y-4">
+          <div className="grid items-start gap-3 rounded-md border border-border bg-muted/20 p-3 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
           <FormField label={t("specialPrice")} htmlFor="profile-special-price" hint={t("specialPriceHint")}>
             <Input
               id="profile-special-price"
@@ -45,16 +47,6 @@ export function ProfilePricingDialog({
               dir="ltr"
               placeholder={t("matrixPrice")}
               defaultValue={specialPricePerHour ?? ""}
-            />
-          </FormField>
-          <FormField label={t("assignedTeachers")} htmlFor="profile-teacher-ids" hint={t("assignedTeachersHint")}>
-            <MultiSelect
-              id="profile-teacher-ids"
-              name="teacherIds"
-              options={teachers.map((teacher) => ({ value: teacher.id, label: teacher.label }))}
-              value={teacherIds}
-              onChange={setTeacherIds}
-              placeholder={t("noTeachersAssigned")}
             />
           </FormField>
           <FormField
@@ -69,6 +61,17 @@ export function ProfilePricingDialog({
               value={specialPriceTeacherIds}
               onChange={setSpecialPriceTeacherIds}
               placeholder={t("allTeachers")}
+            />
+          </FormField>
+          </div>
+          <FormField label={t("assignedTeachers")} htmlFor="profile-teacher-ids" hint={t("assignedTeachersHint")}>
+            <MultiSelect
+              id="profile-teacher-ids"
+              name="teacherIds"
+              options={teachers.map((teacher) => ({ value: teacher.id, label: teacher.label }))}
+              value={teacherIds}
+              onChange={setTeacherIds}
+              placeholder={t("noTeachersAssigned")}
             />
           </FormField>
         </div>

@@ -121,12 +121,25 @@ function StudentFields({
             ))}
           </Select>
         </FormField>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
         <FormField label={t("studyLocation")} htmlFor="studyLocation" hint={t("studyLocationHint")}>
           <Select id="studyLocation" name="studyLocation" defaultValue={student?.studyLocation ?? "CENTER"}>
             <option value="CENTER">{te("location.CENTER")}</option>
             <option value="HOME">{te("location.HOME")}</option>
           </Select>
         </FormField>
+        <FormField label={t("guardian")} htmlFor="guardianId">
+          <Combobox
+            id="guardianId"
+            name="guardianId"
+            options={guardians.map((g) => ({ value: g.id, label: g.label }))}
+            value={guardianId}
+            onChange={setGuardianId}
+          />
+        </FormField>
+      </div>
+      <div className="grid items-start gap-3 rounded-md border border-border bg-muted/20 p-3 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
         <FormField label={t("specialPrice")} htmlFor="specialPricePerHour" hint={t("specialPriceHint")}>
           <Input
             id="specialPricePerHour"
@@ -139,16 +152,21 @@ function StudentFields({
             defaultValue={student?.specialPricePerHour ?? ""}
           />
         </FormField>
+        <FormField
+          label={t("specialPriceTeachers")}
+          htmlFor="specialPriceTeacherIds"
+          hint={t("specialPriceTeachersHint")}
+        >
+          <MultiSelect
+            id="specialPriceTeacherIds"
+            name="specialPriceTeacherIds"
+            options={teachers.map((x) => ({ value: x.id, label: x.label }))}
+            value={specialPriceTeacherIds}
+            onChange={setSpecialPriceTeacherIds}
+            placeholder={t("allTeachers")}
+          />
+        </FormField>
       </div>
-      <FormField label={t("guardian")} htmlFor="guardianId">
-        <Combobox
-          id="guardianId"
-          name="guardianId"
-          options={guardians.map((g) => ({ value: g.id, label: g.label }))}
-          value={guardianId}
-          onChange={setGuardianId}
-        />
-      </FormField>
       <FormField label={t("assignedTeachers")} htmlFor="teacherIds" hint={t("assignedTeachersHint")}>
         <MultiSelect
           id="teacherIds"
@@ -157,20 +175,6 @@ function StudentFields({
           value={teacherIds}
           onChange={setTeacherIds}
           placeholder={t("noTeachersAssigned")}
-        />
-      </FormField>
-      <FormField
-        label={t("specialPriceTeachers")}
-        htmlFor="specialPriceTeacherIds"
-        hint={t("specialPriceTeachersHint")}
-      >
-        <MultiSelect
-          id="specialPriceTeacherIds"
-          name="specialPriceTeacherIds"
-          options={teachers.map((x) => ({ value: x.id, label: x.label }))}
-          value={specialPriceTeacherIds}
-          onChange={setSpecialPriceTeacherIds}
-          placeholder={t("allTeachers")}
         />
       </FormField>
       <FormField label={tc("notes")} htmlFor="notes">
@@ -305,6 +309,7 @@ export function StudentsClient({
         />
         <EntityDialog
           title={t("add")}
+          extraWide
           action={saveStudent.bind(null, locale, null)}
           fields={<StudentFields levels={levels} guardians={guardians} teachers={teachers} />}
           trigger={
@@ -356,6 +361,7 @@ export function StudentsClient({
                     </Link>
                     <EntityDialog
                       title={t("edit")}
+                      extraWide
                       action={saveStudent.bind(null, locale, s.id)}
                       fields={<StudentFields student={s} levels={levels} guardians={guardians} teachers={teachers} />}
                       trigger={

@@ -24,6 +24,7 @@ export function EntityDialog({
   title,
   trigger,
   wide,
+  extraWide,
   action,
   fields,
 }: {
@@ -31,6 +32,8 @@ export function EntityDialog({
   trigger: ReactNode;
   /** Roomier body — for dialogs carrying a table or a list. */
   wide?: boolean;
+  /** Full desktop editor width while remaining viewport-safe on small screens. */
+  extraWide?: boolean;
   action: ActionFn;
   fields: ReactNode;
 }) {
@@ -53,7 +56,7 @@ export function EntityDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className={wide ? "max-w-2xl" : undefined}>
+      <DialogContent className={extraWide ? "max-w-4xl" : wide ? "max-w-2xl" : undefined}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
