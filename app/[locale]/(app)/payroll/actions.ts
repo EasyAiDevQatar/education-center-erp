@@ -125,15 +125,22 @@ export async function createPayout(
 export async function markPayoutPaid(locale: string, id: string): Promise<ActionState> {
   if (await guard()) return { error: "forbidden" };
   const posting = await accountingEnabled();
-  await db.$transaction(async (tx) => {
-    const payout = await tx.teacherPayout.update({
+  const paidAt = new Date();
+  const paid = await db.$transaction(async (tx) => {
+    // The status belongs in the write predicate: a replayed Server Action must
+    // never move an old payout into today's budget month by replacing paidAt.
+    const updated = await tx.teacherPayout.updateMany({
+      where: { id, status: "DRAFT" },
+      data: { status: "PAID", paidAt },
+    });
+    if (updated.count !== 1) return false;
+    const payout = await tx.teacherPayout.findUniqueOrThrow({
       where: { id },
-      data: { status: "PAID" },
       include: { teacher: { select: { name: true } }, employee: { select: { name: true } } },
     });
     if (posting) {
       await postSource(tx, {
-        date: new Date(),
+        date: paidAt,
         memo: `راتب — ${payout.teacher?.name ?? payout.employee?.name ?? id}`,
         sourceType: "PAYROLL",
         sourceId: id,
@@ -143,8 +150,10 @@ export async function markPayoutPaid(locale: string, id: string): Promise<Action
         }),
       });
     }
+    return true;
   });
-  await writeAudit("TeacherPayout", id, "UPDATE", { after: { status: "PAID" } });
+  if (!paid) return { error: "alreadyDecided" };
+  await writeAudit("TeacherPayout", id, "UPDATE", { after: { status: "PAID", paidAt } });
   await notifyPayout(id);
   revalidatePath(`/${locale}/payroll`);
   return { ok: true };

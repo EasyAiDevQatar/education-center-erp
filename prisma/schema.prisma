@@ -486,6 +486,7 @@ model ExpenseCategory {
   /// table: one account per category is all a small centre needs.
   accountId String?
   account   Account?  @relation(fields: [accountId], references: [id])
+  budgetItems BudgetItem[]
 }
 
 model Expense {
@@ -515,6 +516,58 @@ model Expense {
 
   @@index([date])
   @@index([categoryId])
+}
+
+/// A centre budget covering any date range (normally an academic or calendar
+/// year). Monthly items preserve seasonality while the UI can still present a
+/// single annual total. Budgeting deliberately remains independent of the
+/// optional accounting module so a small centre can plan before enabling a
+/// chart of accounts.
+model BudgetPlan {
+  id                   String       @id @default(cuid())
+  name                 String
+  startDate            DateTime
+  endDate              DateTime
+  status               String       @default("ACTIVE") // DRAFT | ACTIVE | ARCHIVED
+  /// Paid payroll is a real centre cost. A centre that also records every
+  /// payslip in Expenses can switch this off to prevent double counting.
+  includePayrollActual Boolean      @default(true)
+  notes                String?
+  createdById          String?
+  items                BudgetItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startDate, endDate])
+  @@index([status])
+}
+
+/// One planned income target or expense category for one calendar month.
+/// Income targets have no expense category; expense items retain a free label
+/// so archived/deactivated categories remain intelligible in old budgets.
+model BudgetItem {
+  id                String           @id @default(cuid())
+  planId            String
+  plan              BudgetPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  month             DateTime
+  /// Stable uniqueness key: `INCOME` or the expense-category id. This closes
+  /// the race where two staff members save the same month simultaneously.
+  key               String
+  kind              String // INCOME | EXPENSE
+  expenseCategoryId String?
+  expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+  label             String?
+  amount            Decimal
+  behavior          String           @default("FIXED") // FIXED | VARIABLE
+  notes             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId, month])
+  @@index([expenseCategoryId])
+  @@unique([planId, month, key])
 }
 
 /// Vendor register: who the centre buys from and pays. Linked from expenses

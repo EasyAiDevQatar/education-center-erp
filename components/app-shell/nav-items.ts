@@ -9,6 +9,7 @@ import {
   Receipt,
   Package,
   Wallet,
+  Calculator,
   BadgeDollarSign,
   ScanLine,
   ClipboardList,
@@ -90,6 +91,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/payments", key: "payments", icon: Receipt, roles: BILLING, section: "finance" },
   { href: "/packages", key: "packages", icon: Package, roles: BILLING, section: "finance" },
   { href: "/expenses", key: "expenses", icon: Wallet, roles: FINANCE, section: "finance" },
+  { href: "/budget", key: "budget", icon: Calculator, roles: FINANCE, section: "finance" },
   {
     href: "/payroll",
     key: "payroll",

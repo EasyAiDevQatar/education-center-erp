@@ -27,6 +27,7 @@ export function EntityDialog({
   extraWide,
   action,
   fields,
+  errorNamespace = "common",
 }: {
   title: string;
   trigger: ReactNode;
@@ -36,8 +37,11 @@ export function EntityDialog({
   extraWide?: boolean;
   action: ActionFn;
   fields: ReactNode;
+  /** Namespace that owns domain-specific `errors.*` messages. */
+  errorNamespace?: "common" | "budget";
 }) {
   const t = useTranslations("common");
+  const tb = useTranslations("budget");
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -66,7 +70,11 @@ export function EntityDialog({
           {error && (
             <p className="text-sm text-destructive">
               {/* Known error codes get a specific message; anything else falls back. */}
-              {t.has(`errors.${error}`) ? t(`errors.${error}`) : t("required")}
+              {errorNamespace === "budget" && tb.has(`errors.${error}`)
+                ? tb(`errors.${error}`)
+                : t.has(`errors.${error}`)
+                  ? t(`errors.${error}`)
+                  : t("required")}
             </p>
           )}
           <DialogFooter>
