@@ -6,6 +6,7 @@ import { TranslateNamesButton } from "@/components/translate-names-button";
 import { loadAiConfig, aiReady } from "@/lib/ai/config";
 import { StudentsClient, type StudentRow, type Option } from "./students-client";
 import { displayName } from "@/lib/names";
+import { toNumber } from "@/lib/money";
 
 export default async function StudentsPage({
   params,
@@ -53,6 +54,7 @@ export default async function StudentsPage({
     phone: s.phone,
     gradeLevelId: s.gradeLevelId,
     gradeYear: s.gradeYear,
+    specialPricePerHour: s.specialPricePerHour == null ? null : toNumber(s.specialPricePerHour),
     gradeLevelLabel: s.gradeLevel
       ? locale === "ar"
         ? s.gradeLevel.nameAr

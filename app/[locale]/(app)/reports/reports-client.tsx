@@ -1,12 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Printer, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { PrintButton } from "@/components/print-button";
 import { formatMoney, formatHours } from "@/lib/money";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
 import type {
@@ -35,6 +36,7 @@ export function ReportsClient({
   terms,
   currency,
   centerName,
+  defaultPrintFormat,
   periodLabel,
   attendance,
   revenue,
@@ -49,6 +51,7 @@ export function ReportsClient({
   terms: { id: string; label: string }[];
   currency: string;
   centerName: string;
+  defaultPrintFormat: string;
   periodLabel: string;
   attendance?: AttendanceRow[];
   revenue?: RevenueRow[];
@@ -146,10 +149,7 @@ export function ReportsClient({
               {t("exportExcel")}
             </a>
           </Button>
-          <Button variant="secondary" size="sm" className="gap-1" onClick={() => window.print()}>
-            <Printer className="size-4" />
-            {tc("print")}
-          </Button>
+          <PrintButton defaultFormat={defaultPrintFormat} />
         </div>
       </div>
 
@@ -162,7 +162,7 @@ export function ReportsClient({
         </div>
       </div>
 
-      <div data-print="A4" className="rounded-lg border border-border bg-card">
+      <div data-print="A4" data-print-size-selectable className="rounded-lg border border-border bg-card">
         {tab === "attendance" && attendance && (
           <AttendanceTable rows={attendance} />
         )}

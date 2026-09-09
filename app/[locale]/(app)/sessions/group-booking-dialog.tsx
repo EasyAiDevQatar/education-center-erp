@@ -133,6 +133,7 @@ export function GroupBookingDialog({
 
   const priceForStudent = (s: StudentOpt) => {
     if (priceOverride[s.id] != null) return priceOverride[s.id];
+    if (s.specialPricePerHour != null) return s.specialPricePerHour;
     const grade = gradeOverride || s.gradeLevelId || "";
     const row = grade ? matrix[grade] : undefined;
     return row ? (row[location] ?? 0) : 0;

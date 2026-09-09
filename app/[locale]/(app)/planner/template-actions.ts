@@ -121,9 +121,10 @@ async function materialiseDrafts(
   // Grade level comes from the student record; rows without one can't be priced.
   const students = await db.student.findMany({
     where: { id: { in: [...new Set(rows.map((r) => r.studentId))] } },
-    select: { id: true, gradeLevelId: true },
+    select: { id: true, gradeLevelId: true, specialPricePerHour: true },
   });
   const gradeOf = new Map(students.map((s) => [s.id, s.gradeLevelId]));
+  const specialOf = new Map(students.map((s) => [s.id, s.specialPricePerHour]));
 
   let count = 0;
   let skipped = 0;
@@ -141,7 +142,10 @@ async function materialiseDrafts(
     }
 
     const when = combineDateTime(date, minToHHMM(r.startMin));
-    const pricePerHour = await resolvePricePerHour(gradeLevelId, r.location, when);
+    const special = specialOf.get(r.studentId);
+    const pricePerHour = special == null
+      ? await resolvePricePerHour(gradeLevelId, r.location, when)
+      : toNumber(special);
     await db.session.create({
       data: {
         date: when,

@@ -42,7 +42,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
-import { printDoc } from "@/lib/print";
+import { printDoc, printPageSize } from "@/lib/print";
 import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
 import { TimeRange } from "@/components/time-range";
 import { findConflicts, weekdayOf, WEEKDAY_ORDER, type Conflict } from "@/lib/conflicts";
@@ -148,6 +148,7 @@ type StudentOpt = {
   gradeLevelId: string | null;
   /** The student's usual study place — new drafts default to it. */
   studyLocation?: "CENTER" | "HOME";
+  specialPricePerHour?: number | null;
 };
 
 const CELL_STYLES: Record<string, string> = {
@@ -182,6 +183,7 @@ export function PlannerClient({
   centerName,
   centerLogo,
   printedBy,
+  defaultPrintFormat,
 }: {
   day: string;
   sessions: PlannerSession[];
@@ -198,6 +200,7 @@ export function PlannerClient({
   centerName: string;
   centerLogo: string;
   printedBy: string;
+  defaultPrintFormat: string;
 }) {
   const t = useTranslations("planner");
   const tc = useTranslations("common");
@@ -240,7 +243,7 @@ export function PlannerClient({
     teacherId: string;
   } | null>(null);
   const [printOpts, setPrintOpts] = useState<PrintOpts>(() =>
-    defaultPrintOpts(teachers, sessions),
+    defaultPrintOpts(teachers, sessions, defaultPrintFormat),
   );
 
   /**
@@ -263,7 +266,7 @@ export function PlannerClient({
     });
     try {
       // The browser derives the "Save as PDF" filename from document.title.
-      printDoc({ size: "A4 landscape", margin: 8, fileName: `Planner-${day}` });
+      printDoc({ size: printPageSize(printOpts.paper, "landscape"), margin: 8, fileName: `Planner-${day}` });
     } finally {
       setPrinting(null);
     }
@@ -286,7 +289,7 @@ export function PlannerClient({
     const kind = req.kind === "student" ? "Students" : "Teachers";
     try {
       printDoc({
-        size: "A4 portrait",
+        size: printPageSize(req.paper),
         // The extra bottom margin is what the repeating footer sits in.
         margin: { top: 10, side: 10, bottom: 18 },
         fileName: `Timetable-${kind}-${scope}`,
@@ -911,6 +914,7 @@ export function PlannerClient({
           day={day}
           students={students.map((st) => ({ id: st.id, label: st.name }))}
           teachers={teachers}
+          defaultPrintFormat={defaultPrintFormat}
           onReady={runTimetable}
           onClose={() => setShowTimetable(false)}
         />
@@ -989,8 +993,10 @@ function AddDraftDialog({
   const [gradeLevelId, setGradeLevelId] = useState("");
   const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");
   const [hours, setHours] = useState("1");
-  const priceFor = (levelId: string, loc: "CENTER" | "HOME") =>
-    matrix[levelId]?.[loc] ?? 0;
+  const priceFor = (levelId: string, loc: "CENTER" | "HOME", id = studentId) => {
+    const special = students.find((student) => student.id === id)?.specialPricePerHour;
+    return special ?? matrix[levelId]?.[loc] ?? 0;
+  };
   const [price, setPrice] = useState("0");
   const [time, setTime] = useState(() =>
     minToHHMM(
@@ -1020,9 +1026,9 @@ function AddDraftDialog({
   const [error, setError] = useState<string | null>(null);
 
   // Re-suggest when switching to HOME (adds the travel gap).
-  function onLocationChange(loc: "CENTER" | "HOME", levelId = gradeLevelId) {
+  function onLocationChange(loc: "CENTER" | "HOME", levelId = gradeLevelId, id = studentId) {
     setLocation(loc);
-    setPrice(String(priceFor(levelId, loc)));
+    setPrice(String(priceFor(levelId, loc, id)));
     setTime(
       minToHHMM(
         suggestNextStart({
@@ -1087,9 +1093,9 @@ function AddDraftDialog({
                 // through onLocationChange so the HOME travel gap re-suggests
                 // the start time too.
                 if (st?.studyLocation && st.studyLocation !== location) {
-                  onLocationChange(st.studyLocation, nextLevel);
+                  onLocationChange(st.studyLocation, nextLevel, v);
                 } else {
-                  setPrice(String(priceFor(nextLevel, location)));
+                  setPrice(String(priceFor(nextLevel, location, v)));
                 }
               }}
             />

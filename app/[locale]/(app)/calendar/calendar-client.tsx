@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users, Printer, Route } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users, Route } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { printDoc } from "@/lib/print";
+import { PrintButton } from "@/components/print-button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -167,6 +167,7 @@ export function CalendarClient({
   locationFilter,
   centre = null,
   centerName,
+  defaultPrintFormat,
   canEdit = true,
   canBook = false,
 }: {
@@ -187,6 +188,7 @@ export function CalendarClient({
   locationFilter: string;
   centre?: { lat: number; lng: number } | null;
   centerName: string;
+  defaultPrintFormat: string;
   /** False for a read-only viewer: no booking, no dragging, no resizing. */
   canEdit?: boolean;
   /** New booking is separately opt-in; existing sessions remain editable. */
@@ -195,7 +197,6 @@ export function CalendarClient({
   const t = useTranslations("calendar");
   const tg = useTranslations("group");
   const te = useTranslations("enums");
-  const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -432,10 +433,7 @@ export function CalendarClient({
           ))}
         </div>
         {view === "list" && (
-          <Button variant="secondary" size="sm" className="gap-1" onClick={() => printDoc("A4 portrait")}>
-            <Printer className="size-4" />
-            {tc("print")}
-          </Button>
+          <PrintButton defaultFormat={defaultPrintFormat} formats={["A4", "A5"]} />
         )}
         {canBook && (
           <GroupBookingDialog
@@ -804,7 +802,7 @@ function ListView({
   );
 
   return (
-    <div data-print="A4" className="rounded-lg border border-border bg-card">
+    <div data-print="A4" data-print-size-selectable className="rounded-lg border border-border bg-card">
       {/* Print-only header — the toolbar is hidden on paper. */}
       <div className="hidden print:mb-3 print:block print:text-center">
         <div className="font-bold">{centerName}</div>

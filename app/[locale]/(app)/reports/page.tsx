@@ -49,7 +49,7 @@ export default async function ReportsPage({
     to: toStr ? new Date(`${toStr}T23:59:59.999Z`) : undefined,
   };
 
-  const settings = await db.setting.findMany({ where: { key: { in: ["currency", "centerName"] } } });
+  const settings = await db.setting.findMany({ where: { key: { in: ["currency", "centerName", "receiptSize"] } } });
   const settingsMap = Object.fromEntries(settings.map((s) => [s.key, s.value]));
 
   // Only the visible report is queried — the others cost nothing until opened.
@@ -89,6 +89,7 @@ export default async function ReportsPage({
         }))}
         currency={settingsMap.currency ?? "QAR"}
         centerName={settingsMap.centerName ?? ""}
+        defaultPrintFormat={settingsMap.receiptSize ?? "A4"}
         periodLabel={fromStr || toStr ? `${fromStr || "…"} — ${toStr || "…"}` : t("allTime")}
         {...data}
       />

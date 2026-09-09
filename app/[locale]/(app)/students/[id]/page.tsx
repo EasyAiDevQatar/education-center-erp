@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { LedgerTable } from "./ledger-table";
 import { displayName, fullName } from "@/lib/names";
 import { unchargeableStatuses } from "@/lib/billing";
+import { ProfilePricingDialog } from "./profile-pricing-dialog";
 
 export default async function StudentProfilePage({
   params,
@@ -46,7 +47,7 @@ export default async function StudentProfilePage({
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
   const unchargeable = await unchargeableStatuses();
 
-  const [balance, ledger, sessions, payments, packages, currency, teacherRows] =
+  const [balance, ledger, sessions, payments, packages, currency, teacherRows, assignedRows] =
     await Promise.all([
       getStudentBalance(id),
       getStudentLedger(id),
@@ -56,8 +57,18 @@ export default async function StudentProfilePage({
       getCurrency(),
       // Payments can be allocated to a teacher from the pay dialog.
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      db.studentTeacher.findMany({
+        where: {
+          studentId: id,
+          OR: [{ academicYear: { isCurrent: true } }, { academicYearId: null }],
+        },
+        include: { teacher: true },
+      }),
     ]);
   const teachers = teacherRows.map((x) => ({ id: x.id, label: displayName(x, locale) }));
+  const assignedTeachers = [
+    ...new Map(assignedRows.map((row) => [row.teacherId, displayName(row.teacher, locale)])).values(),
+  ];
 
   const tabs = [
     { key: "overview", label: tp("overview") },
@@ -71,6 +82,14 @@ export default async function StudentProfilePage({
     <div>
       <PageHeader
         title={fullName(student, locale)}
+        action={
+          <ProfilePricingDialog
+            studentId={id}
+            specialPricePerHour={student.specialPricePerHour == null ? null : toNumber(student.specialPricePerHour)}
+            teacherIds={[...new Set(assignedRows.map((row) => row.teacherId))]}
+            teachers={teachers}
+          />
+        }
         description={
           [
             student.gradeLevel
@@ -126,6 +145,16 @@ export default async function StudentProfilePage({
               <Row
                 label={t("studyLocation")}
                 value={te(`location.${student.studyLocation as "CENTER" | "HOME"}`)}
+              />
+              {student.specialPricePerHour != null && (
+                <Row
+                  label={t("specialPrice")}
+                  value={`${formatMoney(toNumber(student.specialPricePerHour))} ${currency}`}
+                />
+              )}
+              <Row
+                label={t("assignedTeachers")}
+                value={assignedTeachers.length ? assignedTeachers.join("، ") : t("noTeachersAssigned")}
               />
               <Row
                 label={t("homeLocation")}

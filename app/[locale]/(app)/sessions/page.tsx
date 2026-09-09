@@ -117,6 +117,7 @@ export default async function SessionsPage({
     gradeLevelId: s.gradeLevelId,
     gradeYear: s.gradeYear,
     studyLocation: s.studyLocation as "CENTER" | "HOME",
+    specialPricePerHour: s.specialPricePerHour == null ? null : toNumber(s.specialPricePerHour),
   }));
 
   const packageOpts = activePackages.map((p) => ({

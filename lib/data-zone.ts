@@ -119,6 +119,7 @@ export const TABLES: TableSpec[] = [
       { key: "phone", ar: "الهاتف" },
       { key: "gradeCode", ar: "المرحلة" },
       { key: "studyLocation", ar: "مكان الدراسة" },
+      { key: "specialPricePerHour", ar: "السعر الخاص للساعة" },
       { key: "guardianName", ar: "ولي الأمر" },
       { key: "address", ar: "العنوان" },
       { key: "homeCode", ar: "كود موقع المنزل" },

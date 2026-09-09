@@ -76,9 +76,9 @@ export default async function PayslipPage({
   return (
     <div className={payout.payMode === "SESSION" ? "mx-auto max-w-2xl p-6" : "mx-auto max-w-md p-6"}>
       <div className="no-print mb-4 flex justify-end">
-        <PrintButton />
+        <PrintButton defaultFormat={settings.receiptSize} />
       </div>
-      <div data-print="A4" className="rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div data-print="A4" data-print-size-selectable className="rounded-lg border border-border bg-card p-8 shadow-sm">
         <div className="mb-6 border-b border-border pb-4 text-center">
           {settings.centerLogo && (
             // eslint-disable-next-line @next/next/no-img-element

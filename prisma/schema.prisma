@@ -192,6 +192,9 @@ model Student {
   /// office group students by their actual class — five grade-10 students
   /// together — which the broad band (Secondary) cannot express.
   gradeYear Int?
+  /// Optional agreed hourly price for this student. New bookings use it before
+  /// consulting the grade/location price matrix; blank keeps matrix pricing.
+  specialPricePerHour Decimal?
 
   sessions  Session[]
   payments  Payment[]

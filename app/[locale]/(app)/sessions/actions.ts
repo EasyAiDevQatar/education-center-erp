@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
-import { resolvePricePerHour } from "@/lib/pricing";
+import { resolvePricePerHour, resolveStudentPricePerHour } from "@/lib/pricing";
 import { writeAudit } from "@/lib/audit";
 import { guardArchived } from "@/lib/academic-year";
 import { combineDateTime } from "@/lib/session-time";
@@ -110,7 +110,12 @@ export async function saveSession(
     };
   }
   // Authoritative price resolution from the matrix (client preview is advisory).
-  const pricePerHour = await resolvePricePerHour(d.gradeLevelId, d.location, date);
+  const pricePerHour = await resolveStudentPricePerHour(
+    d.studentId,
+    d.gradeLevelId,
+    d.location,
+    date,
+  );
   // Editing a finalized session may change its planned timetable details, but
   // its historical billable snapshot remains the financial source of truth.
   const financialHours = priorSession?.billableHours == null
@@ -376,7 +381,7 @@ export async function updateGroupOccurrenceRoster(
 
   const students = await db.student.findMany({
     where: { id: { in: additionIds }, active: true },
-    select: { id: true, gradeLevelId: true },
+    select: { id: true, gradeLevelId: true, specialPricePerHour: true },
   });
   if (students.length !== additionIds.length) return { error: "notfound" };
   if (students.some((student) => !student.gradeLevelId)) return { error: "noGrade" };
@@ -432,13 +437,13 @@ export async function updateGroupOccurrenceRoster(
     }
     const agreed = memberPrices.get(student.id) ?? savedGroup?.defaultPricePerHour ?? null;
     const pricePerHour =
-      agreed === null
+      agreed === null && student.specialPricePerHour == null
         ? await resolvePricePerHour(
             student.gradeLevelId!,
             first.location as "CENTER" | "HOME",
             first.date,
           )
-        : Number(agreed);
+        : Number(agreed ?? student.specialPricePerHour);
     additions.push({
       date: first.date,
       studentId: student.id,
@@ -549,7 +554,7 @@ export async function createGroupSessions(
 
   const students = await db.student.findMany({
     where: { id: { in: d.studentIds } },
-    select: { id: true, gradeLevelId: true },
+    select: { id: true, gradeLevelId: true, specialPricePerHour: true },
   });
 
   // Cache price lookups by grade+location+date (date matters for versioned rules).
@@ -578,7 +583,12 @@ export async function createGroupSessions(
       const gradeLevelId = d.gradeLevelId || s.gradeLevelId;
       if (!gradeLevelId) { skippedStudents.add(s.id); continue; }
       const override = priceOverride.get(s.id);
-      const pricePerHour = override != null ? override : await priceFor(gradeLevelId, date);
+      const pricePerHour =
+        override != null
+          ? override
+          : s.specialPricePerHour != null
+            ? Number(s.specialPricePerHour)
+            : await priceFor(gradeLevelId, date);
       rows.push({
         date,
         studentId: s.id,

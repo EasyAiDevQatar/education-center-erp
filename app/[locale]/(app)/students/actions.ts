@@ -17,6 +17,7 @@ const schema = z.object({
   phone: z.string().trim().optional().nullable(),
   gradeLevelId: z.string().trim().optional().nullable(),
   gradeYear: z.coerce.number().int().min(1).max(12).optional().nullable(),
+  specialPricePerHour: z.coerce.number().min(0).max(1_000_000).optional().nullable(),
   guardianId: z.string().trim().optional().nullable(),
   studyLocation: z.enum(LOCATIONS).default("CENTER"),
   active: z.coerce.boolean().default(true),
@@ -53,6 +54,7 @@ export async function saveStudent(
     phone: formData.get("phone") || null,
     gradeLevelId: formData.get("gradeLevelId") || null,
     gradeYear: formData.get("gradeYear") || null,
+    specialPricePerHour: orNull(formData.get("specialPricePerHour")),
     guardianId: formData.get("guardianId") || null,
     studyLocation: formData.get("studyLocation") || "CENTER",
     active: formData.get("active") === "on" || formData.get("active") === "true",
@@ -95,6 +97,33 @@ export async function deleteStudent(locale: string, id: string): Promise<ActionS
   await db.student.update({ where: { id }, data: { active: false } });
   await writeAudit("Student", id, "DELETE");
   revalidatePath(`/${locale}/students`);
+  return { ok: true };
+}
+
+/** Focused profile edit for the two values reception changes most often. */
+export async function saveStudentPricingAndTeachers(
+  locale: string,
+  id: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  if (await guard()) return { error: "forbidden" };
+  const parsed = z.coerce.number().min(0).max(1_000_000).nullable().safeParse(
+    orNull(formData.get("specialPricePerHour")),
+  );
+  if (!parsed.success) return { error: "invalid" };
+
+  const teacherIds = [...new Set(formData.getAll("teacherIds").map(String).filter(Boolean))];
+  const validTeachers = await db.teacher.count({ where: { id: { in: teacherIds }, active: true } });
+  if (validTeachers !== teacherIds.length) return { error: "invalid" };
+
+  await db.student.update({ where: { id }, data: { specialPricePerHour: parsed.data } });
+  await setStudentTeachers(id, teacherIds);
+  await writeAudit("Student", id, "UPDATE", {
+    after: { specialPricePerHour: parsed.data, teacherIds },
+  });
+  revalidatePath(`/${locale}/students`);
+  revalidatePath(`/${locale}/students/${id}`);
   return { ok: true };
 }
 

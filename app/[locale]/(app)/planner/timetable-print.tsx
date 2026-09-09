@@ -42,6 +42,7 @@ function weekRange(day: string): [string, string] {
 }
 
 export type TimetableRequest = {
+  paper: "A4" | "A5";
   kind: Kind;
   scope: Scope;
   from: string;
@@ -57,6 +58,7 @@ export function TimetableDialog({
   teachers,
   onReady,
   onClose,
+  defaultPrintFormat,
 }: {
   day: string;
   students: Opt[];
@@ -64,6 +66,7 @@ export function TimetableDialog({
   /** Hands the fetched data back so the caller can render and print it. */
   onReady: (req: TimetableRequest) => void;
   onClose: () => void;
+  defaultPrintFormat: string;
 }) {
   const t = useTranslations("planner");
   const tc = useTranslations("common");
@@ -73,6 +76,7 @@ export function TimetableDialog({
   const [scope, setScope] = useState<Scope>("week");
   const [ids, setIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
+  const [paper, setPaper] = useState<"A4" | "A5">(defaultPrintFormat === "A5" ? "A5" : "A4");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -108,7 +112,7 @@ export function TimetableDialog({
         setError(res.error);
         return;
       }
-      onReady({ kind, scope, from, to, people: res.people });
+      onReady({ kind, scope, from, to, people: res.people, paper });
     });
   }
 
@@ -134,6 +138,13 @@ export function TimetableDialog({
               </Select>
             </FormField>
           </div>
+
+          <FormField label={tc("printFormat")} htmlFor="tt-paper">
+            <Select id="tt-paper" value={paper} onChange={(e) => setPaper(e.target.value as "A4" | "A5")}>
+              <option value="A4">A4</option>
+              <option value="A5">A5</option>
+            </Select>
+          </FormField>
 
           <FormField label={tc("search")} htmlFor="tt-q">
             <Input

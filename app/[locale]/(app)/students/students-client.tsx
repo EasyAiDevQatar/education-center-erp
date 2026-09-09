@@ -41,6 +41,7 @@ export type StudentRow = {
   gradeLevelId: string | null;
   gradeLevelLabel: string | null;
   gradeYear: number | null;
+  specialPricePerHour: number | null;
   guardianId: string | null;
   guardianLabel: string | null;
   studyLocation: "CENTER" | "HOME";
@@ -122,6 +123,18 @@ function StudentFields({
             <option value="CENTER">{te("location.CENTER")}</option>
             <option value="HOME">{te("location.HOME")}</option>
           </Select>
+        </FormField>
+        <FormField label={t("specialPrice")} htmlFor="specialPricePerHour" hint={t("specialPriceHint")}>
+          <Input
+            id="specialPricePerHour"
+            name="specialPricePerHour"
+            type="number"
+            min="0"
+            step="0.01"
+            dir="ltr"
+            placeholder={t("matrixPrice")}
+            defaultValue={student?.specialPricePerHour ?? ""}
+          />
         </FormField>
       </div>
       <FormField label={t("guardian")} htmlFor="guardianId">

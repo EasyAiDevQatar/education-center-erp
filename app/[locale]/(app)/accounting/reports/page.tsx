@@ -32,7 +32,7 @@ export default async function AccountingReportsPage({
   const fromStr = get("from");
   const toStr = get("to");
 
-  const [lines, currencyRow] = await Promise.all([
+  const [lines, settingRows] = await Promise.all([
     db.journalLine.findMany({
       where:
         fromStr || toStr
@@ -47,9 +47,10 @@ export default async function AccountingReportsPage({
           : {},
       include: { account: { select: { id: true, code: true, nameAr: true, nameEn: true, type: true } } },
     }),
-    db.setting.findUnique({ where: { key: "currency" } }),
+    db.setting.findMany({ where: { key: { in: ["currency", "receiptSize"] } } }),
   ]);
-  const currency = currencyRow?.value ?? "QAR";
+  const settings = Object.fromEntries(settingRows.map((row) => [row.key, row.value]));
+  const currency = settings.currency ?? "QAR";
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
 
   const rows: LedgerRow[] = lines.map((l) => ({
@@ -82,11 +83,11 @@ export default async function AccountingReportsPage({
         </label>
         <Button type="submit" variant="outline">{tc("apply")}</Button>
         <div className="ms-auto">
-          <PrintButton />
+          <PrintButton defaultFormat={settings.receiptSize} />
         </div>
       </form>
 
-      <div data-print="A4" className="space-y-6">
+      <div data-print="A4" data-print-size-selectable className="space-y-6">
         <p className="text-sm text-muted-foreground">
           {periodLabel} — {tb.rows.length} {t("accountsTitle")}
         </p>

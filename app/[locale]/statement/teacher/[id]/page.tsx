@@ -8,6 +8,7 @@ import { toNumber, formatMoney, formatHours, formatDate } from "@/lib/money";
 import { PrintButton } from "@/components/print-button";
 import { displayName, fullName } from "@/lib/names";
 import { unchargeableStatuses } from "@/lib/billing";
+import { resolveSalary } from "@/lib/salary-source";
 
 /**
  * Printable A4 account statement for one teacher.
@@ -47,7 +48,7 @@ export default async function TeacherStatementPage({
   const unchargeable = await unchargeableStatuses();
 
   const [teacher, settingsRows, sessions, payouts, earnings] = await Promise.all([
-    db.teacher.findUnique({ where: { id } }),
+    db.teacher.findUnique({ where: { id }, include: { employee: true } }),
     db.setting.findMany(),
     db.session.findMany({
       where: { teacherId: id, status: { notIn: unchargeable }, date: { gte: from, lte: to } },
@@ -71,6 +72,16 @@ export default async function TeacherStatementPage({
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
   const currency = settings.currency ?? "QAR";
   const pct = toNumber(teacher.commissionPct);
+  const salary = resolveSalary({
+    teacher: { fixedSalary: toNumber(teacher.fixedSalary) },
+    employee: teacher.employee
+      ? {
+          basicSalary: toNumber(teacher.employee.basicSalary),
+          allowances: toNumber(teacher.employee.allowances),
+        }
+      : null,
+  });
+  const showPayouts = salary.total > 0 || payouts.length > 0;
   const totalPaidOut = payouts.reduce((sum, p) => sum + toNumber(p.netPaid), 0);
   // The closing balance is what the centre owes, so it follows the basis the
   // centre pays on rather than always the collected column.
@@ -80,20 +91,20 @@ export default async function TeacherStatementPage({
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="no-print mb-4 flex justify-end">
-        <PrintButton />
+        <PrintButton defaultFormat={settings.receiptSize} />
       </div>
 
-      <div data-print="A4" className="rounded-lg border border-border bg-card p-8 shadow-sm">
-        <div className="mb-6 border-b border-border pb-4 text-center">
+      <div data-print="A4" data-print-size-selectable className="statement-compact rounded-lg border border-border bg-card p-6 shadow-sm">
+        <div className="mb-4 border-b border-border pb-3 text-center">
           {settings.centerLogo && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={settings.centerLogo} alt="" className="mx-auto mb-2 max-h-16 object-contain" />
+            <img src={settings.centerLogo} alt="" className="mx-auto mb-1 max-h-12 object-contain" />
           )}
           <h1 className="text-xl font-bold">{settings.centerName ?? tc("appShort")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{tp("statement")}</p>
+          <p className="text-xs text-muted-foreground">{tp("statement")}</p>
         </div>
 
-        <dl className="mb-5 space-y-2 text-sm">
+        <dl className="mb-3 grid grid-cols-1 gap-x-8 gap-y-1 text-xs sm:grid-cols-2">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">{tc("name")}</dt>
             <dd className="font-medium">{fullName(teacher, locale)}</dd>
@@ -111,16 +122,16 @@ export default async function TeacherStatementPage({
         </dl>
 
         {/* Sessions taught — the basis for commission */}
-        <h2 className="mb-2 text-sm font-semibold">{tp("sessions")}</h2>
+        <h2 className="mb-1 text-xs font-semibold">{tp("sessions")}</h2>
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-y border-border bg-muted/40">
-              <th className="p-2">{tc("date")}</th>
-              <th className="p-2">{ts("student")}</th>
-              <th className="p-2">{tc("status")}</th>
-              <th className="p-2">{tc("hours")}</th>
-              <th className="p-2">{tc("total")}</th>
-              <th className="p-2">{t("commissionDue")}</th>
+              <th className="p-1.5">{tc("date")}</th>
+              <th className="p-1.5">{ts("student")}</th>
+              <th className="p-1.5">{tc("status")}</th>
+              <th className="p-1.5">{tc("hours")}</th>
+              <th className="p-1.5">{tc("total")}</th>
+              <th className="p-1.5">{t("commissionDue")}</th>
             </tr>
           </thead>
           <tbody>
@@ -133,12 +144,12 @@ export default async function TeacherStatementPage({
             )}
             {sessions.map((s) => (
               <tr key={s.id} className="border-b border-border/60">
-                <td className="p-2 tabular-nums"><span dir="ltr">{s.date.toISOString().slice(0, 10)}</span></td>
-                <td className="p-2">{displayName(s.student, locale)}</td>
-                <td className="p-2">{te(`sessionStatus.${s.status}`)}</td>
-                <td className="p-2 tabular-nums">{formatHours(s.hours)}</td>
-                <td className="p-2 tabular-nums">{formatMoney(s.total)}</td>
-                <td className="p-2 tabular-nums">
+                <td className="p-1.5 tabular-nums"><span dir="ltr">{s.date.toISOString().slice(0, 10)}</span></td>
+                <td className="p-1.5">{displayName(s.student, locale)}</td>
+                <td className="p-1.5">{te(`sessionStatus.${s.status}`)}</td>
+                <td className="p-1.5 tabular-nums">{formatHours(s.hours)}</td>
+                <td className="p-1.5 tabular-nums">{formatMoney(s.total)}</td>
+                <td className="p-1.5 tabular-nums">
                   {formatMoney((toNumber(s.total) * pct) / 100)}
                 </td>
               </tr>
@@ -146,9 +157,13 @@ export default async function TeacherStatementPage({
           </tbody>
         </table>
 
-        {/* Payouts already issued */}
-        <h2 className="mb-2 mt-6 text-sm font-semibold">{tp("payouts")}</h2>
-        <table className="w-full border-collapse text-xs">
+        {/* Salary/payout information is absent when the profile has no salary
+            and no payment has actually been issued. Empty salary furniture
+            made commission-only statements look as though salary data was missing. */}
+        {showPayouts && (
+          <>
+            <h2 className="mb-1 mt-4 text-xs font-semibold">{tp("payouts")}</h2>
+            <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-y border-border bg-muted/40">
               <th className="p-2">{tc("date")}</th>
@@ -178,19 +193,21 @@ export default async function TeacherStatementPage({
               </tr>
             ))}
           </tbody>
-        </table>
+            </table>
+          </>
+        )}
 
         {/* Reconciliation */}
-        <dl className="mt-6 space-y-2 border-t border-border pt-4 text-sm">
+        <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-1 border-t border-border pt-3 text-xs sm:grid-cols-2">
           <Row label={t("hoursTaught")} value={formatHours(earnings?.hours ?? 0)} />
           <Row label={t("expectedIncome")} value={`${formatMoney(earnings?.expected ?? 0)} ${currency}`} />
           <Row label={t("collectedIncome")} value={`${formatMoney(earnings?.collected ?? 0)} ${currency}`} />
           <Row label={t("commissionExpected")} value={`${formatMoney(earnings?.expectedCommission ?? 0)} ${currency}`} />
           <Row label={t("commissionDue")} value={`${formatMoney(dueCommission)} ${currency}`} />
-          <Row label={tp("payouts")} value={`− ${formatMoney(totalPaidOut)} ${currency}`} />
+          {totalPaidOut > 0 && <Row label={tp("payouts")} value={`− ${formatMoney(totalPaidOut)} ${currency}`} />}
         </dl>
 
-        <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
           <span className="font-semibold">{t("netPayable")}</span>
           <span className="text-2xl font-bold tabular-nums">
             {formatMoney(closing)} <span className="text-base">{currency}</span>
@@ -198,7 +215,7 @@ export default async function TeacherStatementPage({
         </div>
 
         {settings.receiptFooter && (
-          <p className="mt-8 text-center text-sm text-muted-foreground">{settings.receiptFooter}</p>
+          <p className="mt-4 text-center text-xs text-muted-foreground">{settings.receiptFooter}</p>
         )}
       </div>
     </div>

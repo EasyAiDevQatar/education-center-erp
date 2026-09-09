@@ -50,7 +50,7 @@ export async function saveCenterSettings(
     centerAddress: String(formData.get("centerAddress") ?? "").trim(),
     centerPhone: String(formData.get("centerPhone") ?? "").trim(),
     centerTaxNo: String(formData.get("centerTaxNo") ?? "").trim(),
-    // A4 | A5 | POS80 — the per-receipt picker starts from this default.
+    // A4 | A5 | POS80 — every print screen starts from this centre-wide default.
     receiptSize: (() => {
       const value = String(formData.get("receiptSize") ?? "A4").trim();
       return ["A4", "A5", "POS80"].includes(value) ? value : "A4";

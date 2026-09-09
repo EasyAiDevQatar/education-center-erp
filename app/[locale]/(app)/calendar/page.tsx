@@ -104,7 +104,7 @@ export default async function CalendarPage({
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
-      db.setting.findMany({ where: { key: { in: ["currency", "centerName", "centerLat", "centerLng", "calendarBookingEnabled"] } } }),
+      db.setting.findMany({ where: { key: { in: ["currency", "centerName", "centerLat", "centerLng", "calendarBookingEnabled", "receiptSize"] } } }),
       db.subject.findMany({
         where: { active: true },
         orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
@@ -216,6 +216,7 @@ export default async function CalendarPage({
     gradeYear: s.gradeYear,
     teacherIds: s.teachers.map((x) => x.teacherId),
     studyLocation: s.studyLocation as "CENTER" | "HOME",
+    specialPricePerHour: s.specialPricePerHour == null ? null : toNumber(s.specialPricePerHour),
   }));
   const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }));
   const subjectOpts = subjectList.map((sbj) => ({ id: sbj.id, label: label(sbj.nameAr, sbj.nameEn) }));
@@ -246,6 +247,7 @@ export default async function CalendarPage({
         locationFilter={locationFilter}
         centre={centre}
         centerName={settingsMap.centerName ?? ""}
+        defaultPrintFormat={settingsMap.receiptSize ?? "A4"}
       />
     </div>
   );

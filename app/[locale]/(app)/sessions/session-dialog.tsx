@@ -36,6 +36,8 @@ export type StudentOpt = {
   teacherIds?: string[];
   /** The student's usual study place — new sessions default to it. */
   studyLocation?: "CENTER" | "HOME";
+  /** Optional agreed rate that overrides the grade/location matrix. */
+  specialPricePerHour?: number | null;
 };
 export type PackageOpt = { id: string; studentId: string; label: string };
 export type Opt = { id: string; label: string };
@@ -252,9 +254,11 @@ export function SessionDialog({
   }, [subjectOptions]);
 
   const pricePerHour = useMemo(() => {
+    const special = students.find((student) => student.id === studentId)?.specialPricePerHour;
+    if (special != null) return special;
     const row = matrix[gradeLevelId];
     return row ? (row[location] ?? 0) : 0;
-  }, [matrix, gradeLevelId, location]);
+  }, [matrix, gradeLevelId, location, studentId, students]);
   const total = pricePerHour * (parseFloat(hours) || 0);
 
   function onStudentChange(id: string) {

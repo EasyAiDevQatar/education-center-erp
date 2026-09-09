@@ -10,14 +10,15 @@ import { printDoc } from "@/lib/print";
 export type ReceiptFormat = "POS80" | "A4" | "A5";
 
 export function ReceiptPrintControls({ format }: { format: ReceiptFormat }) {
-  const t = useTranslations("payments");
   const ts = useTranslations("settings");
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
 
   function select(next: ReceiptFormat) {
-    router.replace(`${pathname}?size=${next}`);
+    const query = new URLSearchParams(window.location.search);
+    query.set("size", next);
+    router.replace(`${pathname}?${query.toString()}`);
   }
 
   function print() {
@@ -29,7 +30,7 @@ export function ReceiptPrintControls({ format }: { format: ReceiptFormat }) {
 
   return (
     <div className="no-print mb-4 flex flex-wrap items-center justify-end gap-2">
-      <label htmlFor="receipt-format" className="text-sm text-muted-foreground">{t("printFormat")}</label>
+      <label htmlFor="receipt-format" className="text-sm text-muted-foreground">{tc("printFormat")}</label>
       <Select
         id="receipt-format"
         className="w-36"

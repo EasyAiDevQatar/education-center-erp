@@ -57,7 +57,7 @@ export default async function PlannerPage({
       currentPriceMatrix(),
       db.setting.findMany({
         where: {
-          key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin", "centerName", "centerLogo", "centerLat", "centerLng"] },
+          key: { in: ["currency", "plannerDayStart", "plannerHomeGapMin", "centerName", "centerLogo", "centerLat", "centerLng", "receiptSize"] },
         },
       }),
       db.teacherAvailability.findMany({
@@ -188,6 +188,7 @@ export default async function PlannerPage({
           name: displayName(st, locale),
           gradeLevelId: st.gradeLevelId,
           studyLocation: st.studyLocation as "CENTER" | "HOME",
+          specialPricePerHour: st.specialPricePerHour == null ? null : toNumber(st.specialPricePerHour),
         }))}
         levels={levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }))}
         matrix={matrixMap}
@@ -200,6 +201,7 @@ export default async function PlannerPage({
         centerName={settings.centerName ?? ""}
         centerLogo={settings.centerLogo ?? ""}
         printedBy={auth.name}
+        defaultPrintFormat={settings.receiptSize ?? "A4"}
       />
     </div>
   );

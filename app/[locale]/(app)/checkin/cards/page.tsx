@@ -38,9 +38,10 @@ export default async function QrCardsPage({
         gradeLevel: { select: { nameAr: true, nameEn: true } },
       },
     }),
-    db.setting.findMany({ where: { key: "centerName" } }),
+    db.setting.findMany({ where: { key: { in: ["centerName", "receiptSize"] } } }),
   ]);
-  const centerName = settingsRows[0]?.value ?? "";
+  const settings = Object.fromEntries(settingsRows.map((row) => [row.key, row.value]));
+  const centerName = settings.centerName ?? "";
 
   // Render server-side so the page needs no client QR library.
   const cards = await Promise.all(
@@ -69,10 +70,11 @@ export default async function QrCardsPage({
         <PageHeader title={t("cardsTitle")} description={t("cardsSubtitle")} />
       </div>
 
-      <CardsToolbar missing={missing} />
+      <CardsToolbar missing={missing} defaultPrintFormat={settings.receiptSize ?? "A4"} />
 
       <div
         data-print="A4"
+        data-print-size-selectable
         className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 print:grid-cols-3"
       >
         {cards.map((c) => (

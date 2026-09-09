@@ -86,6 +86,7 @@ async function loadRows(
         phone: s.phone ?? "",
         gradeCode: s.gradeLevel?.code ?? "",
         studyLocation: s.studyLocation,
+        specialPricePerHour: s.specialPricePerHour == null ? "" : toNumber(s.specialPricePerHour),
         guardianName: s.guardian?.name ?? "",
         address: s.address ?? "",
         homeCode: s.homeCode ?? "",

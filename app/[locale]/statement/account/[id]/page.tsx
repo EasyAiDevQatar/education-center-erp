@@ -51,10 +51,10 @@ export default async function AccountStatementPrintPage({
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="no-print mb-4 flex justify-end">
-        <PrintButton />
+        <PrintButton defaultFormat={settings.receiptSize} />
       </div>
 
-      <div data-print="A4" className="rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div data-print="A4" data-print-size-selectable className="statement-compact rounded-lg border border-border bg-card p-6 shadow-sm">
         {/* Letterhead */}
         <div className="mb-6 flex items-start justify-between gap-4 border-b border-border pb-4">
           <div className="flex items-center gap-3">

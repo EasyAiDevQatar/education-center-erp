@@ -28,7 +28,7 @@ export default async function RunDetailPage({
         },
       },
     }),
-    db.setting.findMany({ where: { key: { in: ["centerName", "centerLogo", "currency"] } } }),
+    db.setting.findMany({ where: { key: { in: ["centerName", "centerLogo", "currency", "receiptSize"] } } }),
   ]);
   if (!run) notFound();
 
@@ -70,6 +70,7 @@ export default async function RunDetailPage({
         centerName={settings.centerName ?? ""}
         centerLogo={settings.centerLogo ?? ""}
         currency={settings.currency ?? "QAR"}
+        defaultPrintFormat={settings.receiptSize ?? "A4"}
       />
     </div>
   );

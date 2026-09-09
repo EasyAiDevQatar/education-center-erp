@@ -77,7 +77,7 @@ export default async function ChequePrintPage({
     <div className="mx-auto max-w-4xl p-6">
       <div className="no-print mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{t("printHint")}</p>
-        <PrintButton />
+        <PrintButton formats={["A4"]} />
       </div>
 
       {/* The leaf. On screen a dashed border shows the boundary; in print the

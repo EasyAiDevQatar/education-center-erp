@@ -25,6 +25,21 @@ export async function resolvePricePerHour(
   return rule ? toNumber(rule.pricePerHour) : 0;
 }
 
+/** Student-specific agreed pricing wins over the matrix for every new lesson. */
+export async function resolveStudentPricePerHour(
+  studentId: string,
+  gradeLevelId: string,
+  location: LocationType,
+  on: Date = new Date(),
+): Promise<number> {
+  const student = await db.student.findUnique({
+    where: { id: studentId },
+    select: { specialPricePerHour: true },
+  });
+  if (student?.specialPricePerHour != null) return toNumber(student.specialPricePerHour);
+  return resolvePricePerHour(gradeLevelId, location, on);
+}
+
 /** Full current matrix for the settings screen and session form defaults. */
 export async function currentPriceMatrix() {
   const levels = await db.gradeLevel.findMany({

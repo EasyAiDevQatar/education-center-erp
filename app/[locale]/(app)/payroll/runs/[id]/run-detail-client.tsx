@@ -7,6 +7,7 @@ import { Printer, CheckCheck, FileDown } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatMoney } from "@/lib/money";
-import { printDoc } from "@/lib/print";
+import { printDoc, printPageSize } from "@/lib/print";
 import { markRunPaid } from "../actions";
 
 export type ItemRow = {
@@ -188,6 +189,7 @@ export function RunDetailClient({
   centerName,
   centerLogo,
   currency,
+  defaultPrintFormat,
 }: {
   runId: string;
   month: string;
@@ -196,6 +198,7 @@ export function RunDetailClient({
   centerName: string;
   centerLogo: string;
   currency: string;
+  defaultPrintFormat: string;
 }) {
   const t = useTranslations("runs");
   const tc = useTranslations("common");
@@ -204,6 +207,7 @@ export function RunDetailClient({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [printing, setPrinting] = useState(false);
+  const [paper, setPaper] = useState<"A4" | "A5">(defaultPrintFormat === "A5" ? "A5" : "A4");
   const [wpsIssues, setWpsIssues] = useState<{ key: string; message: string; recordIndex?: number }[] | null>(null);
 
   const total = items.reduce((n, i) => n + i.netPaid, 0);
@@ -243,7 +247,7 @@ export function RunDetailClient({
     flushSync(() => setPrinting(true));
     try {
       printDoc({
-        size: "A4 portrait",
+        size: printPageSize(paper),
         margin: { top: 10, side: 12, bottom: 18 },
         fileName: `Payslips-${month}`,
       });
@@ -261,7 +265,16 @@ export function RunDetailClient({
         <Badge variant="default">
           {tc("total")}: {formatMoney(total)} {currency}
         </Badge>
-        <div className="ms-auto flex gap-2">
+        <div className="ms-auto flex flex-wrap items-center gap-2">
+          <Select
+            aria-label={tc("printFormat")}
+            className="w-28"
+            value={paper}
+            onChange={(event) => setPaper(event.target.value as "A4" | "A5")}
+          >
+            <option value="A4">A4</option>
+            <option value="A5">A5</option>
+          </Select>
           <Button variant="secondary" className="gap-1" onClick={doPrint}>
             <Printer className="size-4" />
             {t("printAll")}

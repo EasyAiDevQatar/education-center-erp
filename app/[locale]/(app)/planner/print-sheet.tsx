@@ -14,6 +14,7 @@ import {
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
 import { minToHHMM } from "@/lib/planner";
 import type { PlannerSession } from "./planner-client";
@@ -21,6 +22,7 @@ import type { PlannerSession } from "./planner-client";
 type Opt = { id: string; label: string };
 
 export type PrintOpts = {
+  paper: "A4" | "A5";
   /** Teachers to print, in the order they appear on screen. */
   teacherIds: string[];
   /** Blank columns appended for hand-written additions. 0 ⇒ used columns only. */
@@ -36,6 +38,7 @@ export type PrintOpts = {
 export function defaultPrintOpts(
   teachers: Opt[],
   sessions: PlannerSession[],
+  defaultPrintFormat = "A4",
 ): PrintOpts {
   // Pre-select exactly the teachers who have something to do — the common case
   // is a sheet for today's working staff, not the whole roster.
@@ -43,6 +46,7 @@ export function defaultPrintOpts(
     sessions.filter((s) => s.status !== "CANCELLED").map((s) => s.teacherId),
   );
   return {
+    paper: defaultPrintFormat === "A5" ? "A5" : "A4",
     teacherIds: teachers.filter((t) => busy.has(t.id)).map((t) => t.id),
     extraSlots: 0,
     hideCancelled: true,
@@ -119,6 +123,16 @@ export function PlannerPrintDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          <FormField label={tc("printFormat")} htmlFor="planner-paper-size">
+            <Select
+              id="planner-paper-size"
+              value={opts.paper}
+              onChange={(event) => set({ paper: event.target.value as "A4" | "A5" })}
+            >
+              <option value="A4">A4</option>
+              <option value="A5">A5</option>
+            </Select>
+          </FormField>
           <FormField label={t("printTeachers")} hint={t("printTeachersHint")}>
             <div className="mb-2 flex flex-wrap gap-2">
               <Button

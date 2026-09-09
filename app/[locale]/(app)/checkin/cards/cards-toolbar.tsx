@@ -2,15 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Printer, KeyRound, ArrowRight, ArrowLeft, MessageCircle } from "lucide-react";
+import { KeyRound, ArrowRight, ArrowLeft, MessageCircle } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { printDoc } from "@/lib/print";
+import { PrintButton } from "@/components/print-button";
 import { ensureQrTokens } from "../actions";
 import { sendAllCheckinCodes } from "./card-actions";
 
 /** Print / generate controls for the QR card sheet. */
-export function CardsToolbar({ missing }: { missing: number }) {
+export function CardsToolbar({ missing, defaultPrintFormat }: { missing: number; defaultPrintFormat: string }) {
   const t = useTranslations("checkin");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -78,10 +78,7 @@ export function CardsToolbar({ missing }: { missing: number }) {
           <KeyRound className="size-4" />
           {pending ? tc("saving") : t("generateCards")}
         </Button>
-        <Button size="sm" className="gap-1" onClick={() => printDoc("A4 portrait")}>
-          <Printer className="size-4" />
-          {tc("print")}
-        </Button>
+        <PrintButton defaultFormat={defaultPrintFormat} formats={["A4", "A5"]} />
       </div>
     </div>
   );

@@ -153,6 +153,12 @@ async function importRows(
               homeCode: r.homeCode || null,
               // Accept the Arabic labels the export/template writes, plus raw codes.
               studyLocation: /home|منزل/i.test(r.studyLocation ?? "") ? "HOME" : "CENTER",
+              specialPricePerHour:
+                r.specialPricePerHour !== "" &&
+                Number.isFinite(Number(r.specialPricePerHour)) &&
+                Number(r.specialPricePerHour) >= 0
+                  ? Number(r.specialPricePerHour)
+                  : null,
               checkinPin: /^\d{4,6}$/.test(r.checkinPin ?? "") ? r.checkinPin : null,
               notes: r.notes || null,
             },
