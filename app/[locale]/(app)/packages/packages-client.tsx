@@ -16,7 +16,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -28,7 +27,8 @@ import {
 } from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney, formatHours } from "@/lib/money";
-import { localNowTime, localToday } from "@/lib/session-time";
+import { localToday } from "@/lib/session-time";
+import { Link } from "@/i18n/navigation";
 import { savePackage, deletePackage } from "./actions";
 
 export type Opt = { id: string; label: string };
@@ -169,7 +169,11 @@ export function PackagesClient({
             )}
             {pg.pageItems.map((p) => (
               <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.studentName}</TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/students/${p.studentId}`} className="text-primary hover:underline">
+                    {p.studentName}
+                  </Link>
+                </TableCell>
                 <TableCell className="tabular-nums">{formatHours(p.totalHours)}</TableCell>
                 <TableCell className="tabular-nums">{formatHours(p.hoursUsed)}</TableCell>
                 <TableCell className="tabular-nums font-medium">{formatHours(p.totalHours - p.hoursUsed)}</TableCell>

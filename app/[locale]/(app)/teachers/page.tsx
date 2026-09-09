@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/page-header";
 import { TranslateNamesButton } from "@/components/translate-names-button";
 import { loadAiConfig, aiReady } from "@/lib/ai/config";
 import { TeachersClient, type TeacherRow, type SubjectOpt } from "./teachers-client";
-import { displayName } from "@/lib/names";
 
 export default async function TeachersPage({
   params,
@@ -31,6 +30,7 @@ export default async function TeachersPage({
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
   const rows: TeacherRow[] = teachers.map((teacher) => ({
     id: teacher.id,
+    referenceNo: teacher.referenceNo,
     name: teacher.name,
     nameEn: teacher.nameEn,
     phone: teacher.phone,

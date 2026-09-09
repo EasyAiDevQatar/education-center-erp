@@ -25,6 +25,7 @@ import {
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { ACCOUNT_TYPES, type AccountType } from "@/lib/enums";
+import { Link } from "@/i18n/navigation";
 import { saveAccount, deleteAccount } from "./actions";
 
 export type AccountRow = {
@@ -208,16 +209,31 @@ export function AccountsClient({ accounts }: { accounts: AccountRow[] }) {
               <TableRow key={a.id} className={a.active ? undefined : "opacity-60"}>
                 <TableCell className="font-mono"><span dir="ltr">{a.code}</span></TableCell>
                 <TableCell className="font-medium">
-                  <span className="inline-flex items-center gap-1.5">
+                  <Link
+                    href={`/accounting/accounts/${a.id}`}
+                    className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                  >
                     {a.system && <Lock className="size-3 text-muted-foreground" />}
                     {a.name}
-                  </span>
+                  </Link>
                 </TableCell>
                 <TableCell>
                   <Badge variant={TYPE_BADGE[a.type]}>{te(`accountType.${a.type}`)}</Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{a.parentLabel ?? "—"}</TableCell>
-                <TableCell className="tabular-nums">{a.lineCount}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {a.parentId && a.parentLabel ? (
+                    <Link href={`/accounting/accounts/${a.parentId}`} className="hover:text-primary hover:underline">
+                      {a.parentLabel}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  <Link href={`/accounting/accounts/${a.id}`} className="text-primary hover:underline">
+                    {a.lineCount}
+                  </Link>
+                </TableCell>
                 <TableCell>
                   {a.active ? (
                     <Badge variant="success">{tc("active")}</Badge>

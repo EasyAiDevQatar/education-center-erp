@@ -14,9 +14,11 @@ import { ProfileTabs } from "@/components/profile-tabs";
 import { SendStatementButton } from "@/components/whatsapp-button";
 import { SessionsTable, PaymentsTable, PayoutsTable } from "@/components/tables/relation-tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { AvailabilityEditor } from "./availability-editor";
 import { PortalLoginButton } from "@/components/portal-login-button";
 import { fullName } from "@/lib/names";
+import { referenceCode } from "@/lib/reference-code";
 
 export default async function TeacherProfilePage({
   params,
@@ -34,6 +36,7 @@ export default async function TeacherProfilePage({
   const tp = await getTranslations("profile");
   const tm = await getTranslations("paymentModes");
   const ta = await getTranslations("availability");
+  const ts = await getTranslations("students");
 
   const teacher = await db.teacher.findUnique({ where: { id } });
   if (!teacher) notFound();
@@ -61,7 +64,7 @@ export default async function TeacherProfilePage({
   const wideStart = new Date("2000-01-01T00:00:00.000Z");
   const wideEnd = new Date("2100-01-01T00:00:00.000Z");
 
-  const [earnings, sessions, payments, payouts, currency, availability] = await Promise.all([
+  const [earnings, sessions, payments, payouts, currency, availability, studentLinks] = await Promise.all([
     getTeacherEarnings(id, wideStart, wideEnd),
     loadSessionLines({ teacherId: id }, locale),
     loadTeacherPaymentLines(id),
@@ -72,13 +75,24 @@ export default async function TeacherProfilePage({
       orderBy: [{ weekday: "asc" }, { startMin: "asc" }],
       select: { weekday: true, startMin: true, endMin: true },
     }),
+    db.studentTeacher.findMany({
+      where: {
+        teacherId: id,
+        OR: [{ academicYear: { isCurrent: true } }, { academicYearId: null }],
+      },
+      include: { student: { include: { gradeLevel: true } } },
+    }),
   ]);
+  const assignedStudents = [
+    ...new Map(studentLinks.map((row) => [row.studentId, row.student])).values(),
+  ].sort((a, b) => fullName(a, locale).localeCompare(fullName(b, locale), locale));
 
   // What has already been settled, so the tab can show what remains.
   const paidOut = payouts.reduce((sum, p) => sum + p.netPaid, 0);
 
   const tabs = [
     { key: "overview", label: tp("overview") },
+    { key: "students", label: ts("title"), count: assignedStudents.length },
     { key: "sessions", label: tp("sessions"), count: sessions.length },
     // The money tabs only exist for someone allowed to read them; the bodies
     // below re-check, so a typed ?tab=payouts gets nothing either.
@@ -96,7 +110,7 @@ export default async function TeacherProfilePage({
     <div>
       <PageHeader
         title={fullName(teacher, locale)}
-        description={`${t("commissionPct")}: ${toNumber(teacher.commissionPct)}% · ${
+        description={`${referenceCode("teacher", teacher.referenceNo)} · ${t("commissionPct")}: ${toNumber(teacher.commissionPct)}% · ${
           teacher.paymentMode ? tm(teacher.paymentMode as "SESSION") : t("paymentModeDefault")
         }`}
       />
@@ -163,8 +177,40 @@ export default async function TeacherProfilePage({
         </div>
       )}
 
-      {tab === "sessions" && <SessionsTable rows={sessions} currency={currency} hideTeacher />}
-      {canSeePay && tab === "payments" && <PaymentsTable rows={payments} currency={currency} />}
+      {tab === "students" && (
+        <div className="rounded-lg border border-border bg-card p-2">
+          {assignedStudents.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">{tc("noData")}</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {assignedStudents.map((student) => (
+                <li key={student.id} className="flex flex-wrap items-center justify-between gap-2 p-2">
+                  <Link href={`/students/${student.id}`} className="font-medium text-primary hover:underline">
+                    {fullName(student, locale)}
+                  </Link>
+                  <span className="text-sm text-muted-foreground">
+                    {student.gradeLevel
+                      ? locale === "ar"
+                        ? student.gradeLevel.nameAr
+                        : student.gradeLevel.nameEn
+                      : "—"}
+                  </span>
+                  <Badge variant={student.active ? "success" : "muted"}>
+                    {student.active ? tc("active") : tc("inactive")}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {tab === "sessions" && (
+        <SessionsTable rows={sessions} currency={currency} hideTeacher linkStudents linkSessions />
+      )}
+      {canSeePay && tab === "payments" && (
+        <PaymentsTable rows={payments} currency={currency} linkStudents linkTeachers linkReceipts />
+      )}
       {canSeePay && tab === "payouts" && <PayoutsTable rows={payouts} currency={currency} />}
       {tab === "statement" && (
         <Card>

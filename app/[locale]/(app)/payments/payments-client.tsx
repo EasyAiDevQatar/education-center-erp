@@ -30,6 +30,7 @@ import {
 import { formatMoney } from "@/lib/money";
 import { PAYMENT_METHODS } from "@/lib/enums";
 import { localToday } from "@/lib/session-time";
+import { Link } from "@/i18n/navigation";
 import { savePayment, deletePayment } from "./actions";
 import { VoidPaymentButton } from "./void-payment-button";
 import { SendDuesRemindersButton } from "@/components/whatsapp-button";
@@ -69,6 +70,7 @@ function PaymentFields({
   currency,
   defaultStudentId,
   defaultAmount,
+  canOpenAcademicProfiles,
 }: {
   payment?: PaymentRow;
   students: Opt[];
@@ -76,6 +78,7 @@ function PaymentFields({
   currency: string;
   defaultStudentId?: string;
   defaultAmount?: number;
+  canOpenAcademicProfiles: boolean;
 }) {
   const t = useTranslations("payments");
   const tc = useTranslations("common");
@@ -247,6 +250,7 @@ function PaymentFields({
         onTeacherInferred={(tid) => {
           if (!teacherManual.current) setTeacherId(tid ?? "");
         }}
+        canOpenSessionProfiles={canOpenAcademicProfiles}
       />
       <FormField label={tc("notes")} htmlFor="notes">
         <Input id="notes" name="notes" defaultValue={payment?.notes ?? ""} />
@@ -261,12 +265,14 @@ export function PaymentsClient({
   teachers,
   currency,
   locale: localeProp,
+  canOpenTeacherProfiles,
 }: {
   payments: PaymentRow[];
   students: Opt[];
   teachers: Opt[];
   currency: string;
   locale: string;
+  canOpenTeacherProfiles: boolean;
 }) {
   const t = useTranslations("payments");
   const tc = useTranslations("common");
@@ -359,7 +365,14 @@ export function PaymentsClient({
           title={t("add")}
           wide
           action={savePayment.bind(null, locale, null)}
-          fields={<PaymentFields students={students} teachers={teachers} currency={currency} />}
+          fields={
+            <PaymentFields
+              students={students}
+              teachers={teachers}
+              currency={currency}
+              canOpenAcademicProfiles={canOpenTeacherProfiles}
+            />
+          }
           trigger={
             <Button className="gap-2">
               <Plus className="size-4" />
@@ -384,20 +397,56 @@ export function PaymentsClient({
             {pg.pageItems.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="tabular-nums"><span dir="ltr">{p.date}</span></TableCell>
-                <TableCell className="tabular-nums"><span dir="ltr">{p.receiptNo}</span></TableCell>
-                <TableCell className="font-medium">{p.studentName}</TableCell>
+                <TableCell className="tabular-nums">
+                  <Link
+                    href={`/receipt/${p.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                    dir="ltr"
+                  >
+                    {p.receiptNo}
+                  </Link>
+                </TableCell>
+                <TableCell className="font-medium">
+                  {p.studentId ? (
+                    <Link href={`/students/${p.studentId}`} className="text-primary hover:underline">
+                      {p.studentName}
+                    </Link>
+                  ) : (
+                    p.studentName
+                  )}
+                </TableCell>
                 <TableCell className="tabular-nums font-medium">{formatMoney(p.amount)} {currency}</TableCell>
                 <TableCell><Badge variant="default">{te(`method.${p.method}`)}</Badge></TableCell>
                 <TableCell>
                   {p.teacherAllocations.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {p.teacherAllocations.map((allocation) => (
-                        <Badge key={allocation.teacherId ?? allocation.teacherName} variant="success">
-                          {allocation.teacherName} · <span dir="ltr">{formatMoney(allocation.amount)} {currency}</span>
-                        </Badge>
+                        canOpenTeacherProfiles && allocation.teacherId ? (
+                          <Link
+                            key={allocation.teacherId}
+                            href={`/teachers/${allocation.teacherId}`}
+                            className="hover:opacity-80"
+                          >
+                            <Badge variant="success">
+                              {allocation.teacherName} · <span dir="ltr">{formatMoney(allocation.amount)} {currency}</span>
+                            </Badge>
+                          </Link>
+                        ) : (
+                          <Badge key={allocation.teacherId ?? allocation.teacherName} variant="success">
+                            {allocation.teacherName} · <span dir="ltr">{formatMoney(allocation.amount)} {currency}</span>
+                          </Badge>
+                        )
                       ))}
                     </div>
-                  ) : p.teacherName}
+                  ) : canOpenTeacherProfiles && p.teacherId ? (
+                    <Link href={`/teachers/${p.teacherId}`} className="text-primary hover:underline">
+                      {p.teacherName}
+                    </Link>
+                  ) : (
+                    p.teacherName
+                  )}
                 </TableCell>
                 <TableCell>
                   <RowActions>

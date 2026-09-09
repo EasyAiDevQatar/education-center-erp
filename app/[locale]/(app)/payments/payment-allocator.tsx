@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/money";
+import { referenceCode } from "@/lib/reference-code";
+import { Link } from "@/i18n/navigation";
 import {
   byTeacher,
   inferTeacher,
@@ -31,6 +33,7 @@ export function PaymentAllocator({
   open,
   onExplicitTotal,
   onTeacherInferred,
+  canOpenSessionProfiles = false,
 }: {
   studentId: string;
   amount: number;
@@ -41,6 +44,8 @@ export function PaymentAllocator({
   onExplicitTotal?: (total: number) => void;
   /** One teacher owns every allocated line → their id; mixed/none → null. */
   onTeacherInferred?: (teacherId: string | null) => void;
+  /** Cashiers can allocate money but do not have permission to open academic records. */
+  canOpenSessionProfiles?: boolean;
 }) {
   const t = useTranslations("payments");
   const tc = useTranslations("common");
@@ -206,10 +211,38 @@ export function PaymentAllocator({
                   <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs tabular-nums">
                     {i + 1}
                   </span>
+                  {s.referenceNo != null && (
+                    canOpenSessionProfiles ? (
+                      <Link
+                        href={`/sessions/${s.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-primary hover:underline"
+                        dir="ltr"
+                      >
+                        {referenceCode("session", s.referenceNo)}
+                      </Link>
+                    ) : (
+                      <span className="font-medium tabular-nums" dir="ltr">
+                        {referenceCode("session", s.referenceNo)}
+                      </span>
+                    )
+                  )}
                   <span className="tabular-nums" dir="ltr">
                     {s.date}
                   </span>
-                  <span className="text-muted-foreground">{s.teacherName || "—"}</span>
+                  {canOpenSessionProfiles && s.teacherId ? (
+                    <Link
+                      href={`/teachers/${s.teacherId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {s.teacherName || "—"}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{s.teacherName || "—"}</span>
+                  )}
                   <span className="ms-auto text-xs text-muted-foreground" dir="ltr">
                     {t("owes")} {formatMoney(s.outstanding)}
                   </span>

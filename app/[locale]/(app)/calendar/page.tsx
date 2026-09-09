@@ -133,6 +133,7 @@ export default async function CalendarPage({
     const start = s.date; // stored as UTC wall-clock
     const event: CalEvent = {
       id: s.id,
+      referenceNo: s.referenceNo,
       day: start.toISOString().slice(0, 10),
       startMinutes: start.getUTCHours() * 60 + start.getUTCMinutes(),
       hours: toNumber(s.hours),
@@ -192,6 +193,7 @@ export default async function CalendarPage({
         name: items[0].groupName,
         members: items.map(({ event }) => ({
           id: event.id,
+          referenceNo: event.referenceNo,
           studentId: event.studentId,
           studentName: event.studentName,
           levelLabel: event.levelLabel,

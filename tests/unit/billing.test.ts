@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { paymentStatusFor, packageStatusFor, autoAllocate } from "@/lib/billing-rules";
+import {
+  paymentStatusFor,
+  packageStatusFor,
+  autoAllocate,
+  paymentLedgerEffects,
+} from "@/lib/billing-rules";
 
 describe("paymentStatusFor", () => {
   it("classifies unpaid, partial and paid", () => {
@@ -60,5 +65,29 @@ describe("autoAllocate", () => {
 
   it("returns nothing for a zero payment", () => {
     expect(autoAllocate(0, sessions)).toEqual([]);
+  });
+});
+
+describe("paymentLedgerEffects", () => {
+  it("keeps a completed receipt as a payment credit", () => {
+    expect(paymentLedgerEffects({ status: "COMPLETED", amount: 400, refundAmount: null })).toEqual([
+      { type: "PAYMENT", debit: 0, credit: 400 },
+    ]);
+  });
+
+  it("drops a cancelled receipt entirely", () => {
+    expect(paymentLedgerEffects({ status: "CANCELLED", amount: 400, refundAmount: null })).toEqual([]);
+  });
+
+  it("shows a partial refund as a separate reversal", () => {
+    expect(paymentLedgerEffects({ status: "REFUNDED", amount: 400, refundAmount: 125 })).toEqual([
+      { type: "PAYMENT", debit: 0, credit: 400 },
+      { type: "REFUND", debit: 125, credit: 0 },
+    ]);
+  });
+
+  it("nets a full refund to zero without hiding the history", () => {
+    const effects = paymentLedgerEffects({ status: "REFUNDED", amount: 400, refundAmount: 400 });
+    expect(effects.reduce((net, line) => net + line.credit - line.debit, 0)).toBe(0);
   });
 });

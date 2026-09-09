@@ -27,6 +27,7 @@ import {
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { QuickPayDialog } from "../payments/quick-pay-dialog";
 import { formatMoney, formatHours } from "@/lib/money";
+import { referenceCode } from "@/lib/reference-code";
 import {
   SessionDialog,
   type StudentOpt,
@@ -41,6 +42,7 @@ import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-
 import { useModuleFlags } from "@/components/app-shell/module-flags";
 
 export type SessionRow = SessionInit & {
+  referenceNo: number;
   status: string;
   chargeable: boolean;
   studentName: string;
@@ -123,6 +125,7 @@ export function SessionsClient({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const pathname = usePathname();
   const search = useTableSearch(sessions, (x) => [
+    referenceCode("session", x.referenceNo),
     x.studentName,
     x.teacherName,
     x.levelLabel,
@@ -132,6 +135,11 @@ export function SessionsClient({
   ]);
   const columns = useMemo<ColumnDef<SessionRow>[]>(
     () => [
+      {
+        key: "code",
+        label: t("sessionCode"),
+        value: (s) => referenceCode("session", s.referenceNo),
+      },
       { key: "date", label: tc("date"), type: "date", value: (s) => s.date },
       {
         key: "time",
@@ -202,6 +210,11 @@ export function SessionsClient({
 
   const renderSessionRow = (s: SessionRow, child = false) => (
     <TableRow key={s.id} className={child ? "bg-muted/15" : undefined}>
+      <TableCell className="whitespace-nowrap font-medium tabular-nums">
+        <Link href={`/sessions/${s.id}`} className="text-primary hover:underline" dir="ltr">
+          {referenceCode("session", s.referenceNo)}
+        </Link>
+      </TableCell>
       <TableCell className="tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
       <TableCell className="tabular-nums">
         <span dir="ltr">{s.time ? `${s.time}–${endTime(s.time, s.hours)}` : "—"}</span>
@@ -209,10 +222,18 @@ export function SessionsClient({
       <TableCell className="font-medium">
         <span className={child ? "inline-flex items-center gap-2 ps-5" : undefined}>
           {child && <span className="text-muted-foreground" aria-hidden>↳</span>}
-          {s.studentName}
+          <Link href={`/students/${s.studentId}`} className="text-primary hover:underline">
+            {s.studentName}
+          </Link>
         </span>
       </TableCell>
-      <TableCell>{s.teacherName}</TableCell>
+      <TableCell>
+        {s.teacherId ? (
+          <Link href={`/teachers/${s.teacherId}`} className="text-primary hover:underline">
+            {s.teacherName}
+          </Link>
+        ) : "—"}
+      </TableCell>
       <TableCell>{s.levelLabel}</TableCell>
       <TableCell>
         {s.subjectLabel ? (
@@ -400,7 +421,7 @@ export function SessionsClient({
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground">
+                <TableCell colSpan={12} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -417,6 +438,19 @@ export function SessionsClient({
               return (
                 <Fragment key={item.key}>
                   <TableRow className="bg-primary/5 hover:bg-primary/10">
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      <Link
+                        href={`/sessions/${first.id}`}
+                        className="font-medium text-primary hover:underline"
+                        dir="ltr"
+                        title={item.rows.map((row) => referenceCode("session", row.referenceNo)).join(", ")}
+                      >
+                        {referenceCode("session", first.referenceNo)}
+                      </Link>
+                      {item.rows.length > 1 && (
+                        <Badge variant="muted" className="ms-1" dir="ltr">+{item.rows.length - 1}</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="tabular-nums"><span dir="ltr">{first.date}</span></TableCell>
                     <TableCell className="tabular-nums">
                       <span dir="ltr">{first.time ? `${first.time}–${endTime(first.time, first.hours)}` : "—"}</span>

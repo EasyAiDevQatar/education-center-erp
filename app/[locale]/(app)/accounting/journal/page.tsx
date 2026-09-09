@@ -33,9 +33,11 @@ export default async function JournalPage({
     date: e.date.toISOString().slice(0, 10),
     memo: e.memo,
     sourceType: e.sourceType,
+    sourceId: e.sourceId,
     total: e.lines.reduce((a, l) => a + toNumber(l.debit), 0),
     lines: e.lines.map((l) => ({
       id: l.id,
+      accountId: l.accountId,
       account: `${l.account.code} — ${label(l.account.nameAr, l.account.nameEn)}`,
       debit: toNumber(l.debit),
       credit: toNumber(l.credit),

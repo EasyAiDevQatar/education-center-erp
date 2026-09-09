@@ -41,6 +41,8 @@ export type ChequeRow = {
   amount: number;
   bankName: string | null;
   party: string | null;
+  studentId: string | null;
+  paymentId: string | null;
   receiptNo: string | null;
   dueDate: string | null;
   overdue: boolean;
@@ -396,9 +398,27 @@ export function ChequesClient({
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">
-                      {c.party ?? "—"}
+                      {c.studentId ? (
+                        <Link href={`/students/${c.studentId}`} className="text-primary hover:underline">
+                          {c.party ?? "—"}
+                        </Link>
+                      ) : (
+                        c.party ?? "—"
+                      )}
                       {c.receiptNo && (
-                        <span className="ms-1 text-xs text-muted-foreground" dir="ltr">#{c.receiptNo}</span>
+                        c.paymentId ? (
+                          <Link
+                            href={`/receipt/${c.paymentId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ms-1 text-xs text-primary hover:underline"
+                            dir="ltr"
+                          >
+                            #{c.receiptNo}
+                          </Link>
+                        ) : (
+                          <span className="ms-1 text-xs text-muted-foreground" dir="ltr">#{c.receiptNo}</span>
+                        )
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums">

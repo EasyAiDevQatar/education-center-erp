@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Plus, Home, Building2, Users, Route } from "lucide-react";
-import { useRouter, usePathname } from "@/i18n/navigation";
+import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
+import { referenceCode } from "@/lib/reference-code";
 import { localNowTime, localToday } from "@/lib/session-time";
 import {
   SessionDialog,
@@ -37,6 +38,7 @@ import { GroupOccurrenceDialog } from "./group-occurrence-dialog";
 
 export type CalEvent = {
   id: string;
+  referenceNo: number;
   day: string; // YYYY-MM-DD
   startMinutes: number; // minutes from midnight
   hours: number;
@@ -62,6 +64,7 @@ export type CalEvent = {
     name: string | null;
     members: {
       id: string;
+      referenceNo: number;
       studentId: string;
       studentName: string;
       levelLabel: string;
@@ -95,6 +98,11 @@ function pad(n: number) {
 }
 function fmtTime(min: number) {
   return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
+}
+function eventCodeLabel(event: CalEvent) {
+  const extra = event.group ? event.group.members.length - 1 : 0;
+  const code = referenceCode("session", event.referenceNo);
+  return extra > 0 ? `${code} +${extra}` : code;
 }
 function snap(min: number) {
   return Math.round(min / SNAP_MIN) * SNAP_MIN;
@@ -492,6 +500,7 @@ export function CalendarClient({
           days={days}
           rangeLabel={rangeLabel}
           centerName={centerName}
+          canOpenSession={canEdit}
           onEdit={setEditEv}
           onGroupOpen={setGroupEv}
         />
@@ -636,6 +645,12 @@ export function CalendarClient({
                         >
                           <div className="flex items-center justify-between gap-1">
                             <span className="flex min-w-0 items-center gap-1 truncate font-semibold">
+                              <span
+                                className="shrink-0 rounded bg-background/80 px-1 font-mono text-[9px] font-semibold no-underline"
+                                dir="ltr"
+                              >
+                                {eventCodeLabel(ev)}
+                              </span>
                               {isGroup && <Users className="size-3 shrink-0" />}
                               <span className="truncate">
                                 {isGroup ? ev.group?.name || t("groupSession") : ev.studentName}
@@ -762,6 +777,7 @@ export function CalendarClient({
           event={groupEv}
           currency={currency}
           students={students}
+          canOpenSession={canEdit}
           onClose={() => setGroupEv(null)}
         />
       )}
@@ -781,6 +797,7 @@ function ListView({
   days,
   rangeLabel,
   centerName,
+  canOpenSession,
   onEdit,
   onGroupOpen,
 }: {
@@ -788,6 +805,7 @@ function ListView({
   days: string[];
   rangeLabel: string;
   centerName: string;
+  canOpenSession: boolean;
   onEdit: (ev: CalEvent) => void;
   onGroupOpen: (ev: CalEvent) => void;
 }) {
@@ -816,6 +834,7 @@ function ListView({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>{ts("sessionCode")}</TableHead>
             <TableHead>{tc("date")}</TableHead>
             <TableHead>{ts("startTime")}</TableHead>
             <TableHead>{ts("student")}</TableHead>
@@ -828,7 +847,7 @@ function ListView({
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 {tc("noData")}
               </TableCell>
             </TableRow>
@@ -839,6 +858,19 @@ function ListView({
               className="cursor-pointer"
               onClick={() => ev.group ? onGroupOpen(ev) : onEdit(ev)}
             >
+              <TableCell className="font-mono font-medium tabular-nums" dir="ltr">
+                {canOpenSession ? (
+                  <Link
+                    href={`/sessions/${ev.group?.members[0]?.id ?? ev.id}`}
+                    className="text-primary hover:underline"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {eventCodeLabel(ev)}
+                  </Link>
+                ) : (
+                  eventCodeLabel(ev)
+                )}
+              </TableCell>
               <TableCell className="tabular-nums"><span dir="ltr">{ev.day}</span></TableCell>
               <TableCell className="tabular-nums"><span dir="ltr">{fmtTime(ev.startMinutes)}</span></TableCell>
               <TableCell className="font-medium">

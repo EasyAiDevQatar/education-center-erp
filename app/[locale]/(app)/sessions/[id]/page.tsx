@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bus, CalendarClock, CreditCard, UserCheck } from "lucide-react";
 import { centerClockTime, elapsedMinutes, formatDurationClock } from "@/lib/session-time";
+import { referenceCode } from "@/lib/reference-code";
 
 const hhmm = (d: Date) => d.toISOString().slice(11, 16);
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -90,7 +91,7 @@ export default async function SessionProfilePage({
   return (
     <div>
       <PageHeader
-        title={`${displayName(s.student, locale)} — ${ymd(s.date)} ${hhmm(s.date)}`}
+        title={`${referenceCode("session", s.referenceNo)} · ${displayName(s.student, locale)} — ${ymd(s.date)} ${hhmm(s.date)}`}
         description={[
           s.teacher ? displayName(s.teacher, locale) : null,
           s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
@@ -176,9 +177,15 @@ export default async function SessionProfilePage({
               <ul className="space-y-1">
                 {s.allocations.map((a) => (
                   <li key={a.id} className="flex items-baseline justify-between gap-2">
-                    <span className="text-muted-foreground tabular-nums" dir="ltr">
+                    <Link
+                      href={`/receipt/${a.paymentId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                      dir="ltr"
+                    >
                       {ymd(a.payment.date)} · {a.payment.receiptNo}
-                    </span>
+                    </Link>
                     <span className="font-medium tabular-nums" dir="ltr">{formatMoney(toNumber(a.amount))} {currency}</span>
                   </li>
                 ))}

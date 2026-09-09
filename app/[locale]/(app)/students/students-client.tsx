@@ -1,8 +1,8 @@
 "use client";
 
-import { useState , useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, CircleUserRound, MapPin, Map } from "lucide-react";
+import { Plus, Pencil, CircleUserRound, MapPin, Map as MapIcon } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
@@ -17,7 +17,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -31,10 +30,13 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { MapPicker } from "@/components/map-picker";
 import { saveStudent, deleteStudent } from "./actions";
 import { displayName, nameSearchText } from "@/lib/names";
+import { formatMoney } from "@/lib/money";
+import { referenceCode } from "@/lib/reference-code";
 
 export type Option = { id: string; label: string };
 export type StudentRow = {
   id: string;
+  referenceNo: number;
   name: string;
   nameEn: string | null;
   phone: string | null;
@@ -203,7 +205,7 @@ function StudentFields({
               }}
               trigger={
                 <Button type="button" variant="secondary" size="sm" className="gap-1">
-                  <Map className="size-3.5" />
+                  <MapIcon className="size-3.5" />
                   {t("locateOnMap")}
                 </Button>
               }
@@ -249,21 +251,53 @@ export function StudentsClient({
   levels,
   guardians,
   teachers,
+  currency,
 }: {
   students: StudentRow[];
   levels: Option[];
   guardians: Option[];
   teachers: Option[];
+  currency: string;
 }) {
   const t = useTranslations("students");
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const te = useTranslations("enums");
   const locale = useLocale();
-  const search = useTableSearch(students, (s) => [nameSearchText(s), s.phone, s.gradeLevelLabel, s.guardianLabel, s.homeCode]);
+  const teacherById = useMemo(
+    () => new Map(teachers.map((teacher) => [teacher.id, teacher.label])),
+    [teachers],
+  );
+  const specialTeacherNames = useCallback(
+    (student: StudentRow) =>
+      student.specialPriceTeacherIds.map((id) => teacherById.get(id)).filter(Boolean).join("، "),
+    [teacherById],
+  );
+  const search = useTableSearch(students, (s) => [
+    referenceCode("student", s.referenceNo),
+    nameSearchText(s),
+    s.phone,
+    s.gradeLevelLabel,
+    s.guardianLabel,
+    s.homeCode,
+    s.specialPricePerHour == null ? null : String(s.specialPricePerHour),
+    specialTeacherNames(s),
+  ]);
   const columns = useMemo<ColumnDef<StudentRow>[]>(
     () => [
+      { key: "code", label: t("studentCode"), value: (s) => referenceCode("student", s.referenceNo) },
       { key: "name", label: tc("name"), value: (s) => displayName(s, locale) },
+      {
+        key: "specialPrice",
+        label: t("specialPrice"),
+        type: "number",
+        value: (s) => s.specialPricePerHour,
+      },
+      {
+        key: "specialPriceTeachers",
+        label: t("specialPriceTeachers"),
+        value: (s) => s.specialPricePerHour == null ? null : specialTeacherNames(s) || t("allTeachers"),
+      },
       { key: "level", label: t("gradeLevel"), value: (s) => s.gradeLevelLabel, filterable: true },
       {
         key: "gradeYear",
@@ -293,7 +327,7 @@ export function StudentsClient({
       },
       { key: "actions", label: tc("actions") },
     ],
-    [t, tc, te],
+    [t, tc, te, locale, specialTeacherNames],
   );
   const sf = useTableSortFilter(search.filtered, columns);
   const pg = usePagination(sf.rows, 20, sf.version);
@@ -328,17 +362,52 @@ export function StudentsClient({
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={11} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
             )}
             {pg.pageItems.map((s) => (
               <TableRow key={s.id}>
-                <TableCell className="font-medium">{displayName(s, locale)}</TableCell>
+                <TableCell className="whitespace-nowrap font-medium tabular-nums">
+                  <Link href={`/students/${s.id}`} className="text-primary hover:underline" dir="ltr">
+                    {referenceCode("student", s.referenceNo)}
+                  </Link>
+                </TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/students/${s.id}`} className="hover:text-primary hover:underline">
+                    {displayName(s, locale)}
+                  </Link>
+                </TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums">
+                  {s.specialPricePerHour == null ? "—" : `${formatMoney(s.specialPricePerHour)} ${currency}`}
+                </TableCell>
+                <TableCell>
+                  {s.specialPricePerHour == null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : s.specialPriceTeacherIds.length === 0 ? (
+                    <Badge variant="muted">{t("allTeachers")}</Badge>
+                  ) : (
+                    <div className="flex min-w-48 flex-wrap gap-1">
+                      {s.specialPriceTeacherIds.map((teacherId) => (
+                        <Link key={teacherId} href={`/teachers/${teacherId}`}>
+                          <Badge variant="default" className="hover:underline">
+                            {teacherById.get(teacherId) ?? "—"}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell>{s.gradeLevelLabel ?? "—"}</TableCell>
                 <TableCell className="tabular-nums">{s.gradeYear ?? "—"}</TableCell>
-                <TableCell>{s.guardianLabel ?? "—"}</TableCell>
+                <TableCell>
+                  {s.guardianId && s.guardianLabel ? (
+                    <Link href={`/guardians/${s.guardianId}`} className="hover:text-primary hover:underline">
+                      {s.guardianLabel}
+                    </Link>
+                  ) : "—"}
+                </TableCell>
                 <TableCell><span dir="ltr">{s.phone ?? "—"}</span></TableCell>
                 <TableCell>
                   <Badge variant={s.studyLocation === "HOME" ? "warning" : "default"}>

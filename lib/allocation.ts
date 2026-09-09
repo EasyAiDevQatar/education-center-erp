@@ -10,6 +10,8 @@
 
 export type PayableSession = {
   id: string;
+  /** Stable human-facing sequence, rendered as SE-1001, SE-1002, ... */
+  referenceNo?: number;
   /** YYYY-MM-DD — the tie-break for "oldest" is the id, so runs are stable. */
   date: string;
   teacherId: string | null;

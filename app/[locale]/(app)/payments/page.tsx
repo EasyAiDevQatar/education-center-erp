@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, BILLING_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES, BILLING_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -13,7 +13,7 @@ export default async function PaymentsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, BILLING_ROLES);
+  const viewer = await requireRole(locale, BILLING_ROLES);
 
   const t = await getTranslations("payments");
 
@@ -75,6 +75,7 @@ export default async function PaymentsPage({
         teachers={teacherOpts}
         currency={currency}
         locale={locale}
+        canOpenTeacherProfiles={ACADEMIC_ROLES.includes(viewer.role)}
       />
     </div>
   );

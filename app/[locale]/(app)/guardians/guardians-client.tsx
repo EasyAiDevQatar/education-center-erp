@@ -14,7 +14,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -77,7 +76,7 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
       { key: "students", label: t("students"), type: "number", value: (g) => g.studentCount },
       { key: "actions", label: tc("actions") },
     ],
-    [t, tc],
+    [locale, t, tc],
   );
   const sf = useTableSortFilter(search.filtered, columns);
   const pg = usePagination(sf.rows, 20, sf.version);
@@ -118,10 +117,24 @@ export function GuardiansClient({ guardians }: { guardians: GuardianRow[] }) {
             )}
             {pg.pageItems.map((g) => (
               <TableRow key={g.id}>
-                <TableCell className="font-medium">{displayName(g, locale)}</TableCell>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/guardians/${g.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {displayName(g, locale)}
+                  </Link>
+                </TableCell>
                 <TableCell><span dir="ltr">{g.phone ?? "—"}</span></TableCell>
                 <TableCell><span dir="ltr">{g.email ?? "—"}</span></TableCell>
-                <TableCell className="tabular-nums">{g.studentCount}</TableCell>
+                <TableCell className="tabular-nums">
+                  <Link
+                    href={`/guardians/${g.id}?tab=children`}
+                    className="text-primary hover:underline"
+                  >
+                    {g.studentCount}
+                  </Link>
+                </TableCell>
                 <TableCell>
                   <div className="flex justify-center gap-1">
                     <Link href={`/guardians/${g.id}`}>

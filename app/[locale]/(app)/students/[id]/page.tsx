@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TrendingUp, TrendingDown, Wallet, CalendarDays, Phone, MapPin, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { requireRole, PEOPLE_ROLES } from "@/lib/rbac";
+import { requireRole, PEOPLE_ROLES, ACADEMIC_ROLES, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getStudentBalance, getStudentLedger } from "@/lib/balances";
 import { loadSessionLines, loadPaymentLines, getCurrency } from "@/lib/profile";
@@ -19,6 +19,8 @@ import { LedgerTable } from "./ledger-table";
 import { displayName, fullName } from "@/lib/names";
 import { unchargeableStatuses } from "@/lib/billing";
 import { ProfilePricingDialog } from "./profile-pricing-dialog";
+import { Link } from "@/i18n/navigation";
+import { referenceCode } from "@/lib/reference-code";
 
 export default async function StudentProfilePage({
   params,
@@ -29,7 +31,9 @@ export default async function StudentProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, PEOPLE_ROLES);
+  const viewer = await requireRole(locale, PEOPLE_ROLES);
+  const canOpenAcademicRecords = ACADEMIC_ROLES.includes(viewer.role);
+  const canOpenReceipts = STAFF_ROLES.includes(viewer.role);
 
   const t = await getTranslations("students");
   const tc = await getTranslations("common");
@@ -71,9 +75,17 @@ export default async function StudentProfilePage({
     ]);
   const teachers = teacherRows.map((x) => ({ id: x.id, label: displayName(x, locale) }));
   const assignedTeachers = [
-    ...new Map(assignedRows.map((row) => [row.teacherId, displayName(row.teacher, locale)])).values(),
+    ...new Map(
+      assignedRows.map((row) => [
+        row.teacherId,
+        { id: row.teacherId, label: displayName(row.teacher, locale) },
+      ]),
+    ).values(),
   ];
-  const specialPriceTeachers = specialPriceTeacherRows.map((row) => displayName(row.teacher, locale));
+  const specialPriceTeachers = specialPriceTeacherRows.map((row) => ({
+    id: row.teacherId,
+    label: displayName(row.teacher, locale),
+  }));
 
   const tabs = [
     { key: "overview", label: tp("overview") },
@@ -98,6 +110,7 @@ export default async function StudentProfilePage({
         }
         description={
           [
+            referenceCode("student", student.referenceNo),
             student.gradeLevel
               ? locale === "ar"
                 ? student.gradeLevel.nameAr
@@ -144,7 +157,16 @@ export default async function StudentProfilePage({
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <Row icon={<Phone className="size-4" />} label={tc("phone")} value={student.phone ?? "—"} />
-              <Row label={t("guardian")} value={student.guardian ? displayName(student.guardian, locale) : "—"} />
+              <Row
+                label={t("guardian")}
+                value={
+                  student.guardian ? (
+                    <Link href={`/guardians/${student.guardian.id}`} className="text-primary hover:underline">
+                      {displayName(student.guardian, locale)}
+                    </Link>
+                  ) : "—"
+                }
+              />
               <Row label={tc("phone")} value={student.guardian?.phone ?? "—"} />
               <Row icon={<MapPin className="size-4" />} label={t("address")} value={student.address ?? "—"} />
               <Row label={t("homeCode")} value={student.homeCode ?? "—"} />
@@ -160,13 +182,21 @@ export default async function StudentProfilePage({
                   />
                   <Row
                     label={t("specialPriceTeachers")}
-                    value={specialPriceTeachers.length ? specialPriceTeachers.join("، ") : t("allTeachers")}
+                    value={
+                      specialPriceTeachers.length
+                        ? <TeacherLinks teachers={specialPriceTeachers} enabled={canOpenAcademicRecords} />
+                        : t("allTeachers")
+                    }
                   />
                 </>
               )}
               <Row
                 label={t("assignedTeachers")}
-                value={assignedTeachers.length ? assignedTeachers.join("، ") : t("noTeachersAssigned")}
+                value={
+                  assignedTeachers.length
+                    ? <TeacherLinks teachers={assignedTeachers} enabled={canOpenAcademicRecords} />
+                    : t("noTeachersAssigned")
+                }
               />
               <Row
                 label={t("homeLocation")}
@@ -186,7 +216,13 @@ export default async function StudentProfilePage({
               <CardTitle>{tp("recentSessions")}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <SessionsTable rows={sessions.slice(0, 5)} currency={currency} hideStudent />
+              <SessionsTable
+                rows={sessions.slice(0, 5)}
+                currency={currency}
+                hideStudent
+                linkTeachers={canOpenAcademicRecords}
+                linkSessions={canOpenAcademicRecords}
+              />
             </CardContent>
           </Card>
         </div>
@@ -200,9 +236,18 @@ export default async function StudentProfilePage({
           studentName={displayName(student, locale)}
           teachers={teachers}
           unchargeableStatuses={unchargeable}
+          linkAcademicRecords={canOpenAcademicRecords}
         />
       )}
-      {tab === "payments" && <PaymentsTable rows={payments} currency={currency} hideStudent />}
+      {tab === "payments" && (
+        <PaymentsTable
+          rows={payments}
+          currency={currency}
+          hideStudent
+          linkTeachers={canOpenAcademicRecords}
+          linkReceipts={canOpenReceipts}
+        />
+      )}
       {tab === "statement" && (
         <div className="space-y-3">
           <div className="flex flex-wrap justify-end gap-2">
@@ -252,7 +297,7 @@ function Row({
   icon,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   icon?: React.ReactNode;
 }) {
   return (
@@ -263,5 +308,28 @@ function Row({
       </span>
       <span className="text-end font-medium">{value}</span>
     </div>
+  );
+}
+
+function TeacherLinks({
+  teachers,
+  enabled,
+}: {
+  teachers: { id: string; label: string }[];
+  enabled: boolean;
+}) {
+  return (
+    <span className="inline-flex flex-wrap justify-end gap-x-1">
+      {teachers.map((teacher, index) => (
+        <span key={teacher.id}>
+          {index > 0 && <span className="text-muted-foreground">، </span>}
+          {enabled ? (
+            <Link href={`/teachers/${teacher.id}`} className="text-primary hover:underline">
+              {teacher.label}
+            </Link>
+          ) : teacher.label}
+        </span>
+      ))}
+    </span>
   );
 }

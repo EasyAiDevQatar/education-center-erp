@@ -264,6 +264,7 @@
   },
   "sessions": {
     "title": "Daily Sessions",
+    "sessionCode": "Session code",
     "add": "Add session",
     "edit": "Edit session",
     "student": "Student",
@@ -522,6 +523,7 @@
     "studyLocation": "Study location",
     "studyLocationHint": "New sessions auto-price by grade and study location; each session can still override it.",
     "specialPrice": "Special price / hour",
+    "studentCode": "Student code",
     "specialPriceHint": "Optional. Overrides the grade/location matrix for new bookings and unpaid session edits.",
     "specialPriceTeachers": "Teachers eligible for special price",
     "specialPriceTeachersHint": "Separate from who teaches the student. Leave empty to apply the special price with every teacher, or choose one or more teachers to restrict it.",
@@ -546,6 +548,7 @@
   },
   "teachers": {
     "title": "Teachers",
+    "teacherCode": "Teacher code",
     "add": "Add teacher",
     "edit": "Edit teacher",
     "commissionPct": "Commission %",

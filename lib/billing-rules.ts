@@ -43,3 +43,37 @@ export function autoAllocate(
   }
   return out;
 }
+
+export type PaymentLedgerEffect = {
+  type: "PAYMENT" | "REFUND";
+  debit: number;
+  credit: number;
+};
+
+/**
+ * Turn a receipt lifecycle into the money movements shown on a family ledger.
+ *
+ * A cancelled receipt was a data-entry mistake and contributes nothing. A
+ * refund is different: the original collection stays visible and the amount
+ * returned is a separate debit, so partial refunds and the audit trail both
+ * reconcile with the net-paid total.
+ */
+export function paymentLedgerEffects(payment: {
+  status: string;
+  amount: number;
+  refundAmount: number | null;
+}): PaymentLedgerEffect[] {
+  if (payment.status === "CANCELLED") return [];
+
+  const effects: PaymentLedgerEffect[] = [
+    { type: "PAYMENT", debit: 0, credit: payment.amount },
+  ];
+  if (payment.status === "REFUNDED" && (payment.refundAmount ?? 0) > 0) {
+    effects.push({
+      type: "REFUND",
+      debit: payment.refundAmount ?? 0,
+      credit: 0,
+    });
+  }
+  return effects;
+}

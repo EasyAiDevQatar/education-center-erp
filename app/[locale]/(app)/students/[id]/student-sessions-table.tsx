@@ -16,6 +16,8 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney, formatHours } from "@/lib/money";
 import { QuickPayDialog } from "../../payments/quick-pay-dialog";
 import type { SessionLine } from "@/components/tables/relation-tables";
+import { Link } from "@/i18n/navigation";
+import { referenceCode } from "@/lib/reference-code";
 
 const SESSION_STATUS_VARIANT: Record<string, "success" | "warning" | "muted" | "destructive"> = {
   COMPLETED: "success",
@@ -46,6 +48,7 @@ export function StudentSessionsTable({
   studentName,
   teachers,
   unchargeableStatuses,
+  linkAcademicRecords = false,
 }: {
   rows: SessionLine[];
   currency: string;
@@ -53,6 +56,7 @@ export function StudentSessionsTable({
   studentName: string;
   teachers: { id: string; label: string }[];
   unchargeableStatuses: string[];
+  linkAcademicRecords?: boolean;
 }) {
   const t = useTranslations("sessions");
   const tc = useTranslations("common");
@@ -139,6 +143,7 @@ export function StudentSessionsTable({
                   onChange={togglePage}
                 />
               </TableHead>
+              <TableHead>{t("sessionCode")}</TableHead>
               <TableHead>{tc("date")}</TableHead>
               <TableHead>{t("teacher")}</TableHead>
               <TableHead>{t("gradeLevel")}</TableHead>
@@ -152,7 +157,7 @@ export function StudentSessionsTable({
           <TableBody>
             {search.filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
@@ -169,12 +174,29 @@ export function StudentSessionsTable({
                     onChange={() => toggle(r.id)}
                   />
                 </TableCell>
-                <TableCell className="tabular-nums">
-                  <span dir="ltr">
-                    {r.date} {r.time}
-                  </span>
+                <TableCell className="font-medium tabular-nums" dir="ltr">
+                  {linkAcademicRecords ? (
+                    <Link href={`/sessions/${r.id}`} className="text-primary hover:underline">
+                      {referenceCode("session", r.referenceNo)}
+                    </Link>
+                  ) : referenceCode("session", r.referenceNo)}
                 </TableCell>
-                <TableCell>{r.teacherName}</TableCell>
+                <TableCell className="tabular-nums">
+                  {linkAcademicRecords ? (
+                    <Link href={`/sessions/${r.id}`} className="text-primary hover:underline" dir="ltr">
+                      {r.date} {r.time}
+                    </Link>
+                  ) : (
+                    <span dir="ltr">{r.date} {r.time}</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {linkAcademicRecords && r.teacherId ? (
+                    <Link href={`/teachers/${r.teacherId}`} className="text-primary hover:underline">
+                      {r.teacherName}
+                    </Link>
+                  ) : r.teacherName}
+                </TableCell>
                 <TableCell>{r.levelLabel}</TableCell>
                 <TableCell className="tabular-nums">{formatHours(r.hours)}</TableCell>
                 <TableCell className="tabular-nums">{formatMoney(r.total)}</TableCell>

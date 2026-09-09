@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TrendingUp, TrendingDown, Wallet, Users, Phone, Mail } from "lucide-react";
-import { requireRole, PEOPLE_ROLES } from "@/lib/rbac";
+import { requireRole, PEOPLE_ROLES, ACADEMIC_ROLES, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadSessionLines, loadPaymentLines, getCurrency } from "@/lib/profile";
 import { formatMoney } from "@/lib/money";
@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PortalLoginButton } from "@/components/portal-login-button";
 import { displayName, fullName } from "@/lib/names";
+import { netPaid, unchargeableStatuses } from "@/lib/billing";
+import { toNumber } from "@/lib/money";
 
 export default async function GuardianProfilePage({
   params,
@@ -29,6 +31,8 @@ export default async function GuardianProfilePage({
   setRequestLocale(locale);
   const session = await requireRole(locale, PEOPLE_ROLES);
   const isAdmin = session.role === "ADMIN";
+  const canOpenAcademicRecords = ACADEMIC_ROLES.includes(session.role);
+  const canOpenReceipts = STAFF_ROLES.includes(session.role);
 
   const t = await getTranslations("guardians");
   const ts = await getTranslations("students");
@@ -50,18 +54,27 @@ export default async function GuardianProfilePage({
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
 
   const childIds = guardian.students.map((s) => s.id);
+  const unchargeable = await unchargeableStatuses();
 
   // Family-wide totals: every child's charges and payments.
-  const [charges, paid, sessions, payments, currency] = await Promise.all([
-    db.session.aggregate({ _sum: { total: true }, where: { studentId: { in: childIds } } }),
-    db.payment.aggregate({ _sum: { amount: true }, where: { studentId: { in: childIds } } }),
+  const [lessonCharges, packageCharges, paid, sessions, payments, currency] = await Promise.all([
+    db.session.aggregate({
+      _sum: { total: true },
+      where: {
+        studentId: { in: childIds },
+        status: { notIn: unchargeable },
+        packageId: null,
+      },
+    }),
+    db.package.aggregate({ _sum: { price: true }, where: { studentId: { in: childIds } } }),
+    netPaid({ studentId: { in: childIds } }),
     childIds.length ? loadSessionLines({ studentId: { in: childIds } }, locale) : Promise.resolve([]),
     childIds.length ? loadPaymentLines({ studentId: { in: childIds } }) : Promise.resolve([]),
     getCurrency(),
   ]);
 
-  const totalCharges = Number(charges._sum.total ?? 0);
-  const totalPaid = Number(paid._sum.amount ?? 0);
+  const totalCharges = toNumber(lessonCharges._sum.total) + toNumber(packageCharges._sum.price);
+  const totalPaid = paid;
   const balance = totalCharges - totalPaid;
 
   const tabs = [
@@ -133,8 +146,24 @@ export default async function GuardianProfilePage({
         </div>
       )}
 
-      {tab === "sessions" && <SessionsTable rows={sessions} currency={currency} />}
-      {tab === "payments" && <PaymentsTable rows={payments} currency={currency} />}
+      {tab === "sessions" && (
+        <SessionsTable
+          rows={sessions}
+          currency={currency}
+          linkStudents
+          linkTeachers={canOpenAcademicRecords}
+          linkSessions={canOpenAcademicRecords}
+        />
+      )}
+      {tab === "payments" && (
+        <PaymentsTable
+          rows={payments}
+          currency={currency}
+          linkStudents
+          linkTeachers={canOpenAcademicRecords}
+          linkReceipts={canOpenReceipts}
+        />
+      )}
 
       {/* One page for the whole family — the question a parent actually asks
           is "what do I owe you", not "what does each child owe you". */}

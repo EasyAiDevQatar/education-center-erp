@@ -85,6 +85,7 @@ export default async function SessionsPage({
     const occurrenceKey = sessionOccurrenceKey(s);
     return {
       id: s.id,
+      referenceNo: s.referenceNo,
       date: s.date.toISOString().slice(0, 10),
       time: s.date.toISOString().slice(11, 16),
       studentId: s.studentId,

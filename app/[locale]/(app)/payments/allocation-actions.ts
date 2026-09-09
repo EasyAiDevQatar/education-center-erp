@@ -51,6 +51,7 @@ export async function loadOutstandingSessions(
       const total = toNumber(s.total);
       return {
         id: s.id,
+        referenceNo: s.referenceNo,
         date: s.date.toISOString().slice(0, 10),
         teacherId: s.teacherId,
         teacherName: s.teacher ? displayName(s.teacher, locale) : "",

@@ -18,7 +18,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -32,9 +31,11 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { saveTeacher, deleteTeacher } from "./actions";
 import { displayName, nameSearchText } from "@/lib/names";
 import { EARNINGS_MODES } from "@/lib/earnings-mode";
+import { referenceCode } from "@/lib/reference-code";
 
 export type TeacherRow = {
   id: string;
+  referenceNo: number;
   name: string;
   nameEn: string | null;
   phone: string | null;
@@ -225,9 +226,16 @@ export function TeachersClient({ teachers, subjects }: { teachers: TeacherRow[];
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
   const locale = useLocale();
-  const search = useTableSearch(teachers, (x) => [nameSearchText(x), x.phone, x.notes, ...x.subjectLabels]);
+  const search = useTableSearch(teachers, (x) => [
+    referenceCode("teacher", x.referenceNo),
+    nameSearchText(x),
+    x.phone,
+    x.notes,
+    ...x.subjectLabels,
+  ]);
   const columns = useMemo<ColumnDef<TeacherRow>[]>(
     () => [
+      { key: "code", label: t("teacherCode"), value: (x) => referenceCode("teacher", x.referenceNo) },
       { key: "name", label: tc("name"), value: (x) => displayName(x, locale) },
       { key: "phone", label: tc("phone"), value: (x) => x.phone },
       { key: "commissionPct", label: t("commissionPct"), type: "number", value: (x) => x.commissionPct },
@@ -243,7 +251,7 @@ export function TeachersClient({ teachers, subjects }: { teachers: TeacherRow[];
       },
       { key: "actions", label: tc("actions") },
     ],
-    [t, tc],
+    [locale, t, tc],
   );
   const sf = useTableSortFilter(search.filtered, columns);
   const pg = usePagination(sf.rows, 20, sf.version);
@@ -278,14 +286,26 @@ export function TeachersClient({ teachers, subjects }: { teachers: TeacherRow[];
           <TableBody>
             {pg.total === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
             )}
             {pg.pageItems.map((teacher) => (
               <TableRow key={teacher.id}>
-                <TableCell className="font-medium">{displayName(teacher, locale)}</TableCell>
+                <TableCell className="font-medium tabular-nums" dir="ltr">
+                  <Link href={`/teachers/${teacher.id}`} className="text-primary hover:underline">
+                    {referenceCode("teacher", teacher.referenceNo)}
+                  </Link>
+                </TableCell>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/teachers/${teacher.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {displayName(teacher, locale)}
+                  </Link>
+                </TableCell>
                 <TableCell><span dir="ltr">{teacher.phone ?? "—"}</span></TableCell>
                 <TableCell className="tabular-nums">{teacher.commissionPct}%</TableCell>
                 <TableCell>

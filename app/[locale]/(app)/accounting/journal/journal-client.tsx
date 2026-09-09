@@ -34,7 +34,8 @@ import { usePagination, TablePagination } from "@/components/ui/table-pagination
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney } from "@/lib/money";
 import { JOURNAL_SOURCES } from "@/lib/enums";
-import { localNowTime, localToday } from "@/lib/session-time";
+import { localToday } from "@/lib/session-time";
+import { Link } from "@/i18n/navigation";
 import { createManualEntry, deleteManualEntry } from "./actions";
 
 export type EntryRow = {
@@ -42,8 +43,9 @@ export type EntryRow = {
   date: string;
   memo: string;
   sourceType: string;
+  sourceId: string | null;
   total: number;
-  lines: { id: string; account: string; debit: number; credit: number; memo: string | null }[];
+  lines: { id: string; accountId: string; account: string; debit: number; credit: number; memo: string | null }[];
 };
 export type AccountOpt = { id: string; label: string };
 
@@ -292,10 +294,23 @@ export function JournalClient({
                       {e.memo}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={e.sourceType === "MANUAL" ? "warning" : "default"}>
-                      {te(`journalSource.${e.sourceType as "MANUAL"}`)}
-                    </Badge>
+                  <TableCell onClick={(ev) => ev.stopPropagation()}>
+                    {e.sourceType === "PAYMENT" && e.sourceId ? (
+                      <Link
+                        href={`/receipt/${e.sourceId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:opacity-80"
+                      >
+                        <Badge variant="default">
+                          {te(`journalSource.${e.sourceType as "MANUAL"}`)}
+                        </Badge>
+                      </Link>
+                    ) : (
+                      <Badge variant={e.sourceType === "MANUAL" ? "warning" : "default"}>
+                        {te(`journalSource.${e.sourceType as "MANUAL"}`)}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="tabular-nums">
                     <span dir="ltr">
@@ -315,7 +330,14 @@ export function JournalClient({
                         <tbody>
                           {e.lines.map((l) => (
                             <tr key={l.id} className="border-b border-border/40 last:border-0">
-                              <td className="px-6 py-1.5">{l.account}</td>
+                              <td className="px-6 py-1.5">
+                                <Link
+                                  href={`/accounting/accounts/${l.accountId}`}
+                                  className="text-primary hover:underline"
+                                >
+                                  {l.account}
+                                </Link>
+                              </td>
                               <td className="w-32 px-2 py-1.5 tabular-nums">
                                 <span dir="ltr">
                                   {l.debit > 0 ? formatMoney(l.debit) : ""}

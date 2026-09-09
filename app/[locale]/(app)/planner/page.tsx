@@ -95,6 +95,7 @@ export default async function PlannerPage({
     key: sessionOccurrenceKey(s),
     row: {
       id: s.id,
+      referenceNo: s.referenceNo,
       teacherId: s.teacherId,
       studentId: s.studentId,
       startMin: s.date.getUTCHours() * 60 + s.date.getUTCMinutes(),
@@ -137,6 +138,7 @@ export default async function PlannerPage({
     const payments = new Set(items.map((item) => item.row.paymentStatus));
     const members = items.map(({ row }) => ({
       id: row.id,
+      referenceNo: row.referenceNo,
       studentId: row.studentId,
       studentName: row.studentName,
       levelLabel: row.levelLabel,

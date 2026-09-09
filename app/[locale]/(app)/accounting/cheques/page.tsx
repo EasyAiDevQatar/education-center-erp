@@ -74,6 +74,8 @@ export default async function ChequesPage({
     chequeNo: c.chequeNo,
     amount: toNumber(c.amount),
     bankName: c.bankName ?? c.book?.bankName ?? null,
+    studentId: c.studentId,
+    paymentId: c.paymentId,
     party:
       c.direction === "INCOMING"
         ? c.student

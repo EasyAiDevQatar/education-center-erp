@@ -129,6 +129,7 @@ export default async function CheckinPage({
 
     return {
       id: s.id,
+      referenceNo: s.referenceNo,
       sessionDate: s.date.toISOString().slice(0, 10),
       teacherId: s.teacherId,
       teacherName: s.teacher ? displayName(s.teacher, locale) : "",

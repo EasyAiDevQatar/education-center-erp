@@ -19,6 +19,9 @@ export async function loadSessionLines(
   });
   return rows.map((s) => ({
     id: s.id,
+    referenceNo: s.referenceNo,
+    studentId: s.studentId,
+    teacherId: s.teacherId,
     date: s.date.toISOString().slice(0, 10),
     time: s.date.toISOString().slice(11, 16),
     studentName: s.student.name,
@@ -44,6 +47,8 @@ export async function loadPaymentLines(
   });
   return rows.map((p) => ({
     id: p.id,
+    studentId: p.studentId,
+    teacherId: p.teacherId,
     date: p.date.toISOString().slice(0, 10),
     receiptNo: p.receiptNo,
     studentName: p.student?.name ?? "—",
@@ -81,6 +86,8 @@ export async function loadTeacherPaymentLines(
   for (const row of allocated) {
     const current = allocatedByPayment.get(row.paymentId) ?? {
       id: row.paymentId,
+      studentId: row.payment.studentId,
+      teacherId: row.session.teacherId,
       date: row.payment.date.toISOString().slice(0, 10),
       receiptNo: row.payment.receiptNo,
       studentName: row.payment.student?.name ?? "—",
@@ -96,6 +103,8 @@ export async function loadTeacherPaymentLines(
     ...allocatedByPayment.values(),
     ...direct.map((payment) => ({
       id: payment.id,
+      studentId: payment.studentId,
+      teacherId: payment.teacherId,
       date: payment.date.toISOString().slice(0, 10),
       receiptNo: payment.receiptNo,
       studentName: payment.student?.name ?? "—",

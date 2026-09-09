@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
 import { unchargeableStatuses, netPaid, LIVE_PAYMENTS } from "./billing";
+import { paymentLedgerEffects } from "./billing-rules";
 
 /**
  * Charges − payments = balance owed by the student.
@@ -44,7 +45,7 @@ export async function getStudentBalance(studentId: string) {
 
 export type LedgerEntry = {
   date: string;
-  type: "SESSION" | "PAYMENT" | "PACKAGE";
+  type: "SESSION" | "PAYMENT" | "REFUND" | "PACKAGE";
   description: string;
   debit: number; // charges
   credit: number; // payments
@@ -81,13 +82,23 @@ export async function getStudentLedger(studentId: string): Promise<LedgerEntry[]
       debit: toNumber(p.price),
       credit: 0,
     })),
-    ...payments.map((p) => ({
-      date: p.date.toISOString().slice(0, 10),
-      type: "PAYMENT" as const,
-      description: `#${p.receiptNo}`,
-      debit: 0,
-      credit: toNumber(p.amount),
-    })),
+    ...payments.flatMap((p) =>
+      paymentLedgerEffects({
+        status: p.status,
+        amount: toNumber(p.amount),
+        refundAmount: p.refundAmount == null ? null : toNumber(p.refundAmount),
+      }).map((effect) => ({
+        date: (effect.type === "REFUND" ? p.voidedAt ?? p.date : p.date)
+          .toISOString()
+          .slice(0, 10),
+        type: effect.type,
+        // The arrow is language-neutral and keeps the receipt number visibly
+        // paired with its reversal in Arabic and English statements.
+        description: effect.type === "REFUND" ? `↩ #${p.receiptNo}` : `#${p.receiptNo}`,
+        debit: effect.debit,
+        credit: effect.credit,
+      })),
+    ),
   ].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   let running = 0;

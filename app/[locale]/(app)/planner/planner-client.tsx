@@ -25,7 +25,7 @@ import {
   Route,
   Users,
 } from "lucide-react";
-import { useRouter, usePathname } from "@/i18n/navigation";
+import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
+import { referenceCode } from "@/lib/reference-code";
 import { studentSpecialPrice } from "@/lib/special-price";
 import { printDoc, printPageSize } from "@/lib/print";
 import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
@@ -88,6 +89,7 @@ import {
 
 export type PlannerSession = {
   id: string;
+  referenceNo: number;
   teacherId: string;
   studentId: string;
   startMin: number;
@@ -115,6 +117,7 @@ export type PlannerSession = {
     name: string | null;
     members: {
       id: string;
+      referenceNo: number;
       studentId: string;
       studentName: string;
       levelLabel: string;
@@ -167,6 +170,12 @@ function addDaysStr(s: string, n: number) {
   const d = new Date(`${s}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
+}
+
+function plannerSessionCode(session: PlannerSession) {
+  const extra = session.group ? session.group.members.length - 1 : 0;
+  const code = referenceCode("session", session.referenceNo);
+  return extra > 0 ? `${code} +${extra}` : code;
 }
 
 export function PlannerClient({
@@ -712,7 +721,15 @@ export function PlannerClient({
                           )}
                         >
                           <div className="flex items-center justify-between gap-1 tabular-nums">
-                            <span className="font-semibold">
+                            <span className="flex min-w-0 items-center gap-1.5 font-semibold">
+                              <Link
+                                href={`/sessions/${s.group?.members[0]?.id ?? s.id}`}
+                                className="shrink-0 rounded bg-background/80 px-1 font-mono text-[10px] text-primary hover:underline"
+                                dir="ltr"
+                                draggable={false}
+                              >
+                                {plannerSessionCode(s)}
+                              </Link>
                               <TimeRange start={s.startMin} end={end} />
                             </span>
                             <span className="flex shrink-0 items-center gap-1">

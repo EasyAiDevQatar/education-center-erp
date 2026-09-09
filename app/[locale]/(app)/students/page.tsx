@@ -25,7 +25,7 @@ export default async function StudentsPage({
     select: { id: true },
   });
 
-  const [students, levels, guardians, teachers] = await Promise.all([
+  const [students, levels, guardians, teachers, currencyRow] = await Promise.all([
     db.student.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -38,6 +38,7 @@ export default async function StudentsPage({
     db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
     db.guardian.findMany({ orderBy: { name: "asc" } }),
     db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    db.setting.findUnique({ where: { key: "currency" }, select: { value: true } }),
   ]);
 
   const teacherOptions: Option[] = teachers.map((x) => ({ id: x.id, label: displayName(x, locale) }));
@@ -50,6 +51,7 @@ export default async function StudentsPage({
 
   const rows: StudentRow[] = students.map((s) => ({
     id: s.id,
+    referenceNo: s.referenceNo,
     name: s.name,
     nameEn: s.nameEn,
     phone: s.phone,
@@ -91,6 +93,7 @@ export default async function StudentsPage({
         levels={levelOptions}
         guardians={guardianOptions}
         teachers={teacherOptions}
+        currency={currencyRow?.value ?? "QAR"}
       />
     </div>
   );

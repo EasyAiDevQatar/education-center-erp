@@ -35,6 +35,7 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
 import { formatHours } from "@/lib/money";
+import { referenceCode } from "@/lib/reference-code";
 import { minToHHMM } from "@/lib/planner";
 import { centerToday, formatDurationClock } from "@/lib/session-time";
 import { Select } from "@/components/ui/select";
@@ -55,6 +56,7 @@ export type AttendanceView = "list" | "cards";
 
 export type RosterItem = {
   id: string;
+  referenceNo: number;
   sessionDate: string;
   teacherId: string | null;
   teacherName: string;
@@ -204,6 +206,7 @@ function AttendanceList({
   run: ActionRunner;
 }) {
   const t = useTranslations("checkin");
+  const ts = useTranslations("sessions");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
   const pg = usePagination(rows, 20, query);
@@ -214,6 +217,7 @@ function AttendanceList({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>{ts("sessionCode")}</TableHead>
               <TableHead>{t("studentColumn")}</TableHead>
               <TableHead>{t("teacherColumn")}</TableHead>
               <TableHead>{t("locationColumn")}</TableHead>
@@ -230,13 +234,18 @@ function AttendanceList({
           <TableBody>
             {pg.pageItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="py-10 text-muted-foreground">
+                <TableCell colSpan={12} className="py-10 text-muted-foreground">
                   {tc("noData")}
                 </TableCell>
               </TableRow>
             )}
             {pg.pageItems.map((item) => (
               <TableRow key={item.id} className={item.status === "CANCELLED" ? "opacity-60" : undefined}>
+                <TableCell className="font-mono font-medium tabular-nums" dir="ltr">
+                  <Link href={`/sessions/${item.id}`} className="text-primary hover:underline">
+                    {referenceCode("session", item.referenceNo)}
+                  </Link>
+                </TableCell>
                 <TableCell className="font-medium">{item.studentName}</TableCell>
                 <TableCell>{item.teacherName || t("noTeacher")}</TableCell>
                 <TableCell>{te(`location.${item.location}`)}</TableCell>
@@ -268,6 +277,13 @@ function AttendanceList({
         )}
         {pg.pageItems.map((item) => (
           <div key={item.id} className={cn("space-y-2 p-3", item.status === "CANCELLED" && "opacity-60")}>
+            <Link
+              href={`/sessions/${item.id}`}
+              className="inline-flex font-mono text-xs font-semibold text-primary hover:underline"
+              dir="ltr"
+            >
+              {referenceCode("session", item.referenceNo)}
+            </Link>
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold">{item.studentName}</p>
@@ -326,6 +342,7 @@ export function RosterBoard({
   eligibleTeachersByDate: Record<string, { id: string; label: string }[]>;
 }) {
   const t = useTranslations("checkin");
+  const ts = useTranslations("sessions");
   const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
@@ -336,12 +353,18 @@ export function RosterBoard({
   const [flash, setFlash] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const attendanceSearch = useTableSearch(items, (i) => [i.studentName, i.teacherName]);
+  const attendanceSearch = useTableSearch(items, (i) => [
+    referenceCode("session", i.referenceNo),
+    i.studentName,
+    i.teacherName,
+  ]);
   const teacherSearch = useTableSearch(needsTeacher, (i) => [
+    referenceCode("session", i.referenceNo),
     i.studentName,
     i.sessionDate,
   ]);
   const reviewSearch = useTableSearch(pendingReview, (i) => [
+    referenceCode("session", i.referenceNo),
     i.studentName,
     i.teacherName,
     i.sessionDate,
@@ -566,6 +589,13 @@ export function RosterBoard({
                             CARD_STYLE[item.status] ?? CARD_STYLE.SCHEDULED,
                           )}
                         >
+                          <Link
+                            href={`/sessions/${item.id}`}
+                            className="mb-1 inline-flex font-mono text-[10px] font-semibold text-primary hover:underline"
+                            dir="ltr"
+                          >
+                            {referenceCode("session", item.referenceNo)}
+                          </Link>
                           <div className="flex items-start justify-between gap-1">
                             <span className="truncate font-medium">{item.studentName}</span>
                             {item.location === "HOME" ? (
@@ -637,6 +667,7 @@ export function RosterBoard({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>{ts("sessionCode")}</TableHead>
                   <TableHead>{tc("date")}</TableHead>
                   <TableHead>{t("studentColumn")}</TableHead>
                   <TableHead>{tc("status")}</TableHead>
@@ -646,13 +677,18 @@ export function RosterBoard({
               <TableBody>
                 {teacherPg.pageItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="py-10 text-muted-foreground">{t("noNeedsTeacher")}</TableCell>
+                    <TableCell colSpan={5} className="py-10 text-muted-foreground">{t("noNeedsTeacher")}</TableCell>
                   </TableRow>
                 )}
                 {teacherPg.pageItems.map((item) => {
                   const candidates = eligibleTeachersByDate[item.sessionDate] ?? [];
                   return (
                     <TableRow key={item.id}>
+                      <TableCell className="font-mono font-medium tabular-nums" dir="ltr">
+                        <Link href={`/sessions/${item.id}`} className="text-primary hover:underline">
+                          {referenceCode("session", item.referenceNo)}
+                        </Link>
+                      </TableCell>
                       <TableCell className="tabular-nums" dir="ltr">
                         {item.sessionDate} {minToHHMM(item.startMin)}
                       </TableCell>
@@ -720,6 +756,7 @@ export function RosterBoard({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>{ts("sessionCode")}</TableHead>
                   <TableHead>{tc("date")}</TableHead>
                   <TableHead>{t("studentColumn")}</TableHead>
                   <TableHead>{t("teacherColumn")}</TableHead>
@@ -730,11 +767,16 @@ export function RosterBoard({
               <TableBody>
                 {reviewPg.pageItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-muted-foreground">{t("noReviewSessions")}</TableCell>
+                    <TableCell colSpan={6} className="py-10 text-muted-foreground">{t("noReviewSessions")}</TableCell>
                   </TableRow>
                 )}
                 {reviewPg.pageItems.map((item) => (
                   <TableRow key={item.id}>
+                    <TableCell className="font-mono font-medium tabular-nums" dir="ltr">
+                      <Link href={`/sessions/${item.id}`} className="text-primary hover:underline">
+                        {referenceCode("session", item.referenceNo)}
+                      </Link>
+                    </TableCell>
                     <TableCell className="tabular-nums" dir="ltr">
                       {item.sessionDate} {minToHHMM(item.startMin)}
                     </TableCell>

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Ban, Building2, Check, Clock, Home, Search, UserRoundPlus, Users } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/money";
+import { referenceCode } from "@/lib/reference-code";
 import { cancelGroupOccurrence, updateGroupOccurrenceRoster } from "../sessions/actions";
 import type { StudentOpt } from "../sessions/session-dialog";
 import type { CalEvent } from "./calendar-client";
@@ -32,11 +33,13 @@ export function GroupOccurrenceDialog({
   event,
   currency,
   students,
+  canOpenSession,
   onClose,
 }: {
   event: CalEvent;
   currency: string;
   students: StudentOpt[];
+  canOpenSession: boolean;
   onClose: () => void;
 }) {
   const locale = useLocale();
@@ -166,6 +169,19 @@ export function GroupOccurrenceDialog({
               key={member.id}
               className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
             >
+              {canOpenSession ? (
+                <Link
+                  href={`/sessions/${member.id}`}
+                  className="shrink-0 font-mono text-xs font-semibold text-primary hover:underline"
+                  dir="ltr"
+                >
+                  {referenceCode("session", member.referenceNo)}
+                </Link>
+              ) : (
+                <span className="shrink-0 font-mono text-xs font-semibold" dir="ltr">
+                  {referenceCode("session", member.referenceNo)}
+                </span>
+              )}
               <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold">
                 {index + 1}
               </span>
