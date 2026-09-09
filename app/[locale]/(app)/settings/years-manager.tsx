@@ -15,6 +15,7 @@ import {
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatDateOnly } from "@/lib/date-only";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -99,7 +100,7 @@ export function YearsManager({ years }: { years: AcademicYearRow[] }) {
                   </TableCell>
                   <TableCell className="tabular-nums">
                     <span dir="ltr">
-                      {y.startDate} → {y.endDate}
+                      <span dir="ltr" className="tabular-nums">{formatDateOnly(y.startDate)} → {formatDateOnly(y.endDate)}</span>
                     </span>
                   </TableCell>
                   <TableCell className="tabular-nums">

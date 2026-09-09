@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Bus, CalendarDays, CheckCircle2, Route as RouteIcon } from "lucide-react";
+import { formatDateOnly } from "@/lib/date-only";
 
 const minToHHMM = (n: number) =>
   `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
@@ -118,7 +119,7 @@ export default async function DriverProfilePage({
         {rows.slice(0, 30).map((x) => (
           <TableRow key={x.id}>
             <TableCell className="tabular-nums" dir="ltr">
-              {x.date.toISOString().slice(0, 10)}
+              {formatDateOnly(x.date)}
             </TableCell>
             <TableCell className="tabular-nums" dir="ltr">
               {minToHHMM(x.plannedStartMin)}–{minToHHMM(x.plannedEndMin)}
@@ -170,7 +171,7 @@ export default async function DriverProfilePage({
         )}
         {licenceDays != null && (
           <Badge variant={licenceDays < 0 ? "destructive" : licenceDays <= 60 ? "warning" : "success"}>
-            {t("licenceExpiry")}: <span dir="ltr">{driver.licenceExpiry!.toISOString().slice(0, 10)}</span>
+            {t("licenceExpiry")}: <span dir="ltr">{formatDateOnly(driver.licenceExpiry)}</span>
           </Badge>
         )}
         <Badge variant={driver.active ? "success" : "muted"}>

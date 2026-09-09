@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import type { getDashboardAlerts } from "@/lib/report-queries";
 
 type Alerts = Awaited<ReturnType<typeof getDashboardAlerts>>;
@@ -74,7 +75,7 @@ export async function AlertWidgets({
             <div key={p.id} className="flex items-center justify-between gap-2">
               <span className="truncate">{p.studentName}</span>
               <span className="shrink-0 text-xs text-muted-foreground tabular-nums" dir="ltr">
-                {formatHours(p.remaining)}h · {p.expiresAt}
+                {formatHours(p.remaining)}h · {formatDateOnly(p.expiresAt)}
               </span>
             </div>
           ))}

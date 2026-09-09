@@ -17,6 +17,7 @@ import {
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/date-only";
 
 export type ExpiringRow = {
   id: string;
@@ -163,7 +164,7 @@ export function ExpiringDocsClient({ rows }: { rows: ExpiringRow[] }) {
                     <span dir="ltr">{r.number ?? "—"}</span>
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    <span dir="ltr">{r.expiresOn ?? "—"}</span>
+                    <span dir="ltr">{formatDateOnly(r.expiresOn)}</span>
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {r.days == null ? "—" : r.days}

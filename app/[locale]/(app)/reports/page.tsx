@@ -12,6 +12,7 @@ import {
   getDailySessionReport,
 } from "@/lib/report-queries";
 import { resolveReportDateStrings } from "@/lib/report-range";
+import { formatDateOnly } from "@/lib/date-only";
 import { PageHeader } from "@/components/page-header";
 import { ReportsClient, type ReportTab } from "./reports-client";
 
@@ -99,7 +100,7 @@ export default async function ReportsPage({
         currency={settingsMap.currency ?? "QAR"}
         centerName={settingsMap.centerName ?? ""}
         defaultPrintFormat={settingsMap.receiptSize ?? "A4"}
-        periodLabel={fromStr || toStr ? `${fromStr || "…"} — ${toStr || "…"}` : t("allTime")}
+        periodLabel={fromStr || toStr ? `${fromStr ? formatDateOnly(fromStr) : "…"} — ${toStr ? formatDateOnly(toStr) : "…"}` : t("allTime")}
         {...data}
       />
     </div>

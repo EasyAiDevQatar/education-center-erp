@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
+import { formatDateTime } from "@/lib/date-only";
 import { Printer, CheckCheck, FileDown } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -375,10 +376,7 @@ export function RunDetailClient({
           centerName={centerName}
           centerLogo={centerLogo}
           currency={currency}
-          printedAt={new Date().toLocaleString(locale === "ar" ? "ar-QA" : "en-GB", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })}
+          printedAt={formatDateTime(new Date())}
         />
       )}
     </div>

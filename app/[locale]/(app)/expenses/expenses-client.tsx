@@ -28,6 +28,7 @@ import {
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { useRouter } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { EXPENSE_STATUSES } from "@/lib/enums";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { saveExpense, deleteExpense, approveExpense } from "./actions";
@@ -215,7 +216,7 @@ export function ExpensesClient({
             )}
             {pg.pageItems.map((e) => (
               <TableRow key={e.id}>
-                <TableCell className="tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
+                <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(e.date)}</span></TableCell>
                 <TableCell className="font-medium">{e.description}</TableCell>
                 <TableCell>{e.categoryLabel}</TableCell>
                 <TableCell>{e.supplierLabel ?? e.paidTo ?? "—"}</TableCell>
@@ -233,7 +234,7 @@ export function ExpensesClient({
                       title={e.description}
                       subtitle={e.categoryLabel}
                       fields={[
-                        { label: tc("date"), value: e.date, ltr: true },
+                        { label: tc("date"), value: formatDateOnly(e.date), ltr: true },
                         { label: t("description"), value: e.description },
                         { label: t("category"), value: e.categoryLabel },
                         { label: t("amount"), value: `${formatMoney(e.amount)} ${currency}`, ltr: true },

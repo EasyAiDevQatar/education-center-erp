@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { referenceCode } from "@/lib/reference-code";
 import { Link } from "@/i18n/navigation";
 import {
@@ -203,7 +204,7 @@ export function PaymentAllocator({
                     className="size-4 shrink-0 accent-primary"
                     checked={picked.has(s.id)}
                     onChange={(e) => togglePick(s, e.target.checked)}
-                    aria-label={`${t("payThis")} ${s.date}`}
+                    aria-label={`${t("payThis")} ${formatDateOnly(s.date)}`}
                     title={t("payThis")}
                   />
                   {/* Oldest first, numbered, so "clear the old ones" is visible
@@ -229,7 +230,7 @@ export function PaymentAllocator({
                     )
                   )}
                   <span className="tabular-nums" dir="ltr">
-                    {s.date}
+                    {formatDateOnly(s.date)}
                   </span>
                   {canOpenSessionProfiles && s.teacherId ? (
                     <Link
@@ -252,7 +253,7 @@ export function PaymentAllocator({
                     min="0"
                     max={s.outstanding}
                     dir="ltr"
-                    aria-label={`${t("allocate")} ${s.date}`}
+                    aria-label={`${t("allocate")} ${formatDateOnly(s.date)}`}
                     className={`h-8 w-24 ${over ? "border-destructive" : ""}`}
                     value={value}
                     onChange={(e) => {

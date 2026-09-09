@@ -18,14 +18,12 @@ import {
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { ArticleFeedback } from "@/components/help/article-feedback";
+import { formatDateOnly } from "@/lib/date-only";
 
 export async function DashboardNavigationArticle({ locale }: { locale: string }) {
   const t = await getTranslations("help");
   const ta = await getTranslations("help.articles.dashboardNavigation");
-  const updated = new Intl.DateTimeFormat(locale === "ar" ? "ar-QA" : "en-GB", {
-    dateStyle: "long",
-    timeZone: "Asia/Qatar",
-  }).format(new Date("2026-09-01T00:00:00+03:00"));
+  const updated = formatDateOnly("2026-09-01");
   const dashboardScreenshot = locale === "ar"
     ? "/help/quick-start/dashboard-ar.png"
     : "/help/quick-start/dashboard-en.png";
@@ -62,7 +60,9 @@ export async function DashboardNavigationArticle({ locale }: { locale: string })
             </div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{ta("title")}</h1>
             <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">{ta("intro")}</p>
-            <p className="mt-4 text-sm text-muted-foreground">{t("lastUpdated", { date: updated })}</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {t("lastUpdated", { date: "" })}<span dir="ltr" className="tabular-nums">{updated}</span>
+            </p>
           </header>
 
           <section id="before" className="scroll-mt-20 py-7">

@@ -19,7 +19,7 @@ function SummaryRow({
   return (
     <div className="flex justify-between">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={strong ? "font-semibold tabular-nums" : "font-medium tabular-nums"}>{value}</dd>
+      <dd className={strong ? "font-semibold tabular-nums" : "font-medium tabular-nums"} dir="auto">{value}</dd>
     </div>
   );
 }
@@ -124,7 +124,7 @@ export default async function PayslipPage({
             <tbody>
               {lines.map((s) => (
                 <tr key={s.id} className="border-b border-border/60">
-                  <td className="p-2 tabular-nums"><span dir="ltr">{s.date.toISOString().slice(0, 10)}</span></td>
+                  <td className="p-2 tabular-nums"><span dir="ltr">{formatDate(s.date, locale)}</span></td>
                   <td className="p-2">{displayName(s.student, locale)}</td>
                   <td className="p-2 tabular-nums">{formatHours(s.hours)}</td>
                   <td className="p-2 tabular-nums">{formatMoney(s.total)}</td>

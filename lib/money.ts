@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { formatDateOnly } from "@/lib/date-only";
 
 export type DecimalLike = Prisma.Decimal | number | string | null | undefined;
 
@@ -30,10 +31,8 @@ export function formatHours(v: DecimalLike): string {
 }
 
 export function formatDate(d: Date | string, locale = "en"): string {
-  const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleDateString(locale === "ar" ? "ar-EG-u-nu-latn" : "en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  // Keep the locale argument for backwards compatibility with existing callers.
+  // Dates are deliberately identical in Arabic and English: Western DD/MM/YYYY.
+  void locale;
+  return formatDateOnly(d);
 }

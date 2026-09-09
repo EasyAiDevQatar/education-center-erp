@@ -35,6 +35,7 @@ import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
 import { formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { referenceCode } from "@/lib/reference-code";
 import { minToHHMM } from "@/lib/planner";
 import { centerToday, formatDurationClock } from "@/lib/session-time";
@@ -688,7 +689,7 @@ export function RosterBoard({
                         </Link>
                       </TableCell>
                       <TableCell className="tabular-nums" dir="ltr">
-                        {item.sessionDate} {minToHHMM(item.startMin)}
+                        {formatDateOnly(item.sessionDate)} {minToHHMM(item.startMin)}
                       </TableCell>
                       <TableCell className="font-medium">{item.studentName}</TableCell>
                       <TableCell><StatusBadge status={item.status} /></TableCell>
@@ -776,7 +777,7 @@ export function RosterBoard({
                       </Link>
                     </TableCell>
                     <TableCell className="tabular-nums" dir="ltr">
-                      {item.sessionDate} {minToHHMM(item.startMin)}
+                      {formatDateOnly(item.sessionDate)} {minToHHMM(item.startMin)}
                     </TableCell>
                     <TableCell className="font-medium">{item.studentName}</TableCell>
                     <TableCell>{item.teacherName || t("noTeacher")}</TableCell>

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { referenceCode } from "@/lib/reference-code";
 import { localNowTime, localToday } from "@/lib/session-time";
 import {
@@ -351,14 +352,9 @@ export function CalendarClient({
   const today = localToday();
 
   const rangeLabel = useMemo(() => {
-    const fmt = (s: string) =>
-      new Date(`${s}T00:00:00.000Z`).toLocaleDateString(locale === "ar" ? "ar-EG-u-nu-latn" : "en-GB", {
-        day: "2-digit",
-        month: "short",
-        timeZone: "UTC",
-      });
+    const fmt = (s: string) => formatDateOnly(s);
     return view === "day" ? fmt(days[0]) : `${fmt(days[0])} – ${fmt(days[days.length - 1])}`;
-  }, [days, view, locale]);
+  }, [days, view]);
 
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
@@ -393,7 +389,7 @@ export function CalendarClient({
             <ChevronRight className="size-4 rtl:rotate-180" />
           </Button>
         </div>
-        <span className="min-w-32 text-sm font-semibold tabular-nums">{rangeLabel}</span>
+        <span className="min-w-32 text-sm font-semibold tabular-nums" dir="ltr">{rangeLabel}</span>
 
         <Combobox
           aria-label={t("filterTeacher")}
@@ -526,7 +522,7 @@ export function CalendarClient({
                     {dt.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", { weekday: "short", timeZone: "UTC" })}
                   </div>
                   <div className={cn("text-sm font-semibold tabular-nums", isToday && "text-primary")}>
-                    {dt.toLocaleDateString(locale === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { day: "2-digit", month: "2-digit", timeZone: "UTC" })}
+                    <span dir="ltr">{formatDateOnly(d)}</span>
                   </div>
                 </div>
               );
@@ -869,7 +865,7 @@ function ListView({
                   eventCodeLabel(ev)
                 )}
               </TableCell>
-              <TableCell className="tabular-nums"><span dir="ltr">{ev.day}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(ev.day)}</span></TableCell>
               <TableCell className="tabular-nums"><span dir="ltr">{fmtTime(ev.startMinutes)}</span></TableCell>
               <TableCell className="font-medium">
                 {ev.group ? (

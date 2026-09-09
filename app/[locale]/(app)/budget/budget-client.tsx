@@ -43,6 +43,7 @@ import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import type { BudgetMonthMetrics, BudgetPeriodMetrics } from "@/lib/budget";
 import type { BudgetPlanReportData } from "@/lib/budget-queries";
 import {
@@ -927,14 +928,16 @@ export function BudgetClient({
       <div className="hidden print:mb-4 print:block print:text-center">
         <div className="font-bold">{centerName}</div>
         <div>{t("title")} · {data.plan.name}</div>
-        <div className="text-sm text-muted-foreground">{view === "annual" ? `${data.plan.startDate} — ${data.plan.endDate}` : monthLabel}</div>
+        <div className="text-sm text-muted-foreground" dir={view === "annual" ? "ltr" : undefined}>
+          {view === "annual" ? `${formatDateOnly(data.plan.startDate)} — ${formatDateOnly(data.plan.endDate)}` : monthLabel}
+        </div>
       </div>
 
       <div data-print="A4" data-print-size-selectable className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3">
           <div>
             <h2 className="font-semibold">{data.plan.name}</h2>
-            <p dir="ltr" className="text-start text-xs text-muted-foreground">{data.plan.startDate} — {data.plan.endDate}</p>
+            <p dir="ltr" className="text-start text-xs text-muted-foreground">{formatDateOnly(data.plan.startDate)} — {formatDateOnly(data.plan.endDate)}</p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={editable ? "success" : "muted"}>{editable ? t("active") : t("archived")}</Badge>

@@ -41,6 +41,7 @@ import {
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   DEPARTMENTS,
   EMPLOYEE_STATUSES,
@@ -300,7 +301,7 @@ function DocumentsDialog({
                     )}
                     {d.issuedOn && (
                       <span className="text-xs text-muted-foreground" dir="ltr">
-                        {d.issuedOn} →
+                        {formatDateOnly(d.issuedOn)} →
                       </span>
                     )}
                     <span className="ms-auto flex shrink-0 items-center gap-2">
@@ -318,7 +319,7 @@ function DocumentsDialog({
                         <Badge
                           variant={days !== null && days <= 14 ? "destructive" : days !== null && days <= 60 ? "warning" : "default"}
                         >
-                          {d.expiresOn}
+                          {formatDateOnly(d.expiresOn)}
                         </Badge>
                       )}
                       <Button
@@ -687,7 +688,7 @@ export function HrClient({
                   </TableCell>
                   <TableCell>{e.jobTitle ?? "—"}</TableCell>
                   <TableCell>{e.department ? te(`department.${e.department}`) : "—"}</TableCell>
-                  <TableCell className="tabular-nums"><span dir="ltr">{e.hireDate ?? "—"}</span></TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(e.hireDate)}</span></TableCell>
                   <TableCell className="tabular-nums">
                     {formatMoney(e.basicSalary + e.allowances)}
                   </TableCell>

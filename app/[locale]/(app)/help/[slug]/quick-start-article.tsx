@@ -15,6 +15,7 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { ArticleFeedback } from "@/components/help/article-feedback";
 import { QuickStartChecklist, type QuickStartItem } from "@/components/help/quick-start-checklist";
+import { formatDateOnly } from "@/lib/date-only";
 
 const CHECKLIST_LINKS = [
   "/settings?tab=center&sub=center",
@@ -38,10 +39,7 @@ export async function QuickStartArticle({
 }) {
   const t = await getTranslations("help");
   const ta = await getTranslations("help.articles.quickStart");
-  const updated = new Intl.DateTimeFormat(locale === "ar" ? "ar-QA" : "en-GB", {
-    dateStyle: "long",
-    timeZone: "Asia/Qatar",
-  }).format(new Date("2026-09-01T00:00:00+03:00"));
+  const updated = formatDateOnly("2026-09-01");
   const items: QuickStartItem[] = CHECKLIST_LINKS.map((href, index) => ({
     id: `setup-${index + 1}`,
     title: ta(`checklist.${index}.title`),
@@ -80,7 +78,9 @@ export async function QuickStartArticle({
             </div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{ta("title")}</h1>
             <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">{ta("intro")}</p>
-            <p className="mt-4 text-sm text-muted-foreground">{t("lastUpdated", { date: updated })}</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {t("lastUpdated", { date: "" })}<span dir="ltr" className="tabular-nums">{updated}</span>
+            </p>
           </header>
 
           <section id="before" className="scroll-mt-20 py-7">

@@ -100,7 +100,7 @@ export async function previewTemplate(
   const samples: Record<string, string> = {
     center: map.centerName ?? "المركز",
     currency: map.currency ?? "QAR",
-    date: "2026-08-22",
+    date: "22/08/2026",
     time: "16:00",
     student: "خالد العطية",
     guardian: "أبو خالد العطية",

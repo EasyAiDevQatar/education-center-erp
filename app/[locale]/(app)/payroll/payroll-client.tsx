@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { formatMoney, formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { createPayout, markPayoutPaid, deletePayout } from "./actions";
 import { computePay, anySalary, type EarningsMode } from "@/lib/earnings-mode";
 
@@ -162,7 +163,7 @@ function PayslipFields({
               {terms.length === 0 && <option value="">—</option>}
               {terms.map((x) => (
                 <option key={x.id} value={x.id}>
-                  {x.label} ({x.startDate} → {x.endDate})
+                  {x.label} (<span dir="ltr">{formatDateOnly(x.startDate)} → {formatDateOnly(x.endDate)}</span>)
                 </option>
               ))}
             </Select>
@@ -452,7 +453,7 @@ export function PayrollClient({
                   )}
                 </TableCell>
                 <TableCell className="text-xs tabular-nums"><span dir="ltr">
-                  {p.periodStart} → {p.periodEnd}
+                  {formatDateOnly(p.periodStart)} → {formatDateOnly(p.periodEnd)}
                 </span></TableCell>
                 <TableCell className="tabular-nums">{formatMoney(p.grossCommission)}</TableCell>
                 <TableCell className="tabular-nums">{formatMoney(p.advances)}</TableCell>

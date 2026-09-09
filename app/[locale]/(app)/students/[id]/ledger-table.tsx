@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 
 export type LedgerEntry = {
   date: string;
@@ -49,7 +50,7 @@ export function LedgerTable({ ledger }: { ledger: LedgerEntry[] }) {
           )}
           {pg.pageItems.map((e, i) => (
             <TableRow key={pg.start + i}>
-              <TableCell className="tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(e.date)}</span></TableCell>
               <TableCell>
                 <Badge variant={e.type === "PAYMENT" ? "success" : "muted"}>
                   {e.description}

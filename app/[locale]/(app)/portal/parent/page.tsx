@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { displayName } from "@/lib/names";
+import { formatDateOnly } from "@/lib/date-only";
 
 export default async function ParentPortalPage({
   params,
@@ -93,7 +94,7 @@ export default async function ParentPortalPage({
                 <span className="flex items-center gap-2">
                   {p.expiresAt && (
                     <span className="text-xs text-muted-foreground tabular-nums" dir="ltr">
-                      {p.expiresAt}
+                      {formatDateOnly(p.expiresAt)}
                     </span>
                   )}
                   <Badge variant={p.status === "ACTIVE" ? "success" : "default"}>
@@ -128,7 +129,7 @@ export default async function ParentPortalPage({
                 <div>
                   <div className="font-medium">{s.teacherName}</div>
                   <div className="text-xs text-muted-foreground tabular-nums" dir="ltr">
-                    {s.date} {s.time} · {formatHours(s.hours)}
+                    {formatDateOnly(s.date)} {s.time} · {formatHours(s.hours)}
                   </div>
                 </div>
                 <span className="flex items-center gap-2">
@@ -150,7 +151,7 @@ export default async function ParentPortalPage({
             {active.payments.length === 0 && <p className="text-muted-foreground">{tc("noData")}</p>}
             {active.payments.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-2">
-                <span className="tabular-nums" dir="ltr">{p.date}</span>
+                <span className="tabular-nums" dir="ltr">{formatDateOnly(p.date)}</span>
                 <span className="flex items-center gap-2">
                   <span className="font-medium tabular-nums">
                     {formatMoney(p.amount)} {currency}

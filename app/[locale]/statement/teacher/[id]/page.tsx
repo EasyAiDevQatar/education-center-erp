@@ -116,7 +116,7 @@ export default async function TeacherStatementPage({
           <div className="flex justify-between">
             <dt className="text-muted-foreground">{tc("period")}</dt>
             <dd className="font-medium tabular-nums" dir="ltr">
-              {fromStr || "…"} — {toStr || "…"}
+              {fromStr ? formatDate(fromStr, locale) : "…"} — {toStr ? formatDate(toStr, locale) : "…"}
             </dd>
           </div>
         </dl>
@@ -144,7 +144,7 @@ export default async function TeacherStatementPage({
             )}
             {sessions.map((s) => (
               <tr key={s.id} className="border-b border-border/60">
-                <td className="p-1.5 tabular-nums"><span dir="ltr">{s.date.toISOString().slice(0, 10)}</span></td>
+                <td className="p-1.5 tabular-nums"><span dir="ltr">{formatDate(s.date, locale)}</span></td>
                 <td className="p-1.5">{displayName(s.student, locale)}</td>
                 <td className="p-1.5">{te(`sessionStatus.${s.status}`)}</td>
                 <td className="p-1.5 tabular-nums">{formatHours(s.hours)}</td>
@@ -185,7 +185,7 @@ export default async function TeacherStatementPage({
                 <td className="p-2 tabular-nums"><span dir="ltr">{formatDate(p.createdAt, locale)}</span></td>
                 <td className="p-2 tabular-nums">
                   <span dir="ltr">
-                    {p.periodStart.toISOString().slice(0, 10)} → {p.periodEnd.toISOString().slice(0, 10)}
+                    {formatDate(p.periodStart, locale)} → {formatDate(p.periodEnd, locale)}
                   </span>
                 </td>
                 <td className="p-2">{te(`payoutStatus.${p.status}`)}</td>

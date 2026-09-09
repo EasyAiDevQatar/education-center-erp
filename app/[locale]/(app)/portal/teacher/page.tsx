@@ -9,6 +9,7 @@ import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmOwnSessions } from "./confirm-own-sessions";
+import { formatDateOnly } from "@/lib/date-only";
 
 export default async function TeacherPortalPage({
   params,
@@ -125,7 +126,7 @@ export default async function TeacherPortalPage({
               <div key={s.id} className="flex items-center justify-between gap-2">
                 <span>{s.studentName}</span>
                 <span className="text-xs text-muted-foreground tabular-nums" dir="ltr">
-                  {s.date} {s.time}
+                  {formatDateOnly(s.date)} {s.time}
                 </span>
               </div>
             ))}
@@ -141,7 +142,7 @@ export default async function TeacherPortalPage({
             {data.payouts.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-2">
                 <span className="tabular-nums" dir="ltr">
-                  {p.periodStart} → {p.periodEnd}
+                  {formatDateOnly(p.periodStart)} → {formatDateOnly(p.periodEnd)}
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="font-medium tabular-nums">

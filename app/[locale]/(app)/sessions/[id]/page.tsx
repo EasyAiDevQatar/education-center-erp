@@ -14,9 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Bus, CalendarClock, CreditCard, UserCheck } from "lucide-react";
 import { centerClockTime, elapsedMinutes, formatDurationClock } from "@/lib/session-time";
 import { referenceCode } from "@/lib/reference-code";
+import { formatDateOnly } from "@/lib/date-only";
 
 const hhmm = (d: Date) => d.toISOString().slice(11, 16);
-const ymd = (d: Date) => d.toISOString().slice(0, 10);
 const minToHHMM = (n: number) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -91,7 +91,7 @@ export default async function SessionProfilePage({
   return (
     <div>
       <PageHeader
-        title={`${referenceCode("session", s.referenceNo)} · ${displayName(s.student, locale)} — ${ymd(s.date)} ${hhmm(s.date)}`}
+        title={`${referenceCode("session", s.referenceNo)} · ${displayName(s.student, locale)} — ${formatDateOnly(s.date)} ${hhmm(s.date)}`}
         description={[
           s.teacher ? displayName(s.teacher, locale) : null,
           s.subject ? label(s.subject.nameAr, s.subject.nameEn) : null,
@@ -137,7 +137,7 @@ export default async function SessionProfilePage({
                 <Link href={`/groups/${s.groupId}`} className="text-primary hover:underline">{s.group.name}</Link>
               </Row>
             )}
-            <Row label={tc("date")}><span dir="ltr">{ymd(s.date)}</span></Row>
+            <Row label={tc("date")}><span dir="ltr" className="tabular-nums">{formatDateOnly(s.date)}</span></Row>
             <Row label={t("time")}><span dir="ltr">{hhmm(s.date)}</span></Row>
             <Row label={t("hours")}><span dir="ltr">{toNumber(s.hours)}</span></Row>
             <Row label={t("pricePerHour")}><span dir="ltr">{formatMoney(toNumber(s.pricePerHour))} {currency}</span></Row>
@@ -184,7 +184,7 @@ export default async function SessionProfilePage({
                       className="text-primary hover:underline"
                       dir="ltr"
                     >
-                      {ymd(a.payment.date)} · {a.payment.receiptNo}
+                      {formatDateOnly(a.payment.date)} · {a.payment.receiptNo}
                     </Link>
                     <span className="font-medium tabular-nums" dir="ltr">{formatMoney(toNumber(a.amount))} {currency}</span>
                   </li>

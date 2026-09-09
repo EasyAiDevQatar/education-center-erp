@@ -11,6 +11,7 @@ import { builtInBody } from "@/lib/integrations/notify";
 import { NotificationLogTable, type LogRow } from "./outbound-log";
 import { TemplatesEditor, type TemplateRow } from "./templates-editor";
 import { DeliveryPicker } from "./delivery-picker";
+import { formatDateTime } from "@/lib/date-only";
 
 /**
  * Messages — what the centre said, what it was told, and how it words it.
@@ -70,7 +71,7 @@ export default async function MessagesPage({
 
   const logRows: LogRow[] = outbound.map((l) => ({
     id: l.id,
-    at: l.createdAt.toISOString().slice(0, 16).replace("T", " "),
+    at: l.createdAt.toISOString(),
     provider: l.provider,
     event: l.event,
     audience: l.audience,
@@ -129,7 +130,7 @@ export default async function MessagesPage({
                         className="whitespace-nowrap py-2 pe-3 align-top text-xs text-muted-foreground tabular-nums"
                         dir="ltr"
                       >
-                        {m.receivedAt.toISOString().slice(0, 16).replace("T", " ")}
+                        {formatDateTime(m.receivedAt)}
                       </td>
                       <td className="py-2 pe-3 align-top">
                         <span className="font-medium">

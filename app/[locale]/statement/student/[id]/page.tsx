@@ -128,7 +128,7 @@ export default async function StudentStatementPage({
             )}
             {ledger.map((e, i) => (
               <tr key={i} className="border-b border-border/60">
-                <td className="p-2 tabular-nums"><span dir="ltr">{e.date}</span></td>
+                <td className="p-2 tabular-nums"><span dir="ltr">{formatDate(e.date, locale)}</span></td>
                 <td className="p-2">{e.description}</td>
                 <td className="p-2 tabular-nums">{e.debit ? formatMoney(e.debit) : "—"}</td>
                 <td className="p-2 tabular-nums">{e.credit ? formatMoney(e.credit) : "—"}</td>

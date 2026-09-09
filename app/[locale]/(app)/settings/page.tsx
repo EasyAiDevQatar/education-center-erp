@@ -239,7 +239,7 @@ export default async function SettingsPage({
 
   const audits: AuditRow[] = auditRows.map((a) => ({
     id: a.id,
-    at: a.createdAt.toISOString().slice(0, 16).replace("T", " "),
+    at: a.createdAt.toISOString(),
     userName: a.user?.name ?? null,
     entity: a.entity,
     entityId: a.entityId,

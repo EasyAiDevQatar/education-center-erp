@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { requireAccounting } from "@/lib/accounting/guard";
 import { trialBalance, profitAndLoss, type LedgerRow } from "@/lib/accounting/reports";
 import type { AccountType } from "@/lib/enums";
@@ -65,7 +66,9 @@ export default async function AccountingReportsPage({
   const tb = trialBalance(rows);
   const pl = profitAndLoss(rows);
   const money = (v: number) => `${formatMoney(v)} ${currency}`;
-  const periodLabel = fromStr || toStr ? `${fromStr || "…"} — ${toStr || "…"}` : t("allTime");
+  const periodLabel = fromStr || toStr
+    ? `${fromStr ? formatDateOnly(fromStr) : "…"} — ${toStr ? formatDateOnly(toStr) : "…"}`
+    : t("allTime");
 
   return (
     <div className="space-y-4">
@@ -89,7 +92,7 @@ export default async function AccountingReportsPage({
 
       <div data-print="A4" data-print-size-selectable className="space-y-6">
         <p className="text-sm text-muted-foreground">
-          {periodLabel} — {tb.rows.length} {t("accountsTitle")}
+          <span dir="ltr">{periodLabel}</span> — {tb.rows.length} {t("accountsTitle")}
         </p>
 
         {/* Trial balance */}

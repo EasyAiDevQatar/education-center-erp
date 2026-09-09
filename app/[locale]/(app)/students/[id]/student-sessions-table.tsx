@@ -14,6 +14,7 @@ import {
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney, formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { QuickPayDialog } from "../../payments/quick-pay-dialog";
 import type { SessionLine } from "@/components/tables/relation-tables";
 import { Link } from "@/i18n/navigation";
@@ -167,7 +168,7 @@ export function StudentSessionsTable({
                 <TableCell>
                   <input
                     type="checkbox"
-                    aria-label={r.date}
+                    aria-label={formatDateOnly(r.date)}
                     className="size-4 accent-[var(--primary)]"
                     checked={selected.has(r.id)}
                     disabled={!payable(r)}
@@ -184,10 +185,10 @@ export function StudentSessionsTable({
                 <TableCell className="tabular-nums">
                   {linkAcademicRecords ? (
                     <Link href={`/sessions/${r.id}`} className="text-primary hover:underline" dir="ltr">
-                      {r.date} {r.time}
+                      {formatDateOnly(r.date)} {r.time}
                     </Link>
                   ) : (
-                    <span dir="ltr">{r.date} {r.time}</span>
+                    <span dir="ltr">{formatDateOnly(r.date)} {r.time}</span>
                   )}
                 </TableCell>
                 <TableCell>

@@ -16,7 +16,7 @@ export function FormField({
     <div className="space-y-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground" dir="auto">{hint}</p>}
     </div>
   );
 }

@@ -22,6 +22,7 @@ import { HELP_ARTICLES, findHelpArticle } from "@/lib/help-catalog";
 import { requireAuth } from "@/lib/rbac";
 import { DashboardNavigationArticle } from "./dashboard-navigation-article";
 import { QuickStartArticle } from "./quick-start-article";
+import { formatDateOnly } from "@/lib/date-only";
 
 export function generateStaticParams() {
   return HELP_ARTICLES.filter((article) => article.published).map((article) => ({
@@ -65,10 +66,7 @@ export default async function HelpArticlePage({
   const advancedScreenshot = locale === "ar"
     ? "/help/transport/settings-advanced-ar.png"
     : "/help/transport/settings-advanced-en.png";
-  const updated = new Intl.DateTimeFormat(locale === "ar" ? "ar-QA" : "en-GB", {
-    dateStyle: "long",
-    timeZone: "Asia/Qatar",
-  }).format(new Date("2026-09-01T00:00:00+03:00"));
+  const updated = formatDateOnly("2026-09-01");
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -96,7 +94,9 @@ export default async function HelpArticlePage({
             <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
               {ta("intro")}
             </p>
-            <p className="mt-4 text-sm text-muted-foreground">{t("lastUpdated", { date: updated })}</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {t("lastUpdated", { date: "" })}<span dir="ltr" className="tabular-nums">{updated}</span>
+            </p>
           </header>
 
           <section id="before" className="scroll-mt-20 py-7">

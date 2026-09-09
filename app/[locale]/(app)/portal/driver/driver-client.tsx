@@ -13,6 +13,7 @@ import {
   type Fix,
 } from "@/lib/transport/tracking";
 import { startTrip, completeTrip, arriveAtStop, recordPing } from "./actions";
+import { formatDateOnly } from "@/lib/date-only";
 
 export type DriverStop = {
   id: string;
@@ -294,7 +295,7 @@ export function DriverClient({ trips, today }: { trips: DriverTrip[]; today: str
       </div>
 
       <p className="text-center text-xs text-muted-foreground" dir="ltr">
-        {today}
+        {formatDateOnly(today)}
       </p>
     </>
   );

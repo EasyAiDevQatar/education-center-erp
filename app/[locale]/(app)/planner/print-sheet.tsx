@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { minToHHMM } from "@/lib/planner";
 import type { PlannerSession } from "./planner-client";
 
@@ -305,7 +306,7 @@ export function PlannerPrintSheet({
           <span className="text-[10px]">{t("sheetTitle")}</span>
         </div>
         <div className="text-[10px]">
-          <span dir="ltr">{day}</span> · {weekdayLabel} · {t("printCounts", {
+          <span dir="ltr" className="tabular-nums">{formatDateOnly(day)}</span> · {weekdayLabel} · {t("printCounts", {
             teachers: rows.length,
             sessions: sessionCount,
           })}

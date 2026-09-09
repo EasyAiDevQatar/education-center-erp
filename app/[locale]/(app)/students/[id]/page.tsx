@@ -21,6 +21,7 @@ import { unchargeableStatuses } from "@/lib/billing";
 import { ProfilePricingDialog } from "./profile-pricing-dialog";
 import { Link } from "@/i18n/navigation";
 import { referenceCode } from "@/lib/reference-code";
+import { formatDateOnly } from "@/lib/date-only";
 
 export default async function StudentProfilePage({
   params,
@@ -272,7 +273,7 @@ export default async function StudentProfilePage({
               {packages.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                   <span className="tabular-nums" dir="ltr">
-                    {p.purchasedAt.toISOString().slice(0, 10)}
+                    {formatDateOnly(p.purchasedAt)}
                   </span>
                   <span className="tabular-nums">
                     {toNumber(p.hoursUsed)} / {toNumber(p.totalHours)} {tc("hours")}

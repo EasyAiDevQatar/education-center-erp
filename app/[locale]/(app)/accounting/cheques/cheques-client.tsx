@@ -25,6 +25,7 @@ import { usePagination, TablePagination } from "@/components/ui/table-pagination
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { Link, useRouter } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   CHEQUE_STATUSES,
   type ChequeDirection,
@@ -296,7 +297,7 @@ export function ChequesClient({
           </div>
           <div className="flex items-end gap-2" style={{ height: 96 }}>
             {forecast.map((p) => (
-              <div key={p.label} className="flex flex-1 flex-col items-center gap-1" title={`${p.label}: ${formatMoney(p.weighted)} / ${formatMoney(p.gross)}`}>
+              <div key={p.label} className="flex flex-1 flex-col items-center gap-1" title={`${formatDateOnly(p.label)}: ${formatMoney(p.weighted)} / ${formatMoney(p.gross)}`}>
                 <div className="flex w-full flex-1 items-end justify-center gap-0.5">
                   <div
                     className="w-2 rounded-t bg-primary/30"
@@ -308,7 +309,7 @@ export function ChequesClient({
                   />
                 </div>
                 <span className="text-[10px] tabular-nums text-muted-foreground" dir="ltr">
-                  {p.label.slice(5)}
+                  {formatDateOnly(p.label)}
                 </span>
               </div>
             ))}
@@ -428,7 +429,7 @@ export function ChequesClient({
                     </TableCell>
                     <TableCell className="tabular-nums">
                       <span dir="ltr">
-                        {c.dueDate ?? "—"}
+                        {formatDateOnly(c.dueDate)}
                         {c.overdue && <Badge variant="destructive" className="ms-1">{t("overdue")}</Badge>}
                       </span>
                     </TableCell>

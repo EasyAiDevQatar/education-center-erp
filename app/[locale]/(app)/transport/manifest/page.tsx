@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatDateOnly } from "@/lib/date-only";
 
 const shift = (iso: string, days: number) => {
   const d = new Date(`${iso}T00:00:00.000Z`);
@@ -44,7 +45,7 @@ export default async function ManifestPage({
         <Link href={`/transport/manifest?date=${shift(day, -1)}`} className="rounded-md border border-border p-2 hover:bg-accent">
           <ChevronLeft className="size-4 rtl:rotate-180" />
         </Link>
-        <span className="rounded-md border border-border px-3 py-1.5 font-medium tabular-nums" dir="ltr">{day}</span>
+        <span className="rounded-md border border-border px-3 py-1.5 font-medium tabular-nums" dir="ltr">{formatDateOnly(day)}</span>
         <Link href={`/transport/manifest?date=${shift(day, 1)}`} className="rounded-md border border-border p-2 hover:bg-accent">
           <ChevronRight className="size-4 rtl:rotate-180" />
         </Link>

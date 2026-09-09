@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
 import { leaveDays } from "@/lib/leave";
+import { formatDateOnly } from "@/lib/date-only";
 import type { LeaveBalanceRow } from "@/lib/leave-data";
 import { createLeaveRequest, decideLeaveRequest, createLeaveAdjustment } from "./actions";
 
@@ -214,7 +215,7 @@ export function LeaveClient({
                 <span className="font-medium">{r.employeeName}</span>
                 <Badge variant="default">{typeLabel(r.typeCode)}</Badge>
                 <span className="tabular-nums" dir="ltr">
-                  {r.startDate} → {r.endDate}
+                  {formatDateOnly(r.startDate)} → {formatDateOnly(r.endDate)}
                 </span>
                 <span className="text-muted-foreground">{t("daysN", { n: r.days })}</span>
                 {r.reason && <span className="text-xs text-muted-foreground">· {r.reason}</span>}
@@ -328,7 +329,7 @@ export function LeaveClient({
                   <TableCell>{typeLabel(r.typeCode)}</TableCell>
                   <TableCell className="tabular-nums">
                     <span dir="ltr">
-                      {r.startDate} → {r.endDate}
+                      {formatDateOnly(r.startDate)} → {formatDateOnly(r.endDate)}
                     </span>
                   </TableCell>
                   <TableCell className="tabular-nums">{r.days}</TableCell>

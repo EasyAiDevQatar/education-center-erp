@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   Table,
   TableBody,
@@ -206,7 +207,7 @@ function DocumentsDialog({
                   <span className="ms-auto flex shrink-0 items-center gap-2">
                     {d.expiresOn && (
                       <Badge variant={levelVariant(d.level)}>
-                        <span dir="ltr">{d.expiresOn}</span>
+                        <span dir="ltr">{formatDateOnly(d.expiresOn)}</span>
                       </Badge>
                     )}
                     <Button
@@ -327,7 +328,7 @@ export function VehiclesClient({
                 <Badge variant={levelVariant(a.level)} className="gap-1">
                   <span dir="ltr">{a.plate}</span>
                   <span>· {te(`vehicleDocType.${a.type}`)}</span>
-                  {a.expiresOn && <span dir="ltr">· {a.expiresOn}</span>}
+                  {a.expiresOn && <span dir="ltr">· {formatDateOnly(a.expiresOn)}</span>}
                 </Badge>
               </li>
             ))}

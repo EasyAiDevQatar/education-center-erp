@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CalendarDays, Clock, Wallet, Users2 } from "lucide-react";
+import { formatDateOnly } from "@/lib/date-only";
 
 /**
  * Group 360 — one place linking everything a saved group ("course") touches:
@@ -178,7 +179,7 @@ export default async function GroupProfilePage({
                   {sessions.slice(0, 30).map((s) => (
                     <TableRow key={s.id}>
                       <TableCell className="tabular-nums" dir="ltr">
-                        {s.date.toISOString().slice(0, 10)}
+                        {formatDateOnly(s.date)}
                       </TableCell>
                       <TableCell>
                         <Link href={`/students/${s.studentId}`} className="hover:underline">

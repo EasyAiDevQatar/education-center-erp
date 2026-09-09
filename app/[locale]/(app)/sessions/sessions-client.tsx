@@ -27,6 +27,7 @@ import {
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { QuickPayDialog } from "../payments/quick-pay-dialog";
 import { formatMoney, formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { referenceCode } from "@/lib/reference-code";
 import {
   SessionDialog,
@@ -215,7 +216,7 @@ export function SessionsClient({
           {referenceCode("session", s.referenceNo)}
         </Link>
       </TableCell>
-      <TableCell className="tabular-nums"><span dir="ltr">{s.date}</span></TableCell>
+      <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(s.date)}</span></TableCell>
       <TableCell className="tabular-nums">
         <span dir="ltr">{s.time ? `${s.time}–${endTime(s.time, s.hours)}` : "—"}</span>
       </TableCell>
@@ -451,7 +452,7 @@ export function SessionsClient({
                         <Badge variant="muted" className="ms-1" dir="ltr">+{item.rows.length - 1}</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="tabular-nums"><span dir="ltr">{first.date}</span></TableCell>
+                    <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(first.date)}</span></TableCell>
                     <TableCell className="tabular-nums">
                       <span dir="ltr">{first.time ? `${first.time}–${endTime(first.time, first.hours)}` : "—"}</span>
                     </TableCell>

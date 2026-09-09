@@ -30,6 +30,7 @@ import { LEAD_BOARD_ORDER, followUpState, funnelCounts, type LeadStatus } from "
 import { saveLead, moveLead, deleteLead, convertLead, bookTrialSession } from "./actions";
 import { displayName } from "@/lib/names";
 import { localNowTime, localToday } from "@/lib/session-time";
+import { formatDateOnly } from "@/lib/date-only";
 
 export type LeadRow = {
   id: string;
@@ -204,7 +205,7 @@ export function LeadsBoard({
                           )}
                         >
                           <CalendarClock className="size-3" />
-                          <span dir="ltr" className="tabular-nums">{l.followUpAt}</span>
+                          <span dir="ltr" className="tabular-nums">{formatDateOnly(l.followUpAt)}</span>
                           {fu === "overdue" && <span>· {t("overdue")}</span>}
                           {fu === "dueToday" && <span>· {t("dueToday")}</span>}
                         </div>

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { FINANCE_ROLES } from "@/lib/rbac";
 import { moduleEnabled } from "@/lib/modules";
 import { resolveReportDateStrings } from "@/lib/report-range";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   getDailySessionReport,
   getAttendance,
@@ -60,7 +61,7 @@ export async function GET(
         ? ["Date", "Teaching sessions", "Group sessions", "Individual sessions", "Student bookings", "Scheduled", "In progress", "Completed", "No-show", "Cancelled sessions", "Cancelled student bookings"]
         : ["التاريخ", "الحصص التعليمية", "الحصص الجماعية", "الحصص الفردية", "حجوزات الطلاب", "مجدولة", "قيد التنفيذ", "مكتملة", "غياب", "الحصص الملغاة", "حجوزات الطلاب الملغاة"];
       rows = data.dailyTrend.map((r) => [
-        r.date, r.sessions, r.groupSessions, r.individualSessions, r.studentBookings,
+        formatDateOnly(r.date), r.sessions, r.groupSessions, r.individualSessions, r.studentBookings,
         r.scheduled, r.checkedIn, r.completed, r.noShow, r.cancelled, r.cancelledStudentBookings,
       ]);
       break;
@@ -101,7 +102,7 @@ export async function GET(
         ? ["Student", "Total hours", "Used", "Remaining", "Price", "Status", "Expires"]
         : ["الطالب", "إجمالي الساعات", "المستخدمة", "المتبقية", "السعر", "الحالة", "تاريخ الانتهاء"];
       rows = data.map((r) => [
-        r.studentName, r.totalHours, r.hoursUsed, r.remaining, r.price, r.status, r.expiresAt,
+        r.studentName, r.totalHours, r.hoursUsed, r.remaining, r.price, r.status, formatDateOnly(r.expiresAt),
       ]);
       break;
     }
@@ -111,7 +112,7 @@ export async function GET(
         ? ["Teacher", "Pay mode", "From", "To", "Commission", "Fixed salary", "Deductions", "Advances", "Net paid", "Status"]
         : ["المعلم", "طريقة الدفع", "من", "إلى", "العمولة", "الراتب الثابت", "الخصومات", "السلف", "الصافي", "الحالة"];
       rows = data.map((r) => [
-        r.teacherName, r.payMode, r.periodStart, r.periodEnd,
+        r.teacherName, r.payMode, formatDateOnly(r.periodStart), formatDateOnly(r.periodEnd),
         r.grossCommission, r.fixedSalary, r.deductions, r.advances, r.netPaid, r.status,
       ]);
       break;
@@ -134,7 +135,7 @@ export async function GET(
   ws.views = [{ rightToLeft: !en }];
 
   // A period line above the table, so a printed/emailed file is self-describing.
-  ws.addRow([`${fromStr || "—"} → ${toStr || "—"}`]);
+  ws.addRow([`${formatDateOnly(fromStr)} → ${formatDateOnly(toStr)}`]);
   ws.addRow([]);
   const headerRow = ws.addRow(header);
   headerRow.font = { bold: true };

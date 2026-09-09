@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { toNumber, formatMoney } from "@/lib/money";
 import { amountToArabicWords } from "@/lib/accounting/tafqit";
 import { PrintButton } from "@/components/print-button";
+import { formatDateOnly } from "@/lib/date-only";
 
 type Template = {
   leafW: number;
@@ -67,7 +68,7 @@ export default async function ChequePrintPage({
 
   const amount = cheque ? toNumber(cheque.amount) : 12345.5;
   const payee = cheque ? (cheque.payeeName ?? cheque.supplier?.name ?? "") : "اسم المستفيد التجريبي";
-  const date = (cheque?.issueDate ?? new Date()).toISOString().slice(0, 10);
+  const date = formatDateOnly(cheque?.issueDate ?? new Date());
   const words =
     currency === "QAR" ? amountToArabicWords(amount) : amountToArabicWords(amount, currency, "");
 

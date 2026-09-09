@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CheckCircle2, Fuel, Gauge, Wrench } from "lucide-react";
+import { formatDateOnly } from "@/lib/date-only";
 
 const minToHHMM = (n: number) =>
   `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
@@ -113,7 +114,7 @@ export default async function VehicleProfilePage({
         {rows.slice(0, 30).map((x) => (
           <TableRow key={x.id}>
             <TableCell className="tabular-nums" dir="ltr">
-              {x.date.toISOString().slice(0, 10)}
+              {formatDateOnly(x.date)}
             </TableCell>
             <TableCell className="tabular-nums" dir="ltr">
               {minToHHMM(x.plannedStartMin)}–{minToHHMM(x.plannedEndMin)}
@@ -182,7 +183,7 @@ export default async function VehicleProfilePage({
                       {d.number && <span dir="ltr" className="text-muted-foreground">{d.number}</span>}
                       {d.expiresOn && (
                         <Badge variant={days! < 0 ? "destructive" : days! <= 60 ? "warning" : "success"}>
-                          <span dir="ltr">{d.expiresOn.toISOString().slice(0, 10)}</span>
+                          <span dir="ltr">{formatDateOnly(d.expiresOn)}</span>
                         </Badge>
                       )}
                     </li>
@@ -217,7 +218,7 @@ export default async function VehicleProfilePage({
                   <li key={row.key} className="flex items-baseline justify-between gap-2">
                     <span className="truncate">
                       <span className="tabular-nums text-muted-foreground" dir="ltr">
-                        {row.date.toISOString().slice(0, 10)}
+                        {formatDateOnly(row.date)}
                       </span>{" "}
                       {row.label}
                     </span>

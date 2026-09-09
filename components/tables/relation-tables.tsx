@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { formatMoney, formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { Link } from "@/i18n/navigation";
 import { referenceCode } from "@/lib/reference-code";
 
@@ -101,10 +102,10 @@ export function SessionsTable({
               <TableCell className="text-start tabular-nums">
                 {linkSessions ? (
                   <Link href={`/sessions/${s.id}`} className="text-primary hover:underline" dir="ltr">
-                    {s.date} {s.time}
+                    {formatDateOnly(s.date)} {s.time}
                   </Link>
                 ) : (
-                  <span dir="ltr">{s.date} {s.time}</span>
+                  <span dir="ltr">{formatDateOnly(s.date)} {s.time}</span>
                 )}
               </TableCell>
               {!hideStudent && (
@@ -200,7 +201,7 @@ export function PaymentsTable({
           )}
           {pg.pageItems.map((p) => (
             <TableRow key={p.id}>
-              <TableCell className="text-start tabular-nums"><span dir="ltr">{p.date}</span></TableCell>
+              <TableCell className="text-start tabular-nums"><span dir="ltr">{formatDateOnly(p.date)}</span></TableCell>
               <TableCell className="text-start tabular-nums">
                 {linkReceipts ? (
                   <Link href={`/receipt/${p.id}`} className="text-primary hover:underline" dir="ltr">
@@ -283,7 +284,7 @@ export function PayoutsTable({ rows, currency }: { rows: PayoutLine[]; currency:
           {pg.pageItems.map((p) => (
             <TableRow key={p.id}>
               <TableCell className="text-start tabular-nums"><span dir="ltr">
-                {p.periodStart} → {p.periodEnd}
+                {formatDateOnly(p.periodStart)} → {formatDateOnly(p.periodEnd)}
               </span></TableCell>
               <TableCell className="text-end tabular-nums">{formatMoney(p.grossCommission)}</TableCell>
               <TableCell className="text-end tabular-nums">{formatMoney(p.fixedSalary)}</TableCell>

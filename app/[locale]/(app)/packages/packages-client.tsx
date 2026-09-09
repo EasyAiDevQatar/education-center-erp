@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table-sort";
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { formatMoney, formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { localToday } from "@/lib/session-time";
 import { Link } from "@/i18n/navigation";
 import { savePackage, deletePackage } from "./actions";
@@ -189,8 +190,8 @@ export function PackagesClient({
                         { label: t("totalHours"), value: p.totalHours, ltr: true },
                         { label: t("hoursUsed"), value: p.hoursUsed, ltr: true },
                         { label: t("price"), value: `${formatMoney(p.price)} ${currency}`, ltr: true },
-                        { label: t("purchasedAt"), value: p.purchasedAt, ltr: true },
-                        { label: t("expiresAt"), value: p.expiresAt, ltr: true },
+                        { label: t("purchasedAt"), value: formatDateOnly(p.purchasedAt), ltr: true },
+                        { label: t("expiresAt"), value: formatDateOnly(p.expiresAt), ltr: true },
                         { label: tc("status"), value: te(`packageStatus.${p.status}`) },
                         { label: tc("notes"), value: p.notes, wide: true },
                       ]}

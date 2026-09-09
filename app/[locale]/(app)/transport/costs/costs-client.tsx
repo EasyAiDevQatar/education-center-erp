@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table-sort";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { MAINTENANCE_KINDS } from "@/lib/enums";
 import { localNowTime, localToday } from "@/lib/session-time";
 import {
@@ -313,7 +314,7 @@ export function CostsClient({
               {fuelPg.pageItems.map((x) => (
                 <TableRow key={x.id}>
                   <TableCell className="tabular-nums">
-                    <span dir="ltr">{x.date}</span>
+                    <span dir="ltr">{formatDateOnly(x.date)}</span>
                   </TableCell>
                   <TableCell>
                     <span dir="ltr">{x.plate}</span>
@@ -353,7 +354,7 @@ export function CostsClient({
               {maintPg.pageItems.map((x) => (
                 <TableRow key={x.id}>
                   <TableCell className="tabular-nums">
-                    <span dir="ltr">{x.date}</span>
+                    <span dir="ltr">{formatDateOnly(x.date)}</span>
                   </TableCell>
                   <TableCell>
                     <span dir="ltr">{x.plate}</span>
@@ -368,7 +369,7 @@ export function CostsClient({
                     </span>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {x.nextDueOn && <span dir="ltr">{x.nextDueOn}</span>}
+                    {x.nextDueOn && <span dir="ltr">{formatDateOnly(x.nextDueOn)}</span>}
                     {x.nextDueKm != null && (
                       <span dir="ltr">{x.nextDueOn ? " · " : ""}{x.nextDueKm} km</span>
                     )}

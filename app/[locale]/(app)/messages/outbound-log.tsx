@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { formatDateTime } from "@/lib/date-only";
 
 export type LogRow = {
   id: string;
@@ -55,7 +56,7 @@ export function NotificationLogTable({ rows }: { rows: LogRow[] }) {
           )}
           {pg.pageItems.map((r) => (
             <TableRow key={r.id}>
-              <TableCell className="tabular-nums"><span dir="ltr">{r.at}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{formatDateTime(r.at)}</span></TableCell>
               <TableCell className="text-xs">{r.event}</TableCell>
               <TableCell className="text-xs">{r.audience}</TableCell>
               <TableCell className="tabular-nums"><span dir="ltr">{r.recipient || "—"}</span></TableCell>

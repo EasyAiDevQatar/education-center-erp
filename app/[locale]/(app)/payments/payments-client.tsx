@@ -28,6 +28,7 @@ import {
   type ColumnDef,
 } from "@/components/ui/table-sort";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { PAYMENT_METHODS } from "@/lib/enums";
 import { localToday } from "@/lib/session-time";
 import { Link } from "@/i18n/navigation";
@@ -396,7 +397,7 @@ export function PaymentsClient({
             )}
             {pg.pageItems.map((p) => (
               <TableRow key={p.id}>
-                <TableCell className="tabular-nums"><span dir="ltr">{p.date}</span></TableCell>
+                <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(p.date)}</span></TableCell>
                 <TableCell className="tabular-nums">
                   <Link
                     href={`/receipt/${p.id}`}
@@ -454,7 +455,7 @@ export function PaymentsClient({
                       title={`${t("receiptNo")} ${p.receiptNo}`}
                       subtitle={p.studentName}
                       fields={[
-                        { label: tc("date"), value: p.date, ltr: true },
+                        { label: tc("date"), value: formatDateOnly(p.date), ltr: true },
                         { label: t("receiptNo"), value: p.receiptNo, ltr: true },
                         { label: tc("status"), value: te(`receiptStatus.${p.status}`) },
                         { label: t("student"), value: p.studentName },

@@ -8,6 +8,7 @@ import { DeleteButton } from "@/components/crud/delete-button";
 import { FormField } from "@/components/crud/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatDateOnly } from "@/lib/date-only";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -194,8 +195,8 @@ export function TermsManager({
                       <Badge variant="success" className="ms-2">{t("current")}</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="tabular-nums"><span dir="ltr">{term.startDate}</span></TableCell>
-                  <TableCell className="tabular-nums"><span dir="ltr">{term.endDate}</span></TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(term.startDate)}</span></TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(term.endDate)}</span></TableCell>
                   <TableCell>
                     <Badge variant={term.active ? "success" : "muted"}>
                       {term.active ? tc("active") : tc("inactive")}

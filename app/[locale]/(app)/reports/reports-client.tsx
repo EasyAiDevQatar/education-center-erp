@@ -12,6 +12,7 @@ import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DailySessionsChart } from "@/components/charts/daily-sessions-chart";
 import { formatMoney, formatHours } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { TablePagination, usePagination } from "@/components/ui/table-pagination";
 import type {
   AttendanceRow,
@@ -206,12 +207,6 @@ function DailySessionsReport({ report }: { report: DailySessionReport }) {
   const days = report.dailyTrend.length;
   const average = days > 0 ? report.summary.sessions / days : 0;
   const p = usePagination(report.dailyTrend);
-  const dateFormatter = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
   const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
   const hasActivity = report.summary.sessions + report.summary.cancelledSessions > 0;
   const hasActiveActivity = report.summary.sessions > 0;
@@ -302,7 +297,7 @@ function DailySessionsReport({ report }: { report: DailySessionReport }) {
                     {p.pageItems.map((row) => (
                       <tr key={row.date} className="border-b border-border/60">
                         <td className="whitespace-nowrap p-2 text-center tabular-nums" dir="ltr">
-                          {dateFormatter.format(new Date(`${row.date}T00:00:00.000Z`))}
+                          {formatDateOnly(row.date)}
                         </td>
                         <td className="p-2 text-center font-medium tabular-nums">{row.sessions}</td>
                         <td className="p-2 text-center tabular-nums">{row.groupSessions}</td>
@@ -712,7 +707,7 @@ function PackagesTable({ rows, currency }: { rows: PackageReportRow[]; currency:
                     {te(`packageStatus.${r.status}`)}
                   </Badge>
                 </td>
-                <td className="p-2 text-center tabular-nums"><span dir="ltr">{r.expiresAt ?? "—"}</span></td>
+                <td className="p-2 text-center tabular-nums"><span dir="ltr">{formatDateOnly(r.expiresAt)}</span></td>
               </tr>
             ))}
           </tbody>
@@ -756,7 +751,7 @@ function PayoutsSummaryTable({ rows, currency }: { rows: PayoutSummaryRow[]; cur
                 </td>
                 <td className="p-2 text-center tabular-nums">
                   <span dir="ltr">
-                    {r.periodStart} → {r.periodEnd}
+                    {formatDateOnly(r.periodStart)} → {formatDateOnly(r.periodEnd)}
                   </span>
                 </td>
                 <td className="p-2 text-center tabular-nums">{formatMoney(r.grossCommission)}</td>

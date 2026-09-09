@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   Table,
   TableBody,
@@ -283,7 +284,7 @@ export function JournalClient({
                   className="cursor-pointer"
                   onClick={() => setOpenId(openId === e.id ? null : e.id)}
                 >
-                  <TableCell className="tabular-nums"><span dir="ltr">{e.date}</span></TableCell>
+                  <TableCell className="tabular-nums"><span dir="ltr">{formatDateOnly(e.date)}</span></TableCell>
                   <TableCell className="font-medium">
                     <span className="inline-flex items-center gap-1.5">
                       {openId === e.id ? (

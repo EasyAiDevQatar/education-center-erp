@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/money";
+import { formatDateOnly } from "@/lib/date-only";
 import { referenceCode } from "@/lib/reference-code";
 import { cancelGroupOccurrence, updateGroupOccurrenceRoster } from "../sessions/actions";
 import type { StudentOpt } from "../sessions/session-dialog";
@@ -101,7 +102,7 @@ export function GroupOccurrenceDialog({
         <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/60 p-3 text-sm">
           <span className="flex items-center gap-1.5">
             <Clock className="size-4 text-muted-foreground" />
-            <bdi dir="ltr">{event.day} · {formatTime(event.startMinutes)}–{formatTime(event.startMinutes + Math.round(event.hours * 60))}</bdi>
+            <bdi dir="ltr">{formatDateOnly(event.day)} · {formatTime(event.startMinutes)}–{formatTime(event.startMinutes + Math.round(event.hours * 60))}</bdi>
           </span>
           <span className="flex items-center gap-1.5">
             {event.location === "HOME" ? <Home className="size-4" /> : <Building2 className="size-4" />}

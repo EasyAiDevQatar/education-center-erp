@@ -1,4 +1,5 @@
 import "server-only";
+import { formatDateOnly } from "@/lib/date-only";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney } from "@/lib/money";
 import { getProvider, activeConfigsFor, loadConfig } from "./registry";
@@ -447,7 +448,7 @@ export async function dispatch(
 }
 
 function fmtDate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  return formatDateOnly(d);
 }
 function fmtTime(d: Date) {
   return d.toISOString().slice(11, 16);

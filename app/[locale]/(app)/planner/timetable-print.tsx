@@ -19,6 +19,7 @@ import { weekdayOf } from "@/lib/conflicts";
 import { normalizeArabic } from "@/components/ui/table-search";
 import { Input } from "@/components/ui/input";
 import { timetableData, type TimetablePerson } from "./timetable-actions";
+import { formatDateOnly, formatDateTime } from "@/lib/date-only";
 
 type Opt = { id: string; label: string };
 type Scope = "day" | "week";
@@ -131,7 +132,11 @@ export function TimetableDialog({
                 <option value="teacher">{t("timetableTeachers")}</option>
               </Select>
             </FormField>
-            <FormField label={t("timetableScope")} htmlFor="tt-scope" hint={`${from} → ${to}`}>
+            <FormField
+              label={t("timetableScope")}
+              htmlFor="tt-scope"
+              hint={`${formatDateOnly(from)} → ${formatDateOnly(to)}`}
+            >
               <Select id="tt-scope" value={scope} onChange={(e) => setScope(e.target.value as Scope)}>
                 <option value="week">{t("timetableWeekly")}</option>
                 <option value="day">{t("timetableDaily")}</option>
@@ -241,12 +246,8 @@ export function TimetableSheet({
   const t = useTranslations("planner");
   const te = useTranslations("enums");
   const tc = useTranslations("common");
-  const locale = useLocale();
 
-  const printedAt = new Date().toLocaleString(locale === "ar" ? "ar-QA" : "en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  const printedAt = formatDateTime(new Date());
 
   return (
     <div data-print="A4P" className="hidden print:block">
@@ -281,7 +282,9 @@ export function TimetableSheet({
               <div className="text-end">
                 <div className="text-base font-bold">{person.name}</div>
                 <div className="text-[10px]" dir="ltr">
-                  {req.from === req.to ? req.from : `${req.from} → ${req.to}`}
+                  {req.from === req.to
+                    ? formatDateOnly(req.from)
+                    : `${formatDateOnly(req.from)} → ${formatDateOnly(req.to)}`}
                 </div>
               </div>
             </header>
@@ -311,7 +314,7 @@ export function TimetableSheet({
                           <td rowSpan={entries.length} className="align-top">
                             <div className="font-bold">{te(`weekday.${weekdayOf(date)}`)}</div>
                             <div className="text-[10px]" dir="ltr">
-                              {date}
+                              {formatDateOnly(date)}
                             </div>
                           </td>
                         )}

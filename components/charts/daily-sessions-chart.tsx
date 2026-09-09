@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatDateOnly } from "@/lib/date-only";
 
 export type DailySessionsPoint = {
   date: string;
@@ -27,18 +28,6 @@ type DailySessionsChartProps = {
     ariaLabel: string;
   };
 };
-
-function parseCalendarDate(value: string) {
-  const isoDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (isoDate) {
-    return new Date(
-      Date.UTC(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3])),
-    );
-  }
-
-  return new Date(value);
-}
 
 function sampleDateTicks(data: DailySessionsPoint[], maximumTicks = 10) {
   const dates = data.map((point) => point.date);
@@ -60,32 +49,7 @@ export function DailySessionsChart({ data, labels }: DailySessionsChartProps) {
   const locale = useLocale();
   const rtl = locale.startsWith("ar");
   const ticks = useMemo(() => sampleDateTicks(data), [data]);
-  const tickDateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(locale, {
-        day: "numeric",
-        month: "short",
-        timeZone: "UTC",
-      }),
-    [locale],
-  );
-  const tooltipDateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(locale, {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "UTC",
-      }),
-    [locale],
-  );
   const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale]);
-
-  const formatDate = (value: string, formatter: Intl.DateTimeFormat) => {
-    const date = parseCalendarDate(value);
-    return Number.isNaN(date.getTime()) ? value : formatter.format(date);
-  };
 
   return (
     <div
@@ -101,7 +65,7 @@ export function DailySessionsChart({ data, labels }: DailySessionsChartProps) {
             dataKey="date"
             reversed={rtl}
             ticks={ticks}
-            tickFormatter={(value: string) => formatDate(value, tickDateFormatter)}
+            tickFormatter={(value: string) => formatDateOnly(value)}
             tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
             tickLine={false}
             axisLine={{ stroke: "var(--border)" }}
@@ -117,9 +81,7 @@ export function DailySessionsChart({ data, labels }: DailySessionsChartProps) {
             width={48}
           />
           <Tooltip
-            labelFormatter={(value) =>
-              formatDate(String(value), tooltipDateFormatter)
-            }
+            labelFormatter={(value) => formatDateOnly(String(value))}
             formatter={(value, name) => [
               numberFormatter.format(Number(value ?? 0)),
               name,

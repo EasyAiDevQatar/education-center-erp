@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { BackupFile } from "@/lib/backups";
+import { formatDateTime } from "@/lib/date-only";
 import { saveBackupDrive, testBackupDrive, restoreBackup } from "./backup-actions";
 
 function fmtSize(bytes: number): string {
@@ -162,7 +163,7 @@ export function BackupSettings({
                   </TableCell>
                   <TableCell className="tabular-nums">
                     <span dir="ltr">
-                      {b.modifiedAt.slice(0, 16).replace("T", " ")}
+                      {formatDateTime(b.modifiedAt)}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -203,7 +204,7 @@ export function BackupSettings({
               <div className="rounded-md border border-border p-3 text-sm">
                 <p className="font-mono text-xs" dir="ltr">{target.name}</p>
                 <p className="mt-1 text-muted-foreground" dir="ltr">
-                  {target.modifiedAt.slice(0, 16).replace("T", " ")} · {fmtSize(target.sizeBytes)}
+                  {formatDateTime(target.modifiedAt)} · {fmtSize(target.sizeBytes)}
                 </p>
               </div>
               <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">

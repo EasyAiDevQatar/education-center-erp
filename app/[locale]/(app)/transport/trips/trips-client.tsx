@@ -23,6 +23,7 @@ import { usePagination, TablePagination } from "@/components/ui/table-pagination
 import { TableSearch, useTableSearch } from "@/components/ui/table-search";
 import { minToHHMM } from "@/lib/planner";
 import { TRIP_STATUSES } from "@/lib/enums";
+import { formatDateOnly } from "@/lib/date-only";
 
 export type TripRow = {
   id: string;
@@ -160,7 +161,7 @@ export function TripsClient({
             {pg.pageItems.map((x) => (
               <TableRow key={x.id}>
                 <TableCell className="tabular-nums">
-                  <span dir="ltr">{x.date}</span>
+                  <span dir="ltr">{formatDateOnly(x.date)}</span>
                 </TableCell>
                 <TableCell className="tabular-nums">
                   <span dir="ltr">

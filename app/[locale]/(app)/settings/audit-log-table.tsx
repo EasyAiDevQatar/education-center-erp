@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination, TablePagination } from "@/components/ui/table-pagination";
+import { formatDateTime } from "@/lib/date-only";
 
 export type AuditRow = {
   id: string;
@@ -84,7 +85,7 @@ export function AuditLogTable({ rows }: { rows: AuditRow[] }) {
           )}
           {pg.pageItems.map((r) => (
             <TableRow key={r.id}>
-              <TableCell className="tabular-nums"><span dir="ltr">{r.at}</span></TableCell>
+              <TableCell className="tabular-nums"><span dir="ltr">{formatDateTime(r.at)}</span></TableCell>
               <TableCell>{r.userName ?? "—"}</TableCell>
               <TableCell>{r.entity}</TableCell>
               <TableCell className="max-w-40 truncate text-xs text-muted-foreground"><span dir="ltr">

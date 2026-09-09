@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DocumentLink } from "./document-link";
+import { formatDateOnly } from "@/lib/date-only";
 
 /** Colour for an expiry bucket. `unknown` is never green. */
 function levelVariant(level: string) {
@@ -62,8 +63,6 @@ export default async function EmployeeProfilePage({
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
 
   const today = new Date();
-  const ymd = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
-
   // Only the newest row per type decides whether the employee's papers are in
   // order — a renewal must silence the row it replaced.
   const current = latestPerType(employee.documents);
@@ -99,7 +98,7 @@ export default async function EmployeeProfilePage({
           icon={BadgeCheck}
           tone={employee.status === "ACTIVE" ? "success" : "default"}
         />
-        <StatCard label={t("hireDate")} value={ymd(employee.hireDate) ?? "—"} icon={CalendarDays} />
+        <StatCard label={t("hireDate")} value={formatDateOnly(employee.hireDate)} icon={CalendarDays} />
         <StatCard
           label={t("documentsNeedingAttention")}
           value={String(problems.length)}
@@ -121,7 +120,7 @@ export default async function EmployeeProfilePage({
                 [t("qid"), employee.qid],
                 [t("nationality"), employee.nationality],
                 [t("passportNo"), employee.passportNo],
-                [t("dob"), ymd(employee.dob)],
+                [t("dob"), formatDateOnly(employee.dob)],
               ].map(([label, value]) => (
                 <div key={String(label)} className="flex justify-between gap-3">
                   <span className="text-muted-foreground">{label}</span>
@@ -212,10 +211,10 @@ export default async function EmployeeProfilePage({
                       <span dir="ltr">{d.number ?? "—"}</span>
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      <span dir="ltr">{ymd(d.issuedOn) ?? "—"}</span>
+                      <span dir="ltr">{formatDateOnly(d.issuedOn)}</span>
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      <span dir="ltr">{ymd(d.expiresOn) ?? "—"}</span>
+                      <span dir="ltr">{formatDateOnly(d.expiresOn)}</span>
                     </TableCell>
                     <TableCell>
                       {superseded ? (
@@ -259,10 +258,10 @@ export default async function EmployeeProfilePage({
                 <TableRow key={l.id}>
                   <TableCell>{l.typeCode}</TableCell>
                   <TableCell className="tabular-nums">
-                    <span dir="ltr">{ymd(l.startDate)}</span>
+                    <span dir="ltr">{formatDateOnly(l.startDate)}</span>
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    <span dir="ltr">{ymd(l.endDate)}</span>
+                    <span dir="ltr">{formatDateOnly(l.endDate)}</span>
                   </TableCell>
                   <TableCell className="tabular-nums">{toNumber(l.days)}</TableCell>
                   <TableCell>
@@ -307,10 +306,10 @@ export default async function EmployeeProfilePage({
               {employee.payslips.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="tabular-nums">
-                    <span dir="ltr">{ymd(p.periodStart)}</span>
+                    <span dir="ltr">{formatDateOnly(p.periodStart)}</span>
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    <span dir="ltr">{ymd(p.periodEnd)}</span>
+                    <span dir="ltr">{formatDateOnly(p.periodEnd)}</span>
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {formatMoney(toNumber(p.netPaid))}

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { formatDateOnly } from "@/lib/date-only";
 import {
   Table,
   TableBody,
@@ -210,7 +211,7 @@ export function DriversClient({
               <li key={d.id}>
                 <Badge variant={levelVariant(d.licenceLevel)} className="gap-1">
                   <span>{d.name}</span>
-                  {d.licenceExpiry && <span dir="ltr">· {d.licenceExpiry}</span>}
+                  {d.licenceExpiry && <span dir="ltr">· {formatDateOnly(d.licenceExpiry)}</span>}
                 </Badge>
               </li>
             ))}
@@ -265,7 +266,7 @@ export function DriversClient({
                 <TableCell>
                   {d.licenceExpiry ? (
                     <Badge variant={levelVariant(d.licenceLevel)}>
-                      <span dir="ltr">{d.licenceExpiry}</span>
+                      <span dir="ltr">{formatDateOnly(d.licenceExpiry)}</span>
                     </Badge>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -303,7 +304,7 @@ export function DriversClient({
                           label: t("licenceExpiry"),
                           value: d.licenceExpiry ? (
                             <Badge variant={levelVariant(d.licenceLevel)}>
-                              <span dir="ltr">{d.licenceExpiry}</span>
+                              <span dir="ltr">{formatDateOnly(d.licenceExpiry)}</span>
                             </Badge>
                           ) : null,
                         },
