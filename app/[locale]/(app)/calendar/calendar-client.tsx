@@ -52,6 +52,7 @@ export type CalEvent = {
   status: string;
   paymentStatus: string;
   total: number;
+  pricePerHour: number;
   guardianPhone: string | null;
   addressLabel: string | null;
   home: { lat: number; lng: number } | null;
@@ -364,6 +365,7 @@ export function CalendarClient({
         location: editEv.location,
         hours: editEv.hours,
         paymentStatus: editEv.paymentStatus,
+        pricePerHour: editEv.pricePerHour,
         notes: null,
       }
     : undefined;

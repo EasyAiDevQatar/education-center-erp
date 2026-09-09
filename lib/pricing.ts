@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { toNumber } from "./money";
 import type { LocationType } from "./enums";
+import { studentSpecialPrice } from "./special-price";
 
 /**
  * Resolve the price-per-hour for a grade level + location from the versioned
@@ -28,15 +29,24 @@ export async function resolvePricePerHour(
 /** Student-specific agreed pricing wins over the matrix for every new lesson. */
 export async function resolveStudentPricePerHour(
   studentId: string,
+  teacherId: string | null,
   gradeLevelId: string,
   location: LocationType,
   on: Date = new Date(),
 ): Promise<number> {
   const student = await db.student.findUnique({
     where: { id: studentId },
-    select: { specialPricePerHour: true },
+    select: {
+      specialPricePerHour: true,
+      specialPriceTeachers: { select: { teacherId: true } },
+    },
   });
-  if (student?.specialPricePerHour != null) return toNumber(student.specialPricePerHour);
+  const special = studentSpecialPrice(
+    student?.specialPricePerHour == null ? null : toNumber(student.specialPricePerHour),
+    student?.specialPriceTeachers.map((row) => row.teacherId),
+    teacherId,
+  );
+  if (special != null) return special;
   return resolvePricePerHour(gradeLevelId, location, on);
 }
 

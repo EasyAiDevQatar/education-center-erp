@@ -14,17 +14,20 @@ export function ProfilePricingDialog({
   studentId,
   specialPricePerHour,
   teacherIds: initialTeacherIds,
+  specialPriceTeacherIds: initialSpecialPriceTeacherIds,
   teachers,
 }: {
   studentId: string;
   specialPricePerHour: number | null;
   teacherIds: string[];
+  specialPriceTeacherIds: string[];
   teachers: { id: string; label: string }[];
 }) {
   const locale = useLocale();
   const t = useTranslations("students");
   const tc = useTranslations("common");
   const [teacherIds, setTeacherIds] = useState(initialTeacherIds);
+  const [specialPriceTeacherIds, setSpecialPriceTeacherIds] = useState(initialSpecialPriceTeacherIds);
 
   return (
     <EntityDialog
@@ -52,6 +55,20 @@ export function ProfilePricingDialog({
               value={teacherIds}
               onChange={setTeacherIds}
               placeholder={t("noTeachersAssigned")}
+            />
+          </FormField>
+          <FormField
+            label={t("specialPriceTeachers")}
+            htmlFor="profile-special-price-teacher-ids"
+            hint={t("specialPriceTeachersHint")}
+          >
+            <MultiSelect
+              id="profile-special-price-teacher-ids"
+              name="specialPriceTeacherIds"
+              options={teachers.map((teacher) => ({ value: teacher.id, label: teacher.label }))}
+              value={specialPriceTeacherIds}
+              onChange={setSpecialPriceTeacherIds}
+              placeholder={t("allTeachers")}
             />
           </FormField>
         </div>

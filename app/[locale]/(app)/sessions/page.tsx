@@ -51,7 +51,10 @@ export default async function SessionsPage({
       db.student.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      include: { teachers: { where: { academicYearId: currentYear?.id ?? null } } },
+      include: {
+        teachers: { where: { academicYearId: currentYear?.id ?? null } },
+        specialPriceTeachers: { select: { teacherId: true } },
+      },
     }),
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
@@ -118,6 +121,7 @@ export default async function SessionsPage({
     gradeYear: s.gradeYear,
     studyLocation: s.studyLocation as "CENTER" | "HOME",
     specialPricePerHour: s.specialPricePerHour == null ? null : toNumber(s.specialPricePerHour),
+    specialPriceTeacherIds: s.specialPriceTeachers.map((row) => row.teacherId),
   }));
 
   const packageOpts = activePackages.map((p) => ({

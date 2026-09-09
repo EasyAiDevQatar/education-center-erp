@@ -18,34 +18,34 @@ datasource db {
 /// Application users with a role. A user may be linked to a Teacher or Guardian
 /// record to power the teacher/parent portals.
 model User {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
   /// Latin-script name, shown when the interface is in English. Optional: the
   /// centre's records are Arabic-first, so this fills in over time and every
   /// display falls back to `name` while it is empty.
   nameEn       String?
-  email        String   @unique
+  email        String  @unique
   passwordHash String
-  role         String   @default("RECEPTIONIST") // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT
+  role         String  @default("RECEPTIONIST") // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT
   /// All roles this user may act as (JSON array of role identifiers — built-in
   /// enum values or CustomRole.key). Null/empty means just `role`. The active
   /// role lives in the session, not here, so switching never rewrites the row.
   roleKeys     String?
-  locale       String   @default("ar") // ar | en
-  active       Boolean  @default(true)
+  locale       String  @default("ar") // ar | en
+  active       Boolean @default(true)
 
-  teacherId  String?  @unique
-  teacher    Teacher? @relation(fields: [teacherId], references: [id])
-  guardianId String?  @unique
+  teacherId  String?   @unique
+  teacher    Teacher?  @relation(fields: [teacherId], references: [id])
+  guardianId String?   @unique
   guardian   Guardian? @relation(fields: [guardianId], references: [id])
-  employeeId String?  @unique
+  employeeId String?   @unique
   employee   Employee? @relation(fields: [employeeId], references: [id])
 
-  auditLogs AuditLog[]
-  leads     Lead[]
+  auditLogs     AuditLog[]
+  leads         Lead[]
   notifications InAppNotification[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }
 
 model Teacher {
@@ -55,16 +55,16 @@ model Teacher {
   /// coordinates — so a teacher pinned for any other reason was silently added
   /// to the transport plan, and one who genuinely drove herself could only be
   /// excluded by deleting her address.
-  transportMode String   @default("CENTER") // CENTER | OWN_CAR
-  id            String   @id @default(cuid())
+  transportMode String  @default("CENTER") // CENTER | OWN_CAR
+  id            String  @id @default(cuid())
   name          String
   /// Latin-script name, shown when the interface is in English. Optional: the
   /// centre's records are Arabic-first, so this fills in over time and every
   /// display falls back to `name` while it is empty.
   nameEn        String?
   phone         String?
-  commissionPct Decimal  @default(0) // percentage, e.g. 50 = 50%
-  active        Boolean  @default(true)
+  commissionPct Decimal @default(0) // percentage, e.g. 50 = 50%
+  active        Boolean @default(true)
   notes         String?
 
   /// Fixed monthly salary paid on top of commission, and any standing deduction.
@@ -80,24 +80,25 @@ model Teacher {
 
   /// Where the teacher is collected from / dropped home by the transport
   /// module. Optional: only teachers who actually get a lift need it.
-  address       String?
-  homeLat       Float?
-  homeLng       Float?
+  address String?
+  homeLat Float?
+  homeLng Float?
 
-  user         User?
-  sessions     Session[]
-  payments     Payment[]      // payments allocated to this teacher
-  payouts      TeacherPayout[]
-  availability TeacherAvailability[]
-  templates    PlannerTemplate[]
-  students     StudentTeacher[]
-  subjects     TeacherSubject[]
-  employee     Employee?
-  tripStops    TripStop[]
-  groups       StudentGroup[]
+  user                 User?
+  sessions             Session[]
+  payments             Payment[] // payments allocated to this teacher
+  payouts              TeacherPayout[]
+  availability         TeacherAvailability[]
+  templates            PlannerTemplate[]
+  students             StudentTeacher[]
+  specialPriceStudents StudentSpecialPriceTeacher[]
+  subjects             TeacherSubject[]
+  employee             Employee?
+  tripStops            TripStop[]
+  groups               StudentGroup[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   inboundMessages InboundMessage[]
 }
 
@@ -114,8 +115,8 @@ model Guardian {
   user     User?
   students Student[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   inboundMessages InboundMessage[]
 }
 
@@ -139,7 +140,7 @@ model PriceRule {
   id            String     @id @default(cuid())
   gradeLevelId  String
   gradeLevel    GradeLevel @relation(fields: [gradeLevelId], references: [id])
-  location      String     // CENTER | HOME
+  location      String // CENTER | HOME
   pricePerHour  Decimal
   effectiveFrom DateTime   @default(now())
   active        Boolean    @default(true)
@@ -167,50 +168,53 @@ model Student {
 
   // Home-session check-in support: saved home location (geofence anchor) and a
   // short PIN the student/guardian confirms at check-in.
-  address    String?
-  homeLat    Float?
-  homeLng    Float?
-  checkinPin String?
+  address             String?
+  homeLat             Float?
+  homeLng             Float?
+  checkinPin          String?
   /// Stable random token behind the student's printable QR card.
   /// Deliberately not the row id: a card can be reissued by rotating this
   /// without touching history, and a lost card never exposes an internal id.
-  qrToken    String? @unique
+  qrToken             String?  @unique
   /// Short code the centre uses to identify the home location (zone/street/
   /// building, a compound name, whatever they already write on the paper
   /// sheet). Shown on planner cards for HOME sessions so the teacher knows
   /// where they are going at a glance.
-  homeCode   String?
+  homeCode            String?
   /// Where this student usually studies (CENTER | HOME). New sessions default
   /// their location — and therefore their price — from this; each session can
   /// still override it.
-  studyLocation String @default("CENTER")
+  studyLocation       String   @default("CENTER")
   /// Opt-in to the transport module. Explicit rather than inferred from having
   /// coordinates: most families drive their own child, and generating a car for
   /// every student with a saved home pin would flood the planner.
-  needsTransport Boolean @default(false)
+  needsTransport      Boolean  @default(false)
   /// School year 1-12, distinct from gradeLevel (the pricing band). Lets the
   /// office group students by their actual class — five grade-10 students
   /// together — which the broad band (Secondary) cannot express.
-  gradeYear Int?
+  gradeYear           Int?
   /// Optional agreed hourly price for this student. New bookings use it before
   /// consulting the grade/location price matrix; blank keeps matrix pricing.
   specialPricePerHour Decimal?
 
-  sessions  Session[]
-  payments  Payment[]
-  packages  Package[]
-  templates PlannerTemplate[]
-  leads     Lead[]
-  teachers     StudentTeacher[]
-  cheques      Cheque[]
-  tripStops    TripStop[]
-  groupMembers GroupMember[]
+  sessions             Session[]
+  payments             Payment[]
+  packages             Package[]
+  templates            PlannerTemplate[]
+  leads                Lead[]
+  teachers             StudentTeacher[]
+  /// Optional scope for `specialPricePerHour`. With no rows the agreed price
+  /// applies to every teacher; one or more rows restrict it to those teachers.
+  specialPriceTeachers StudentSpecialPriceTeacher[]
+  cheques              Cheque[]
+  tripStops            TripStop[]
+  groupMembers         GroupMember[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  inboundMessages InboundMessage[]
 
   @@index([name])
-  inboundMessages InboundMessage[]
 }
 
 /// A teacher's recurring weekly working window. Several rows per weekday are
@@ -260,84 +264,84 @@ model PlannerTemplate {
 /// A single tutoring session (حصة). Price is resolved from the PriceRule matrix
 /// at creation time and snapshotted onto the row.
 model Session {
-  id           String     @id @default(cuid())
-  date         DateTime
-  studentId    String
-  student      Student    @relation(fields: [studentId], references: [id])
+  id             String        @id @default(cuid())
+  date           DateTime
+  studentId      String
+  student        Student       @relation(fields: [studentId], references: [id])
   /// Nullable so a walk-in can be recorded before anyone knows who
   /// taught it — no payroll moves until a teacher is assigned.
-  teacherId    String?
-  teacher      Teacher?   @relation(fields: [teacherId], references: [id])
+  teacherId      String?
+  teacher        Teacher?      @relation(fields: [teacherId], references: [id])
   /// The saved group ("course") this booking came from, when it was made
   /// through group booking with a loaded group. Powers the group 360 view.
-  groupId      String?
-  group        StudentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  groupId        String?
+  group          StudentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   /// One identifier per occurrence created by group booking. The calendar uses
   /// it to present many per-student financial rows as one teaching session.
   bookingBatchId String?
-  gradeLevelId String
-  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  gradeLevelId   String
+  gradeLevel     GradeLevel    @relation(fields: [gradeLevelId], references: [id])
   /// Optional at booking. When set, shown on the booking card. A session's
   /// subject is independent of the teacher's subject list — a cover lesson can
   /// be any subject — so this is not constrained to the teacher's subjects.
-  subjectId    String?
-  subject      Subject?   @relation(fields: [subjectId], references: [id])
-  location     String     // CENTER | HOME
-  hours        Decimal
-  pricePerHour Decimal
-  total        Decimal
-  paymentStatus String    @default("UNPAID") // PAID | PARTIAL | UNPAID
-  packageId    String?
-  package      Package?   @relation(fields: [packageId], references: [id])
-  notes        String?
-  branchId     String?    // future multi-branch seam
+  subjectId      String?
+  subject        Subject?      @relation(fields: [subjectId], references: [id])
+  location       String // CENTER | HOME
+  hours          Decimal
+  pricePerHour   Decimal
+  total          Decimal
+  paymentStatus  String        @default("UNPAID") // PAID | PARTIAL | UNPAID
+  packageId      String?
+  package        Package?      @relation(fields: [packageId], references: [id])
+  notes          String?
+  branchId       String? // future multi-branch seam
 
   // Scheduling & attendance. `date` holds the start datetime; `hours` is the
   // planned duration. Attendance drives status: a completed session is billable.
-  status           String    @default("SCHEDULED") // SCHEDULED | CHECKED_IN | COMPLETED | NO_SHOW | CANCELLED
-  studentCheckInAt DateTime?
+  status            String    @default("SCHEDULED") // SCHEDULED | CHECKED_IN | COMPLETED | NO_SHOW | CANCELLED
+  studentCheckInAt  DateTime?
   studentCheckOutAt DateTime?
-  teacherCheckInAt DateTime?
-  checkInMethod    String?   // KIOSK | GPS | QR | MANUAL
-  checkInLat       Float?
-  checkInLng       Float?
-  actualHours      Decimal?  // exact elapsed hours from check-in → check-out, rounded to one minute
-  billableHours    Decimal?  // financial duration snapshot; null until attendance is finalized
+  teacherCheckInAt  DateTime?
+  checkInMethod     String? // KIOSK | GPS | QR | MANUAL
+  checkInLat        Float?
+  checkInLng        Float?
+  actualHours       Decimal? // exact elapsed hours from check-in → check-out, rounded to one minute
+  billableHours     Decimal? // financial duration snapshot; null until attendance is finalized
 
   /// What kind of lesson this is. Chosen at booking; drives how much lateness
   /// transport may propose — an exam is never delayed, whatever the settings say.
-  sessionType  String @default("REGULAR") // REGULAR | EXAM | ASSESSMENT | TRIAL | REVISION | MAKEUP
+  sessionType String @default("REGULAR") // REGULAR | EXAM | ASSESSMENT | TRIAL | REVISION | MAKEUP
 
   // --- Per-session transport timing overrides -----------------------------
   // All nullable: null means "inherit", first from the session type, then from
   // the centre-wide settings. Only a session that genuinely differs stores a
   // value, so changing the global policy still moves everything that follows it.
   /// STRICT | FLEXIBLE | VERY_FLEXIBLE
-  transportTimingPolicy    String?
-  maxAllowedLatenessMin    Int?
-  maxEarlyArrivalMin       Int?
-  maxPostSessionWaitMin    Int?
-  requireDelayApproval     Boolean?
-  notifyOnDelay            Boolean?
+  transportTimingPolicy String?
+  maxAllowedLatenessMin Int?
+  maxEarlyArrivalMin    Int?
+  maxPostSessionWaitMin Int?
+  requireDelayApproval  Boolean?
+  notifyOnDelay         Boolean?
 
   /// Trial lesson: booked at zero price as a DRAFT so it shows on the calendar
   /// and planner without ever touching the ledger.
-  isTrial     Boolean @default(false)
-  leadId      String?
-  lead        Lead?   @relation(fields: [leadId], references: [id])
+  isTrial Boolean @default(false)
+  leadId  String?
+  lead    Lead?   @relation(fields: [leadId], references: [id])
 
-  allocations PaymentAllocation[]
-  tripStops   TripStop[]
+  allocations    PaymentAllocation[]
+  tripStops      TripStop[]
   /// True once this session's hours have been deducted from its package, so
   /// confirm/undo cycles can never double-count.
-  packageApplied Boolean @default(false)
+  packageApplied Boolean             @default(false)
   /// Completed by the nightly sweep rather than by a person. Auto-completing
   /// makes a session billable without anyone confirming the lesson happened,
   /// so it is flagged for the review list rather than done silently.
-  autoCompleted  Boolean @default(false)
+  autoCompleted  Boolean             @default(false)
   /// Recorded without a teacher (walk-in). Surfaces in the check-in
   /// review list until an admin allocates one.
-  needsTeacher   Boolean @default(false)
+  needsTeacher   Boolean             @default(false)
 
   createdById String?
   createdAt   DateTime @default(now())
@@ -392,12 +396,12 @@ model Payment {
   /// reconcile against the cash drawer or the copy the parent is holding.
   /// CANCELLED means it never happened (keyed in error); REFUNDED means the
   /// money came in and went back out, and both remain visible.
-  status String @default("COMPLETED")
+  status       String    @default("COMPLETED")
   /// Why. Required by the action rather than the column, because rows written
   /// before this existed have no answer to give.
-  voidReason String?
-  voidedAt   DateTime?
-  voidedById String?
+  voidReason   String?
+  voidedAt     DateTime?
+  voidedById   String?
   /// What went back. A partial refund keeps the original amount and records
   /// only the returned part, so the receipt still says what was collected.
   refundAmount Decimal?
@@ -497,14 +501,14 @@ model Expense {
   supplier    Supplier?       @relation(fields: [supplierId], references: [id])
   cheque      Cheque?
 
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  fuelLog        FuelLog?
+  maintenanceLog MaintenanceLog?
 
   @@index([date])
   @@index([categoryId])
-  fuelLog        FuelLog?
-  maintenanceLog MaintenanceLog?
 }
 
 /// Vendor register: who the centre buys from and pays. Linked from expenses
@@ -523,80 +527,80 @@ model Supplier {
   expenses Expense[]
   cheques  Cheque[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([name])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   fuelLogs        FuelLog[]
   maintenanceLogs MaintenanceLog[]
+
+  @@index([name])
 }
 
 /// A teacher payroll run for a period.
 model TeacherPayout {
-  id              String   @id @default(cuid())
+  id                 String   @id @default(cuid())
   /// Nullable since HR phase 4: a receptionist's payslip has no teacher. Every
   /// pre-HR row still has it set. A hand-applied CHECK ("payslip_has_subject")
   /// guarantees at least one of teacherId/employeeId is present — Prisma
   /// cannot manage CHECK constraints, so do not expect it in a migrate diff.
-  teacherId       String?
-  teacher         Teacher? @relation(fields: [teacherId], references: [id])
-  periodStart     DateTime
-  periodEnd       DateTime
+  teacherId          String?
+  teacher            Teacher? @relation(fields: [teacherId], references: [id])
+  periodStart        DateTime
+  periodEnd          DateTime
   /// Commission actually due — commissionPct applied to income collected.
-  grossCommission Decimal
+  grossCommission    Decimal
   /// Commission the sessions would earn once fully collected (for comparison).
-  expectedCommission Decimal @default(0)
-  fixedSalary     Decimal  @default(0)
-  deductions      Decimal  @default(0)
-  advances        Decimal  @default(0)
-  netPaid         Decimal
-  status          String   @default("DRAFT") // DRAFT | PAID
-  notes           String?
+  expectedCommission Decimal  @default(0)
+  fixedSalary        Decimal  @default(0)
+  deductions         Decimal  @default(0)
+  advances           Decimal  @default(0)
+  netPaid            Decimal
+  status             String   @default("DRAFT") // DRAFT | PAID
+  notes              String?
   /// Mode this payout was generated under (SESSION | MONTH | TERM), snapshotted
   /// so a later change to the teacher's setting can't rewrite payslip history.
-  payMode         String?
+  payMode            String?
   /// Earnings mode in force when this payout was cut (SALARY | COMMISSION |
   /// BOTH), snapshotted for the same reason: a payslip must keep explaining the
   /// figures it was printed with.
-  earnMode        String?
+  earnMode           String?
   /// Term this payout covers, when generated in TERM mode.
-  termId          String?
-  term            Term?    @relation(fields: [termId], references: [id])
+  termId             String?
+  term               Term?    @relation(fields: [termId], references: [id])
 
   /// --- HR module (additive; null on every pre-HR row) ---
   /// The employee this payslip pays. A teacher-who-is-an-employee carries BOTH
   /// teacherId and employeeId on one row — one payslip, not two to reconcile.
-  employeeId String?
-  employee   Employee? @relation(fields: [employeeId], references: [id])
+  employeeId      String?
+  employee        Employee?   @relation(fields: [employeeId], references: [id])
   /// The batch this payslip was cut in. Null = ad-hoc single payout.
-  runId String?
-  run   PayrollRun? @relation(fields: [runId], references: [id])
+  runId           String?
+  run             PayrollRun? @relation(fields: [runId], references: [id])
   /// WPS/gratuity split of fixedSalary. fixedSalary is kept written as their
   /// sum so every reader that predates the HR module stays correct unchanged.
-  basicSalary Decimal @default(0)
-  allowances  Decimal @default(0)
+  basicSalary     Decimal     @default(0)
+  allowances      Decimal     @default(0)
   /// WPS "Extra hours" / "Extra income" columns.
-  overtime    Decimal @default(0)
-  extraIncome Decimal @default(0)
+  overtime        Decimal     @default(0)
+  extraIncome     Decimal     @default(0)
   /// WPS "Number of Working days". Null on pre-HR rows; the SIF generator
   /// refuses to emit a record without it rather than guessing 30.
   workingDays     Int?
-  unpaidLeaveDays Decimal @default(0)
+  unpaidLeaveDays Decimal     @default(0)
   /// CASH | BANK | CHEQUE — surfaces as the WPS Payment Type.
-  paymentMethod String?
-  paidAt        DateTime?
-  cheque        Cheque?
+  paymentMethod   String?
+  paidAt          DateTime?
+  cheque          Cheque?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([teacherId])
-  @@index([employeeId])
-  @@index([runId])
   /// One payslip per employee per run — a double-clicked bulk generate must not
   /// become a double payment. NULLs are distinct in Postgres, so legacy rows
   /// (employeeId null) are unaffected — the property StudentTeacher relies on.
   @@unique([employeeId, runId])
+  @@index([teacherId])
+  @@index([employeeId])
+  @@index([runId])
 }
 
 /// Immutable audit trail for financial records. before/after stored as JSON text.
@@ -657,16 +661,16 @@ model Integration {
   provider String  @unique // EASYAICONNECT | ... (see lib/integrations/registry.ts)
   enabled  Boolean @default(false)
 
-  baseUrl String?
-  apiKey  String?
+  baseUrl        String?
+  apiKey         String?
   /// Provider-specific extras as JSON text (endpoint paths, sender id, …).
-  config  String?
+  config         String?
   /// JSON array of enabled event keys, e.g. ["SESSION_BOOKED","PAYMENT_RECEIVED"].
-  events  String?
+  events         String?
   /// JSON array of audiences to notify: ["TEACHER","PARENT","STUDENT"].
   /// Kept as the fallback for a row saved before the matrix existed; the matrix
   /// is the answer once one is stored.
-  audiences String?
+  audiences      String?
   /// Who hears about what, as {"SESSION_BOOKED":["TEACHER","PARENT"], …}.
   ///
   /// The two lists above could only express a cross product: every chosen
@@ -689,14 +693,14 @@ model Integration {
 
 /// Delivery record for every outbound notification attempt.
 model NotificationLog {
-  id        String  @id @default(cuid())
-  provider  String
-  event     String
-  audience  String // TEACHER | PARENT | STUDENT
-  recipient String // phone number or provider contact id
-  status    String // SENT | FAILED | SKIPPED
-  message   String?
-  error     String?
+  id         String  @id @default(cuid())
+  provider   String
+  event      String
+  audience   String // TEACHER | PARENT | STUDENT
+  recipient  String // phone number or provider contact id
+  status     String // SENT | FAILED | SKIPPED
+  message    String?
+  error      String?
   entityType String?
   entityId   String?
 
@@ -717,14 +721,14 @@ model MessageTemplate {
   id String @id @default(cuid())
 
   /// Which notification this rewords, e.g. PAYMENT_RECEIVED.
-  event String
+  event    String
   /// Null means everyone who gets this event. A row naming an audience wins
   /// over the null row, so a centre can word the driver's copy differently
   /// without rewriting the family's.
   audience String?
   /// ar or en — a centre running bilingually needs both, and a missing one
   /// falls back to the built-in rather than sending the wrong language.
-  locale String
+  locale   String
 
   body   String
   active Boolean @default(true)
@@ -751,13 +755,13 @@ model InboundMessage {
 
   /// The provider's own event id. Unique because a webhook is retried on any
   /// non-2xx, and a retry must not become a second copy of the same message.
-  externalId String @unique
+  externalId  String  @unique
   /// The provider's conversation handle, kept so a reply can be threaded later.
   threadId    String?
   contactName String?
   /// E.164 where the provider gave us one; null when the contact lookup failed.
-  phone String?
-  body  String
+  phone       String?
+  body        String
 
   /// The payload exactly as received. When a message does not match anybody,
   /// this is the only way to find out why without asking for it to be resent.
@@ -784,29 +788,29 @@ model InboundMessage {
 /// A prospective student before they enrol. Converting a lead creates the real
 /// Student (and Guardian) records and links any trial sessions already booked.
 model Lead {
-  id        String  @id @default(cuid())
-  name      String
+  id               String      @id @default(cuid())
+  name             String
   /// Latin-script name, shown when the interface is in English. Optional: the
   /// centre's records are Arabic-first, so this fills in over time and every
   /// display falls back to `name` while it is empty.
-  nameEn    String?
-  phone     String?
-  email     String?
+  nameEn           String?
+  phone            String?
+  email            String?
   /// Where they came from — walk-in, referral, Instagram, etc. Free text so the
   /// centre can track whatever channels they actually use.
-  source    String?
+  source           String?
   /// NEW | CONTACTED | TRIAL | ENROLLED | LOST
-  status    String  @default("NEW")
-  notes     String?
+  status           String      @default("NEW")
+  notes            String?
   /// Grade level they are asking about, when known.
-  gradeLevelId String?
-  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
-  followUpAt   DateTime?
+  gradeLevelId     String?
+  gradeLevel       GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  followUpAt       DateTime?
   assignedToUserId String?
-  assignedTo       User?  @relation(fields: [assignedToUserId], references: [id])
+  assignedTo       User?       @relation(fields: [assignedToUserId], references: [id])
   /// Set once converted, so the lead keeps a trail to the enrolled student.
-  studentId String?
-  student   Student? @relation(fields: [studentId], references: [id])
+  studentId        String?
+  student          Student?    @relation(fields: [studentId], references: [id])
 
   sessions Session[]
 
@@ -823,11 +827,11 @@ model Lead {
 /// the whole roster. Scoped per academic year so last year's pairings don't
 /// clutter this year's lists.
 model StudentTeacher {
-  id        String  @id @default(cuid())
-  studentId String
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teacherId String
-  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  studentId      String
+  student        Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId      String
+  teacher        Teacher       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   /// Null until the centre sets up academic years, so assignments work before
   /// then and simply become year-scoped once a year exists.
   academicYearId String?
@@ -842,6 +846,23 @@ model StudentTeacher {
   @@index([studentId])
   @@index([teacherId])
   @@index([academicYearId])
+}
+
+/// A student's agreed price can be limited to a separate set of teachers.
+/// This is deliberately independent from StudentTeacher: eligibility for an
+/// agreed price is a commercial rule, not a teaching assignment.
+model StudentSpecialPriceTeacher {
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, teacherId])
+  @@index([studentId])
+  @@index([teacherId])
 }
 
 /// A school year. Archiving one freezes its money and attendance records.
@@ -903,16 +924,16 @@ model Employee {
   nationality String?
   dob         DateTime?
 
-  hireDate DateTime?
+  hireDate     DateTime?
   /// Last working day. Set at final settlement; also stops leave accrual.
   endDate      DateTime?
   jobTitle     String?
   department   String? // TEACHING | RECEPTION | ADMIN | TRANSPORT | OTHER
   contractType String? // UNLIMITED | LIMITED — the expiry lives on a CONTRACT document
-  status       String  @default("ACTIVE") // ACTIVE | ON_LEAVE | TERMINATED
+  status       String    @default("ACTIVE") // ACTIVE | ON_LEAVE | TERMINATED
 
-  iban     String?
-  bankName String?
+  iban            String?
+  bankName        String?
   /// The bank's official WPS short code (Appendix B). Deliberately separate
   /// from bankName: the SIF is parsed by the bank, and free text there gets
   /// the whole file rejected.
@@ -939,7 +960,7 @@ model Employee {
   payslips         TeacherPayout[]
   settlements      EndOfService[]
   /// Set only while this employee drives (transport module).
-  driver Driver?
+  driver           Driver?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -954,17 +975,17 @@ model Employee {
 /// first time someone renews in the wrong screen. A renewal is a new row, so
 /// history survives; alerts read the latest row per type.
 model EmployeeDocument {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   type       String // QID | VISA | PASSPORT | CONTRACT | HEALTH_CARD | LICENCE | OTHER
   number     String?
   issuedOn   DateTime?
   expiresOn  DateTime?
   /// Path to the scan on disk — never a DB blob, which would put passport
   /// scans into every nightly pg_dump.
-  fileUrl String?
-  notes   String?
+  fileUrl    String?
+  notes      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -974,11 +995,11 @@ model EmployeeDocument {
 }
 
 model LeaveType {
-  id     String  @id @default(cuid())
-  code   String  @unique // ANNUAL | SICK | UNPAID | MATERNITY | HAJJ | OTHER
-  nameAr String
-  nameEn String
-  paid   Boolean @default(true)
+  id              String   @id @default(cuid())
+  code            String   @unique // ANNUAL | SICK | UNPAID | MATERNITY | HAJJ | OTHER
+  nameAr          String
+  nameEn          String
+  paid            Boolean  @default(true)
   /// Whether days under this type still count as service for gratuity. False
   /// for UNPAID — the case that can drop someone below the one-year cliff.
   countsAsService Boolean  @default(true)
@@ -992,14 +1013,14 @@ model LeaveRequest {
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   /// Snapshot of LeaveType.code, matching how payMode/earnMode are snapshotted:
   /// renaming or retiring a type must not rewrite an approved request.
-  typeCode  String
-  startDate DateTime
-  endDate   DateTime
+  typeCode   String
+  startDate  DateTime
+  endDate    DateTime
   /// Computed and frozen at submission — a policy change cannot silently alter
   /// what an approved request said.
-  days   Decimal
-  status String  @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
-  reason String?
+  days       Decimal
+  status     String   @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  reason     String?
 
   decidedByUserId String?
   decidedAt       DateTime?
@@ -1016,10 +1037,10 @@ model LeaveRequest {
 /// module is unusable on day one: staff have already taken leave this year
 /// that the system has never seen.
 model LeaveAdjustment {
-  id         String   @id @default(cuid())
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  typeCode   String
+  id              String   @id @default(cuid())
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  typeCode        String
   /// Positive credits days, negative debits them.
   days            Decimal
   effectiveOn     DateTime
@@ -1033,12 +1054,12 @@ model LeaveAdjustment {
 /// One batch of payslips: selecting many employees and generating in one
 /// action produces one run and N TeacherPayout rows.
 model PayrollRun {
-  id String @id @default(cuid())
+  id              String    @id @default(cuid())
   /// The YYYY-MM this run pays — WPS carries Salary Year+Month in its header.
-  month       String
-  periodStart DateTime
-  periodEnd   DateTime
-  status      String @default("DRAFT") // DRAFT | APPROVED | PAID
+  month           String
+  periodStart     DateTime
+  periodEnd       DateTime
+  status          String    @default("DRAFT") // DRAFT | APPROVED | PAID
   /// Default for the run; per-payslip paymentMethod may override.
   paymentMethod   String?
   paidAt          DateTime?
@@ -1059,9 +1080,9 @@ model PayrollRun {
 /// Proof of what was filed with the bank. The bytes are not stored — the
 /// generator is deterministic, so the file is reproducible from the run.
 model WpsExport {
-  id    String     @id @default(cuid())
-  runId String
-  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  id              String     @id @default(cuid())
+  runId           String
+  run             PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   /// The payer bank the file was named for (Appendix B short code).
   bankCode        String
   sifVersion      String
@@ -1071,7 +1092,7 @@ model WpsExport {
   /// sha256 of the emitted bytes.
   checksum        String?
   createdByUserId String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime   @default(now())
 
   @@index([runId])
 }
@@ -1089,21 +1110,21 @@ model EndOfService {
   serviceDays         Int
   serviceYears        Decimal
   basicSalaryAtEnd    Decimal
-  unpaidLeaveDays     Decimal @default(0)
+  unpaidLeaveDays     Decimal  @default(0)
   gratuityDaysPerYear Decimal
   gratuityDays        Decimal
   gratuityAmount      Decimal
-  unusedLeaveDays     Decimal @default(0)
-  unusedLeaveAmount   Decimal @default(0)
-  otherDues           Decimal @default(0)
-  deductions          Decimal @default(0)
+  unusedLeaveDays     Decimal  @default(0)
+  unusedLeaveAmount   Decimal  @default(0)
+  otherDues           Decimal  @default(0)
+  deductions          Decimal  @default(0)
   /// May be negative: a settlement where deductions exceed dues is a real
   /// debt, unlike a payslip net which is floored at zero.
-  netSettlement Decimal
-  status        String  @default("DRAFT") // DRAFT | PAID
+  netSettlement       Decimal
+  status              String   @default("DRAFT") // DRAFT | PAID
   /// The payslip it was disbursed on, when paid through payroll.
-  payslipId String? @unique
-  notes     String?
+  payslipId           String?  @unique
+  notes               String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1122,7 +1143,7 @@ model Account {
   code     String    @unique
   nameAr   String
   nameEn   String
-  type     String    // ASSET | LIABILITY | EQUITY | INCOME | EXPENSE (lib/enums.ts)
+  type     String // ASSET | LIABILITY | EQUITY | INCOME | EXPENSE (lib/enums.ts)
   parentId String?
   parent   Account?  @relation("AccountTree", fields: [parentId], references: [id])
   children Account[] @relation("AccountTree")
@@ -1145,11 +1166,11 @@ model Account {
 /// auto-posting: MANUAL entries carry a null sourceId (NULLs are distinct, so
 /// the unique never blocks them).
 model JournalEntry {
-  id         String  @id @default(cuid())
+  id         String   @id @default(cuid())
   date       DateTime
   memo       String
   /// PAYMENT | EXPENSE | PAYROLL | CHEQUE | MANUAL (lib/enums.ts)
-  sourceType String  @default("MANUAL")
+  sourceType String   @default("MANUAL")
   /// PAYMENT/EXPENSE → row id; PAYROLL → payout id; CHEQUE → `${id}:${status}`.
   sourceId   String?
 
@@ -1204,7 +1225,7 @@ model ChequeBook {
 /// `chequePolicy` setting.
 model Cheque {
   id         String  @id @default(cuid())
-  direction  String  // INCOMING | OUTGOING
+  direction  String // INCOMING | OUTGOING
   status     String  @default("DRAFT")
   chequeNo   String
   amount     Decimal @default(0)
@@ -1214,17 +1235,17 @@ model Cheque {
   payeeName  String?
 
   bookId     String?
-  book       ChequeBook? @relation(fields: [bookId], references: [id])
+  book       ChequeBook?    @relation(fields: [bookId], references: [id])
   supplierId String?
-  supplier   Supplier?   @relation(fields: [supplierId], references: [id])
+  supplier   Supplier?      @relation(fields: [supplierId], references: [id])
   studentId  String?
-  student    Student?    @relation(fields: [studentId], references: [id])
+  student    Student?       @relation(fields: [studentId], references: [id])
   /// The money document this cheque settles — at most one each way.
-  paymentId  String? @unique
-  payment    Payment? @relation(fields: [paymentId], references: [id])
-  expenseId  String? @unique
-  expense    Expense? @relation(fields: [expenseId], references: [id])
-  payoutId   String? @unique
+  paymentId  String?        @unique
+  payment    Payment?       @relation(fields: [paymentId], references: [id])
+  expenseId  String?        @unique
+  expense    Expense?       @relation(fields: [expenseId], references: [id])
+  payoutId   String?        @unique
   payout     TeacherPayout? @relation(fields: [payoutId], references: [id])
 
   issueDate     DateTime?
@@ -1234,7 +1255,7 @@ model Cheque {
   clearanceDate DateTime?
   bounceDate    DateTime?
   bounceReason  String?
-  bounceFee     Decimal @default(0)
+  bounceFee     Decimal   @default(0)
 
   /// Replacement chain: a bounced cheque points at the cheque replacing it.
   replacedById String? @unique
@@ -1255,9 +1276,9 @@ model Cheque {
 
 /// Append-only status history for a cheque.
 model ChequeEvent {
-  id         String  @id @default(cuid())
+  id         String   @id @default(cuid())
   chequeId   String
-  cheque     Cheque  @relation(fields: [chequeId], references: [id], onDelete: Cascade)
+  cheque     Cheque   @relation(fields: [chequeId], references: [id], onDelete: Cascade)
   fromStatus String?
   toStatus   String
   note       String?
@@ -1267,29 +1288,31 @@ model ChequeEvent {
   @@index([chequeId, at])
 }
 
-/* --------------------------- Transport: the fleet -------------------------- */
+/**
+ * --------------------------- Transport: the fleet --------------------------
+ */
 
 /// A vehicle the centre can dispatch. Kept deliberately thin: everything that
 /// expires lives in VehicleDocument, and everything that costs money arrives in
 /// Z5 (fuel/maintenance), so this row rarely changes once created.
 model Vehicle {
-  id    String @id @default(cuid())
+  id         String  @id @default(cuid())
   /// Registration plate — the number staff actually say out loud, so it is the
   /// natural key and must be unique.
-  plate String @unique
-  make  String?
-  model String?
-  year  Int?
+  plate      String  @unique
+  make       String?
+  model      String?
+  year       Int?
   /// Passenger seats excluding the driver — the capacity the allocator honours.
   capacity   Int     @default(4)
   odometerKm Int     @default(0)
   active     Boolean @default(true)
   notes      String?
 
-  documents VehicleDocument[]
+  documents   VehicleDocument[]
   /// Drivers whose default vehicle this is (back-relation, not ownership).
-  drivers Driver[]
-  trips   Trip[]
+  drivers     Driver[]
+  trips       Trip[]
   fuel        FuelLog[]
   maintenance MaintenanceLog[]
 
@@ -1310,8 +1333,8 @@ model VehicleDocument {
   issuedOn  DateTime?
   expiresOn DateTime?
   /// Path to the scan on disk — never a DB blob (see EmployeeDocument).
-  fileUrl String?
-  notes   String?
+  fileUrl   String?
+  notes     String?
 
   createdAt DateTime @default(now())
 
@@ -1346,14 +1369,16 @@ model Driver {
   trips Trip[]
   pings DriverPing[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  inboundMessages InboundMessage[]
 
   @@index([active])
-  inboundMessages InboundMessage[]
 }
 
-/* -------------------------- Transport: trips ------------------------------ */
+/**
+ * -------------------------- Transport: trips ------------------------------
+ */
 
 /// One vehicle journey serving one or more passengers. Created by the planner's
 /// generator (status PROPOSED, awaiting a human) or by hand (PLANNED).
@@ -1390,10 +1415,10 @@ model Trip {
   allocationScore Decimal?
 
   /// Phase-1 validation: VALID | WARNING | INVALID. Approval is gated on this.
-  validationStatus  String  @default("WARNING")
+  validationStatus   String  @default("WARNING")
   /// Human-readable reasons a route needs review, JSON array of {code,text}.
   validationMessages String?
-  needsReviewReason String?
+  needsReviewReason  String?
 
   /// Revision / audit provenance (a session change proposes a new revision
   /// rather than mutating an approved trip).
@@ -1401,25 +1426,25 @@ model Trip {
   supersedesTripId String?
   manualEdit       Boolean @default(false)
 
-  overrideReason  String?
-  overriddenById  String?
-  overriddenAt    DateTime?
-  approvedById    String?
-  approvedAt      DateTime?
-  deadheadKm      Decimal?
-  slackMin        Int?
+  overrideReason String?
+  overriddenById String?
+  overriddenAt   DateTime?
+  approvedById   String?
+  approvedAt     DateTime?
+  deadheadKm     Decimal?
+  slackMin       Int?
 
   /// OSRM encoded polyline for the whole route, so the board draws the real
   /// road path rather than straight segments. Null when built on the estimator.
-  routeGeometry   String?
+  routeGeometry String?
 
   /// Trip direction after the pickup/return split (C4): PICKUP (توصيل, homes
   /// → centre), RETURN (عودة, centre → homes), or CHAIN (a field round / an
   /// un-split day). Null on legacy trips.
-  tripKind        String?
+  tripKind  String?
   /// Shared key linking the trips a single passenger's day was split into,
   /// so the board can group توصيل + عودة together.
-  linkGroup       String?
+  linkGroup String?
 
   notes       String?
   createdById String?
@@ -1461,9 +1486,9 @@ model TripStop {
   distanceFromPrevM    Int?
   /// True while travel time is the straight-line estimate rather than a road
   /// network result (Phase 2 sets these to false once OSRM is live).
-  estimated        Boolean @default(true)
-  fallbackUsed     Boolean @default(true)
-  validationStatus String?
+  estimated            Boolean @default(true)
+  fallbackUsed         Boolean @default(true)
+  validationStatus     String?
 
   /// Exactly one passenger link is set. Two nullable columns beat a polymorphic
   /// id because the FK still protects them.
@@ -1509,8 +1534,8 @@ model DriverPing {
   tripId   String?
   trip     Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
-  lat Float
-  lng Float
+  lat       Float
+  lng       Float
   /// Reported accuracy in metres. Fixes worse than the configured ceiling are
   /// rejected client-side; the column is kept so a stored path can be audited.
   accuracyM Int?
@@ -1530,9 +1555,9 @@ model FuelLog {
   vehicleId String
   vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
-  date   DateTime
-  litres Decimal
-  cost   Decimal
+  date       DateTime
+  litres     Decimal
+  cost       Decimal
   /// Reading at the pump. Fuel economy is only computable between two fills
   /// that both recorded one, so it is optional but worth chasing.
   odometerKm Int?
@@ -1541,8 +1566,8 @@ model FuelLog {
   supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   /// The expense this created. SetNull rather than Cascade: deleting an expense
   /// must not silently erase the fuel history it came from.
-  expenseId String?  @unique
-  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  expenseId  String?   @unique
+  expense    Expense?  @relation(fields: [expenseId], references: [id], onDelete: SetNull)
 
   notes String?
 
@@ -1579,25 +1604,24 @@ model MaintenanceLog {
   @@index([vehicleId, date])
 }
 
-
 /// A saved teaching group / course: a fixed roster taught together, each member
 /// billed at their own agreed price. Distinct from an ad-hoc group booking,
 /// which is a one-off selection priced from the matrix.
 model StudentGroup {
-  id           String      @id @default(cuid())
-  name         String
-  teacherId    String?
-  teacher      Teacher?    @relation(fields: [teacherId], references: [id], onDelete: SetNull)
-  subjectId    String?
-  subject      Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  gradeLevelId String?
-  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
-  location     String      @default("CENTER") // CENTER | HOME
+  id                  String      @id @default(cuid())
+  name                String
+  teacherId           String?
+  teacher             Teacher?    @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  subjectId           String?
+  subject             Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  gradeLevelId        String?
+  gradeLevel          GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  location            String      @default("CENTER") // CENTER | HOME
   /// Default hourly price. A member with no override inherits this; if this is
   /// null too, booking falls back to the grade/location price matrix.
   defaultPricePerHour Decimal?
-  active       Boolean     @default(true)
-  notes        String?
+  active              Boolean     @default(true)
+  notes               String?
 
   members  GroupMember[]
   sessions Session[]
@@ -1610,11 +1634,11 @@ model StudentGroup {
 
 /// One student's place in a group, with their own agreed price.
 model GroupMember {
-  id        String       @id @default(cuid())
-  groupId   String
-  group     StudentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  studentId String
-  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  groupId      String
+  group        StudentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   /// Per-student hourly price. Null = the group default, then the matrix.
   pricePerHour Decimal?
 
@@ -1633,7 +1657,7 @@ model CustomRole {
   key         String   @unique
   name        String
   nameEn      String?
-  baseRole    String   // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT | DRIVER
+  baseRole    String // ADMIN | ACCOUNTANT | RECEPTIONIST | TEACHER | PARENT | DRIVER
   permissions String   @default("{}") // JSON navKey -> bool (menu visibility)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1711,20 +1735,20 @@ model RoutingCache {
 /// app. `idempotencyKey` is what stops a regenerated plan re-announcing a delay
 /// nobody's decision changed.
 model InAppNotification {
-  id        String  @id @default(cuid())
+  id       String  @id @default(cuid())
   /// Who should see it. USER when addressed to one account, otherwise a role
   /// bucket every holder of that role reads (TRANSPORT_ADMIN | CENTER_ADMIN).
-  audience  String
-  userId    String?
-  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audience String
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   /// e.g. TRIP_DELAY_PROPOSED | TRIP_DELAY_APPROVED | TRIP_DELAY_CHANGED
-  event     String
-  title     String
-  body      String
+  event    String
+  title    String
+  body     String
   /// Rendered payload (passenger, session, arrival times, saving summary).
-  data      String?
-  severity  String  @default("INFO") // INFO | WARNING | CRITICAL
+  data     String?
+  severity String  @default("INFO") // INFO | WARNING | CRITICAL
 
   entityType String?
   entityId   String?

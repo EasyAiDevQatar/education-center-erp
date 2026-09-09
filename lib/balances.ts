@@ -7,7 +7,7 @@ import { unchargeableStatuses, netPaid, LIVE_PAYMENTS } from "./billing";
  * Charges − payments = balance owed by the student.
  *
  * Three rules keep this honest:
- *  - A lesson that was not delivered is not a charge — see
+ *  - A lesson that was not delivered and attendance-confirmed is not a charge — see
  *    `unchargeableStatuses`. This used to exclude DRAFT only, which meant a
  *    cancelled lesson and an unbilled no-show were both shown to the parent as
  *    money owed, printed on their statement and chased by the nightly reminder

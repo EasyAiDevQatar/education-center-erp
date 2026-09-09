@@ -70,6 +70,8 @@ export async function saveStudent(
   const data = parsed.data;
   // Multi-select posts one hidden input per teacher.
   const teacherIds = formData.getAll("teacherIds").map(String).filter(Boolean);
+  const specialPriceTeacherIds = formData.getAll("specialPriceTeacherIds").map(String).filter(Boolean);
+  if (!(await validTeacherIds([...teacherIds, ...specialPriceTeacherIds]))) return { error: "invalid" };
 
   let studentId: string;
   if (id) {
@@ -85,6 +87,7 @@ export async function saveStudent(
   }
 
   await setStudentTeachers(studentId, teacherIds);
+  await setStudentSpecialPriceTeachers(studentId, specialPriceTeacherIds);
 
   revalidatePath(`/${locale}/students`);
   revalidatePath(`/${locale}/students/${studentId}`);
@@ -114,13 +117,16 @@ export async function saveStudentPricingAndTeachers(
   if (!parsed.success) return { error: "invalid" };
 
   const teacherIds = [...new Set(formData.getAll("teacherIds").map(String).filter(Boolean))];
-  const validTeachers = await db.teacher.count({ where: { id: { in: teacherIds }, active: true } });
-  if (validTeachers !== teacherIds.length) return { error: "invalid" };
+  const specialPriceTeacherIds = [
+    ...new Set(formData.getAll("specialPriceTeacherIds").map(String).filter(Boolean)),
+  ];
+  if (!(await validTeacherIds([...teacherIds, ...specialPriceTeacherIds]))) return { error: "invalid" };
 
   await db.student.update({ where: { id }, data: { specialPricePerHour: parsed.data } });
   await setStudentTeachers(id, teacherIds);
+  await setStudentSpecialPriceTeachers(id, specialPriceTeacherIds);
   await writeAudit("Student", id, "UPDATE", {
-    after: { specialPricePerHour: parsed.data, teacherIds },
+    after: { specialPricePerHour: parsed.data, teacherIds, specialPriceTeacherIds },
   });
   revalidatePath(`/${locale}/students`);
   revalidatePath(`/${locale}/students/${id}`);
@@ -150,6 +156,26 @@ async function setStudentTeachers(studentId: string, teacherIds: string[]) {
       ? [
           db.studentTeacher.createMany({
             data: teacherIds.map((teacherId) => ({ studentId, teacherId, academicYearId })),
+          }),
+        ]
+      : []),
+  ]);
+}
+
+async function validTeacherIds(ids: string[]) {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return true;
+  return (await db.teacher.count({ where: { id: { in: unique }, active: true } })) === unique.length;
+}
+
+async function setStudentSpecialPriceTeachers(studentId: string, teacherIds: string[]) {
+  const unique = [...new Set(teacherIds)];
+  await db.$transaction([
+    db.studentSpecialPriceTeacher.deleteMany({ where: { studentId } }),
+    ...(unique.length
+      ? [
+          db.studentSpecialPriceTeacher.createMany({
+            data: unique.map((teacherId) => ({ studentId, teacherId })),
           }),
         ]
       : []),

@@ -42,6 +42,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
+import { studentSpecialPrice } from "@/lib/special-price";
 import { printDoc, printPageSize } from "@/lib/print";
 import { suggestNextStart, minToHHMM, hhmmToMin } from "@/lib/planner";
 import { TimeRange } from "@/components/time-range";
@@ -149,6 +150,7 @@ type StudentOpt = {
   /** The student's usual study place — new drafts default to it. */
   studyLocation?: "CENTER" | "HOME";
   specialPricePerHour?: number | null;
+  specialPriceTeacherIds?: string[];
 };
 
 const CELL_STYLES: Record<string, string> = {
@@ -994,7 +996,12 @@ function AddDraftDialog({
   const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");
   const [hours, setHours] = useState("1");
   const priceFor = (levelId: string, loc: "CENTER" | "HOME", id = studentId) => {
-    const special = students.find((student) => student.id === id)?.specialPricePerHour;
+    const student = students.find((item) => item.id === id);
+    const special = studentSpecialPrice(
+      student?.specialPricePerHour,
+      student?.specialPriceTeacherIds,
+      teacherId,
+    );
     return special ?? matrix[levelId]?.[loc] ?? 0;
   };
   const [price, setPrice] = useState("0");

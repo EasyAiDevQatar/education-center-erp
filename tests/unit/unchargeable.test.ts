@@ -31,6 +31,12 @@ describe("what counts as a charge", () => {
       expect(unbilledStatuses(policy, ["DRAFT", "CANCELLED"])).toContain("CANCELLED");
     }
   });
+
+  it("keeps every unconfirmed lifecycle state out of money and statements", () => {
+    const pending = ["DRAFT", "SCHEDULED", "CHECKED_IN", "CANCELLED"];
+    expect(unbilledStatuses("CANCELLED", pending)).toEqual([...pending, "NO_SHOW"]);
+    expect(unbilledStatuses("TAUGHT", pending)).toEqual(pending);
+  });
 });
 
 /**
@@ -65,6 +71,6 @@ describe("the money readers share one rule", () => {
   it("billing.ts is where the rule lives", () => {
     const src = readFileSync(path.join(root, "lib/billing.ts"), "utf8");
     expect(src).toContain("export async function unchargeableStatuses");
-    expect(src).toContain('["DRAFT", "CANCELLED"]');
+    expect(src).toContain('["DRAFT", "SCHEDULED", "CHECKED_IN", "CANCELLED"]');
   });
 });

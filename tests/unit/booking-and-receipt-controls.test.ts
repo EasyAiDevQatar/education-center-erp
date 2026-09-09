@@ -61,16 +61,28 @@ describe("student special pricing", () => {
     const actions = read("app/[locale]/(app)/sessions/actions.ts");
     expect(schema).toContain("specialPricePerHour Decimal?");
     expect(pricing).toContain("resolveStudentPricePerHour");
-    expect(pricing).toContain("student?.specialPricePerHour != null");
+    expect(pricing).toContain("studentSpecialPrice(");
     expect(actions).toContain("resolveStudentPricePerHour(");
   });
 
   it("shows the override and linked teachers on the student profile", () => {
     const form = read("app/[locale]/(app)/students/students-client.tsx");
     const profile = read("app/[locale]/(app)/students/[id]/page.tsx");
+    const schema = read("prisma/schema.prisma");
     expect(form).toContain('name="specialPricePerHour"');
     expect(form).toContain('name="teacherIds"');
+    expect(form).toContain('name="specialPriceTeacherIds"');
     expect(profile).toContain('t("assignedTeachers")');
+    expect(schema).toContain("model StudentSpecialPriceTeacher");
+  });
+
+  it("reprices old unpaid sessions but preserves a paid session's historical rate", () => {
+    const action = read("app/[locale]/(app)/sessions/actions.ts");
+    const dialog = read("app/[locale]/(app)/sessions/session-dialog.tsx");
+    expect(action).toContain('priorSession.paymentStatus === "UNPAID"');
+    expect(action).toContain("Number(priorSession.pricePerHour)");
+    expect(dialog).toContain('name="pricePerHour"');
+    expect(dialog).toContain("suggestedPrice");
   });
 });
 

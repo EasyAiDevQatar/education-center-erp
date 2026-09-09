@@ -24,6 +24,7 @@ import { useConflictCheck, SpacingWarning, useSpacingCheck } from "@/components/
 import { createGroupSessions } from "./actions";
 import { suggestFix, type FixSuggestion } from "./suggest-actions";
 import type { StudentOpt, Opt, PriceMatrix } from "./session-dialog";
+import { studentSpecialPrice } from "@/lib/special-price";
 
 export type GroupOpt = {
   id: string;
@@ -133,7 +134,12 @@ export function GroupBookingDialog({
 
   const priceForStudent = (s: StudentOpt) => {
     if (priceOverride[s.id] != null) return priceOverride[s.id];
-    if (s.specialPricePerHour != null) return s.specialPricePerHour;
+    const special = studentSpecialPrice(
+      s.specialPricePerHour,
+      s.specialPriceTeacherIds,
+      teacherId,
+    );
+    if (special != null) return special;
     const grade = gradeOverride || s.gradeLevelId || "";
     const row = grade ? matrix[grade] : undefined;
     return row ? (row[location] ?? 0) : 0;

@@ -47,7 +47,7 @@ export default async function StudentProfilePage({
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
   const unchargeable = await unchargeableStatuses();
 
-  const [balance, ledger, sessions, payments, packages, currency, teacherRows, assignedRows] =
+  const [balance, ledger, sessions, payments, packages, currency, teacherRows, assignedRows, specialPriceTeacherRows] =
     await Promise.all([
       getStudentBalance(id),
       getStudentLedger(id),
@@ -64,11 +64,16 @@ export default async function StudentProfilePage({
         },
         include: { teacher: true },
       }),
+      db.studentSpecialPriceTeacher.findMany({
+        where: { studentId: id },
+        include: { teacher: true },
+      }),
     ]);
   const teachers = teacherRows.map((x) => ({ id: x.id, label: displayName(x, locale) }));
   const assignedTeachers = [
     ...new Map(assignedRows.map((row) => [row.teacherId, displayName(row.teacher, locale)])).values(),
   ];
+  const specialPriceTeachers = specialPriceTeacherRows.map((row) => displayName(row.teacher, locale));
 
   const tabs = [
     { key: "overview", label: tp("overview") },
@@ -87,6 +92,7 @@ export default async function StudentProfilePage({
             studentId={id}
             specialPricePerHour={student.specialPricePerHour == null ? null : toNumber(student.specialPricePerHour)}
             teacherIds={[...new Set(assignedRows.map((row) => row.teacherId))]}
+            specialPriceTeacherIds={specialPriceTeacherRows.map((row) => row.teacherId)}
             teachers={teachers}
           />
         }
@@ -147,10 +153,16 @@ export default async function StudentProfilePage({
                 value={te(`location.${student.studyLocation as "CENTER" | "HOME"}`)}
               />
               {student.specialPricePerHour != null && (
-                <Row
-                  label={t("specialPrice")}
-                  value={`${formatMoney(toNumber(student.specialPricePerHour))} ${currency}`}
-                />
+                <>
+                  <Row
+                    label={t("specialPrice")}
+                    value={`${formatMoney(toNumber(student.specialPricePerHour))} ${currency}`}
+                  />
+                  <Row
+                    label={t("specialPriceTeachers")}
+                    value={specialPriceTeachers.length ? specialPriceTeachers.join("، ") : t("allTeachers")}
+                  />
+                </>
               )}
               <Row
                 label={t("assignedTeachers")}

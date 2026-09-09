@@ -32,6 +32,7 @@ export default async function StudentsPage({
         gradeLevel: true,
         guardian: true,
         teachers: { where: { academicYearId: currentYear?.id ?? null } },
+        specialPriceTeachers: { select: { teacherId: true } },
       },
     }),
     db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
@@ -71,6 +72,7 @@ export default async function StudentsPage({
     homeCode: s.homeCode,
     studyLocation: s.studyLocation as "CENTER" | "HOME",
     teacherIds: s.teachers.map((x) => x.teacherId),
+    specialPriceTeacherIds: s.specialPriceTeachers.map((x) => x.teacherId),
   }));
 
   const aiCfg = await loadAiConfig();

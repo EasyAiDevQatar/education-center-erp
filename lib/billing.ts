@@ -35,11 +35,16 @@ export async function noShowPolicy() {
  * own list, which is what stops them drifting apart again.
  *
  *  - DRAFT      unconfirmed planner rows; never money.
+ *  - SCHEDULED  booked but attendance has not confirmed delivery; never money.
+ *  - CHECKED_IN in progress, with no completed billable duration yet; never money.
  *  - CANCELLED  the lesson did not happen and nobody is charged for it.
  *  - NO_SHOW    only when the centre's policy says a no-show is not billed.
  */
 export async function unchargeableStatuses(): Promise<string[]> {
-  return unbilledStatuses(await noShowPolicy(), ["DRAFT", "CANCELLED"]);
+  return unbilledStatuses(
+    await noShowPolicy(),
+    ["DRAFT", "SCHEDULED", "CHECKED_IN", "CANCELLED"],
+  );
 }
 
 /**

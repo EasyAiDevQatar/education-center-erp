@@ -16,6 +16,7 @@ import { notifySession } from "@/lib/integrations/notify";
 import { revertPackageHours, syncSessionPaymentStatus } from "@/lib/billing";
 import { LOCATIONS, PAYMENT_STATUSES } from "@/lib/enums";
 import { canCancelSession } from "@/lib/session-lifecycle";
+import { studentSpecialPrice } from "@/lib/special-price";
 
 export type ActionState = {
   ok?: boolean;
@@ -34,6 +35,7 @@ const schema = z.object({
   gradeLevelId: z.string().min(1),
   location: z.enum(LOCATIONS),
   hours: z.coerce.number().positive(),
+  pricePerHour: z.coerce.number().min(0).max(1_000_000).optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).default("UNPAID"),
   notes: z.string().trim().optional().nullable(),
   packageId: z.string().trim().optional().nullable(),
@@ -76,6 +78,7 @@ export async function saveSession(
     gradeLevelId: formData.get("gradeLevelId"),
     location: formData.get("location"),
     hours: formData.get("hours"),
+    pricePerHour: formData.get("pricePerHour") || undefined,
     paymentStatus: formData.get("paymentStatus") || "UNPAID",
     notes: formData.get("notes") || null,
     packageId: formData.get("packageId") || null,
@@ -112,16 +115,24 @@ export async function saveSession(
   // Authoritative price resolution from the matrix (client preview is advisory).
   const pricePerHour = await resolveStudentPricePerHour(
     d.studentId,
+    d.teacherId,
     d.gradeLevelId,
     d.location,
     date,
   );
+  // A receipt/allocation freezes the agreed historical price. An unpaid
+  // booking remains editable, including bookings made before a student's
+  // special price was configured.
+  const editablePrice = !priorSession || priorSession.paymentStatus === "UNPAID";
+  const effectivePricePerHour = editablePrice
+    ? (d.pricePerHour ?? pricePerHour)
+    : Number(priorSession.pricePerHour);
   // Editing a finalized session may change its planned timetable details, but
   // its historical billable snapshot remains the financial source of truth.
   const financialHours = priorSession?.billableHours == null
     ? d.hours
     : Number(priorSession.billableHours);
-  const total = pricePerHour * financialHours;
+  const total = effectivePricePerHour * financialHours;
 
   const data = {
     date,
@@ -130,9 +141,12 @@ export async function saveSession(
     gradeLevelId: d.gradeLevelId,
     location: d.location,
     hours: d.hours,
-    pricePerHour,
+    pricePerHour: effectivePricePerHour,
     total,
-    paymentStatus: d.paymentStatus,
+    paymentStatus:
+      priorSession && priorSession.paymentStatus !== "UNPAID"
+        ? priorSession.paymentStatus
+        : d.paymentStatus,
     notes: d.notes,
     packageId: d.packageId || null,
     subjectId: d.subjectId || null,
@@ -381,7 +395,12 @@ export async function updateGroupOccurrenceRoster(
 
   const students = await db.student.findMany({
     where: { id: { in: additionIds }, active: true },
-    select: { id: true, gradeLevelId: true, specialPricePerHour: true },
+    select: {
+      id: true,
+      gradeLevelId: true,
+      specialPricePerHour: true,
+      specialPriceTeachers: { select: { teacherId: true } },
+    },
   });
   if (students.length !== additionIds.length) return { error: "notfound" };
   if (students.some((student) => !student.gradeLevelId)) return { error: "noGrade" };
@@ -436,14 +455,19 @@ export async function updateGroupOccurrenceRoster(
       };
     }
     const agreed = memberPrices.get(student.id) ?? savedGroup?.defaultPricePerHour ?? null;
+    const special = studentSpecialPrice(
+      student.specialPricePerHour == null ? null : Number(student.specialPricePerHour),
+      student.specialPriceTeachers.map((row) => row.teacherId),
+      first.teacherId,
+    );
     const pricePerHour =
-      agreed === null && student.specialPricePerHour == null
+      agreed === null && special == null
         ? await resolvePricePerHour(
             student.gradeLevelId!,
             first.location as "CENTER" | "HOME",
             first.date,
           )
-        : Number(agreed ?? student.specialPricePerHour);
+        : Number(agreed ?? special);
     additions.push({
       date: first.date,
       studentId: student.id,
@@ -554,7 +578,12 @@ export async function createGroupSessions(
 
   const students = await db.student.findMany({
     where: { id: { in: d.studentIds } },
-    select: { id: true, gradeLevelId: true, specialPricePerHour: true },
+    select: {
+      id: true,
+      gradeLevelId: true,
+      specialPricePerHour: true,
+      specialPriceTeachers: { select: { teacherId: true } },
+    },
   });
 
   // Cache price lookups by grade+location+date (date matters for versioned rules).
@@ -583,11 +612,16 @@ export async function createGroupSessions(
       const gradeLevelId = d.gradeLevelId || s.gradeLevelId;
       if (!gradeLevelId) { skippedStudents.add(s.id); continue; }
       const override = priceOverride.get(s.id);
+      const special = studentSpecialPrice(
+        s.specialPricePerHour == null ? null : Number(s.specialPricePerHour),
+        s.specialPriceTeachers.map((row) => row.teacherId),
+        d.teacherId,
+      );
       const pricePerHour =
         override != null
           ? override
-          : s.specialPricePerHour != null
-            ? Number(s.specialPricePerHour)
+          : special != null
+            ? special
             : await priceFor(gradeLevelId, date);
       rows.push({
         date,

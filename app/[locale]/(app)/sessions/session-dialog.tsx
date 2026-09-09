@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { formatMoney } from "@/lib/money";
 import { localNowTime, localToday } from "@/lib/session-time";
+import { studentSpecialPrice } from "@/lib/special-price";
 import {
   ConflictWarnings,
   useConflictCheck,
@@ -38,6 +39,8 @@ export type StudentOpt = {
   studyLocation?: "CENTER" | "HOME";
   /** Optional agreed rate that overrides the grade/location matrix. */
   specialPricePerHour?: number | null;
+  /** Teachers for whom the special rate applies. Empty means every teacher. */
+  specialPriceTeacherIds?: string[];
 };
 export type PackageOpt = { id: string; studentId: string; label: string };
 export type Opt = { id: string; label: string };
@@ -53,6 +56,7 @@ export type SessionInit = {
   location: "CENTER" | "HOME";
   hours: number;
   paymentStatus: string;
+  pricePerHour: number;
   notes: string | null;
   packageId?: string | null;
   subjectId?: string | null;
@@ -155,6 +159,7 @@ export function SessionDialog({
   const [time, setTime] = useState(session?.time ?? defaultTime ?? now);
   const [teacherId, setTeacherId] = useState(session?.teacherId ?? defaultTeacherId ?? "");
   const [subjectId, setSubjectId] = useState(session?.subjectId ?? "");
+  const [price, setPrice] = useState("");
 
   // When opened fresh for quick-create, reset the light fields.
   useEffect(() => {
@@ -253,12 +258,25 @@ export function SessionDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectOptions]);
 
-  const pricePerHour = useMemo(() => {
-    const special = students.find((student) => student.id === studentId)?.specialPricePerHour;
+  const suggestedPrice = useMemo(() => {
+    const student = students.find((item) => item.id === studentId);
+    const special = studentSpecialPrice(
+      student?.specialPricePerHour,
+      student?.specialPriceTeacherIds,
+      teacherId,
+    );
     if (special != null) return special;
     const row = matrix[gradeLevelId];
     return row ? (row[location] ?? 0) : 0;
-  }, [matrix, gradeLevelId, location, studentId, students]);
+  }, [matrix, gradeLevelId, location, studentId, teacherId, students]);
+  const priceEditable = !session || session.paymentStatus === "UNPAID";
+  useEffect(() => {
+    // This synchronizes the editable field when the selected pricing inputs
+    // change; preserving stale manual state here would apply the wrong teacher scope.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrice(String(priceEditable ? suggestedPrice : (session?.pricePerHour ?? suggestedPrice)));
+  }, [priceEditable, session?.pricePerHour, suggestedPrice]);
+  const pricePerHour = Number(price) || 0;
   const total = pricePerHour * (parseFloat(hours) || 0);
 
   function onStudentChange(id: string) {
@@ -416,6 +434,7 @@ export function SessionDialog({
           </FormField>
         )}
 
+        <div className="grid grid-cols-2 gap-3">
         <FormField label={t("paymentStatus")} htmlFor="paymentStatus">
           <Select id="paymentStatus" name="paymentStatus" defaultValue={session?.paymentStatus ?? "UNPAID"}>
             <option value="UNPAID">{te("paymentStatus.UNPAID")}</option>
@@ -423,6 +442,25 @@ export function SessionDialog({
             <option value="PAID">{te("paymentStatus.PAID")}</option>
           </Select>
         </FormField>
+        <FormField
+          label={t("pricePerHour")}
+          htmlFor="pricePerHour"
+          hint={priceEditable ? t("priceEditableHint") : t("paidPriceLocked")}
+        >
+          <Input
+            id="pricePerHour"
+            name="pricePerHour"
+            type="number"
+            min="0"
+            step="0.01"
+            dir="ltr"
+            value={price}
+            onChange={(event) => setPrice(event.target.value)}
+            disabled={!priceEditable}
+            required={priceEditable}
+          />
+        </FormField>
+        </div>
 
         {/* Covering the session with a prepaid package: hours are drawn down when
             it is confirmed/checked out, and it is not charged again on the ledger. */}

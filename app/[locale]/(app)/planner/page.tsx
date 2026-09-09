@@ -52,7 +52,11 @@ export default async function PlannerPage({
         orderBy: { date: "asc" },
       }),
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
-      db.student.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+      db.student.findMany({
+        where: { active: true },
+        orderBy: { name: "asc" },
+        include: { specialPriceTeachers: { select: { teacherId: true } } },
+      }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
       db.setting.findMany({
@@ -189,6 +193,7 @@ export default async function PlannerPage({
           gradeLevelId: st.gradeLevelId,
           studyLocation: st.studyLocation as "CENTER" | "HOME",
           specialPricePerHour: st.specialPricePerHour == null ? null : toNumber(st.specialPricePerHour),
+          specialPriceTeacherIds: st.specialPriceTeachers.map((row) => row.teacherId),
         }))}
         levels={levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }))}
         matrix={matrixMap}

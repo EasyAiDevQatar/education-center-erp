@@ -54,6 +54,8 @@ export type StudentRow = {
   homeCode: string | null;
   /** Teacher ids assigned for the current academic year. */
   teacherIds: string[];
+  /** Separate commercial scope for the student's special price. */
+  specialPriceTeacherIds: string[];
 };
 
 function StudentFields({
@@ -75,6 +77,7 @@ function StudentFields({
   const [address, setAddress] = useState(student?.address ?? "");
   const [guardianId, setGuardianId] = useState(student?.guardianId ?? "");
   const [teacherIds, setTeacherIds] = useState<string[]>(student?.teacherIds ?? []);
+  const [specialPriceTeacherIds, setSpecialPriceTeacherIds] = useState<string[]>(student?.specialPriceTeacherIds ?? []);
 
   function useCurrentLocation() {
     if (!("geolocation" in navigator)) return;
@@ -154,6 +157,20 @@ function StudentFields({
           value={teacherIds}
           onChange={setTeacherIds}
           placeholder={t("noTeachersAssigned")}
+        />
+      </FormField>
+      <FormField
+        label={t("specialPriceTeachers")}
+        htmlFor="specialPriceTeacherIds"
+        hint={t("specialPriceTeachersHint")}
+      >
+        <MultiSelect
+          id="specialPriceTeacherIds"
+          name="specialPriceTeacherIds"
+          options={teachers.map((x) => ({ value: x.id, label: x.label }))}
+          value={specialPriceTeacherIds}
+          onChange={setSpecialPriceTeacherIds}
+          placeholder={t("allTeachers")}
         />
       </FormField>
       <FormField label={tc("notes")} htmlFor="notes">

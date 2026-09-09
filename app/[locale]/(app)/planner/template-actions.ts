@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
 import { resolvePricePerHour } from "@/lib/pricing";
+import { studentSpecialPrice } from "@/lib/special-price";
 import { combineDateTime } from "@/lib/session-time";
 import { toNumber } from "@/lib/money";
 import { minToHHMM } from "@/lib/planner";
@@ -121,10 +122,21 @@ async function materialiseDrafts(
   // Grade level comes from the student record; rows without one can't be priced.
   const students = await db.student.findMany({
     where: { id: { in: [...new Set(rows.map((r) => r.studentId))] } },
-    select: { id: true, gradeLevelId: true, specialPricePerHour: true },
+    select: {
+      id: true,
+      gradeLevelId: true,
+      specialPricePerHour: true,
+      specialPriceTeachers: { select: { teacherId: true } },
+    },
   });
   const gradeOf = new Map(students.map((s) => [s.id, s.gradeLevelId]));
-  const specialOf = new Map(students.map((s) => [s.id, s.specialPricePerHour]));
+  const specialOf = new Map(students.map((s) => [
+    s.id,
+    {
+      price: s.specialPricePerHour == null ? null : toNumber(s.specialPricePerHour),
+      teacherIds: s.specialPriceTeachers.map((row) => row.teacherId),
+    },
+  ]));
 
   let count = 0;
   let skipped = 0;
@@ -142,10 +154,11 @@ async function materialiseDrafts(
     }
 
     const when = combineDateTime(date, minToHHMM(r.startMin));
-    const special = specialOf.get(r.studentId);
+    const specialRow = specialOf.get(r.studentId);
+    const special = studentSpecialPrice(specialRow?.price, specialRow?.teacherIds, r.teacherId);
     const pricePerHour = special == null
       ? await resolvePricePerHour(gradeLevelId, r.location, when)
-      : toNumber(special);
+      : special;
     await db.session.create({
       data: {
         date: when,
