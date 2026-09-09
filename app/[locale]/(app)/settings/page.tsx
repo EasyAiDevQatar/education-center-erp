@@ -39,6 +39,7 @@ import { EDITABLE_ROLES, loadRolePermissions, loadCustomRoles, parseRoleKeys } f
 import { RolePermissionsSettings } from "./role-permissions-settings";
 import { DemoUsersSettings } from "./demo-users-settings";
 import { BuildingsManager, type BuildingRow } from "./buildings-manager";
+import { CalendarBookingSettings } from "./calendar-booking-settings";
 
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -326,6 +327,11 @@ export default async function SettingsPage({
         },
         { key: "subjects", label: t("subjects"), node: <SubjectsManager subjects={subjectRows} /> },
         { key: "priceMatrix", label: t("priceMatrix"), node: <PriceMatrixEditor rows={matrixRows} /> },
+        {
+          key: "calendarBooking",
+          label: t("calendarBooking"),
+          node: <CalendarBookingSettings enabled={settings.calendarBookingEnabled === "1"} />,
+        },
         {
           key: "attendance",
           label: tatt("title"),

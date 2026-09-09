@@ -18,6 +18,24 @@ function revalidate(locale: string) {
   revalidatePath(`/${locale}/settings`);
 }
 
+/** Calendar creation is opt-in. Absence of the row deliberately means off. */
+export async function saveCalendarBookingSetting(
+  locale: string,
+  enabled: boolean,
+): Promise<ActionState> {
+  if (await guardAdmin()) return { error: "forbidden" };
+  const value = enabled ? "1" : "0";
+  await db.setting.upsert({
+    where: { key: "calendarBookingEnabled" },
+    create: { key: "calendarBookingEnabled", value },
+    update: { value },
+  });
+  await writeAudit("Setting", "calendarBookingEnabled", "UPDATE", { after: { enabled } });
+  revalidate(locale);
+  revalidatePath(`/${locale}/calendar`);
+  return { ok: true };
+}
+
 /* ---- Center profile (key/value settings) ---- */
 export async function saveCenterSettings(
   locale: string,
@@ -32,8 +50,11 @@ export async function saveCenterSettings(
     centerAddress: String(formData.get("centerAddress") ?? "").trim(),
     centerPhone: String(formData.get("centerPhone") ?? "").trim(),
     centerTaxNo: String(formData.get("centerTaxNo") ?? "").trim(),
-    // A4 | POS80 — drives the print stylesheet used for receipts.
-    receiptSize: String(formData.get("receiptSize") ?? "A4").trim(),
+    // A4 | A5 | POS80 — the per-receipt picker starts from this default.
+    receiptSize: (() => {
+      const value = String(formData.get("receiptSize") ?? "A4").trim();
+      return ["A4", "A5", "POS80"].includes(value) ? value : "A4";
+    })(),
     statementFooter: String(formData.get("statementFooter") ?? "").trim(),
   };
 

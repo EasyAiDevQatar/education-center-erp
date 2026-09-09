@@ -6,7 +6,6 @@ import { db } from "@/lib/db";
 import { applyMark } from "@/lib/attendance";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
-import { resolvePricePerHour } from "@/lib/pricing";
 import { writeAudit } from "@/lib/audit";
 import { combineDateTime } from "@/lib/session-time";
 import { toNumber } from "@/lib/money";
@@ -59,6 +58,8 @@ const draftSchema = z.object({
   gradeLevelId: z.string().min(1),
   location: z.enum(LOCATIONS),
   hours: z.coerce.number().min(0.25).max(12),
+  /** Starts from the price matrix, but the desk may override it for this booking. */
+  pricePerHour: z.coerce.number().min(0).max(1_000_000),
 });
 
 /** Create a planner DRAFT session (pending confirmation; not billable yet). */
@@ -72,7 +73,7 @@ export async function createDraftSession(
   const d = parsed.data;
 
   const date = combineDateTime(d.date, d.time);
-  const pricePerHour = await resolvePricePerHour(d.gradeLevelId, d.location, date);
+  const pricePerHour = d.pricePerHour;
 
   const created = await db.session.create({
     data: {
@@ -100,9 +101,11 @@ const updateSchema = z.object({
   location: z.enum(LOCATIONS),
   /** Optional reassignment to another teacher (drag-and-drop / edit dialog). */
   teacherId: z.string().min(1).optional().nullable(),
+  /** Omitted by drag/move operations, which must preserve the snapshotted rate. */
+  pricePerHour: z.coerce.number().min(0).max(1_000_000).optional(),
 });
 
-/** Edit a draft's time/duration/location/teacher; price re-resolved from the matrix. */
+/** Edit a draft while preserving its snapshotted rate unless the desk changes it. */
 export async function updateDraft(
   locale: string,
   input: z.infer<typeof updateSchema>,
@@ -117,7 +120,7 @@ export async function updateDraft(
   if (existing.status !== "DRAFT") return { error: "notDraft" };
 
   const date = combineDateTime(existing.date.toISOString().slice(0, 10), d.time);
-  const pricePerHour = await resolvePricePerHour(existing.gradeLevelId, d.location, date);
+  const pricePerHour = d.pricePerHour ?? toNumber(existing.pricePerHour);
 
   await db.session.update({
     where: { id: d.id },
@@ -131,7 +134,13 @@ export async function updateDraft(
     },
   });
   await writeAudit("Session", d.id, "UPDATE", {
-    after: { time: d.time, hours: d.hours, location: d.location, teacherId: d.teacherId ?? undefined },
+    after: {
+      time: d.time,
+      hours: d.hours,
+      location: d.location,
+      teacherId: d.teacherId ?? undefined,
+      pricePerHour,
+    },
   });
   revalidate(locale);
   return { ok: true };

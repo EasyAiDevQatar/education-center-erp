@@ -18,7 +18,7 @@ import {
 } from "@/lib/accounting/journal-data";
 import { linesForPayment } from "@/lib/accounting/posting";
 import { syncSessionPaymentStatus, unchargeableStatuses } from "@/lib/billing";
-import { validateAllocation, type SuggestedLine } from "@/lib/allocation";
+import { inferTeacher, validateAllocation, type SuggestedLine } from "@/lib/allocation";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -202,6 +202,15 @@ export async function savePayment(
 
         const check = validateAllocation(payable, allocation, d.amount);
         if (!check.ok) throw new Error(check.error ?? "invalid");
+
+        // The legacy header can name only one teacher. Derive it from the
+        // authoritative session split when that split belongs to one teacher;
+        // mixed receipts intentionally keep the header null and use their
+        // PaymentAllocation rows for each teacher's collected amount.
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { teacherId: inferTeacher(payable, allocation) },
+        });
 
         for (const line of allocation) {
           await tx.paymentAllocation.create({

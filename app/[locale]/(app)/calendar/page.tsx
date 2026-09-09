@@ -104,7 +104,7 @@ export default async function CalendarPage({
       db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
       currentPriceMatrix(),
-      db.setting.findMany({ where: { key: { in: ["currency", "centerName", "centerLat", "centerLng"] } } }),
+      db.setting.findMany({ where: { key: { in: ["currency", "centerName", "centerLat", "centerLng", "calendarBookingEnabled"] } } }),
       db.subject.findMany({
         where: { active: true },
         orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
@@ -228,6 +228,7 @@ export default async function CalendarPage({
       <PageHeader title={t("title")} description={t("subtitle")} />
       <CalendarClient
         canEdit={canEdit}
+        canBook={canEdit && settingsMap.calendarBookingEnabled === "1"}
         view={view}
         anchor={anchorStr}
         days={days}

@@ -57,15 +57,19 @@ export function PaymentAllocator({
   useEffect(() => {
     if (!open || !studentId) return;
     let cancelled = false;
-    setLoading(true);
     touched.current = false;
-    loadOutstandingSessions(locale, studentId)
-      .then((r) => {
+    async function load() {
+      setLoading(true);
+      try {
+        const r = await loadOutstandingSessions(locale, studentId);
         if (cancelled) return;
         setSessions(r.sessions);
         setPicked(new Set());
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
     return () => {
       cancelled = true;
     };
@@ -238,14 +242,17 @@ export function PaymentAllocator({
 
           {/* Per teacher, because payouts are per teacher — the session list
               alone does not answer "who did this money settle for". */}
-          {teachers.length > 1 && (
-            <div className="flex flex-wrap gap-1.5 border-t border-border px-3 py-2">
-              {teachers.map((x) => (
-                <Badge key={x.teacherId ?? "none"} variant={x.allocated > 0 ? "success" : "muted"}>
-                  {x.teacherName || "—"}
-                  <span dir="ltr"> · {formatMoney(x.allocated)}/{formatMoney(x.outstanding)}</span>
-                </Badge>
-              ))}
+          {teachers.length > 0 && (
+            <div className="border-t border-border px-3 py-2">
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t("teacherDistribution")}</p>
+              <div className="flex flex-wrap gap-1.5" aria-live="polite">
+                {teachers.map((x) => (
+                  <Badge key={x.teacherId ?? "none"} variant={x.allocated > 0 ? "success" : "muted"}>
+                    {x.teacherName || "—"}
+                    <span dir="ltr"> · {formatMoney(x.allocated)}/{formatMoney(x.outstanding)} {currency}</span>
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
 

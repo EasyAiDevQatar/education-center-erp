@@ -128,7 +128,7 @@ export async function getAllTeacherEarnings(
     unchargeableStatuses(),
   ]);
 
-  const [sessionsGrouped, paymentsGrouped] = await Promise.all([
+  const [sessionsGrouped, allocatedPayments, directPayments] = await Promise.all([
     db.session.groupBy({
       by: ["teacherId"],
       _sum: { total: true, hours: true },
@@ -142,21 +142,40 @@ export async function getAllTeacherEarnings(
         ...(dateRange ? { date: dateRange } : {}),
       },
     }),
-    db.payment.groupBy({
-      by: ["teacherId"],
-      _sum: { amount: true },
-      where: dateRange ? { date: dateRange } : undefined,
+    db.paymentAllocation.findMany({
+      where: {
+        payment: { status: "COMPLETED", ...(dateRange ? { date: dateRange } : {}) },
+      },
+      select: { amount: true, session: { select: { teacherId: true } } },
+    }),
+    // Backward compatibility for receipts recorded before per-session splits.
+    db.payment.findMany({
+      where: {
+        status: "COMPLETED",
+        teacherId: { not: null },
+        allocations: { none: {} },
+        ...(dateRange ? { date: dateRange } : {}),
+      },
+      select: { teacherId: true, amount: true },
     }),
   ]);
 
   const sMap = new Map(sessionsGrouped.map((g) => [g.teacherId, g._sum]));
-  const pMap = new Map(paymentsGrouped.map((g) => [g.teacherId, g._sum]));
+  const pMap = new Map<string, number>();
+  for (const row of allocatedPayments) {
+    if (!row.session.teacherId) continue;
+    pMap.set(row.session.teacherId, (pMap.get(row.session.teacherId) ?? 0) + toNumber(row.amount));
+  }
+  for (const row of directPayments) {
+    if (!row.teacherId) continue;
+    pMap.set(row.teacherId, (pMap.get(row.teacherId) ?? 0) + toNumber(row.amount));
+  }
 
   return teachers.map((t) =>
     build(
       t,
       toNumber(sMap.get(t.id)?.total),
-      toNumber(pMap.get(t.id)?.amount),
+      toNumber(pMap.get(t.id)),
       toNumber(sMap.get(t.id)?.hours),
       centreDefault,
       basis,
@@ -177,7 +196,7 @@ export async function getTeacherEarnings(
   ]);
   if (!teacher) return null;
   const dateRange = rangeWhere(from, to);
-  const [s, p] = await Promise.all([
+  const [s, allocated, direct] = await Promise.all([
     db.session.aggregate({
       _sum: { total: true, hours: true },
       where: {
@@ -186,15 +205,27 @@ export async function getTeacherEarnings(
         status: { notIn: await unchargeableStatuses() },
       },
     }),
+    db.paymentAllocation.aggregate({
+      _sum: { amount: true },
+      where: {
+        session: { teacherId },
+        payment: { status: "COMPLETED", date: dateRange },
+      },
+    }),
     db.payment.aggregate({
       _sum: { amount: true },
-      where: { teacherId, date: dateRange },
+      where: {
+        teacherId,
+        status: "COMPLETED",
+        date: dateRange,
+        allocations: { none: {} },
+      },
     }),
   ]);
   return build(
     teacher,
     toNumber(s._sum.total),
-    toNumber(p._sum.amount),
+    toNumber(allocated._sum.amount) + toNumber(direct._sum.amount),
     toNumber(s._sum.hours),
     centreDefault,
     basis,

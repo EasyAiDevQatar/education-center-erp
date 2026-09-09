@@ -53,6 +53,61 @@ export async function loadPaymentLines(
   }));
 }
 
+/**
+ * A teacher's collection history follows session allocations, not the
+ * receipt's one-teacher compatibility field. Mixed receipts therefore appear
+ * once for each teacher with only that teacher's allocated amount.
+ */
+export async function loadTeacherPaymentLines(
+  teacherId: string,
+  take = 500,
+): Promise<PaymentLine[]> {
+  const [allocated, direct] = await Promise.all([
+    db.paymentAllocation.findMany({
+      where: { session: { teacherId }, payment: { status: "COMPLETED" } },
+      orderBy: { payment: { date: "desc" } },
+      take,
+      include: { payment: { include: { student: true } }, session: { include: { teacher: true } } },
+    }),
+    db.payment.findMany({
+      where: { teacherId, status: "COMPLETED", allocations: { none: {} } },
+      orderBy: { date: "desc" },
+      take,
+      include: { student: true, teacher: true },
+    }),
+  ]);
+
+  const allocatedByPayment = new Map<string, PaymentLine>();
+  for (const row of allocated) {
+    const current = allocatedByPayment.get(row.paymentId) ?? {
+      id: row.paymentId,
+      date: row.payment.date.toISOString().slice(0, 10),
+      receiptNo: row.payment.receiptNo,
+      studentName: row.payment.student?.name ?? "—",
+      amount: 0,
+      method: row.payment.method,
+      teacherName: row.session.teacher?.name ?? null,
+    };
+    current.amount += toNumber(row.amount);
+    allocatedByPayment.set(row.paymentId, current);
+  }
+
+  return [
+    ...allocatedByPayment.values(),
+    ...direct.map((payment) => ({
+      id: payment.id,
+      date: payment.date.toISOString().slice(0, 10),
+      receiptNo: payment.receiptNo,
+      studentName: payment.student?.name ?? "—",
+      amount: toNumber(payment.amount),
+      method: payment.method,
+      teacherName: payment.teacher?.name ?? null,
+    })),
+  ]
+    .sort((a, b) => b.date.localeCompare(a.date) || b.receiptNo.localeCompare(a.receiptNo))
+    .slice(0, take);
+}
+
 export async function loadPayoutLines(teacherId: string): Promise<PayoutLine[]> {
   const rows = await db.teacherPayout.findMany({
     where: { teacherId },

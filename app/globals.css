@@ -129,6 +129,10 @@
   [data-print="POS80"] .pos-hide {
     display: none !important;
   }
+  [data-print="A5"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 @media print {

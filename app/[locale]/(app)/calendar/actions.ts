@@ -9,8 +9,24 @@ import { writeAudit } from "@/lib/audit";
 import { guardArchived } from "@/lib/academic-year";
 import { toNumber } from "@/lib/money";
 import { combineDateTime } from "@/lib/session-time";
+import { saveSession } from "../sessions/actions";
 
 export type ActionState = { ok?: boolean; error?: string };
+
+/** Create through the calendar only when an administrator opted into it. */
+export async function saveCalendarSession(
+  locale: string,
+  id: string | null,
+  previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  if (await guard()) return { error: "forbidden" };
+  if (!id) {
+    const setting = await db.setting.findUnique({ where: { key: "calendarBookingEnabled" } });
+    if (setting?.value !== "1") return { error: "calendarBookingDisabled" };
+  }
+  return saveSession(locale, id, previous, formData);
+}
 
 async function guard() {
   const s = await getSession();

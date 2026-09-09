@@ -96,6 +96,7 @@ export type PlannerSession = {
   location: "CENTER" | "HOME";
   status: string;
   total: number;
+  pricePerHour: number;
   /** Student's home location code — only meaningful for HOME sessions. */
   homeCode: string | null;
   /** Subject, when the booking has one. Shown on the card. */
@@ -988,6 +989,9 @@ function AddDraftDialog({
   const [gradeLevelId, setGradeLevelId] = useState("");
   const [location, setLocation] = useState<"CENTER" | "HOME">("CENTER");
   const [hours, setHours] = useState("1");
+  const priceFor = (levelId: string, loc: "CENTER" | "HOME") =>
+    matrix[levelId]?.[loc] ?? 0;
+  const [price, setPrice] = useState("0");
   const [time, setTime] = useState(() =>
     minToHHMM(
       suggestNextStart({
@@ -1016,8 +1020,9 @@ function AddDraftDialog({
   const [error, setError] = useState<string | null>(null);
 
   // Re-suggest when switching to HOME (adds the travel gap).
-  function onLocationChange(loc: "CENTER" | "HOME") {
+  function onLocationChange(loc: "CENTER" | "HOME", levelId = gradeLevelId) {
     setLocation(loc);
+    setPrice(String(priceFor(levelId, loc)));
     setTime(
       minToHHMM(
         suggestNextStart({
@@ -1030,10 +1035,7 @@ function AddDraftDialog({
     );
   }
 
-  const pricePerHour = (() => {
-    const row = matrix[gradeLevelId];
-    return row ? (row[location] ?? 0) : 0;
-  })();
+  const pricePerHour = Math.max(0, parseFloat(price) || 0);
   const total = pricePerHour * (parseFloat(hours) || 0);
 
   const conflicts = studentId
@@ -1057,6 +1059,7 @@ function AddDraftDialog({
         gradeLevelId,
         location,
         hours: parseFloat(hours) || 1,
+        pricePerHour,
       });
       if (res.ok) onSaved();
       else setError(res.error ?? "invalid");
@@ -1078,12 +1081,16 @@ function AddDraftDialog({
               onChange={(v) => {
                 setStudentId(v);
                 const st = students.find((x) => x.id === v);
-                if (st?.gradeLevelId) setGradeLevelId(st.gradeLevelId);
+                const nextLevel = st?.gradeLevelId ?? "";
+                setGradeLevelId(nextLevel);
                 // Default location from the student's usual study place —
                 // through onLocationChange so the HOME travel gap re-suggests
                 // the start time too.
-                if (st?.studyLocation && st.studyLocation !== location)
-                  onLocationChange(st.studyLocation);
+                if (st?.studyLocation && st.studyLocation !== location) {
+                  onLocationChange(st.studyLocation, nextLevel);
+                } else {
+                  setPrice(String(priceFor(nextLevel, location)));
+                }
               }}
             />
           </FormField>
@@ -1116,7 +1123,14 @@ function AddDraftDialog({
           </div>
 
           <FormField label={ts("gradeLevel")} htmlFor="p-grade">
-            <Select id="p-grade" value={gradeLevelId} onChange={(e) => setGradeLevelId(e.target.value)}>
+            <Select
+              id="p-grade"
+              value={gradeLevelId}
+              onChange={(e) => {
+                setGradeLevelId(e.target.value);
+                setPrice(String(priceFor(e.target.value, location)));
+              }}
+            >
               <option value="">—</option>
               {levels.map((l) => (
                 <option key={l.id} value={l.id}>{l.label}</option>
@@ -1124,10 +1138,22 @@ function AddDraftDialog({
             </Select>
           </FormField>
 
-          <div className="flex items-center justify-between rounded-md bg-accent/60 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">
-              {ts("pricePerHour")}: <span className="font-medium tabular-nums text-foreground">{formatMoney(pricePerHour)}</span> {currency}
-            </span>
+          <div className="flex items-end justify-between gap-3 rounded-md bg-accent/60 px-3 py-2 text-sm">
+            <FormField label={ts("pricePerHour")} htmlFor="p-price" hint={t("priceOverrideHint")}>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="p-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  dir="ltr"
+                  className="h-9 w-32 bg-card"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+                <span className="text-muted-foreground">{currency}</span>
+              </div>
+            </FormField>
             <span className="font-semibold">
               {ts("total")}: <span className="tabular-nums">{formatMoney(total)}</span> {currency}
             </span>
@@ -1177,6 +1203,7 @@ function EditDraftDialog({
   const [hours, setHours] = useState(String(session.hours));
   const [location, setLocation] = useState<"CENTER" | "HOME">(session.location);
   const [teacherId, setTeacherId] = useState(session.teacherId);
+  const [price, setPrice] = useState(String(session.pricePerHour));
   const [pending, start] = useTransition();
 
   const spacing = useSpacingCheck({
@@ -1205,6 +1232,7 @@ function EditDraftDialog({
         hours: parseFloat(hours) || session.hours,
         location,
         teacherId: teacherId !== session.teacherId ? teacherId : null,
+        pricePerHour: Math.max(0, parseFloat(price) || 0),
       });
       if (res.ok) onSaved();
     });
@@ -1246,6 +1274,17 @@ function EditDraftDialog({
               </Select>
             </FormField>
           </div>
+          <FormField label={ts("pricePerHour")} htmlFor="e-price" hint={t("priceOverrideHint")}>
+            <Input
+              id="e-price"
+              type="number"
+              min="0"
+              step="0.01"
+              dir="ltr"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </FormField>
           <ConflictWarnings conflicts={conflicts} />
           <SpacingWarning check={spacing} onUseSuggestion={setTime} />
         </div>

@@ -21,7 +21,11 @@ export default async function PaymentsPage({
     db.payment.findMany({
       orderBy: { date: "desc" },
       take: 500,
-      include: { student: true, teacher: true },
+      include: {
+        student: true,
+        teacher: true,
+        allocations: { include: { session: { include: { teacher: true } } } },
+      },
     }),
     db.student.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -29,7 +33,20 @@ export default async function PaymentsPage({
   ]);
 
   const currency = settingsRows[0]?.value ?? "QAR";
-  const rows: PaymentRow[] = payments.map((p) => ({
+  const rows: PaymentRow[] = payments.map((p) => {
+    const byTeacher = new Map<string, { teacherId: string | null; teacherName: string; amount: number }>();
+    for (const allocation of p.allocations) {
+      const teacher = allocation.session.teacher;
+      const key = teacher?.id ?? "none";
+      const current = byTeacher.get(key) ?? {
+        teacherId: teacher?.id ?? null,
+        teacherName: teacher ? displayName(teacher, locale) : "—",
+        amount: 0,
+      };
+      current.amount += toNumber(allocation.amount);
+      byTeacher.set(key, current);
+    }
+    return {
     id: p.id,
     date: p.date.toISOString().slice(0, 10),
     receiptNo: p.receiptNo,
@@ -42,8 +59,10 @@ export default async function PaymentsPage({
     method: p.method,
     teacherId: p.teacherId,
     teacherName: p.teacher ? displayName(p.teacher, locale) : "—",
+    teacherAllocations: [...byTeacher.values()],
     notes: p.notes,
-  }));
+    };
+  });
   const studentOpts: Opt[] = students.map((s) => ({ id: s.id, label: displayName(s, locale) }));
   const teacherOpts: Opt[] = teachers.map((t) => ({ id: t.id, label: displayName(t, locale) }));
 

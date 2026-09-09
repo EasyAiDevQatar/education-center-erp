@@ -32,7 +32,7 @@ import { GroupBookingDialog, type GroupOpt } from "../sessions/group-booking-dia
 import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
 import { useModuleFlags } from "@/components/app-shell/module-flags";
 import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
-import { rescheduleSession, resizeSession } from "./actions";
+import { rescheduleSession, resizeSession, saveCalendarSession } from "./actions";
 import { GroupOccurrenceDialog } from "./group-occurrence-dialog";
 
 export type CalEvent = {
@@ -168,6 +168,7 @@ export function CalendarClient({
   centre = null,
   centerName,
   canEdit = true,
+  canBook = false,
 }: {
   view: CalendarView;
   anchor: string;
@@ -188,6 +189,8 @@ export function CalendarClient({
   centerName: string;
   /** False for a read-only viewer: no booking, no dragging, no resizing. */
   canEdit?: boolean;
+  /** New booking is separately opt-in; existing sessions remain editable. */
+  canBook?: boolean;
 }) {
   const t = useTranslations("calendar");
   const tg = useTranslations("group");
@@ -434,25 +437,27 @@ export function CalendarClient({
             {tc("print")}
           </Button>
         )}
-        <GroupBookingDialog
-          students={students}
-          teachers={teachers}
-          levels={levels}
-          groups={groups}
-          matrix={matrix}
-          currency={currency}
-          onSaved={() => router.refresh()}
-          trigger={
-            <Button size="sm" variant="secondary" className="gap-1">
-              <Users className="size-4" />
-              {tg("short")}
-            </Button>
-          }
-        />
+        {canBook && (
+          <GroupBookingDialog
+            students={students}
+            teachers={teachers}
+            levels={levels}
+            groups={groups}
+            matrix={matrix}
+            currency={currency}
+            onSaved={() => router.refresh()}
+            trigger={
+              <Button size="sm" variant="secondary" className="gap-1">
+                <Users className="size-4" />
+                {tg("short")}
+              </Button>
+            }
+          />
+        )}
         {/* Today at the current time — not the first day of whatever week is
             on screen, which is what made a Friday booking open on the 18th.
             Clicking a specific grid slot still passes that slot instead. */}
-        {canEdit && (
+        {canBook && (
           <Button
             size="sm"
             className="gap-1"
@@ -463,6 +468,12 @@ export function CalendarClient({
           </Button>
         )}
       </div>
+
+      {canEdit && !canBook && (
+        <p className="no-print rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          {t("bookingDisabled")}
+        </p>
+      )}
 
       {/* Legend */}
       <div className="no-print flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
@@ -541,7 +552,7 @@ export function CalendarClient({
                     ref={(el) => { colRefs.current[ci] = el; }}
                     className="relative flex-1 border-s border-border"
                     onClick={(e) => {
-                      if (!canEdit) return;
+                      if (!canBook) return;
                       const top = (e.currentTarget as HTMLElement).getBoundingClientRect().top;
                       const min = Math.max(GRID_MIN, Math.min(GRID_MAX - 60, snap(GRID_MIN + ((e.clientY - top) / hourPx) * 60)));
                       setCreateAt({ date: day, time: fmtTime(min) });
@@ -692,7 +703,7 @@ export function CalendarClient({
       {createAt && (
         <SessionDialog
           title={t("add")}
-          action={saveSession.bind(null, locale, null)}
+          action={saveCalendarSession.bind(null, locale, null)}
           students={students}
           teachers={teachers}
           levels={levels}

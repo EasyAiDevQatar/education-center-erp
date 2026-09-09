@@ -108,6 +108,7 @@ export function CenterProfileForm({ values }: { values: CenterValues }) {
       <FormField label={t("receiptSize")} htmlFor="receiptSize">
         <Select id="receiptSize" name="receiptSize" defaultValue={values.receiptSize || "A4"}>
           <option value="A4">{t("sizeA4")}</option>
+          <option value="A5">{t("sizeA5")}</option>
           <option value="POS80">{t("sizePos")}</option>
         </Select>
       </FormField>

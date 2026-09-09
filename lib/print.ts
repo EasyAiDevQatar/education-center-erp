@@ -9,7 +9,7 @@
  * Used by the planner (landscape, to fit the teacher × slot grid), the
  * timetables, and the calendar list view (portrait).
  */
-export type PageSize = "A4 portrait" | "A4 landscape";
+export type PageSize = "A4 portrait" | "A4 landscape" | "A5 portrait" | "80mm auto";
 
 export type PrintOptions = {
   size?: PageSize;

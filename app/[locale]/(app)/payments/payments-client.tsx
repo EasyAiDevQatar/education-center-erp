@@ -18,7 +18,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -30,7 +29,7 @@ import {
 } from "@/components/ui/table-sort";
 import { formatMoney } from "@/lib/money";
 import { PAYMENT_METHODS } from "@/lib/enums";
-import { localNowTime, localToday } from "@/lib/session-time";
+import { localToday } from "@/lib/session-time";
 import { savePayment, deletePayment } from "./actions";
 import { VoidPaymentButton } from "./void-payment-button";
 import { SendDuesRemindersButton } from "@/components/whatsapp-button";
@@ -51,6 +50,7 @@ export type PaymentRow = {
   method: string;
   teacherId: string | null;
   teacherName: string;
+  teacherAllocations: { teacherId: string | null; teacherName: string; amount: number }[];
   notes: string | null;
 };
 
@@ -98,18 +98,22 @@ function PaymentFields({
 
   useEffect(() => {
     let cancelled = false;
-    if (!studentId) {
-      setInfo(null);
-      return;
-    }
-    setLoading(true);
-    getStudentOutstanding(studentId)
-      .then((res) => {
+    async function load() {
+      if (!studentId) {
+        setInfo(null);
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await getStudentOutstanding(studentId);
         if (cancelled) return;
         setInfo(res);
         if (res && !amountTouched) setAmount(res.balance > 0 ? String(res.balance) : "");
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
     return () => {
       cancelled = true;
     };
@@ -215,7 +219,7 @@ function PaymentFields({
         </div>
       )}
 
-      <FormField label={t("allocateTeacher")} htmlFor="teacherId">
+      <FormField label={t("allocateTeacher")} htmlFor="teacherId" hint={t("manualTeacherHint")}>
         <Combobox
           id="teacherId"
           name="teacherId"
@@ -272,6 +276,7 @@ export function PaymentsClient({
     p.studentName,
     p.receiptNo,
     p.teacherName,
+    ...p.teacherAllocations.map((allocation) => allocation.teacherName),
     p.notes,
     p.date,
   ]);
@@ -291,7 +296,12 @@ export function PaymentsClient({
         options: [...PAYMENT_METHODS],
         optionLabel: (v) => te(`method.${v}`),
       },
-      { key: "teacher", label: t("allocateTeacher"), value: (p) => p.teacherName, filterable: true },
+      {
+        key: "teacher",
+        label: t("teacherDistribution"),
+        value: (p) => p.teacherAllocations.map((x) => x.teacherName).join(", ") || p.teacherName,
+        filterable: true,
+      },
       // No `value` ⇒ inert header: no button, no cursor, no aria-sort.
       { key: "actions", label: tc("actions") },
     ],
@@ -378,7 +388,17 @@ export function PaymentsClient({
                 <TableCell className="font-medium">{p.studentName}</TableCell>
                 <TableCell className="tabular-nums font-medium">{formatMoney(p.amount)} {currency}</TableCell>
                 <TableCell><Badge variant="default">{te(`method.${p.method}`)}</Badge></TableCell>
-                <TableCell>{p.teacherName}</TableCell>
+                <TableCell>
+                  {p.teacherAllocations.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {p.teacherAllocations.map((allocation) => (
+                        <Badge key={allocation.teacherId ?? allocation.teacherName} variant="success">
+                          {allocation.teacherName} · <span dir="ltr">{formatMoney(allocation.amount)} {currency}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : p.teacherName}
+                </TableCell>
                 <TableCell>
                   <RowActions>
                     <ViewDialog
@@ -389,7 +409,12 @@ export function PaymentsClient({
                         { label: t("receiptNo"), value: p.receiptNo, ltr: true },
                         { label: tc("status"), value: te(`receiptStatus.${p.status}`) },
                         { label: t("student"), value: p.studentName },
-                        { label: t("teacher"), value: p.teacherName },
+                        {
+                          label: t("teacherDistribution"),
+                          value: p.teacherAllocations.length
+                            ? p.teacherAllocations.map((x) => `${x.teacherName}: ${formatMoney(x.amount)} ${currency}`).join(" · ")
+                            : p.teacherName,
+                        },
                         { label: t("amount"), value: `${formatMoney(p.amount)} ${currency}`, ltr: true },
                         { label: t("method"), value: te(`method.${p.method}`) },
                         { label: tc("notes"), value: p.notes, wide: true },

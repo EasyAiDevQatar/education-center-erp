@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, Wallet, Clock, Phone, Percent, FileText } fro
 import { requireRole, ACADEMIC_ROLES, PAYROLL_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getTeacherEarnings } from "@/lib/payroll";
-import { loadSessionLines, loadPaymentLines, loadPayoutLines, getCurrency } from "@/lib/profile";
+import { loadSessionLines, loadTeacherPaymentLines, loadPayoutLines, getCurrency } from "@/lib/profile";
 import { formatMoney, formatHours, toNumber } from "@/lib/money";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ export default async function TeacherProfilePage({
   const [earnings, sessions, payments, payouts, currency, availability] = await Promise.all([
     getTeacherEarnings(id, wideStart, wideEnd),
     loadSessionLines({ teacherId: id }, locale),
-    loadPaymentLines({ teacherId: id }),
+    loadTeacherPaymentLines(id),
     loadPayoutLines(id),
     getCurrency(),
     db.teacherAvailability.findMany({

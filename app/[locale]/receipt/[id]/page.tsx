@@ -3,22 +3,29 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireAuth, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber, formatMoney, formatDate } from "@/lib/money";
-import { PrintButton } from "@/components/print-button";
 import { displayName, fullName } from "@/lib/names";
+import { ReceiptPrintControls, type ReceiptFormat } from "./receipt-print-controls";
 
 export default async function ReceiptPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<{ size?: string }>;
 }) {
   const { locale, id } = await params;
+  const { size } = await searchParams;
   setRequestLocale(locale);
   const session = await requireAuth(locale);
 
   const [payment, settingsRows] = await Promise.all([
     db.payment.findUnique({
       where: { id },
-      include: { student: true, teacher: true },
+      include: {
+        student: true,
+        teacher: true,
+        allocations: { include: { session: { include: { teacher: true } } } },
+      },
     }),
     db.setting.findMany(),
   ]);
@@ -37,15 +44,29 @@ export default async function ReceiptPage({
   const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
   const currency = settings.currency ?? "QAR";
 
-  const isPos = settings.receiptSize === "POS80";
+  const configured = ["POS80", "A4", "A5"].includes(settings.receiptSize)
+    ? settings.receiptSize
+    : "A4";
+  const format = (["POS80", "A4", "A5"].includes(size ?? "") ? size : configured) as ReceiptFormat;
+  const isPos = format === "POS80";
+  const distribution = new Map<string, { id: string; name: string; amount: number }>();
+  for (const allocation of payment.allocations) {
+    const teacher = allocation.session.teacher;
+    const key = teacher?.id ?? "none";
+    const current = distribution.get(key) ?? {
+      id: key,
+      name: teacher ? displayName(teacher, locale) : "—",
+      amount: 0,
+    };
+    current.amount += toNumber(allocation.amount);
+    distribution.set(key, current);
+  }
 
   return (
-    <div className={isPos ? "mx-auto max-w-xs p-4" : "mx-auto max-w-md p-6"}>
-      <div className="no-print mb-4 flex justify-end">
-        <PrintButton />
-      </div>
+    <div className={isPos ? "mx-auto max-w-xs p-4" : format === "A5" ? "mx-auto max-w-sm p-5" : "mx-auto max-w-md p-6"}>
+      <ReceiptPrintControls format={format} />
       <div
-        data-print={isPos ? "POS80" : "A4"}
+        data-print={format}
         className={
           isPos
             ? "rounded-lg border border-border bg-card p-4 shadow-sm print:border-0 print:shadow-none"
@@ -90,12 +111,23 @@ export default async function ReceiptPage({
             <dt className="text-muted-foreground">{t("method")}</dt>
             <dd>{te(`method.${payment.method}`)}</dd>
           </div>
-          {payment.teacher && (
+          {distribution.size > 0 ? (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">{t("teacherDistribution")}</dt>
+              <dd className="space-y-1 text-end">
+                {[...distribution.values()].map((row) => (
+                  <div key={row.id}>
+                    {row.name} · <span className="tabular-nums" dir="ltr">{formatMoney(row.amount)} {currency}</span>
+                  </div>
+                ))}
+              </dd>
+            </div>
+          ) : payment.teacher ? (
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{t("allocateTeacher")}</dt>
               <dd>{displayName(payment.teacher, locale)}</dd>
             </div>
-          )}
+          ) : null}
           {payment.notes && (
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{tc("notes")}</dt>

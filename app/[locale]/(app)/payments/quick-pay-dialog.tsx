@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
-import { localNowTime, localToday } from "@/lib/session-time";
+import { localToday } from "@/lib/session-time";
 import { savePayment } from "./actions";
 import { PaymentAllocator } from "./payment-allocator";
 
@@ -147,7 +147,7 @@ export function QuickPayDialog({
                   <option value="TRANSFER">{te("method.TRANSFER")}</option>
                 </Select>
               </FormField>
-              <FormField label={t("allocateTeacher")} htmlFor="qp-teacher">
+              <FormField label={t("allocateTeacher")} htmlFor="qp-teacher" hint={t("manualTeacherHint")}>
                 <Select
                   id="qp-teacher"
                   name="teacherId"
