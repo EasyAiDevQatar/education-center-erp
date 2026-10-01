@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,7 @@ export function Combobox({
   required,
   className,
   allowClear = true,
+  emptyActions,
 }: {
   options: ComboOption[];
   value: string;
@@ -43,6 +44,7 @@ export function Combobox({
   required?: boolean;
   className?: string;
   allowClear?: boolean;
+  emptyActions?: ReactNode;
 }) {
   const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
@@ -76,13 +78,16 @@ export function Combobox({
 
   useEffect(() => {
     if (open) {
-      setQuery("");
-      setHighlight(Math.max(0, filtered.findIndex((o) => o.value === value)));
       // Focus after the panel paints so the caret lands in the search box.
       requestAnimationFrame(() => inputRef.current?.focus());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  function openList() {
+    setQuery("");
+    setHighlight(Math.max(0, options.findIndex((option) => option.value === value)));
+    setOpen(true);
+  }
 
   // Keep the highlighted row in view while arrowing through a long list.
   useEffect(() => {
@@ -99,7 +104,7 @@ export function Combobox({
   function onKeyDown(e: React.KeyboardEvent) {
     if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
       e.preventDefault();
-      setOpen(true);
+      openList();
       return;
     }
     if (!open) return;
@@ -127,7 +132,7 @@ export function Combobox({
         type="button"
         id={id}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => open ? setOpen(false) : openList()}
         onKeyDown={onKeyDown}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -204,6 +209,9 @@ export function Combobox({
               </li>
             ))}
           </ul>
+          {filtered.length === 0 && emptyActions && (
+            <div className="border-t border-border p-2">{emptyActions}</div>
+          )}
         </div>
       )}
     </div>

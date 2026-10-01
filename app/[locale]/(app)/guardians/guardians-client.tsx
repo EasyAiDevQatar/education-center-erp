@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import {
   CircleUserRound,
   House,
@@ -547,10 +548,11 @@ function BulkGuardianStudentsDialog({
 }
 
 function CreateGuardianDialog({ gradeLevels }: { gradeLevels: GradeOption[] }) {
+  const createRequested = useSearchParams().get("create") === "1";
   const t = useTranslations("guardians");
   const tc = useTranslations("common");
   const locale = useLocale();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(createRequested);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [bulkGuardian, setBulkGuardian] = useState<CreatedGuardianResult | null>(null);

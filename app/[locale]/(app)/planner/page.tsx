@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, ACADEMIC_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { toNumber } from "@/lib/money";
 import { currentPriceMatrix } from "@/lib/pricing";
@@ -186,6 +186,7 @@ export default async function PlannerPage({
     <div>
       <PageHeader title={t("title")} description={t("subtitle")} />
       <PlannerClient
+        canManagePeople={STAFF_ROLES.includes(auth.role)}
         day={day}
         sessions={rows}
         teachers={teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }))}

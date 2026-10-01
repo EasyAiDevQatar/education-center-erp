@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { Plus, Pencil, CircleUserRound, Copy, MapPin, Map as MapIcon } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
@@ -360,6 +361,7 @@ export function StudentsClient({
   currency: string;
   canManage: boolean;
 }) {
+  const createRequested = useSearchParams().get("create") === "1";
   const t = useTranslations("students");
   const tc = useTranslations("common");
   const tp = useTranslations("profile");
@@ -445,6 +447,7 @@ export function StudentsClient({
         {canManage && (
           <EntityDialog
             title={t("add")}
+            initiallyOpen={createRequested}
             extraWide
             action={saveStudent.bind(null, locale, null)}
             fields={

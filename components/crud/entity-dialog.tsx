@@ -28,6 +28,7 @@ export function EntityDialog({
   action,
   fields,
   errorNamespace = "common",
+  initiallyOpen = false,
 }: {
   title: string;
   trigger: ReactNode;
@@ -39,10 +40,11 @@ export function EntityDialog({
   fields: ReactNode;
   /** Namespace that owns domain-specific `errors.*` messages. */
   errorNamespace?: "common" | "budget";
+  initiallyOpen?: boolean;
 }) {
   const t = useTranslations("common");
   const tb = useTranslations("budget");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -181,6 +181,7 @@ function plannerSessionCode(session: PlannerSession) {
 }
 
 export function PlannerClient({
+  canManagePeople,
   day,
   sessions: allSessions,
   teachers,
@@ -198,6 +199,7 @@ export function PlannerClient({
   printedBy,
   defaultPrintFormat,
 }: {
+  canManagePeople: boolean;
   day: string;
   sessions: PlannerSession[];
   teachers: Opt[];
@@ -848,6 +850,7 @@ export function PlannerClient({
       {/* Add-draft dialog */}
       {addFor && (
         <AddDraftDialog
+          canManagePeople={canManagePeople}
           day={day}
           teacherId={addFor}
           teacherName={teachers.find((x) => x.id === addFor)?.label ?? ""}
@@ -975,6 +978,7 @@ type ConflictsFor = (c: {
 }) => Conflict[];
 
 function AddDraftDialog({
+  canManagePeople,
   day,
   teacherId,
   teacherName,
@@ -989,6 +993,7 @@ function AddDraftDialog({
   onClose,
   onSaved,
 }: {
+  canManagePeople: boolean;
   day: string;
   teacherId: string;
   teacherName: string;
@@ -1012,6 +1017,21 @@ function AddDraftDialog({
   const tp = useTranslations("payments");
   const requestId = useRef<string | null>(null);
   const submitting = useRef(false);
+  const addingStudent = useRef(false);
+  useEffect(() => {
+    const refreshStudents = () => {
+      if (addingStudent.current && document.visibilityState === "visible") {
+        addingStudent.current = false;
+        router.refresh();
+      }
+    };
+    window.addEventListener("focus", refreshStudents);
+    document.addEventListener("visibilitychange", refreshStudents);
+    return () => {
+      window.removeEventListener("focus", refreshStudents);
+      document.removeEventListener("visibilitychange", refreshStudents);
+    };
+  }, [router]);
   const [method, setMethod] = useState<"CASH" | "POS" | "QPAY" | "TRANSFER">("CASH");
   const [payment, setPayment] = useState<{ sessionId: string; amount: number; result: PlannerState } | null>(null);
 
@@ -1146,6 +1166,15 @@ function AddDraftDialog({
           <FormField label={ts("student")} htmlFor="p-student">
             <Combobox
               id="p-student"
+              emptyActions={canManagePeople &&
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">{ts("newStudentBookingHint")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/guardians?create=1" target="_blank" rel="noopener noreferrer" onClick={() => { addingStudent.current = true; }} className="rounded-md border px-3 py-2 text-sm text-primary hover:bg-accent">{ts("addNewParent")}</Link>
+                    <Link href="/students?create=1" target="_blank" rel="noopener noreferrer" onClick={() => { addingStudent.current = true; }} className="rounded-md border px-3 py-2 text-sm text-primary hover:bg-accent">{ts("addNewStudent")}</Link>
+                  </div>
+                </div>
+              }
               options={students.map((st) => ({ value: st.id, label: st.name }))}
               value={studentId}
               onChange={(v) => {
