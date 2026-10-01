@@ -84,12 +84,13 @@ export function SessionsTable({
             <TableHead className="text-end">{t("hours")}</TableHead>
             <TableHead className="text-end">{t("total")}</TableHead>
             <TableHead>{tc("status")}</TableHead>
+            <TableHead>{t("paymentStatus")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground">
+              <TableCell colSpan={10} className="text-center text-muted-foreground">
                 {tc("noData")}
               </TableCell>
             </TableRow>
@@ -140,6 +141,13 @@ export function SessionsTable({
                 <Badge variant={SESSION_STATUS_VARIANT[s.status] ?? "muted"}>
                   {te(`sessionStatus.${s.status}`)}
                 </Badge>
+              </TableCell>
+              <TableCell>
+                {["DRAFT", "CANCELLED", "SCHEDULED", "CHECKED_IN"].includes(s.status) ? "—" : (
+                  <Badge variant={s.paymentStatus === "PAID" ? "success" : s.paymentStatus === "PARTIAL" ? "warning" : "muted"}>
+                    {te(`paymentStatus.${s.paymentStatus}`)}
+                  </Badge>
+                )}
               </TableCell>
             </TableRow>
           ))}

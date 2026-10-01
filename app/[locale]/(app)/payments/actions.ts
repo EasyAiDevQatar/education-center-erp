@@ -20,7 +20,7 @@ import { linesForPayment } from "@/lib/accounting/posting";
 import { syncSessionPaymentStatus, unchargeableStatuses } from "@/lib/billing";
 import { inferTeacher, validateAllocation, type SuggestedLine } from "@/lib/allocation";
 
-export type ActionState = { ok?: boolean; error?: string };
+export type ActionState = { ok?: boolean; error?: string; receiptId?: string };
 
 /**
  * Read the per-session split the dialog posted.
@@ -237,7 +237,10 @@ export async function savePayment(
   }
 
   revalidatePath(`/${locale}/payments`);
-  return { ok: true };
+  for (const path of ["students/[id]", "teachers/[id]", "guardians/[id]", "sessions/[id]", "sessions", "planner", "calendar", "checkin"]) {
+    revalidatePath(`/${locale}/${path}`, "page");
+  }
+  return { ok: true, receiptId: createdId ?? undefined };
 }
 
 export async function deletePayment(locale: string, id: string): Promise<ActionState> {

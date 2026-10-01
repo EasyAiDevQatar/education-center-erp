@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
 import { localToday } from "@/lib/session-time";
+import { showPaymentReceipt } from "@/lib/payment-receipt";
 import { savePayment } from "./actions";
 import { PaymentAllocator } from "./payment-allocator";
 
@@ -87,13 +88,23 @@ export function QuickPayDialog({
       }
     }
     setPending(true);
+    // Reserve the print tab during the click, before the asynchronous save.
+    const receiptWindow = window.open("about:blank", "_blank");
+    if (receiptWindow) receiptWindow.opener = null;
     try {
       const res = await savePayment(locale, null, {}, fd);
       if (res.ok) {
         setOpen(false);
         onPaid?.();
         router.refresh();
-      } else setError(res.error ?? "invalid");
+        showPaymentReceipt(receiptWindow, locale, res.receiptId, (path) => router.push(path));
+      } else {
+        receiptWindow?.close();
+        setError(res.error ?? "invalid");
+      }
+    } catch {
+      receiptWindow?.close();
+      setError("invalid");
     } finally {
       setPending(false);
     }
