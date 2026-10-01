@@ -1163,18 +1163,12 @@ function AddDraftDialog({
           <DialogTitle>{t("addDraftFor", { teacher: teacherName })}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <FormField label={ts("student")} htmlFor="p-student">
+          <FormField label={ts("student")} htmlFor="p-student" labelActions={canManagePeople && <>
+            <Link href="/guardians?create=1" target="_blank" rel="noopener noreferrer" title={ts("newStudentBookingHint")} onClick={() => { addingStudent.current = true; }} className="rounded px-1 py-1 text-xs text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2">{ts("addNewParent")}</Link>
+            <Link href="/students?create=1" target="_blank" rel="noopener noreferrer" title={ts("newStudentBookingHint")} onClick={() => { addingStudent.current = true; }} className="rounded px-1 py-1 text-xs text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2">{ts("addNewStudent")}</Link>
+          </>}>
             <Combobox
               id="p-student"
-              emptyActions={canManagePeople &&
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">{ts("newStudentBookingHint")}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href="/guardians?create=1" target="_blank" rel="noopener noreferrer" onClick={() => { addingStudent.current = true; }} className="rounded-md border px-3 py-2 text-sm text-primary hover:bg-accent">{ts("addNewParent")}</Link>
-                    <Link href="/students?create=1" target="_blank" rel="noopener noreferrer" onClick={() => { addingStudent.current = true; }} className="rounded-md border px-3 py-2 text-sm text-primary hover:bg-accent">{ts("addNewStudent")}</Link>
-                  </div>
-                </div>
-              }
               options={students.map((st) => ({ value: st.id, label: st.name }))}
               value={studentId}
               onChange={(v) => {
