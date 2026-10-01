@@ -35,6 +35,7 @@ export function PaymentAllocator({
   onExplicitTotal,
   onTeacherInferred,
   canOpenSessionProfiles = false,
+  sessionIds,
 }: {
   studentId: string;
   amount: number;
@@ -47,6 +48,7 @@ export function PaymentAllocator({
   onTeacherInferred?: (teacherId: string | null) => void;
   /** Cashiers can allocate money but do not have permission to open academic records. */
   canOpenSessionProfiles?: boolean;
+  sessionIds?: string[];
 }) {
   const t = useTranslations("payments");
   const tc = useTranslations("common");
@@ -69,7 +71,7 @@ export function PaymentAllocator({
       try {
         const r = await loadOutstandingSessions(locale, studentId);
         if (cancelled) return;
-        setSessions(r.sessions);
+        setSessions(sessionIds ? r.sessions.filter((s) => sessionIds.includes(s.id)) : r.sessions);
         setPicked(new Set());
       } finally {
         if (!cancelled) setLoading(false);
@@ -79,7 +81,7 @@ export function PaymentAllocator({
     return () => {
       cancelled = true;
     };
-  }, [open, studentId, locale]);
+  }, [open, studentId, locale, sessionIds]);
 
   const applySuggestion = useCallback(
     (value: number) => {

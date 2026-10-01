@@ -226,7 +226,7 @@ export default async function TeacherProfilePage({
       )}
 
       {tab === "sessions" && (
-        <SessionsTable rows={sessions} currency={currency} hideTeacher linkStudents linkSessions />
+        <SessionsTable rows={sessions} currency={currency} hideTeacher linkStudents linkSessions canPay={STAFF_ROLES.includes(session.role)} />
       )}
       {canSeePay && tab === "payments" && (
         <PaymentsTable rows={payments} currency={currency} linkStudents linkTeachers linkReceipts />

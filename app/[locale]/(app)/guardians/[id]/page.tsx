@@ -198,6 +198,7 @@ export default async function GuardianProfilePage({
           linkStudents
           linkTeachers={canOpenAcademicRecords}
           linkSessions={canOpenAcademicRecords}
+          canPay={canOpenReceipts}
         />
       )}
       {tab === "payments" && (

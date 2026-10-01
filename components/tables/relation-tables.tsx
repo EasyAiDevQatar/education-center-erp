@@ -15,6 +15,7 @@ import { formatMoney, formatHours } from "@/lib/money";
 import { formatDateOnly } from "@/lib/date-only";
 import { Link } from "@/i18n/navigation";
 import { referenceCode } from "@/lib/reference-code";
+import { PayProfileSessions } from "./pay-profile-sessions";
 
 /* Read-only, paginated tables used across the 360° profile pages. */
 
@@ -52,6 +53,7 @@ export function SessionsTable({
   linkStudents = false,
   linkTeachers = false,
   linkSessions = false,
+  canPay = false,
 }: {
   rows: SessionLine[];
   currency: string;
@@ -60,6 +62,7 @@ export function SessionsTable({
   linkStudents?: boolean;
   linkTeachers?: boolean;
   linkSessions?: boolean;
+  canPay?: boolean;
 }) {
   const t = useTranslations("sessions");
   const tc = useTranslations("common");
@@ -68,6 +71,7 @@ export function SessionsTable({
 
   return (
     <div className="rounded-lg border border-border bg-card">
+      {canPay && <div className="flex justify-end border-b p-3"><PayProfileSessions rows={rows} currency={currency} /></div>}
       <Table>
         <TableHeader>
           <TableRow>

@@ -40,6 +40,7 @@ export function QuickPayDialog({
   onPaid,
   initiallyOpen = false,
   sessionId,
+  sessionIds,
   onClose,
 }: {
   studentId: string;
@@ -53,6 +54,7 @@ export function QuickPayDialog({
   onPaid?: () => void;
   initiallyOpen?: boolean;
   sessionId?: string;
+  sessionIds?: string[];
   onClose?: () => void;
 }) {
   const t = useTranslations("payments");
@@ -76,6 +78,14 @@ export function QuickPayDialog({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setError(null);
+    if (sessionIds) {
+      const lines = JSON.parse(String(fd.get("allocations") || "[]")) as { sessionId: string; amount: number }[];
+      const allocated = lines.reduce((sum, line) => sum + line.amount, 0);
+      if (!lines.length || lines.some((line) => !sessionIds.includes(line.sessionId)) || Math.abs(allocated - Number(fd.get("amount"))) > 0.005) {
+        setError("allocation");
+        return;
+      }
+    }
     setPending(true);
     try {
       const res = await savePayment(locale, null, {}, fd);
@@ -136,7 +146,7 @@ export function QuickPayDialog({
                   type="number"
                   step="0.5"
                   min="0"
-                  max={sessionId ? amount : undefined}
+                  max={sessionId || sessionIds ? amount : undefined}
                   dir="ltr"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
@@ -177,6 +187,7 @@ export function QuickPayDialog({
                 { sessionId, amount: Number(payAmount) || 0 },
               ])} />
             ) : <PaymentAllocator
+              sessionIds={sessionIds}
               studentId={studentId}
               amount={parseFloat(payAmount) || 0}
               currency={currency}
@@ -193,7 +204,7 @@ export function QuickPayDialog({
               <Input id="qp-notes" name="notes" />
             </FormField>
 
-            {error && <p className="text-sm text-destructive">{tc("errorGeneric")}</p>}
+            {error && <p className="text-sm text-destructive">{error === "allocation" ? t("selectSessionAllocation") : tc("errorGeneric")}</p>}
 
             <DialogFooter>
               <DialogClose asChild>
