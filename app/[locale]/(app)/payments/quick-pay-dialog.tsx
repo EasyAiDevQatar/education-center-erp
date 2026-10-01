@@ -38,6 +38,9 @@ export function QuickPayDialog({
   variant = "icon",
   disabled,
   onPaid,
+  initiallyOpen = false,
+  sessionId,
+  onClose,
 }: {
   studentId: string;
   studentName: string;
@@ -48,6 +51,9 @@ export function QuickPayDialog({
   variant?: "icon" | "button";
   disabled?: boolean;
   onPaid?: () => void;
+  initiallyOpen?: boolean;
+  sessionId?: string;
+  onClose?: () => void;
 }) {
   const t = useTranslations("payments");
   const tc = useTranslations("common");
@@ -55,7 +61,7 @@ export function QuickPayDialog({
   const locale = useLocale();
   const router = useRouter();
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Controlled so the allocator can re-suggest as the figure is edited.
@@ -85,7 +91,7 @@ export function QuickPayDialog({
 
   return (
     <>
-      {variant === "icon" ? (
+      {initiallyOpen ? null : variant === "icon" ? (
         <Button
           variant="ghost"
           size="icon"
@@ -103,7 +109,7 @@ export function QuickPayDialog({
         </Button>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) onClose?.(); }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("payNowFor", { name: studentName })}</DialogTitle>
@@ -130,6 +136,7 @@ export function QuickPayDialog({
                   type="number"
                   step="0.5"
                   min="0"
+                  max={sessionId ? amount : undefined}
                   dir="ltr"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
@@ -165,7 +172,11 @@ export function QuickPayDialog({
               </FormField>
             </div>
 
-            <PaymentAllocator
+            {sessionId ? (
+              <input type="hidden" name="allocations" value={JSON.stringify([
+                { sessionId, amount: Number(payAmount) || 0 },
+              ])} />
+            ) : <PaymentAllocator
               studentId={studentId}
               amount={parseFloat(payAmount) || 0}
               currency={currency}
@@ -176,7 +187,7 @@ export function QuickPayDialog({
               onTeacherInferred={(tid) => {
                 if (!teacherManual.current) setTeacherSel(tid ?? "");
               }}
-            />
+            />}
 
             <FormField label={tc("notes")} htmlFor="qp-notes">
               <Input id="qp-notes" name="notes" />

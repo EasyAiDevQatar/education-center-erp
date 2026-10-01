@@ -1,10 +1,15 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, PEOPLE_ROLES } from "@/lib/rbac";
+import { requireRole, PEOPLE_ROLES, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { TranslateNamesButton } from "@/components/translate-names-button";
 import { loadAiConfig, aiReady } from "@/lib/ai/config";
-import { StudentsClient, type StudentRow, type Option } from "./students-client";
+import {
+  StudentsClient,
+  type StudentRow,
+  type Option,
+  type GuardianOption,
+} from "./students-client";
 import { displayName } from "@/lib/names";
 import { toNumber } from "@/lib/money";
 
@@ -15,7 +20,8 @@ export default async function StudentsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, PEOPLE_ROLES);
+  const viewer = await requireRole(locale, PEOPLE_ROLES);
+  const canManage = STAFF_ROLES.includes(viewer.role);
 
   const t = await getTranslations("students");
 
@@ -36,7 +42,12 @@ export default async function StudentsPage({
       },
     }),
     db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
-    db.guardian.findMany({ orderBy: { name: "asc" } }),
+    db.guardian.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        homes: { orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }, { label: "asc" }] },
+      },
+    }),
     db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.setting.findUnique({ where: { key: "currency" }, select: { value: true } }),
   ]);
@@ -47,7 +58,19 @@ export default async function StudentsPage({
     id: l.id,
     label: locale === "ar" ? l.nameAr : l.nameEn,
   }));
-  const guardianOptions: Option[] = guardians.map((g) => ({ id: g.id, label: displayName(g, locale) }));
+  const guardianOptions: GuardianOption[] = guardians.map((g) => ({
+    id: g.id,
+    label: displayName(g, locale),
+    homes: g.homes.map((home) => ({
+      id: home.id,
+      label: home.label,
+      address: home.address,
+      homeCode: home.homeCode,
+      homeLat: home.homeLat,
+      homeLng: home.homeLng,
+      isDefault: home.isDefault,
+    })),
+  }));
 
   const rows: StudentRow[] = students.map((s) => ({
     id: s.id,
@@ -94,6 +117,7 @@ export default async function StudentsPage({
         guardians={guardianOptions}
         teachers={teacherOptions}
         currency={currencyRow?.value ?? "QAR"}
+        canManage={canManage}
       />
     </div>
   );

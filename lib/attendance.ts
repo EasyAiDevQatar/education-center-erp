@@ -16,6 +16,7 @@ import {
   canCheckOut,
 } from "@/lib/session-lifecycle";
 import { elapsedMinutes } from "@/lib/session-time";
+import type { Prisma } from "@prisma/client";
 
 /**
  * One way to say a lesson happened.
@@ -33,6 +34,37 @@ import { elapsedMinutes } from "@/lib/session-time";
 
 export const MARKS = ["COMPLETED", "NO_SHOW", "SCHEDULED"] as const;
 export type Mark = (typeof MARKS)[number];
+
+/** Shared attendance transition, also usable inside an atomic booking/payment. */
+export async function applyAttendanceMarkInTransaction(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  mark: Mark,
+  policy: Awaited<ReturnType<typeof attendanceBillablePolicy>> | null,
+  chargeNoShow = false,
+  auto = false,
+): Promise<boolean> {
+  const existing = await tx.session.findUnique({ where: { id: sessionId } });
+  if (!existing || !canApplyAttendanceMark(existing.status, mark)) return false;
+  const becomesBillable = mark === "COMPLETED" || chargeNoShow;
+  await tx.session.update({ where: { id: sessionId }, data: {
+    status: mark,
+    autoCompleted: mark === "COMPLETED" ? auto : false,
+    ...(mark === "SCHEDULED" ? {
+      studentCheckInAt: null, studentCheckOutAt: null, teacherCheckInAt: null,
+      checkInMethod: null, checkInLat: null, checkInLng: null, actualHours: null,
+    } : {}),
+  } });
+  if (becomesBillable && policy) {
+    await snapshotBillableSession(tx, sessionId, policy, { forcePlanned: chargeNoShow });
+    await applyPackageHours(tx, sessionId);
+  } else {
+    await revertPackageHours(tx, sessionId);
+    await clearBillableSessionSnapshot(tx, sessionId);
+  }
+  await syncSessionPaymentStatus(tx, sessionId);
+  return true;
+}
 
 /**
  * Apply an attendance mark, keeping billing and the family in step.
@@ -57,41 +89,10 @@ export async function applyMark(sessionId: string, mark: Mark, auto = false): Pr
   const policy = mark === "SCHEDULED" ? null : await attendanceBillablePolicy();
   const chargeNoShow = mark === "NO_SHOW" && (await noShowPolicy()) === "TAUGHT";
 
-  await db.$transaction(async (tx) => {
-    const becomesBillable = mark === "COMPLETED" || chargeNoShow;
-
-    await tx.session.update({
-      where: { id: sessionId },
-      data: {
-        status: mark,
-        autoCompleted: mark === "COMPLETED" ? auto : false,
-        ...(mark === "SCHEDULED"
-          ? {
-              studentCheckInAt: null,
-              studentCheckOutAt: null,
-              teacherCheckInAt: null,
-              checkInMethod: null,
-              checkInLat: null,
-              checkInLng: null,
-              actualHours: null,
-            }
-          : {}),
-      },
-    });
-
-    if (becomesBillable && policy) {
-      // A no-show billed as taught is always the booked duration; there is no
-      // arrival/departure measurement to apply an actual-time policy to.
-      await snapshotBillableSession(tx, sessionId, policy, { forcePlanned: chargeNoShow });
-      await applyPackageHours(tx, sessionId);
-    } else {
-      // Revert before clearing the snapshot: package drawdown must subtract
-      // the same duration that was originally added.
-      await revertPackageHours(tx, sessionId);
-      await clearBillableSessionSnapshot(tx, sessionId);
-    }
-    await syncSessionPaymentStatus(tx, sessionId);
-  });
+  const changed = await db.$transaction((tx) =>
+    applyAttendanceMarkInTransaction(tx, sessionId, mark, policy, chargeNoShow, auto),
+  );
+  if (!changed) return false;
 
   // SCHEDULED means somebody undid a mark, which is a correction rather than
   // news, so it says nothing.

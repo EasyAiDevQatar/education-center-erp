@@ -19,6 +19,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { formatMoney } from "@/lib/money";
 import { localNowTime, localToday } from "@/lib/session-time";
 import { studentSpecialPrice } from "@/lib/special-price";
+import { resolveSessionStudentDefaults } from "@/lib/session-form-defaults";
 import {
   ConflictWarnings,
   useConflictCheck,
@@ -92,6 +93,7 @@ export function SessionDialog({
   onOpenChange,
   defaultDate,
   defaultTime,
+  defaultStudentId,
   defaultTeacherId,
   defaultLocation,
   defaultHours,
@@ -120,6 +122,8 @@ export function SessionDialog({
   onOpenChange?: (v: boolean) => void;
   defaultDate?: string;
   defaultTime?: string;
+  /** Preselected active student. Their grade and usual location follow them. */
+  defaultStudentId?: string;
   defaultTeacherId?: string;
   /** Where the lesson happens, when the caller already knows — the master
    *  planner's legend chip is literally "a lesson at home" or "at the centre". */
@@ -145,10 +149,18 @@ export function SessionDialog({
 
   const today = localToday();
   const now = localNowTime();
-  const [studentId, setStudentId] = useState(session?.studentId ?? "");
-  const [gradeLevelId, setGradeLevelId] = useState(session?.gradeLevelId ?? "");
+  const createStudentDefaults = useMemo(
+    () => resolveSessionStudentDefaults(students, defaultStudentId, defaultLocation),
+    [students, defaultStudentId, defaultLocation],
+  );
+  const [studentId, setStudentId] = useState(
+    session?.studentId ?? createStudentDefaults.studentId,
+  );
+  const [gradeLevelId, setGradeLevelId] = useState(
+    session?.gradeLevelId ?? createStudentDefaults.gradeLevelId,
+  );
   const [location, setLocation] = useState<"CENTER" | "HOME">(
-    session?.location ?? defaultLocation ?? "CENTER",
+    session?.location ?? createStudentDefaults.location,
   );
   const [hours, setHours] = useState<string>(
     session ? String(session.hours) : String(defaultHours ?? 1),
@@ -164,9 +176,12 @@ export function SessionDialog({
   // When opened fresh for quick-create, reset the light fields.
   useEffect(() => {
     if (open && !session) {
-      setStudentId("");
-      setGradeLevelId("");
-      setLocation(defaultLocation ?? "CENTER");
+      // A newly opened dialog is a fresh form, even if the previous booking
+      // left client state behind when it closed.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStudentId(createStudentDefaults.studentId);
+      setGradeLevelId(createStudentDefaults.gradeLevelId);
+      setLocation(createStudentDefaults.location);
       setHours(String(defaultHours ?? 1));
       setPackageId("");
       setDate(defaultDate ?? localToday());
@@ -175,9 +190,15 @@ export function SessionDialog({
       setSubjectId("");
       setError(null);
     }
-    // `today` is stable for the life of the dialog.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, session, defaultDate, defaultTime, defaultTeacherId, defaultLocation, defaultHours]);
+  }, [
+    open,
+    session,
+    defaultDate,
+    defaultTime,
+    defaultTeacherId,
+    defaultHours,
+    createStudentDefaults,
+  ]);
 
   // Advisory only — never gates the save button.
   const conflictResults = useConflictCheck(
@@ -254,6 +275,7 @@ export function SessionDialog({
     if (!subjectId) return;
     if (subjectOptions.some((sbj) => sbj.id === subjectId)) return;
     if (session?.subjectId === subjectId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSubjectId("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectOptions]);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { Printer } from "lucide-react";
@@ -14,6 +15,23 @@ export function ReceiptPrintControls({ format }: { format: ReceiptFormat }) {
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
+  const printed = useRef(false);
+
+  useEffect(() => {
+    if (printed.current || new URLSearchParams(window.location.search).get("autoprint") !== "1") return;
+    let cancelled = false;
+    void (async () => {
+      await document.fonts.ready;
+      await Promise.all(Array.from(document.images).map((image) => image.decode().catch(() => undefined)));
+      if (cancelled || printed.current) return;
+      printed.current = true;
+      const url = new URL(window.location.href);
+      url.searchParams.delete("autoprint");
+      window.history.replaceState(window.history.state, "", url);
+      printDoc({ size: format === "POS80" ? "80mm auto" : `${format} portrait`, margin: format === "POS80" ? 3 : 12 });
+    })();
+    return () => { cancelled = true; };
+  }, [format]);
 
   function select(next: ReceiptFormat) {
     const query = new URLSearchParams(window.location.search);

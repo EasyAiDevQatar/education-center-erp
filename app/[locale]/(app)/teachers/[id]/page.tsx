@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TrendingUp, TrendingDown, Wallet, Clock, Phone, Percent, FileText } from "lucide-react";
-import { requireRole, ACADEMIC_ROLES, PAYROLL_ROLES } from "@/lib/rbac";
+import { requireRole, ACADEMIC_ROLES, PAYROLL_ROLES, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { getTeacherEarnings } from "@/lib/payroll";
 import { loadSessionLines, loadTeacherPaymentLines, loadPayoutLines, getCurrency } from "@/lib/profile";
@@ -19,6 +19,8 @@ import { AvailabilityEditor } from "./availability-editor";
 import { PortalLoginButton } from "@/components/portal-login-button";
 import { fullName } from "@/lib/names";
 import { referenceCode } from "@/lib/reference-code";
+import { loadSessionFormOptions } from "@/lib/session-form-options";
+import { ProfileAddSessionDialog } from "../../sessions/profile-add-session-dialog";
 
 export default async function TeacherProfilePage({
   params,
@@ -29,7 +31,7 @@ export default async function TeacherProfilePage({
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, ACADEMIC_ROLES);
+  const session = await requireRole(locale, ACADEMIC_ROLES);
 
   const t = await getTranslations("teachers");
   const tc = await getTranslations("common");
@@ -40,9 +42,9 @@ export default async function TeacherProfilePage({
 
   const teacher = await db.teacher.findUnique({ where: { id } });
   if (!teacher) notFound();
+  const canAddSession = STAFF_ROLES.includes(session.role) && teacher.active;
 
   // Only an admin can mint portal logins, so only they see the control.
-  const session = await requireRole(locale, ACADEMIC_ROLES);
   const isAdmin = session.role === "ADMIN";
   /**
    * Whether this viewer may see what the teacher is paid.
@@ -64,7 +66,16 @@ export default async function TeacherProfilePage({
   const wideStart = new Date("2000-01-01T00:00:00.000Z");
   const wideEnd = new Date("2100-01-01T00:00:00.000Z");
 
-  const [earnings, sessions, payments, payouts, currency, availability, studentLinks] = await Promise.all([
+  const [
+    earnings,
+    sessions,
+    payments,
+    payouts,
+    currency,
+    availability,
+    studentLinks,
+    sessionFormOptions,
+  ] = await Promise.all([
     getTeacherEarnings(id, wideStart, wideEnd),
     loadSessionLines({ teacherId: id }, locale),
     loadTeacherPaymentLines(id),
@@ -82,6 +93,7 @@ export default async function TeacherProfilePage({
       },
       include: { student: { include: { gradeLevel: true } } },
     }),
+    canAddSession ? loadSessionFormOptions(locale) : Promise.resolve(null),
   ]);
   const assignedStudents = [
     ...new Map(studentLinks.map((row) => [row.studentId, row.student])).values(),
@@ -110,6 +122,14 @@ export default async function TeacherProfilePage({
     <div>
       <PageHeader
         title={fullName(teacher, locale)}
+        action={
+          sessionFormOptions ? (
+            <ProfileAddSessionDialog
+              options={sessionFormOptions}
+              defaultTeacherId={id}
+            />
+          ) : undefined
+        }
         description={`${referenceCode("teacher", teacher.referenceNo)} · ${t("commissionPct")}: ${toNumber(teacher.commissionPct)}% · ${
           teacher.paymentMode ? tm(teacher.paymentMode as "SESSION") : t("paymentModeDefault")
         }`}

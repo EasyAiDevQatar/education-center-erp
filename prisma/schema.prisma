@@ -116,10 +116,37 @@ model Guardian {
   notes    String?
   user     User?
   students Student[]
+  /// A family can use more than one home (for example, mother and father).
+  /// Student records copy the selected home's location when they are created;
+  /// they deliberately do not hold a foreign key so later family edits never
+  /// rewrite a child's saved transport/check-in location unexpectedly.
+  homes    GuardianHome[]
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   inboundMessages InboundMessage[]
+}
+
+model GuardianHome {
+  id         String   @id @default(cuid())
+  guardianId String
+  guardian   Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  /// Human-friendly choice shown while adding a student, e.g. "Main home".
+  label      String
+  address    String?
+  homeCode   String?
+  homeLat    Float?
+  homeLng    Float?
+  /// Application logic keeps exactly one default when a guardian has homes.
+  /// A partial unique index is intentionally avoided so the schema remains
+  /// portable between PostgreSQL production and SQLite local development.
+  isDefault  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guardianId, sortOrder])
 }
 
 model GradeLevel {

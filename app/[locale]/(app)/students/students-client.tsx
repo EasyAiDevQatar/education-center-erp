@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Plus, Pencil, CircleUserRound, MapPin, Map as MapIcon } from "lucide-react";
+import { Plus, Pencil, CircleUserRound, Copy, MapPin, Map as MapIcon } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { EntityDialog } from "@/components/crud/entity-dialog";
 import { DeleteButton } from "@/components/crud/delete-button";
@@ -32,44 +32,49 @@ import { saveStudent, deleteStudent } from "./actions";
 import { displayName, nameSearchText } from "@/lib/names";
 import { formatMoney } from "@/lib/money";
 import { referenceCode } from "@/lib/reference-code";
+import {
+  clearAppliedGuardianHome,
+  duplicateStudentDefaults,
+  guardianHomeFieldValues,
+  preferredGuardianHome,
+  type GuardianHomeSnapshot,
+  type StudentHomeFieldValues,
+  type StudentFormDefaults,
+} from "@/lib/student-form";
 
 export type Option = { id: string; label: string };
-export type StudentRow = {
+export type GuardianOption = Option & { homes: GuardianHomeSnapshot[] };
+export type StudentRow = StudentFormDefaults & {
   id: string;
   referenceNo: number;
-  name: string;
-  nameEn: string | null;
-  phone: string | null;
-  gradeLevelId: string | null;
   gradeLevelLabel: string | null;
-  gradeYear: number | null;
-  specialPricePerHour: number | null;
-  guardianId: string | null;
   guardianLabel: string | null;
-  studyLocation: "CENTER" | "HOME";
-  active: boolean;
-  notes: string | null;
-  address: string | null;
-  homeLat: number | null;
-  homeLng: number | null;
-  checkinPin: string | null;
-  homeCode: string | null;
-  /** Teacher ids assigned for the current academic year. */
-  teacherIds: string[];
-  /** Separate commercial scope for the student's special price. */
-  specialPriceTeacherIds: string[];
 };
+
+function matchesStudentHome(home: GuardianHomeSnapshot, student: StudentFormDefaults): boolean {
+  const values = guardianHomeFieldValues(home);
+  return (
+    values.address === (student.address ?? "") &&
+    values.homeCode === (student.homeCode ?? "") &&
+    values.lat === (student.homeLat == null ? "" : String(student.homeLat)) &&
+    values.lng === (student.homeLng == null ? "" : String(student.homeLng))
+  );
+}
 
 function StudentFields({
   student,
   levels,
   guardians,
   teachers,
+  duplicate = false,
+  enableGuardianHomeAutofill = false,
 }: {
-  student?: StudentRow;
+  student?: StudentFormDefaults;
   levels: Option[];
-  guardians: Option[];
+  guardians: GuardianOption[];
   teachers: Option[];
+  duplicate?: boolean;
+  enableGuardianHomeAutofill?: boolean;
 }) {
   const t = useTranslations("students");
   const tc = useTranslations("common");
@@ -77,9 +82,69 @@ function StudentFields({
   const [lat, setLat] = useState(student?.homeLat != null ? String(student.homeLat) : "");
   const [lng, setLng] = useState(student?.homeLng != null ? String(student.homeLng) : "");
   const [address, setAddress] = useState(student?.address ?? "");
+  const [homeCode, setHomeCode] = useState(student?.homeCode ?? "");
   const [guardianId, setGuardianId] = useState(student?.guardianId ?? "");
   const [teacherIds, setTeacherIds] = useState<string[]>(student?.teacherIds ?? []);
   const [specialPriceTeacherIds, setSpecialPriceTeacherIds] = useState<string[]>(student?.specialPriceTeacherIds ?? []);
+  const initialGuardian = guardians.find((guardian) => guardian.id === student?.guardianId);
+  const initialGuardianHome =
+    enableGuardianHomeAutofill && student
+      ? initialGuardian?.homes.find((home) => matchesStudentHome(home, student)) ?? null
+      : null;
+  const [guardianHomeId, setGuardianHomeId] = useState(initialGuardianHome?.id ?? "");
+  const appliedParentHome = useRef<StudentHomeFieldValues | null>(
+    initialGuardianHome ? guardianHomeFieldValues(initialGuardianHome) : null,
+  );
+  const guardianHomes = useMemo(
+    () => guardians.find((guardian) => guardian.id === guardianId)?.homes ?? [],
+    [guardianId, guardians],
+  );
+
+  function applyParentHome(home: GuardianHomeSnapshot) {
+    const values = guardianHomeFieldValues(home);
+    appliedParentHome.current = values;
+    setGuardianHomeId(home.id);
+    setAddress(values.address);
+    setHomeCode(values.homeCode);
+    setLat(values.lat);
+    setLng(values.lng);
+  }
+
+  function clearParentDerivedHome() {
+    const applied = appliedParentHome.current;
+    if (!applied) return;
+    // Each updater sees the matching current value, so fields changed manually
+    // after choosing a parent home survive a later guardian change.
+    setAddress((current) => clearAppliedGuardianHome(
+      { address: current, homeCode, lat, lng },
+      applied,
+    ).address);
+    setHomeCode((current) => clearAppliedGuardianHome(
+      { address, homeCode: current, lat, lng },
+      applied,
+    ).homeCode);
+    setLat((current) => clearAppliedGuardianHome(
+      { address, homeCode, lat: current, lng },
+      applied,
+    ).lat);
+    setLng((current) => clearAppliedGuardianHome(
+      { address, homeCode, lat, lng: current },
+      applied,
+    ).lng);
+    appliedParentHome.current = null;
+  }
+
+  function onGuardianChange(nextGuardianId: string) {
+    setGuardianId(nextGuardianId);
+    if (!enableGuardianHomeAutofill) return;
+    const nextHomes = guardians.find((guardian) => guardian.id === nextGuardianId)?.homes ?? [];
+    const nextHome = preferredGuardianHome(nextHomes);
+    if (nextHome) applyParentHome(nextHome);
+    else {
+      setGuardianHomeId("");
+      clearParentDerivedHome();
+    }
+  }
 
   function useCurrentLocation() {
     if (!("geolocation" in navigator)) return;
@@ -95,9 +160,14 @@ function StudentFields({
 
   return (
     <>
+      {duplicate && (
+        <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-muted-foreground">
+          {t("duplicateHint")}
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField label={tc("nameAr")} htmlFor="name">
-          <Input id="name" name="name" defaultValue={student?.name} required />
+          <Input id="name" name="name" defaultValue={student?.name} autoFocus={duplicate} required />
         </FormField>
         <FormField label={tc("nameEn")} htmlFor="nameEn" hint={tc("nameEnHint")}>
           <Input id="nameEn" name="nameEn" dir="ltr" defaultValue={student?.nameEn ?? ""} />
@@ -137,10 +207,33 @@ function StudentFields({
             name="guardianId"
             options={guardians.map((g) => ({ value: g.id, label: g.label }))}
             value={guardianId}
-            onChange={setGuardianId}
+            onChange={onGuardianChange}
           />
         </FormField>
       </div>
+      {enableGuardianHomeAutofill && guardianHomes.length > 0 && (
+        <FormField label={t("parentHome")} htmlFor="guardianHomeId" hint={t("parentHomeHint")}>
+          <Select
+            id="guardianHomeId"
+            value={guardianHomeId}
+            onChange={(event) => {
+              const home = guardianHomes.find((item) => item.id === event.target.value);
+              if (home) applyParentHome(home);
+              else {
+                setGuardianHomeId("");
+                clearParentDerivedHome();
+              }
+            }}
+          >
+            <option value="">—</option>
+            {guardianHomes.map((home) => (
+              <option key={home.id} value={home.id}>
+                {home.label}{home.isDefault ? ` · ${t("defaultHome")}` : ""}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      )}
       <div className="grid items-start gap-3 rounded-md border border-border bg-muted/20 p-3 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
         <FormField label={t("specialPrice")} htmlFor="specialPricePerHour" hint={t("specialPriceHint")}>
           <Input
@@ -233,7 +326,13 @@ function StudentFields({
             <Input id="checkinPin" name="checkinPin" dir="ltr" inputMode="numeric" maxLength={6} placeholder="4–6" defaultValue={student?.checkinPin ?? ""} />
           </FormField>
           <FormField label={t("homeCode")} htmlFor="homeCode" hint={t("homeCodeHint")}>
-            <Input id="homeCode" name="homeCode" maxLength={40} defaultValue={student?.homeCode ?? ""} />
+            <Input
+              id="homeCode"
+              name="homeCode"
+              maxLength={40}
+              value={homeCode}
+              onChange={(event) => setHomeCode(event.target.value)}
+            />
           </FormField>
         </div>
       </div>
@@ -252,12 +351,14 @@ export function StudentsClient({
   guardians,
   teachers,
   currency,
+  canManage,
 }: {
   students: StudentRow[];
   levels: Option[];
-  guardians: Option[];
+  guardians: GuardianOption[];
   teachers: Option[];
   currency: string;
+  canManage: boolean;
 }) {
   const t = useTranslations("students");
   const tc = useTranslations("common");
@@ -341,18 +442,27 @@ export function StudentsClient({
           resultCount={search.filtered.length}
           placeholder={t("searchPlaceholder")}
         />
-        <EntityDialog
-          title={t("add")}
-          extraWide
-          action={saveStudent.bind(null, locale, null)}
-          fields={<StudentFields levels={levels} guardians={guardians} teachers={teachers} />}
-          trigger={
-            <Button className="gap-2">
-              <Plus className="size-4" />
-              {t("add")}
-            </Button>
-          }
-        />
+        {canManage && (
+          <EntityDialog
+            title={t("add")}
+            extraWide
+            action={saveStudent.bind(null, locale, null)}
+            fields={
+              <StudentFields
+                levels={levels}
+                guardians={guardians}
+                teachers={teachers}
+                enableGuardianHomeAutofill
+              />
+            }
+            trigger={
+              <Button className="gap-2">
+                <Plus className="size-4" />
+                {t("add")}
+              </Button>
+            }
+          />
+        )}
       </div>
       <div className="rounded-lg border border-border bg-card">
         <Table>
@@ -428,18 +538,42 @@ export function StudentsClient({
                         <CircleUserRound className="size-4" />
                       </Button>
                     </Link>
-                    <EntityDialog
-                      title={t("edit")}
-                      extraWide
-                      action={saveStudent.bind(null, locale, s.id)}
-                      fields={<StudentFields student={s} levels={levels} guardians={guardians} teachers={teachers} />}
-                      trigger={
-                        <Button variant="ghost" size="icon" aria-label={tc("edit")}>
-                          <Pencil className="size-4" />
-                        </Button>
-                      }
-                    />
-                    <DeleteButton action={deleteStudent.bind(null, locale, s.id)} />
+                    {canManage && (
+                      <>
+                        <EntityDialog
+                          title={t("duplicate")}
+                          extraWide
+                          action={saveStudent.bind(null, locale, null)}
+                          fields={
+                            <StudentFields
+                              student={duplicateStudentDefaults(s)}
+                              levels={levels}
+                              guardians={guardians}
+                              teachers={teachers}
+                              duplicate
+                              enableGuardianHomeAutofill
+                            />
+                          }
+                          trigger={
+                            <Button variant="ghost" size="icon" aria-label={t("duplicate")} title={t("duplicate")}>
+                              <Copy className="size-4" />
+                            </Button>
+                          }
+                        />
+                        <EntityDialog
+                          title={t("edit")}
+                          extraWide
+                          action={saveStudent.bind(null, locale, s.id)}
+                          fields={<StudentFields student={s} levels={levels} guardians={guardians} teachers={teachers} />}
+                          trigger={
+                            <Button variant="ghost" size="icon" aria-label={tc("edit")}>
+                              <Pencil className="size-4" />
+                            </Button>
+                          }
+                        />
+                        <DeleteButton action={deleteStudent.bind(null, locale, s.id)} />
+                      </>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

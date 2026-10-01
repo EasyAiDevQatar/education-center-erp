@@ -22,6 +22,8 @@ import { ProfilePricingDialog } from "./profile-pricing-dialog";
 import { Link } from "@/i18n/navigation";
 import { referenceCode } from "@/lib/reference-code";
 import { formatDateOnly } from "@/lib/date-only";
+import { loadSessionFormOptions } from "@/lib/session-form-options";
+import { ProfileAddSessionDialog } from "../../sessions/profile-add-session-dialog";
 
 export default async function StudentProfilePage({
   params,
@@ -47,12 +49,24 @@ export default async function StudentProfilePage({
     include: { gradeLevel: true, guardian: true },
   });
   if (!student) notFound();
+  const canAddSession = STAFF_ROLES.includes(viewer.role) && student.active;
 
   const sp = await searchParams;
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
   const unchargeable = await unchargeableStatuses();
 
-  const [balance, ledger, sessions, payments, packages, currency, teacherRows, assignedRows, specialPriceTeacherRows] =
+  const [
+    balance,
+    ledger,
+    sessions,
+    payments,
+    packages,
+    currency,
+    teacherRows,
+    assignedRows,
+    specialPriceTeacherRows,
+    sessionFormOptions,
+  ] =
     await Promise.all([
       getStudentBalance(id),
       getStudentLedger(id),
@@ -73,6 +87,9 @@ export default async function StudentProfilePage({
         where: { studentId: id },
         include: { teacher: true },
       }),
+      canAddSession
+        ? loadSessionFormOptions(locale, { studentIds: [id] })
+        : Promise.resolve(null),
     ]);
   const teachers = teacherRows.map((x) => ({ id: x.id, label: displayName(x, locale) }));
   const assignedTeachers = [
@@ -101,13 +118,21 @@ export default async function StudentProfilePage({
       <PageHeader
         title={fullName(student, locale)}
         action={
-          <ProfilePricingDialog
-            studentId={id}
-            specialPricePerHour={student.specialPricePerHour == null ? null : toNumber(student.specialPricePerHour)}
-            teacherIds={[...new Set(assignedRows.map((row) => row.teacherId))]}
-            specialPriceTeacherIds={specialPriceTeacherRows.map((row) => row.teacherId)}
-            teachers={teachers}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {sessionFormOptions && (
+              <ProfileAddSessionDialog
+                options={sessionFormOptions}
+                defaultStudentId={id}
+              />
+            )}
+            <ProfilePricingDialog
+              studentId={id}
+              specialPricePerHour={student.specialPricePerHour == null ? null : toNumber(student.specialPricePerHour)}
+              teacherIds={[...new Set(assignedRows.map((row) => row.teacherId))]}
+              specialPriceTeacherIds={specialPriceTeacherRows.map((row) => row.teacherId)}
+              teachers={teachers}
+            />
+          </div>
         }
         description={
           [

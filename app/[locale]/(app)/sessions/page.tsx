@@ -3,11 +3,10 @@ import { requireRole, ACADEMIC_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadGroupOpts } from "@/lib/groups";
 import { toNumber } from "@/lib/money";
-import { currentPriceMatrix } from "@/lib/pricing";
+import { loadSessionFormOptions } from "@/lib/session-form-options";
 import { readSessionFilters, sessionWhere } from "@/lib/session-query";
 import { PageHeader } from "@/components/page-header";
 import { SessionsClient, type SessionRow } from "./sessions-client";
-import type { PriceMatrix } from "./session-dialog";
 import { displayName } from "@/lib/names";
 import { unchargeableStatuses } from "@/lib/billing";
 import { groupOccurrenceKeys, sessionOccurrenceKey } from "@/lib/session-grouping";
@@ -28,13 +27,7 @@ export default async function SessionsPage({
   const filters = readSessionFilters(sp);
   const unchargeable = await unchargeableStatuses();
 
-  // Assignments are per academic year; unscoped until a year exists.
-  const currentYear = await db.academicYear.findFirst({
-    where: { isCurrent: true },
-    select: { id: true },
-  });
-
-  const [sessions, students, teachers, levels, matrix, settingsRows, activePackages, subjectList, teacherSubjectRows, groups] =
+  const [sessions, formOptions, groups] =
     await Promise.all([
       db.session.findMany({
         where: sessionWhere(filters),
@@ -48,37 +41,21 @@ export default async function SessionsPage({
           group: { select: { name: true } },
         },
       }),
-      db.student.findMany({
-      where: { active: true },
-      orderBy: { name: "asc" },
-      include: {
-        teachers: { where: { academicYearId: currentYear?.id ?? null } },
-        specialPriceTeachers: { select: { teacherId: true } },
-      },
-    }),
-      db.teacher.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
-      db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
-      currentPriceMatrix(),
-      db.setting.findMany({ where: { key: "currency" } }),
-      db.package.findMany({
-        where: { status: "ACTIVE" },
-        include: { student: true },
-        orderBy: { purchasedAt: "desc" },
-      }),
-      db.subject.findMany({
-        where: { active: true },
-        orderBy: [{ sortOrder: "asc" }, { nameAr: "asc" }],
-      }),
-      db.teacherSubject.findMany({ select: { teacherId: true, subjectId: true } }),
+      loadSessionFormOptions(locale),
       loadGroupOpts(),
     ]);
 
-  const currency = settingsRows[0]?.value ?? "QAR";
+  const {
+    students: studentOpts,
+    teachers: teacherOpts,
+    levels: levelOpts,
+    matrix: matrixMap,
+    currency,
+    packages: packageOpts,
+    subjects: subjectOpts,
+    teacherSubjectIds,
+  } = formOptions;
   const label = (ar: string, en: string) => (locale === "ar" ? ar : en);
-
-  const matrixMap: PriceMatrix = Object.fromEntries(
-    matrix.map((m) => [m.gradeLevel.id, { CENTER: m.CENTER, HOME: m.HOME }]),
-  );
 
   const realGroupKeys = groupOccurrenceKeys(sessions);
   const allRows: SessionRow[] = sessions.map((s) => {
@@ -113,32 +90,6 @@ export default async function SessionsPage({
     : filters.bookingType === "individual"
       ? allRows.filter((row) => !row.groupKey)
       : allRows;
-
-  const studentOpts = students.map((s) => ({
-    id: s.id,
-    name: displayName(s, locale),
-    teacherIds: s.teachers.map((x) => x.teacherId),
-    gradeLevelId: s.gradeLevelId,
-    gradeYear: s.gradeYear,
-    studyLocation: s.studyLocation as "CENTER" | "HOME",
-    specialPricePerHour: s.specialPricePerHour == null ? null : toNumber(s.specialPricePerHour),
-    specialPriceTeacherIds: s.specialPriceTeachers.map((row) => row.teacherId),
-  }));
-
-  const packageOpts = activePackages.map((p) => ({
-    id: p.id,
-    studentId: p.studentId,
-    label: `${toNumber(p.totalHours) - toNumber(p.hoursUsed)} / ${toNumber(p.totalHours)} ${
-      locale === "ar" ? "ساعة متبقية" : "h remaining"
-    }`,
-  }));
-  const teacherOpts = teachers.map((tt) => ({ id: tt.id, label: displayName(tt, locale) }));
-  const subjectOpts = subjectList.map((sbj) => ({ id: sbj.id, label: label(sbj.nameAr, sbj.nameEn) }));
-  const teacherSubjectIds: Record<string, string[]> = {};
-  for (const r of teacherSubjectRows) {
-    (teacherSubjectIds[r.teacherId] ??= []).push(r.subjectId);
-  }
-  const levelOpts = levels.map((l) => ({ id: l.id, label: label(l.nameAr, l.nameEn) }));
 
   // Export link carries the current filters.
   const exportParams = new URLSearchParams();

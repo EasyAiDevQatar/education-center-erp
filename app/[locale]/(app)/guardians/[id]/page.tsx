@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { TrendingUp, TrendingDown, Wallet, Users, Phone, Mail } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Users, Phone, Mail, MapPin } from "lucide-react";
 import { requireRole, PEOPLE_ROLES, ACADEMIC_ROLES, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { loadSessionLines, loadPaymentLines, getCurrency } from "@/lib/profile";
@@ -19,6 +19,8 @@ import { PortalLoginButton } from "@/components/portal-login-button";
 import { displayName, fullName } from "@/lib/names";
 import { netPaid, unchargeableStatuses } from "@/lib/billing";
 import { toNumber } from "@/lib/money";
+import { loadSessionFormOptions } from "@/lib/session-form-options";
+import { ProfileAddSessionDialog } from "../../sessions/profile-add-session-dialog";
 
 export default async function GuardianProfilePage({
   params,
@@ -41,7 +43,10 @@ export default async function GuardianProfilePage({
 
   const guardian = await db.guardian.findUnique({
     where: { id },
-    include: { students: { include: { gradeLevel: true } } },
+    include: {
+      students: { include: { gradeLevel: true } },
+      homes: { orderBy: { sortOrder: "asc" } },
+    },
   });
   if (!guardian) notFound();
 
@@ -54,10 +59,12 @@ export default async function GuardianProfilePage({
   const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) ?? "overview";
 
   const childIds = guardian.students.map((s) => s.id);
+  const activeChildIds = guardian.students.filter((student) => student.active).map((student) => student.id);
+  const canAddSession = STAFF_ROLES.includes(session.role) && activeChildIds.length > 0;
   const unchargeable = await unchargeableStatuses();
 
   // Family-wide totals: every child's charges and payments.
-  const [lessonCharges, packageCharges, paid, sessions, payments, currency] = await Promise.all([
+  const [lessonCharges, packageCharges, paid, sessions, payments, currency, sessionFormOptions] = await Promise.all([
     db.session.aggregate({
       _sum: { total: true },
       where: {
@@ -71,6 +78,9 @@ export default async function GuardianProfilePage({
     childIds.length ? loadSessionLines({ studentId: { in: childIds } }, locale) : Promise.resolve([]),
     childIds.length ? loadPaymentLines({ studentId: { in: childIds } }) : Promise.resolve([]),
     getCurrency(),
+    canAddSession
+      ? loadSessionFormOptions(locale, { studentIds: activeChildIds })
+      : Promise.resolve(null),
   ]);
 
   const totalCharges = toNumber(lessonCharges._sum.total) + toNumber(packageCharges._sum.price);
@@ -87,7 +97,18 @@ export default async function GuardianProfilePage({
 
   return (
     <div>
-      <PageHeader title={fullName(guardian, locale)} description={guardian.phone ?? undefined} />
+      <PageHeader
+        title={fullName(guardian, locale)}
+        description={guardian.phone ?? undefined}
+        action={
+          sessionFormOptions ? (
+            <ProfileAddSessionDialog
+              options={sessionFormOptions}
+              defaultStudentId={activeChildIds.length === 1 ? activeChildIds[0] : undefined}
+            />
+          ) : undefined
+        }
+      />
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={ts("totalCharges")} value={formatMoney(totalCharges)} suffix={currency} icon={TrendingUp} />
@@ -113,6 +134,30 @@ export default async function GuardianProfilePage({
             <Row icon={<Phone className="size-4" />} label={tc("phone")} value={guardian.phone ?? "—"} />
             <Row icon={<Mail className="size-4" />} label={tc("email")} value={guardian.email ?? "—"} />
             {guardian.notes && <Row label={tc("notes")} value={guardian.notes} />}
+            {guardian.homes.length > 0 && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <p className="flex items-center gap-1.5 font-medium">
+                  <MapPin className="size-4 text-primary" />
+                  {t("homes")}
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {guardian.homes.map((home) => (
+                    <div key={home.id} className="rounded-md border border-border bg-muted/20 p-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{home.label}</span>
+                        {home.isDefault && <Badge variant="default">{t("defaultHome")}</Badge>}
+                      </div>
+                      <p className="mt-1 text-muted-foreground">{home.address ?? "—"}</p>
+                      {home.homeCode && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("homeCode")}: {home.homeCode}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {isAdmin && (
               <div className="pt-2">
                 <PortalLoginButton kind="guardian" recordId={id} hasLogin={!!linkedUser} />

@@ -1,11 +1,10 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requireRole, PEOPLE_ROLES } from "@/lib/rbac";
+import { requireRole, PEOPLE_ROLES, STAFF_ROLES } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { TranslateNamesButton } from "@/components/translate-names-button";
 import { loadAiConfig, aiReady } from "@/lib/ai/config";
-import { GuardiansClient, type GuardianRow } from "./guardians-client";
-import { displayName } from "@/lib/names";
+import { GuardiansClient, type GradeOption, type GuardianRow } from "./guardians-client";
 
 export default async function GuardiansPage({
   params,
@@ -14,13 +13,20 @@ export default async function GuardiansPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  await requireRole(locale, PEOPLE_ROLES);
+  const viewer = await requireRole(locale, PEOPLE_ROLES);
+  const canManage = STAFF_ROLES.includes(viewer.role);
 
   const t = await getTranslations("guardians");
-  const guardians = await db.guardian.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { students: true } } },
-  });
+  const [guardians, gradeLevels] = await Promise.all([
+    db.guardian.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        homes: { orderBy: { sortOrder: "asc" } },
+        _count: { select: { students: true } },
+      },
+    }),
+    db.gradeLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
+  ]);
   const rows: GuardianRow[] = guardians.map((g) => ({
     id: g.id,
     name: g.name,
@@ -29,6 +35,11 @@ export default async function GuardiansPage({
     email: g.email,
     notes: g.notes,
     studentCount: g._count.students,
+    homes: g.homes,
+  }));
+  const grades: GradeOption[] = gradeLevels.map((grade) => ({
+    id: grade.id,
+    label: locale === "ar" ? grade.nameAr : grade.nameEn,
   }));
 
   const aiCfg = await loadAiConfig();
@@ -42,7 +53,7 @@ export default async function GuardiansPage({
           <TranslateNamesButton entity="guardians" />
         </div>
       )}
-      <GuardiansClient guardians={rows} />
+      <GuardiansClient guardians={rows} gradeLevels={grades} canManage={canManage} />
     </div>
   );
 }

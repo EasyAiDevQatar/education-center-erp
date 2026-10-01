@@ -62,6 +62,20 @@ function revalidateSessionViews(locale: string) {
   }
 }
 
+/** Profiles project the same session immediately after a profile-side booking. */
+function revalidateSessionProfiles(
+  locale: string,
+  studentIds: Array<string | null | undefined>,
+  teacherIds: Array<string | null | undefined>,
+) {
+  for (const id of new Set(studentIds.filter((value): value is string => !!value))) {
+    revalidatePath(`/${locale}/students/${id}`);
+  }
+  for (const id of new Set(teacherIds.filter((value): value is string => !!value))) {
+    revalidatePath(`/${locale}/teachers/${id}`);
+  }
+}
+
 export async function saveSession(
   locale: string,
   id: string | null,
@@ -169,6 +183,7 @@ export async function saveSession(
     await writeAudit("Session", created.id, "CREATE", { after: data });
     await notifySession("SESSION_BOOKED", created.id);
     revalidateSessionViews(locale);
+    revalidateSessionProfiles(locale, [data.studentId], [data.teacherId]);
     // A freshly booked home lesson has no ride yet by definition — prompt.
     if (data.location === "HOME") {
       return { ok: true, homeNeedsTrip: { count: 1, date: d.date } };
@@ -176,6 +191,11 @@ export async function saveSession(
     return { ok: true };
   }
   revalidateSessionViews(locale);
+  revalidateSessionProfiles(
+    locale,
+    [priorSession?.studentId, data.studentId],
+    [priorSession?.teacherId, data.teacherId],
+  );
   return { ok: true };
 }
 

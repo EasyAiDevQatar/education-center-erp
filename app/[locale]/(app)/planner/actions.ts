@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { applyMark } from "@/lib/attendance";
+import { applyMark, applyAttendanceMarkInTransaction } from "@/lib/attendance";
 import { getSession } from "@/lib/session";
 import { STAFF_ROLES } from "@/lib/rbac";
 import { writeAudit } from "@/lib/audit";
@@ -11,11 +11,21 @@ import { combineDateTime } from "@/lib/session-time";
 import { toNumber } from "@/lib/money";
 import { compactTimes, hhmmToMin, minToHHMM } from "@/lib/planner";
 import { LOCATIONS } from "@/lib/enums";
+import { guardArchived } from "@/lib/academic-year";
+import { attendanceBillablePolicy, syncSessionPaymentStatus } from "@/lib/billing";
+import { nextReceiptNo } from "@/lib/balances";
+import { accountingEnabled, postSource } from "@/lib/accounting/journal-data";
+import { linesForPayment } from "@/lib/accounting/posting";
+import { notifyPayment, notifySession } from "@/lib/integrations/notify";
+import { localToday } from "@/lib/session-time";
 
 export type PlannerState = {
   ok?: boolean;
   error?: string;
   count?: number;
+  sessionId?: string;
+  paymentId?: string;
+  amount?: number;
   /** Confirmed HOME sessions that no trip serves yet — prompts trip planning. */
   homeNeedsTrip?: { count: number; date: string } | null;
 };
@@ -92,6 +102,110 @@ export async function createDraftSession(
   await writeAudit("Session", created.id, "CREATE", { after: { status: "DRAFT", planner: true } });
   revalidate(locale);
   return { ok: true };
+}
+
+/** A stable request id makes a retried click return the original booking/receipt. */
+export async function createConfirmedPlannerSession(
+  locale: string,
+  input: z.infer<typeof draftSchema> & {
+    requestId: string;
+    fastPay: boolean;
+    method: "CASH" | "POS" | "QPAY" | "TRANSFER";
+  },
+): Promise<PlannerState> {
+  const viewer = await getSession();
+  if (!viewer || !STAFF_ROLES.includes(viewer.role)) return { error: "forbidden" };
+  const parsed = draftSchema.extend({
+    requestId: z.string().uuid(),
+    fastPay: z.boolean(),
+    method: z.enum(["CASH", "POS", "QPAY", "TRANSFER"]),
+  }).safeParse(input);
+  if (!parsed.success) return { error: "invalid" };
+  const d = parsed.data;
+  const date = combineDateTime(d.date, d.time);
+  if (!Number.isFinite(date.getTime())) return { error: "invalid" };
+  const paymentDate = combineDateTime(localToday(), "00:00");
+  const frozen = await guardArchived(date, ...(d.fastPay ? [paymentDate] : []));
+  if (frozen) return { error: frozen };
+  const id = `planner-${d.requestId}`;
+  const policy = await attendanceBillablePolicy();
+  const posting = d.fastPay && await accountingEnabled();
+  const receiptNo = d.fastPay ? await nextReceiptNo() : null;
+  try {
+    const result = await db.$transaction(async (tx) => {
+      // Upsert obtains the row lock as well as protecting against concurrent retries.
+      const booking = await tx.session.upsert({
+        where: { id },
+        update: { updatedAt: new Date() },
+        create: {
+          id, date, studentId: d.studentId, teacherId: d.teacherId,
+          gradeLevelId: d.gradeLevelId, location: d.location, hours: d.hours,
+          pricePerHour: d.pricePerHour, total: d.pricePerHour * d.hours,
+          status: "DRAFT", paymentStatus: "UNPAID", createdById: viewer.userId,
+        },
+        include: { allocations: { include: { payment: true } } },
+      });
+      if (booking.createdById !== viewer.userId || booking.studentId !== d.studentId || booking.teacherId !== d.teacherId) {
+        throw new Error("invalid");
+      }
+      if (booking.status === "COMPLETED") {
+        const payment = booking.allocations.find((line) => line.payment.status === "COMPLETED")?.payment;
+        if (d.fastPay && !payment) throw new Error("invalid");
+        return { sessionId: id, paymentId: payment?.id, amount: toNumber(booking.total), fresh: false };
+      }
+      if (booking.status !== "DRAFT") throw new Error("invalid");
+      const [student, teacher, grade] = await Promise.all([
+        tx.student.findFirst({ where: { id: d.studentId, active: true } }),
+        tx.teacher.findFirst({ where: { id: d.teacherId, active: true } }),
+        tx.gradeLevel.findFirst({ where: { id: d.gradeLevelId, active: true } }),
+      ]);
+      if (!student || !teacher || !grade) throw new Error("invalid");
+      if (!await applyAttendanceMarkInTransaction(tx, id, "COMPLETED", policy)) throw new Error("invalid");
+      const confirmed = await tx.session.findUniqueOrThrow({ where: { id } });
+      const amount = toNumber(confirmed.total);
+      let paymentId: string | undefined;
+      if (d.fastPay) {
+        if (amount <= 0) throw new Error("invalid");
+        const payment = await tx.payment.create({ data: {
+          date: paymentDate, receiptNo: receiptNo!, studentId: d.studentId,
+          teacherId: d.teacherId, amount, method: d.method, createdById: viewer.userId,
+          allocations: { create: { sessionId: id, amount } },
+        } });
+        paymentId = payment.id;
+        if (posting) await postSource(tx, {
+          date: paymentDate, memo: `Payment — ${receiptNo}`, sourceType: "PAYMENT",
+          sourceId: payment.id, lines: linesForPayment({ amount, method: d.method, receiptNo: receiptNo! }),
+        });
+        await tx.auditLog.create({ data: {
+          userId: viewer.userId, entity: "Payment", entityId: payment.id, action: "CREATE",
+          after: JSON.stringify({ amount, method: d.method, sessionId: id, planner: true }),
+        } });
+      }
+      await syncSessionPaymentStatus(tx, id);
+      await tx.auditLog.create({ data: {
+        userId: viewer.userId, entity: "Session", entityId: id, action: "CREATE",
+        after: JSON.stringify({ ...d, status: "COMPLETED", planner: true }),
+      } });
+      return { sessionId: id, paymentId, amount, fresh: true };
+    });
+    if (result.fresh) {
+      // Notification delivery must not turn a committed payment into a failed save.
+      await Promise.allSettled([
+        notifySession("CHECKED_IN", id),
+        ...(result.paymentId ? [notifyPayment(result.paymentId)] : []),
+      ]);
+    }
+    revalidate(locale);
+    revalidatePath(`/${locale}/payments`);
+    revalidatePath(`/${locale}/students/${d.studentId}`);
+    revalidatePath(`/${locale}/teachers/${d.teacherId}`);
+    return {
+      ok: true, sessionId: result.sessionId, paymentId: result.paymentId, amount: result.amount,
+      homeNeedsTrip: d.location === "HOME" ? { count: 1, date: d.date } : null,
+    };
+  } catch {
+    return { error: "invalid" };
+  }
 }
 
 const updateSchema = z.object({

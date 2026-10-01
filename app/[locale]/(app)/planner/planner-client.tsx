@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -56,11 +56,13 @@ import {
 } from "@/components/conflict-warnings";
 import type { PriceMatrix } from "../sessions/session-dialog";
 import { deleteSession } from "../sessions/actions";
+import { QuickPayDialog } from "../payments/quick-pay-dialog";
 import { useSessionHover, tripTint, type SessionTripLite } from "@/components/session-hover-card";
 import { useModuleFlags } from "@/components/app-shell/module-flags";
 import { TripPromptDialog, type TripPromptInfo } from "@/components/trip-prompt-dialog";
 import {
   createDraftSession,
+  createConfirmedPlannerSession,
   updateDraft,
   confirmSession,
   confirmDay,
@@ -858,8 +860,9 @@ export function PlannerClient({
           homeGapMin={homeGapMin}
           conflictsFor={conflictsFor}
           onClose={() => setAddFor(null)}
-          onSaved={() => {
+          onSaved={(result) => {
             setAddFor(null);
+            if (result?.homeNeedsTrip) setTripPrompt(result.homeNeedsTrip);
             router.refresh();
           }}
         />
@@ -998,13 +1001,19 @@ function AddDraftDialog({
   homeGapMin: number;
   conflictsFor: ConflictsFor;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (result?: PlannerState) => void;
 }) {
   const t = useTranslations("planner");
   const ts = useTranslations("sessions");
   const tc = useTranslations("common");
   const te = useTranslations("enums");
   const locale = useLocale();
+  const router = useRouter();
+  const tp = useTranslations("payments");
+  const requestId = useRef<string | null>(null);
+  const submitting = useRef(false);
+  const [method, setMethod] = useState<"CASH" | "POS" | "QPAY" | "TRANSFER">("CASH");
+  const [payment, setPayment] = useState<{ sessionId: string; amount: number; result: PlannerState } | null>(null);
 
   const [studentId, setStudentId] = useState("");
   const [gradeLevelId, setGradeLevelId] = useState("");
@@ -1075,11 +1084,15 @@ function AddDraftDialog({
       })
     : [];
 
-  function submit() {
+  function submit(mode: "draft" | "confirm" | "pay" | "fast" = "draft") {
     setError(null);
-    if (!studentId || !gradeLevelId) return setError("required");
+    if (submitting.current) return;
+    if (!studentId || !gradeLevelId || !Number.isFinite(Number(price)) || Number(price) < 0 || !Number.isFinite(Number(hours)) || Number(hours) < 0.25) return setError("required");
+    submitting.current = true;
+    requestId.current ??= crypto.randomUUID();
     start(async () => {
-      const res = await createDraftSession(locale, {
+      try {
+      const input = {
         date: day,
         time,
         teacherId,
@@ -1088,11 +1101,40 @@ function AddDraftDialog({
         location,
         hours: parseFloat(hours) || 1,
         pricePerHour,
-      });
-      if (res.ok) onSaved();
+      };
+      const res = mode === "draft"
+        ? await createDraftSession(locale, input)
+        : await createConfirmedPlannerSession(locale, {
+            ...input, requestId: requestId.current!, fastPay: mode === "fast", method,
+          });
+      if (res.ok && mode === "pay" && res.sessionId) {
+        setPayment({ sessionId: res.sessionId, amount: res.amount ?? total, result: res });
+      } else if (res.ok && mode === "fast" && res.paymentId) {
+        router.push(`/receipt/${res.paymentId}?autoprint=1`);
+        onSaved();
+      } else if (res.ok) onSaved(res);
       else setError(res.error ?? "invalid");
+      } catch {
+        setError("invalid");
+      } finally {
+        submitting.current = false;
+      }
     });
   }
+
+  if (payment) return (
+    <QuickPayDialog
+      initiallyOpen
+      sessionId={payment.sessionId}
+      studentId={studentId}
+      studentName={students.find((student) => student.id === studentId)?.name ?? ""}
+      amount={payment.amount}
+      currency={currency}
+      teachers={[{ id: teacherId, label: teacherName }]}
+      onPaid={() => onSaved(payment.result)}
+      onClose={() => onSaved(payment.result)}
+    />
+  );
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -1189,16 +1231,26 @@ function AddDraftDialog({
           <ConflictWarnings conflicts={conflicts} />
           <SpacingWarning check={spacing} onUseSuggestion={setTime} />
           <p className="text-xs text-muted-foreground">{t("timeAutoHint")}</p>
+          <FormField label={t("fastPayMethod")} htmlFor="p-payment-method" hint={t("confirmPaymentHint")}>
+            <Select id="p-payment-method" value={method} onChange={(event) => setMethod(event.target.value as typeof method)}>
+              {(["CASH", "POS", "QPAY", "TRANSFER"] as const).map((value) => (
+                <option key={value} value={value}>{te(`method.${value}`)}</option>
+              ))}
+            </Select>
+          </FormField>
 
-          {error && <p className="text-sm text-destructive">{tc("required")}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{tc("errorGeneric")}</p>}
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-wrap gap-2">
           <DialogClose asChild>
             <Button type="button" variant="outline">{tc("cancel")}</Button>
           </DialogClose>
-          <Button type="button" disabled={pending || !studentId || !gradeLevelId} onClick={submit}>
+          <Button type="button" variant="outline" disabled={pending || !studentId || !gradeLevelId} onClick={() => submit("draft")}>
             {pending ? tc("saving") : t("addDraft")}
           </Button>
+          <Button type="button" disabled={pending || !studentId || !gradeLevelId} onClick={() => submit("confirm")}>{t("confirm")}</Button>
+          <Button type="button" disabled={pending || !studentId || !gradeLevelId || total <= 0} onClick={() => submit("pay")}>{t("confirmAndPay")}</Button>
+          <Button type="button" title={tp("method")} disabled={pending || !studentId || !gradeLevelId || total <= 0} onClick={() => submit("fast")}>{t("confirmAndFastPay")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
